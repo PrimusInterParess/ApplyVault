@@ -1,0 +1,46 @@
+@ApplyVault.Api_HostAddress = http://localhost:5173
+
+GET {{ApplyVault.Api_HostAddress}}/api/health
+Accept: application/json
+
+###
+
+GET {{ApplyVault.Api_HostAddress}}/api/scrape-results
+Accept: application/json
+
+###
+
+GET {{ApplyVault.Api_HostAddress}}/api/scrape-results/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+POST {{ApplyVault.Api_HostAddress}}/api/scrape-results
+Content-Type: application/json
+
+{
+  "title": "Sample job page",
+  "url": "https://example.com/jobs/backend-engineer",
+  "text": "Example scraped job text",
+  "textLength": 24,
+  "extractedAt": "2026-03-31T00:00:00.000Z",
+  "jobDetails": {
+    "sourceHostname": "example.com",
+    "detectedPageType": "job-posting",
+    "jobTitle": "Backend Engineer",
+    "companyName": "Example Inc.",
+    "location": "Remote",
+    "jobDescription": "Build APIs and integrations.",
+    "positionSummary": "Hands-on backend role.",
+    "hiringManagerName": "Jane Doe",
+    "hiringManagerContacts": [
+      {
+        "type": "email",
+        "value": "jane.doe@example.com",
+        "label": "Work"
+      }
+    ]
+  }
+}
+
+###

@@ -1,0 +1,140 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.popup {
+  width: 420px;
+  padding: 16px;
+}
+
+.popup__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.popup__description {
+  margin: 0 0 16px;
+  color: #52525b;
+}
+
+.popup__button {
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.popup__button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.popup__status {
+  min-height: 40px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #3f3f46;
+}
+
+.popup__label {
+  display: block;
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.popup__label--section {
+  margin-top: 0;
+}
+
+.popup__section {
+  margin-top: 16px;
+}
+
+.popup__section-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.popup__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.popup__detail {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.popup__detail--stacked {
+  grid-column: 1 / -1;
+}
+
+.popup__detail dt {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #52525b;
+}
+
+.popup__detail dd {
+  margin: 0;
+}
+
+.popup__field,
+.popup__textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #18181b;
+}
+
+.popup__field:focus,
+.popup__textarea:focus {
+  outline: 2px solid #bfdbfe;
+  outline-offset: 1px;
+  border-color: #60a5fa;
+}
+
+.popup__field {
+  min-height: 38px;
+}
+
+.popup__field--multiline {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.popup__textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.popup__textarea--secondary {
+  min-height: 160px;
+}
+
+.popup__textarea--contacts {
+  min-height: 96px;
+}

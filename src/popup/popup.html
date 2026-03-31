@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApplyVault</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <h1 class="popup__title">ApplyVault</h1>
+      <p class="popup__description">Capture job details, review them, and save the result to the ApplyVault API.</p>
+
+      <button id="scrape-button" class="popup__button" type="button">
+        Scrape current page
+      </button>
+
+      <p id="status" class="popup__status" aria-live="polite">
+        Ready to scrape the active tab.
+      </p>
+
+      <section class="popup__section">
+        <h2 class="popup__section-title">Structured details</h2>
+        <dl class="popup__details">
+          <div class="popup__detail">
+            <dt>Scraped at</dt>
+            <dd><input id="scraped-at" class="popup__field" type="text" placeholder="Not scraped yet." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Source</dt>
+            <dd><input id="source-hostname" class="popup__field" type="text" placeholder="Not available." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Page type</dt>
+            <dd><input id="page-type" class="popup__field" type="text" placeholder="Not available." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Job title</dt>
+            <dd><input id="job-title" class="popup__field" type="text" placeholder="Not found." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Company</dt>
+            <dd><input id="company-name" class="popup__field" type="text" placeholder="Not found." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Location</dt>
+            <dd><input id="job-location" class="popup__field" type="text" placeholder="Not found." /></dd>
+          </div>
+          <div class="popup__detail">
+            <dt>Hiring manager</dt>
+            <dd><input id="hiring-manager" class="popup__field" type="text" placeholder="Not found." /></dd>
+          </div>
+          <div class="popup__detail popup__detail--stacked">
+            <dt>Position summary</dt>
+            <dd>
+              <textarea
+                id="position-summary"
+                class="popup__field popup__field--multiline"
+                rows="3"
+                placeholder="Not found."
+              ></textarea>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="popup__section">
+        <label class="popup__label popup__label--section" for="hiring-manager-contacts">Hiring manager contacts</label>
+        <textarea
+          id="hiring-manager-contacts"
+          class="popup__textarea popup__textarea--contacts"
+          placeholder="No contact details found."
+        ></textarea>
+      </section>
+
+      <label class="popup__label" for="job-description">Job description</label>
+      <textarea id="job-description" class="popup__textarea popup__textarea--secondary"></textarea>
+
+      <label class="popup__label" for="scraped-text">Scraped text</label>
+      <textarea id="scraped-text" class="popup__textarea"></textarea>
+    </main>
+
+    <script src="./popup.js"></script>
+  </body>
+</html>

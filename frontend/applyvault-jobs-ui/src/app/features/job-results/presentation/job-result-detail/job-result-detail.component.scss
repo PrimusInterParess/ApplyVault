@@ -3,6 +3,7 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 32px;
   padding: 1.75rem;
+  position: relative;
   background:
     radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 28%),
     linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.8));
@@ -22,11 +23,25 @@
   align-items: flex-start;
 }
 
+.job-detail__header {
+  position: relative;
+  padding-right: 24rem;
+  min-height: 3.5rem;
+}
+
+.job-detail__header-content {
+  min-width: 0;
+}
+
 .job-detail__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: 22rem;
 }
 
 .job-detail__reject,
@@ -266,7 +281,14 @@ li strong {
   }
 
   .job-detail__actions {
+    position: static;
+    max-width: none;
     justify-content: flex-start;
+  }
+
+  .job-detail__header {
+    padding-right: 0;
+    min-height: 0;
   }
 
   .job-detail__grid {

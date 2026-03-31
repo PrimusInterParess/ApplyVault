@@ -8,6 +8,8 @@ public sealed class ScrapeResultEntity
 
     public bool IsRejected { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public required string Title { get; set; }
 
     public required string Url { get; set; }

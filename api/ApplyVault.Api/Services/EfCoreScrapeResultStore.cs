@@ -11,6 +11,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         return dbContext
             .ScrapeResults
             .AsNoTracking()
+            .Where((result) => !result.IsDeleted)
             .Include((result) => result.HiringManagerContacts)
             .OrderBy((result) => result.SavedAt)
             .Select(MapToSavedResult)
@@ -23,7 +24,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .ScrapeResults
             .AsNoTracking()
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id);
+            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
 
         return entity is null ? null : MapToSavedResult(entity);
     }
@@ -35,6 +36,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             Id = Guid.NewGuid(),
             SavedAt = DateTimeOffset.UtcNow,
             IsRejected = false,
+            IsDeleted = false,
             Title = result.Title,
             Url = result.Url,
             Text = result.Text,
@@ -69,7 +71,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         var entity = dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id);
+            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
 
         if (entity is null)
         {
@@ -87,7 +89,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         var entity = dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id);
+            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
 
         if (entity is null)
         {
@@ -98,6 +100,23 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         dbContext.SaveChanges();
 
         return MapToSavedResult(entity);
+    }
+
+    public bool Delete(Guid id)
+    {
+        var entity = dbContext
+            .ScrapeResults
+            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
+
+        if (entity is null)
+        {
+            return false;
+        }
+
+        entity.IsDeleted = true;
+        dbContext.SaveChanges();
+
+        return true;
     }
 
     private static SavedScrapeResult MapToSavedResult(ScrapeResultEntity entity)

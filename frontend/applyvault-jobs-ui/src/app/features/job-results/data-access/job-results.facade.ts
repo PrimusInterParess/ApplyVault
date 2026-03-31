@@ -150,6 +150,29 @@ export class JobResultsFacade {
     });
   }
 
+  deleteResult(id: string): void {
+    const currentResult = this.results().find((result) => result.id === id);
+
+    if (!currentResult || this.updatingResultId() === id) {
+      return;
+    }
+
+    this.updatingResultId.set(id);
+    this.updateError.set(null);
+
+    this.apiService.delete(id).subscribe({
+      next: () => {
+        this.results.update((results) => results.filter((result) => result.id !== id));
+        this.updateError.set(null);
+        this.updatingResultId.set(null);
+      },
+      error: () => {
+        this.updateError.set('The result could not be deleted. Please try again.');
+        this.updatingResultId.set(null);
+      }
+    });
+  }
+
   updateDescription(id: string, description: string): void {
     const currentResult = this.results().find((result) => result.id === id);
     const normalizedDescription = description.trim();

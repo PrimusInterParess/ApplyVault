@@ -19,6 +19,7 @@ export class JobResultDetailComponent {
   readonly job = input<JobResultViewModel | null>(null);
   readonly updating = input(false);
   readonly toggleRejected = output<string>();
+  readonly deleteResult = output<string>();
   readonly saveDescription = output<JobDescriptionSaveEvent>();
   readonly editingDescription = signal(false);
   readonly descriptionDraft = signal('');

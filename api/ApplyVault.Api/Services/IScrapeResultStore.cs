@@ -13,4 +13,6 @@ public interface IScrapeResultStore
     SavedScrapeResult? SetRejected(Guid id, bool isRejected);
 
     SavedScrapeResult? UpdateDescription(Guid id, string description);
+
+    bool Delete(Guid id);
 }

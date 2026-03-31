@@ -79,6 +79,19 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
         return Ok(updatedResult);
     }
 
+    [HttpDelete("{id:guid}")]
+    public IActionResult Delete(Guid id)
+    {
+        var deleted = store.Delete(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
     private void ValidateRequest(ScrapeResultDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Title))

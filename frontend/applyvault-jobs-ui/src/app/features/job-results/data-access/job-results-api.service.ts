@@ -23,6 +23,10 @@ export class JobResultsApiService {
     );
   }
 
+  delete(id: string): Observable<void> {
+    return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/scrape-results/${id}`);
+  }
+
   updateDescription(
     id: string,
     request: UpdateJobDescriptionRequest

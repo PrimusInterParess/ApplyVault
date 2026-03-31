@@ -1,7 +1,7 @@
 @if (job(); as selectedJob) {
   <section class="job-detail">
     <div class="job-detail__header">
-      <div>
+      <div class="job-detail__header-content">
         <p class="job-detail__eyebrow">{{ selectedJob.sourceHostname }} · {{ selectedJob.detectedPageType }}</p>
         <h2>{{ selectedJob.title }}</h2>
         <p class="job-detail__company">{{ selectedJob.company }}</p>
@@ -16,6 +16,13 @@
           (click)="toggleRejected.emit(selectedJob.id)">
           {{ selectedJob.isRejected ? 'Undo rejection' : 'Mark as rejected' }}
         </button>
+        <button
+          type="button"
+          class="job-detail__secondary-action"
+          [disabled]="updating()"
+          (click)="deleteResult.emit(selectedJob.id)">
+          Delete
+        </button>
         <a [href]="selectedJob.url" target="_blank" rel="noreferrer">Open source listing</a>
       </div>
     </div>
@@ -26,8 +33,6 @@
       }
       <span>{{ selectedJob.location }}</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
-      <span>Extracted {{ selectedJob.extractedAt | date: 'MMM d, y, h:mm a' }}</span>
-      <span>{{ selectedJob.textLength | number }} chars captured</span>
     </div>
 
     <div class="job-detail__grid">

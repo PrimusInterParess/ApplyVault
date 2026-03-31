@@ -3,9 +3,7 @@
     <div>
       <p class="jobs-page__eyebrow">ApplyVault dashboard</p>
       <h1>Saved job results, organized into a clean review workspace.</h1>
-      <p class="jobs-page__intro">
-        Browse every captured listing, filter by source, and inspect the structured details without digging through raw JSON.
-      </p>
+
     </div>
 
     <div class="jobs-page__stats">
@@ -28,28 +26,7 @@
     </div>
   </section>
 
-  <section class="jobs-page__toolbar">
-    <label class="jobs-page__field">
-      <span>Search</span>
-      <input
-        type="search"
-        placeholder="Title, company, manager, location..."
-        [value]="facade.searchTerm()"
-        (input)="facade.updateSearchTerm(asValue($event))" />
-    </label>
-
-    <label class="jobs-page__field">
-      <span>Source</span>
-      <select [value]="facade.selectedSource()" (change)="facade.updateSource(asValue($event))">
-        <option value="all">All sources</option>
-        @for (source of facade.availableSources(); track source) {
-          <option [value]="source">{{ source }}</option>
-        }
-      </select>
-    </label>
-
     <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh</button>
-  </section>
 
   @if (facade.updateError(); as updateError) {
     <p class="jobs-page__inline-error">{{ updateError }}</p>
@@ -90,6 +67,7 @@
             [job]="facade.selectedResult()"
             [updating]="facade.updatingResultId() === facade.selectedResultId()"
             (toggleRejected)="facade.toggleRejected($event)"
+            (deleteResult)="facade.deleteResult($event)"
             (saveDescription)="facade.updateDescription($event.id, $event.description)" />
         </section>
       </section>

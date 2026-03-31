@@ -1,5 +1,16 @@
+# Node and frontend build artifacts
 node_modules/
 dist/
+.angular/
+coverage/
+tmp/
+out-tsc/
+bazel-out/
+.sass-cache/
+connect.lock
+libpeerconnection.log
+testem.log
+typings/
 
 # Logs
 *.log
@@ -17,10 +28,18 @@ yarn-error.log*
 Thumbs.db
 .vs/
 .vscode/
+.idea/
+.project
+.classpath
+.c9/
+.settings/
+.history/
+*.launch
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+*.sublime-workspace
 
 # .NET build artifacts
 bin/

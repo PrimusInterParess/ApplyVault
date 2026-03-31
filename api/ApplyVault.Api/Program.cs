@@ -1,4 +1,6 @@
+using ApplyVault.Api.Data;
 using ApplyVault.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,9 +13,22 @@ builder.Services.AddCors((options) =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
-builder.Services.AddSingleton<IScrapeResultStore, InMemoryScrapeResultStore>();
+var connectionString = builder.Configuration.GetConnectionString("ApplyVault")
+    ?? throw new InvalidOperationException("Connection string 'ApplyVault' is not configured.");
+
+builder.Services.AddDbContext<ApplyVaultDbContext>((options) =>
+{
+    options.UseSqlServer(connectionString);
+});
+builder.Services.AddScoped<IScrapeResultStore, EfCoreScrapeResultStore>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplyVaultDbContext>();
+    dbContext.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {

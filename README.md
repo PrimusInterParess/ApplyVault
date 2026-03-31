@@ -1,6 +1,6 @@
 # ApplyVault
 
-ApplyVault is a Chrome Manifest V3 extension that captures job listing details from the active tab through a popup action and can save the result to a local ASP.NET API.
+ApplyVault is a Chrome Manifest V3 extension that captures job listing details from the active tab through a popup action and can save the result to a local ASP.NET API backed by SQL Server through EF Core.
 
 ## Architecture
 
@@ -53,6 +53,9 @@ dotnet run --project api/ApplyVault.Api --launch-profile http
 ```
 
 The ApplyVault extension posts to `http://localhost:5173/api/scrape-results`.
+
+By default, the API uses the `ApplyVault` SQL Server LocalDB database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`.
+Startup applies EF Core migrations automatically with `Database.Migrate()`.
 
 Useful endpoints:
 

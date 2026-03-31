@@ -28,3 +28,14 @@ obj/
 
 # Local ASP.NET development settings
 appsettings.Development.json
+
+# Local database and machine-specific API overrides
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+appsettings.Local.json
+appsettings.*.local.json

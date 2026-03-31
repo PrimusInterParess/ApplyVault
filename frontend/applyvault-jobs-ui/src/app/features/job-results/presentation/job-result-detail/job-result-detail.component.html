@@ -1,0 +1,115 @@
+@if (job(); as selectedJob) {
+  <section class="job-detail">
+    <div class="job-detail__header">
+      <div>
+        <p class="job-detail__eyebrow">{{ selectedJob.sourceHostname }} · {{ selectedJob.detectedPageType }}</p>
+        <h2>{{ selectedJob.title }}</h2>
+        <p class="job-detail__company">{{ selectedJob.company }}</p>
+      </div>
+
+      <div class="job-detail__actions">
+        <button
+          type="button"
+          class="job-detail__reject"
+          [class.job-detail__reject--active]="selectedJob.isRejected"
+          [disabled]="updating()"
+          (click)="toggleRejected.emit(selectedJob.id)">
+          {{ selectedJob.isRejected ? 'Undo rejection' : 'Mark as rejected' }}
+        </button>
+        <a [href]="selectedJob.url" target="_blank" rel="noreferrer">Open source listing</a>
+      </div>
+    </div>
+
+    <div class="job-detail__chips">
+      @if (selectedJob.isRejected) {
+        <span class="job-detail__chip job-detail__chip--rejected">Rejected</span>
+      }
+      <span>{{ selectedJob.location }}</span>
+      <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
+      <span>Extracted {{ selectedJob.extractedAt | date: 'MMM d, y, h:mm a' }}</span>
+      <span>{{ selectedJob.textLength | number }} chars captured</span>
+    </div>
+
+    <div class="job-detail__grid">
+      <article>
+        <h3>Role summary</h3>
+        <p>{{ selectedJob.summary }}</p>
+      </article>
+
+      <article>
+        <h3>Hiring manager</h3>
+        <p>{{ selectedJob.hiringManagerName }}</p>
+
+        @if (selectedJob.hiringManagerContacts.length > 0) {
+          <ul>
+            @for (contact of selectedJob.hiringManagerContacts; track contact.type + contact.value) {
+              <li>
+                <span>{{ contact.label || contact.type }}</span>
+                <strong>{{ contact.value }}</strong>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="job-detail__muted">No hiring manager contacts were captured for this result.</p>
+        }
+      </article>
+    </div>
+
+    <article class="job-detail__description">
+      <div class="job-detail__section-header">
+        <div>
+          <h3>Description snapshot</h3>
+          <p class="job-detail__muted">Markdown is supported for manual cleanup and formatting.</p>
+        </div>
+
+        @if (!editingDescription()) {
+          <button
+            type="button"
+            class="job-detail__secondary-action"
+            [disabled]="updating()"
+            (click)="beginDescriptionEdit()">
+            Edit description
+          </button>
+        }
+      </div>
+
+      @if (editingDescription()) {
+        <label class="job-detail__editor">
+          <span class="job-detail__muted">Description</span>
+          <textarea
+            rows="16"
+            [value]="descriptionDraft()"
+            [disabled]="updating()"
+            (input)="updateDescriptionDraft($event)"></textarea>
+        </label>
+
+        <div class="job-detail__editor-actions">
+          <button
+            type="button"
+            class="job-detail__primary-action"
+            [disabled]="!canSaveDescription()"
+            (click)="submitDescriptionEdit()">
+            Save description
+          </button>
+          <button
+            type="button"
+            class="job-detail__secondary-action"
+            [disabled]="updating()"
+            (click)="cancelDescriptionEdit()">
+            Cancel
+          </button>
+        </div>
+
+        @if (normalizedDraftDescription().length === 0) {
+          <p class="job-detail__validation-message">Description cannot be empty.</p>
+        }
+      } @else {
+        <div class="job-detail__description-body" [innerHTML]="renderedDescription()"></div>
+      }
+    </article>
+  </section>
+} @else {
+  <section class="job-detail job-detail--empty">
+    <p>Select a result from the list to inspect its captured details.</p>
+  </section>
+}

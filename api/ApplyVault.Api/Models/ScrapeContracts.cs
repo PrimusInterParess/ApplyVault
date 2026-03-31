@@ -30,10 +30,19 @@ public sealed record ScrapeResultDto(
 public sealed record SavedScrapeResult(
     Guid Id,
     DateTimeOffset SavedAt,
+    bool IsRejected,
     ScrapeResultDto Payload
 );
 
 public sealed record SaveScrapeResultResponse(
     Guid Id,
     DateTimeOffset SavedAt
+);
+
+public sealed record UpdateScrapeResultRejectionRequest(
+    bool IsRejected
+);
+
+public sealed record UpdateScrapeResultDescriptionRequest(
+    string Description
 );

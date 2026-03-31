@@ -6,6 +6,15 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - a local ASP.NET Core API backed by EF Core and SQL Server LocalDB
 - an Angular dashboard for browsing and filtering saved job results
 
+## Current Capabilities
+
+- Scrape page text plus structured job details such as title, company, location, description, summary, and hiring-manager contacts.
+- Review and edit extracted fields in the extension popup before saving them to the API.
+- Store saved results in LocalDB through EF Core migrations applied automatically at API startup.
+- Browse saved jobs in the Angular dashboard and inspect a dedicated detail panel.
+- Mark saved results as rejected and update the saved job description from the dashboard.
+- Render saved job descriptions as Markdown in the dashboard detail view.
+
 ## Repository Layout
 
 - `src/`
@@ -20,11 +29,13 @@ ApplyVault is a job-capture workspace built from three connected parts:
 ## Extension Architecture
 
 - `src/popup`
-  UI for triggering a scrape and displaying the captured result.
+  UI for triggering a scrape, reviewing extracted fields, editing the payload, and saving it.
 - `src/background`
   Service worker that coordinates scrape and save flows.
 - `src/content`
   Content script plus DOM extraction logic.
+- `src/content/jobDetailsExtraction`
+  Modular extraction pipeline for descriptions, contacts, metadata, JSON-LD, page-type detection, and shared helpers.
 - `src/application`
   Use-case orchestration layer.
 - `src/infrastructure`
@@ -55,6 +66,10 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `GET /api/scrape-results`
 - `GET /api/scrape-results/{id}`
 - `POST /api/scrape-results`
+- `PATCH /api/scrape-results/{id}/rejection`
+- `PATCH /api/scrape-results/{id}/description`
+
+Saved results include the raw scrape payload plus structured job details and a persisted `isRejected` flag.
 
 By default, the API uses the `ApplyVault` SQL Server LocalDB database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`. Startup applies EF Core migrations automatically with `Database.Migrate()`.
 
@@ -80,17 +95,21 @@ The dashboard runs on `http://localhost:4200/` and reads saved results from `htt
 1. Start the API.
 2. Build and load the extension in Chrome.
 3. Open a job listing and click `Scrape current page`.
-4. Review the scraped fields and click `Save to API`.
+4. Review the scraped text and structured fields in the popup, make any needed edits, and click `Save`.
 5. Start the Angular dashboard and review saved results in the browser.
+6. Open a saved result to update the description or mark it as rejected.
 
 ## Manual Verification
 
 1. Open a normal website or job page in Chrome.
 2. Use the extension to scrape the current page.
-3. Save the result to the API and confirm the request succeeds.
-4. Open the dashboard and verify the new job appears in the list.
-5. Use the search and source filters to confirm filtering works.
-6. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+3. Confirm the popup fills in structured fields such as job title, company, location, description, and contacts.
+4. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.
+5. Open the dashboard and verify the new job appears in the list.
+6. Use the search and source filters to confirm filtering works.
+7. Open a saved result, toggle its rejected state, and verify the change persists after refresh.
+8. Edit the saved description in the dashboard and verify the rendered Markdown updates.
+9. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
 
 ## Notes
 

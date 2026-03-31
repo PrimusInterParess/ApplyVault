@@ -9,4 +9,8 @@ public interface IScrapeResultStore
     SavedScrapeResult? GetById(Guid id);
 
     SavedScrapeResult Save(ScrapeResultDto result);
+
+    SavedScrapeResult? SetRejected(Guid id, bool isRejected);
+
+    SavedScrapeResult? UpdateDescription(Guid id, string description);
 }

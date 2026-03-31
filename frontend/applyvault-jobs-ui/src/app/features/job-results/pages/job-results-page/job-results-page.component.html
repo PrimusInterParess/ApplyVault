@@ -1,0 +1,98 @@
+<main class="jobs-page">
+  <section class="jobs-page__hero">
+    <div>
+      <p class="jobs-page__eyebrow">ApplyVault dashboard</p>
+      <h1>Saved job results, organized into a clean review workspace.</h1>
+      <p class="jobs-page__intro">
+        Browse every captured listing, filter by source, and inspect the structured details without digging through raw JSON.
+      </p>
+    </div>
+
+    <div class="jobs-page__stats">
+      <article>
+        <span>Total results</span>
+        <strong>{{ facade.stats().totalResults }}</strong>
+      </article>
+      <article>
+        <span>Companies</span>
+        <strong>{{ facade.stats().companies }}</strong>
+      </article>
+      <article>
+        <span>Sources</span>
+        <strong>{{ facade.stats().sources }}</strong>
+      </article>
+      <article>
+        <span>Rejected</span>
+        <strong>{{ facade.stats().rejected }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="jobs-page__toolbar">
+    <label class="jobs-page__field">
+      <span>Search</span>
+      <input
+        type="search"
+        placeholder="Title, company, manager, location..."
+        [value]="facade.searchTerm()"
+        (input)="facade.updateSearchTerm(asValue($event))" />
+    </label>
+
+    <label class="jobs-page__field">
+      <span>Source</span>
+      <select [value]="facade.selectedSource()" (change)="facade.updateSource(asValue($event))">
+        <option value="all">All sources</option>
+        @for (source of facade.availableSources(); track source) {
+          <option [value]="source">{{ source }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh</button>
+  </section>
+
+  @if (facade.updateError(); as updateError) {
+    <p class="jobs-page__inline-error">{{ updateError }}</p>
+  }
+
+  @if (facade.loading()) {
+    <section class="jobs-page__state">
+      <h2>Loading saved results...</h2>
+      <p>Pulling captured job listings from the ApplyVault API.</p>
+    </section>
+  } @else {
+    @if (facade.error(); as errorMessage) {
+      <section class="jobs-page__state jobs-page__state--error">
+        <h2>Dashboard unavailable</h2>
+        <p>{{ errorMessage }}</p>
+        <button type="button" (click)="facade.load()">Try again</button>
+      </section>
+    } @else {
+      <section class="jobs-page__content">
+        <aside class="jobs-page__list">
+          @if (facade.filteredResults().length === 0) {
+            <div class="jobs-page__empty">
+              <h2>No matching results</h2>
+              <p>Adjust your filters or save more jobs from the extension.</p>
+            </div>
+          } @else {
+            @for (job of facade.filteredResults(); track job.id) {
+              <app-job-result-card
+                [job]="job"
+                [selected]="facade.selectedResultId() === job.id"
+                (choose)="facade.select($event)" />
+            }
+          }
+        </aside>
+
+        <section class="jobs-page__detail">
+          <app-job-result-detail
+            [job]="facade.selectedResult()"
+            [updating]="facade.updatingResultId() === facade.selectedResultId()"
+            (toggleRejected)="facade.toggleRejected($event)"
+            (saveDescription)="facade.updateDescription($event.id, $event.description)" />
+        </section>
+      </section>
+    }
+  }
+</main>

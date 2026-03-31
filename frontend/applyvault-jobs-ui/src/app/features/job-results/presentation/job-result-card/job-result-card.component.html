@@ -1,0 +1,24 @@
+<button
+  type="button"
+  class="job-card"
+  [class.job-card--selected]="selected()"
+  (click)="choose.emit(job().id)">
+  <div class="job-card__eyebrow">
+    <span>{{ job().sourceHostname }}</span>
+    <span>{{ job().savedAt | date: 'MMM d, y' }}</span>
+  </div>
+
+  @if (job().isRejected) {
+    <span class="job-card__status">Rejected</span>
+  }
+
+  <h3>{{ job().title }}</h3>
+  <p class="job-card__company">{{ job().company }}</p>
+
+  <div class="job-card__meta">
+    <span>{{ job().location }}</span>
+    <span>{{ job().detectedPageType }}</span>
+  </div>
+
+  <p class="job-card__excerpt">{{ job().excerpt }}</p>
+</button>

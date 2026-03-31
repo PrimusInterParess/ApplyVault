@@ -26,8 +26,10 @@ const buildOptions = {
 
 async function copyStaticAssets() {
   await Promise.all([
+    mkdir(path.join(distDir, 'assets'), { recursive: true }),
     mkdir(path.join(distDir, 'popup'), { recursive: true }),
     cp(path.resolve(rootDir, 'manifest.json'), path.join(distDir, 'manifest.json')),
+    cp(path.resolve(rootDir, 'src/assets/applyvault-icon.png'), path.join(distDir, 'assets/applyvault-icon.png')),
     cp(path.resolve(rootDir, 'src/popup/popup.html'), path.join(distDir, 'popup/popup.html')),
     cp(path.resolve(rootDir, 'src/popup/popup.css'), path.join(distDir, 'popup/popup.css'))
   ]);

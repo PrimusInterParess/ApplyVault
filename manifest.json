@@ -3,12 +3,16 @@
   "name": "ApplyVault",
   "version": "0.1.0",
   "description": "Capture job listing details from the current tab and save them to the ApplyVault API.",
+  "icons": {
+    "128": "assets/applyvault-icon.png"
+  },
   "permissions": ["activeTab", "tabs", "scripting"],
   "host_permissions": ["http://localhost:5173/*"],
   "background": {
     "service_worker": "background/background.js"
   },
   "action": {
+    "default_icon": "assets/applyvault-icon.png",
     "default_title": "ApplyVault",
     "default_popup": "popup/popup.html"
   },

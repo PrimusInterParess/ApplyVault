@@ -8,19 +8,44 @@
   </head>
   <body>
     <main class="popup">
-      <h1 class="popup__title">ApplyVault</h1>
-      <p class="popup__description">Capture job details, review them, and save the result to the ApplyVault API.</p>
+      <section class="popup__hero">
+        <p class="popup__eyebrow">ApplyVault extension</p>
+        <div class="popup__hero-row">
+          <div>
+            <h1 class="popup__title">Capture and curate job details fast.</h1>
+            <p class="popup__description">
+              Scrape the active tab, review the structured result, and save a cleaner record into ApplyVault.
+            </p>
+          </div>
+          <div class="popup__badge">Chrome companion</div>
+        </div>
+      </section>
 
-      <button id="scrape-button" class="popup__button" type="button">
-        Scrape current page
-      </button>
+      <section class="popup__panel popup__panel--action">
+        <div class="popup__panel-header">
+          <div>
+            <p class="popup__panel-eyebrow">Workflow</p>
+            <h2 class="popup__section-title">Extract the current page</h2>
+          </div>
+          <button id="scrape-button" class="popup__button" type="button">
+            Scrape current page
+          </button>
+        </div>
 
-      <p id="status" class="popup__status" aria-live="polite">
-        Ready to scrape the active tab.
-      </p>
+        <p id="status" class="popup__status" aria-live="polite">
+          Ready to scrape the active tab.
+        </p>
+      </section>
 
-      <section class="popup__section">
-        <h2 class="popup__section-title">Structured details</h2>
+      <section class="popup__panel">
+        <div class="popup__panel-header popup__panel-header--stacked">
+          <div>
+            <p class="popup__panel-eyebrow">Structured details</p>
+            <h2 class="popup__section-title">Review the extracted fields</h2>
+          </div>
+          <p class="popup__section-copy">Edit anything before saving so the API record stays clean and searchable.</p>
+        </div>
+
         <dl class="popup__details">
           <div class="popup__detail">
             <dt>Scraped at</dt>
@@ -64,8 +89,14 @@
         </dl>
       </section>
 
-      <section class="popup__section">
-        <label class="popup__label popup__label--section" for="hiring-manager-contacts">Hiring manager contacts</label>
+      <section class="popup__panel">
+        <div class="popup__panel-header popup__panel-header--stacked">
+          <div>
+            <p class="popup__panel-eyebrow">Contacts</p>
+            <label class="popup__label popup__label--section" for="hiring-manager-contacts">Hiring manager contacts</label>
+          </div>
+          <p class="popup__section-copy">Keep one contact per line using the existing label, type, and value format.</p>
+        </div>
         <textarea
           id="hiring-manager-contacts"
           class="popup__textarea popup__textarea--contacts"
@@ -73,11 +104,25 @@
         ></textarea>
       </section>
 
-      <label class="popup__label" for="job-description">Job description</label>
-      <textarea id="job-description" class="popup__textarea popup__textarea--secondary"></textarea>
+      <section class="popup__panel">
+        <div class="popup__panel-header popup__panel-header--stacked">
+          <div>
+            <p class="popup__panel-eyebrow">Description</p>
+            <label class="popup__label popup__label--section" for="job-description">Job description</label>
+          </div>
+        </div>
+        <textarea id="job-description" class="popup__textarea popup__textarea--secondary"></textarea>
+      </section>
 
-      <label class="popup__label" for="scraped-text">Scraped text</label>
-      <textarea id="scraped-text" class="popup__textarea"></textarea>
+      <section class="popup__panel">
+        <div class="popup__panel-header popup__panel-header--stacked">
+          <div>
+            <p class="popup__panel-eyebrow">Raw scrape</p>
+            <label class="popup__label popup__label--section" for="scraped-text">Scraped text</label>
+          </div>
+        </div>
+        <textarea id="scraped-text" class="popup__textarea"></textarea>
+      </section>
     </main>
 
     <script src="./popup.js"></script>

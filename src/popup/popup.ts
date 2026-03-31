@@ -176,7 +176,7 @@ function parseContacts(value: string, fallbackContacts: HiringManagerContact[]):
 }
 
 function setButtonMode(button: HTMLButtonElement, mode: PopupMode): void {
-  button.textContent = mode === 'scrape' ? 'Scrape current page' : 'Save to API';
+  button.textContent = mode === 'scrape' ? 'Scrape current page' : 'Save';
 }
 
 function renderContacts(contactList: HTMLTextAreaElement, contacts: HiringManagerContact[]): void {

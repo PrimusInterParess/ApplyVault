@@ -4,6 +4,7 @@ export interface JobResultViewModel {
   readonly id: string;
   readonly savedAt: string;
   readonly extractedAt: string;
+  readonly isRejected: boolean;
   readonly title: string;
   readonly company: string;
   readonly location: string;
@@ -23,5 +24,5 @@ export interface JobResultsStats {
   readonly totalResults: number;
   readonly companies: number;
   readonly sources: number;
-  readonly remoteFriendly: number;
+  readonly rejected: number;
 }

@@ -34,6 +34,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         {
             Id = Guid.NewGuid(),
             SavedAt = DateTimeOffset.UtcNow,
+            IsRejected = false,
             Title = result.Title,
             Url = result.Url,
             Text = result.Text,
@@ -58,6 +59,42 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         };
 
         dbContext.ScrapeResults.Add(entity);
+        dbContext.SaveChanges();
+
+        return MapToSavedResult(entity);
+    }
+
+    public SavedScrapeResult? SetRejected(Guid id, bool isRejected)
+    {
+        var entity = dbContext
+            .ScrapeResults
+            .Include((result) => result.HiringManagerContacts)
+            .SingleOrDefault((result) => result.Id == id);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.IsRejected = isRejected;
+        dbContext.SaveChanges();
+
+        return MapToSavedResult(entity);
+    }
+
+    public SavedScrapeResult? UpdateDescription(Guid id, string description)
+    {
+        var entity = dbContext
+            .ScrapeResults
+            .Include((result) => result.HiringManagerContacts)
+            .SingleOrDefault((result) => result.Id == id);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.JobDescription = description;
         dbContext.SaveChanges();
 
         return MapToSavedResult(entity);
@@ -88,6 +125,6 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                         contact.Label))
                     .ToArray()));
 
-        return new SavedScrapeResult(entity.Id, entity.SavedAt, payload);
+        return new SavedScrapeResult(entity.Id, entity.SavedAt, entity.IsRejected, payload);
     }
 }

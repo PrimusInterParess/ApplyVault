@@ -43,6 +43,42 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
         return CreatedAtAction(nameof(GetById), new { id = savedResult.Id }, response);
     }
 
+    [HttpPatch("{id:guid}/rejection")]
+    public ActionResult<SavedScrapeResult> UpdateRejection(
+        Guid id,
+        [FromBody] UpdateScrapeResultRejectionRequest request)
+    {
+        var updatedResult = store.SetRejected(id, request.IsRejected);
+
+        if (updatedResult is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(updatedResult);
+    }
+
+    [HttpPatch("{id:guid}/description")]
+    public ActionResult<SavedScrapeResult> UpdateDescription(
+        Guid id,
+        [FromBody] UpdateScrapeResultDescriptionRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Description))
+        {
+            ModelState.AddModelError(nameof(request.Description), "Description is required.");
+            return ValidationProblem(ModelState);
+        }
+
+        var updatedResult = store.UpdateDescription(id, request.Description.Trim());
+
+        if (updatedResult is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(updatedResult);
+    }
+
     private void ValidateRequest(ScrapeResultDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Title))

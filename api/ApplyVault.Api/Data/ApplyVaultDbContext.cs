@@ -12,6 +12,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
         modelBuilder.Entity<ScrapeResultEntity>((entity) =>
         {
             entity.HasKey((result) => result.Id);
+            entity.Property((result) => result.IsRejected).HasDefaultValue(false);
             entity.Property((result) => result.Title).IsRequired();
             entity.Property((result) => result.Url).IsRequired();
             entity.Property((result) => result.Text).HasColumnType("nvarchar(max)").IsRequired();

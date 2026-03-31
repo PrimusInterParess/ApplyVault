@@ -10,7 +10,7 @@ export const routes: Routes = [
     path: 'jobs',
     title: 'ApplyVault Job Results',
     loadComponent: () =>
-      import('./features/job-results/pages/job-results-page.component').then(
+      import('./features/job-results/pages/job-results-page/job-results-page.component').then(
         (module) => module.JobResultsPageComponent
       )
   },

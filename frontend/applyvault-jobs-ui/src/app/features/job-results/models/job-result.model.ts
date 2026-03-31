@@ -28,5 +28,10 @@ export interface ScrapeResultPayload {
 export interface SavedJobResult {
   readonly id: string;
   readonly savedAt: string;
+  readonly isRejected: boolean;
   readonly payload: ScrapeResultPayload;
+}
+
+export interface UpdateJobDescriptionRequest {
+  readonly description: string;
 }

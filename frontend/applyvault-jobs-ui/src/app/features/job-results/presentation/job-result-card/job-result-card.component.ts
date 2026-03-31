@@ -1,0 +1,16 @@
+import { DatePipe } from '@angular/common';
+import { Component, input, output } from '@angular/core';
+
+import { JobResultViewModel } from '../../models/job-result-view.model';
+
+@Component({
+  selector: 'app-job-result-card',
+  imports: [DatePipe],
+  templateUrl: './job-result-card.component.html',
+  styleUrl: './job-result-card.component.scss'
+})
+export class JobResultCardComponent {
+  readonly job = input.required<JobResultViewModel>();
+  readonly selected = input(false);
+  readonly choose = output<string>();
+}

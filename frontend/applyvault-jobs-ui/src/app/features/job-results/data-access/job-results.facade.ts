@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
+import { SavedJobResult } from '../models/job-result.model';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
 import { JobResultsApiService } from './job-results-api.service';
 
@@ -10,9 +11,11 @@ export class JobResultsFacade {
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly updateError = signal<string | null>(null);
   readonly searchTerm = signal('');
   readonly selectedSource = signal('all');
   readonly selectedId = signal<string | null>(null);
+  readonly updatingResultId = signal<string | null>(null);
   readonly results = signal<readonly JobResultViewModel[]>([]);
 
   readonly availableSources = computed(() =>
@@ -49,13 +52,13 @@ export class JobResultsFacade {
     const results = this.results();
     const companyCount = new Set(results.map((result) => result.company)).size;
     const sourceCount = new Set(results.map((result) => result.sourceHostname)).size;
-    const remoteCount = results.filter((result) => /remote|hybrid/i.test(result.location)).length;
+    const rejectedCount = results.filter((result) => result.isRejected).length;
 
     return {
       totalResults: results.length,
       companies: companyCount,
       sources: sourceCount,
-      remoteFriendly: remoteCount
+      rejected: rejectedCount
     };
   });
 
@@ -88,6 +91,7 @@ export class JobResultsFacade {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.updateError.set(null);
 
     this.apiService.getAll().subscribe({
       next: (results) => {
@@ -121,5 +125,66 @@ export class JobResultsFacade {
 
   select(id: string): void {
     this.selectedId.set(id);
+  }
+
+  toggleRejected(id: string): void {
+    const currentResult = this.results().find((result) => result.id === id);
+
+    if (!currentResult || this.updatingResultId() === id) {
+      return;
+    }
+
+    this.updatingResultId.set(id);
+    this.updateError.set(null);
+
+    this.apiService.setRejected(id, !currentResult.isRejected).subscribe({
+      next: (updatedResult) => {
+        this.results.update((results) => this.replaceResult(results, updatedResult));
+        this.updateError.set(null);
+        this.updatingResultId.set(null);
+      },
+      error: () => {
+        this.updateError.set('The rejection state could not be updated. Please try again.');
+        this.updatingResultId.set(null);
+      }
+    });
+  }
+
+  updateDescription(id: string, description: string): void {
+    const currentResult = this.results().find((result) => result.id === id);
+    const normalizedDescription = description.trim();
+
+    if (
+      !currentResult ||
+      this.updatingResultId() === id ||
+      normalizedDescription.length === 0 ||
+      normalizedDescription === currentResult.description.trim()
+    ) {
+      return;
+    }
+
+    this.updatingResultId.set(id);
+    this.updateError.set(null);
+
+    this.apiService.updateDescription(id, { description: normalizedDescription }).subscribe({
+      next: (updatedResult) => {
+        this.results.update((results) => this.replaceResult(results, updatedResult));
+        this.updateError.set(null);
+        this.updatingResultId.set(null);
+      },
+      error: () => {
+        this.updateError.set('The description could not be updated. Please try again.');
+        this.updatingResultId.set(null);
+      }
+    });
+  }
+
+  private replaceResult(
+    results: readonly JobResultViewModel[],
+    updatedResult: SavedJobResult
+  ): readonly JobResultViewModel[] {
+    const updatedViewModel = mapSavedJobResultToViewModel(updatedResult);
+
+    return results.map((result) => (result.id === updatedViewModel.id ? updatedViewModel : result));
   }
 }

@@ -8,10 +8,11 @@
       </div>
 
       <div class="job-detail__actions">
-        <app-job-result-interview-date-editor
-          [interviewDate]="selectedJob.interviewDate"
+        <app-job-result-interview-event-editor
+          [interviewEvent]="selectedJob.interviewEvent"
           [updating]="updating()"
-          (save)="saveInterviewDate.emit({ id: selectedJob.id, interviewDate: $event })" />
+          (save)="submitInterviewEvent($event)"
+          (clear)="clearScheduledInterview()" />
         <button
           type="button"
           class="job-detail__reject"
@@ -35,14 +36,82 @@
       @if (selectedJob.isRejected) {
         <span class="job-detail__chip job-detail__chip--rejected">Rejected</span>
       }
-      @if (selectedJob.interviewDate) {
+      @if (selectedJob.interviewEvent) {
         <span class="job-detail__chip job-detail__chip--interview">
-          Interview {{ formatInterviewDate(selectedJob.interviewDate) }}
+          Interview {{ formatInterviewEventWindow(selectedJob.interviewEvent) }}
         </span>
       }
       <span>{{ selectedJob.location }}</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
     </div>
+
+    <article class="job-detail__description">
+      <div class="job-detail__section-header">
+        <div>
+          <h3>Calendar connections</h3>
+          <p class="job-detail__muted">Connect a provider, then push the saved interview event into your calendar.</p>
+        </div>
+      </div>
+
+      <div class="job-detail__calendar-actions">
+        <button
+          type="button"
+          class="job-detail__primary-action"
+          [disabled]="connectingProvider() === 'google'"
+          (click)="connectCalendar.emit('google')">
+          {{ connectingProvider() === 'google' ? 'Connecting Google...' : 'Connect Google' }}
+        </button>
+        <button
+          type="button"
+          class="job-detail__primary-action"
+          [disabled]="connectingProvider() === 'microsoft'"
+          (click)="connectCalendar.emit('microsoft')">
+          {{ connectingProvider() === 'microsoft' ? 'Connecting Microsoft...' : 'Connect Microsoft' }}
+        </button>
+      </div>
+
+      @if (connectionError(); as connectionErrorMessage) {
+        <p class="job-detail__validation-message">{{ connectionErrorMessage }}</p>
+      }
+
+      @if (connectionsLoading()) {
+        <p class="job-detail__muted">Loading connected providers...</p>
+      } @else if (connections().length === 0) {
+        <p class="job-detail__muted">No providers connected yet.</p>
+      } @else {
+        <ul class="job-detail__calendar-list">
+          @for (connection of connections(); track connection.id) {
+            <li>
+              <div>
+                <strong>{{ connection.provider | titlecase }}</strong>
+                <p>{{ connection.displayName || connection.email || connection.providerUserId }}</p>
+              </div>
+              <div class="job-detail__calendar-row-actions">
+                <button
+                  type="button"
+                  class="job-detail__secondary-action"
+                  [disabled]="!selectedJob.interviewEvent || syncingCalendarAccountId() === connection.id"
+                  (click)="syncCalendar(connection.id)">
+                  {{
+                    syncingCalendarAccountId() === connection.id
+                      ? 'Syncing...'
+                      : selectedJob.interviewEvent
+                        ? 'Create event'
+                        : 'Save timing first'
+                  }}
+                </button>
+                <button
+                  type="button"
+                  class="job-detail__secondary-action"
+                  (click)="disconnectCalendar.emit(connection.id)">
+                  Disconnect
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </article>
 
     <div class="job-detail__grid">
       <article>

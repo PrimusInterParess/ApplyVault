@@ -1,0 +1,54 @@
+<main class="auth-page">
+  <section class="auth-page__card">
+    <p class="auth-page__eyebrow">ApplyVault</p>
+    <h1>{{ mode() === 'login' ? 'Sign in to your dashboard' : 'Create your account' }}</h1>
+    <p class="auth-page__subtitle">
+      Authentication is required before you can link calendar providers and create interview events.
+    </p>
+
+    <div class="auth-page__mode-switch">
+      <button
+        type="button"
+        [class.auth-page__mode-button--active]="mode() === 'login'"
+        (click)="switchMode('login')">
+        Sign in
+      </button>
+      <button
+        type="button"
+        [class.auth-page__mode-button--active]="mode() === 'signup'"
+        (click)="switchMode('signup')">
+        Sign up
+      </button>
+    </div>
+
+    <label class="auth-page__field">
+      <span>Email</span>
+      <input
+        type="email"
+        [value]="email()"
+        autocomplete="email"
+        (input)="updateEmail(($any($event.target)).value)" />
+    </label>
+
+    <label class="auth-page__field">
+      <span>Password</span>
+      <input
+        type="password"
+        [value]="password()"
+        autocomplete="current-password"
+        (input)="updatePassword(($any($event.target)).value)" />
+    </label>
+
+    @if (infoMessage(); as infoMessage) {
+      <p class="auth-page__message">{{ infoMessage }}</p>
+    }
+
+    @if (auth.error(); as errorMessage) {
+      <p class="auth-page__message auth-page__message--error">{{ errorMessage }}</p>
+    }
+
+    <button type="button" class="auth-page__submit" [disabled]="auth.loading()" (click)="submit()">
+      {{ auth.loading() ? 'Working...' : mode() === 'login' ? 'Sign in' : 'Create account' }}
+    </button>
+  </section>
+</main>

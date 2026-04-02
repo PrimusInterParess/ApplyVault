@@ -1,4 +1,4 @@
-import { HiringManagerContact } from './job-result.model';
+import { CalendarEventLink, HiringManagerContact, InterviewEvent } from './job-result.model';
 
 export interface JobResultViewModel {
   readonly id: string;
@@ -6,6 +6,8 @@ export interface JobResultViewModel {
   readonly extractedAt: string;
   readonly isRejected: boolean;
   readonly interviewDate: string | null;
+  readonly interviewEvent: InterviewEvent | null;
+  readonly calendarEvents: readonly CalendarEventLink[];
   readonly title: string;
   readonly company: string;
   readonly location: string;

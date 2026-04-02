@@ -1,0 +1,49 @@
+@if (!editing()) {
+  <div class="interview-event-editor__summary">
+    <button type="button" class="interview-event-editor__primary" [disabled]="updating()" (click)="beginEdit()">
+      {{ interviewEvent() ? 'Edit interview event' : 'Schedule interview event' }}
+    </button>
+
+    @if (interviewEvent()) {
+      <button type="button" class="interview-event-editor__secondary" [disabled]="updating()" (click)="clearEvent()">
+        Clear
+      </button>
+    }
+  </div>
+} @else {
+  <div class="interview-event-editor__form">
+    <label>
+      <span>Start</span>
+      <input type="datetime-local" [value]="start()" (input)="updateStart(($any($event.target)).value)" />
+    </label>
+
+    <label>
+      <span>End</span>
+      <input type="datetime-local" [value]="end()" (input)="updateEnd(($any($event.target)).value)" />
+    </label>
+
+    <label>
+      <span>Time zone</span>
+      <input type="text" [value]="timeZone()" (input)="updateTimeZone(($any($event.target)).value)" />
+    </label>
+
+    <label>
+      <span>Location</span>
+      <input type="text" [value]="location()" (input)="updateLocation(($any($event.target)).value)" />
+    </label>
+
+    <label>
+      <span>Notes</span>
+      <textarea rows="4" [value]="notes()" (input)="updateNotes(($any($event.target)).value)"></textarea>
+    </label>
+
+    <div class="interview-event-editor__actions">
+      <button type="button" class="interview-event-editor__primary" [disabled]="!canSave()" (click)="submit()">
+        Save event
+      </button>
+      <button type="button" class="interview-event-editor__secondary" [disabled]="updating()" (click)="cancelEdit()">
+        Cancel
+      </button>
+    </div>
+  </div>
+}

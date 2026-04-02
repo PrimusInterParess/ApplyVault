@@ -1,35 +1,45 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { marked } from 'marked';
 
 import { JobResultViewModel } from '../../models/job-result-view.model';
-import { formatInterviewDate } from '../../utils/interview-date';
-import { JobResultInterviewDateEditorComponent } from '../job-result-interview-date-editor/job-result-interview-date-editor.component';
+import { ConnectedCalendarAccount, UpdateInterviewEventRequest } from '../../models/job-result.model';
+import { formatInterviewEventWindow } from '../../utils/interview-event';
+import { JobResultInterviewEventEditorComponent } from '../job-result-interview-event-editor/job-result-interview-event-editor.component';
 
 export interface JobDescriptionSaveEvent {
   readonly id: string;
   readonly description: string;
 }
 
-export interface JobInterviewDateSaveEvent {
+export interface JobInterviewEventSaveEvent {
   readonly id: string;
-  readonly interviewDate: string | null;
+  readonly request: UpdateInterviewEventRequest;
 }
 
 @Component({
   selector: 'app-job-result-detail',
   standalone: true,
-  imports: [DatePipe, JobResultInterviewDateEditorComponent],
+  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent],
   templateUrl: './job-result-detail.component.html',
   styleUrl: './job-result-detail.component.scss'
 })
 export class JobResultDetailComponent {
   readonly job = input<JobResultViewModel | null>(null);
   readonly updating = input(false);
+  readonly connections = input<readonly ConnectedCalendarAccount[]>([]);
+  readonly connectionsLoading = input(false);
+  readonly connectionError = input<string | null>(null);
+  readonly syncingCalendarAccountId = input<string | null>(null);
+  readonly connectingProvider = input<string | null>(null);
   readonly toggleRejected = output<string>();
   readonly deleteResult = output<string>();
   readonly saveDescription = output<JobDescriptionSaveEvent>();
-  readonly saveInterviewDate = output<JobInterviewDateSaveEvent>();
+  readonly saveInterviewEvent = output<JobInterviewEventSaveEvent>();
+  readonly clearInterviewEvent = output<string>();
+  readonly connectCalendar = output<string>();
+  readonly disconnectCalendar = output<string>();
+  readonly createCalendarEvent = output<{ id: string; connectedAccountId: string }>();
   readonly editingDescription = signal(false);
   readonly descriptionDraft = signal('');
   readonly normalizedDraftDescription = computed(() => this.descriptionDraft().trim());
@@ -61,7 +71,7 @@ export class JobResultDetailComponent {
 
     return typeof rendered === 'string' ? rendered : '';
   });
-  readonly formatInterviewDate = formatInterviewDate;
+  readonly formatInterviewEventWindow = formatInterviewEventWindow;
 
   constructor() {
     effect(() => {
@@ -103,6 +113,42 @@ export class JobResultDetailComponent {
     this.saveDescription.emit({
       id: job.id,
       description: this.normalizedDraftDescription()
+    });
+  }
+
+  submitInterviewEvent(request: UpdateInterviewEventRequest): void {
+    const job = this.job();
+
+    if (!job) {
+      return;
+    }
+
+    this.saveInterviewEvent.emit({
+      id: job.id,
+      request
+    });
+  }
+
+  clearScheduledInterview(): void {
+    const job = this.job();
+
+    if (!job) {
+      return;
+    }
+
+    this.clearInterviewEvent.emit(job.id);
+  }
+
+  syncCalendar(connectedAccountId: string): void {
+    const job = this.job();
+
+    if (!job?.interviewEvent) {
+      return;
+    }
+
+    this.createCalendarEvent.emit({
+      id: job.id,
+      connectedAccountId
     });
   }
 }

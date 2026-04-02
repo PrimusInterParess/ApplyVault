@@ -4,6 +4,8 @@ public sealed class ScrapeResultEntity
 {
     public Guid Id { get; set; }
 
+    public Guid? UserId { get; set; }
+
     public DateTimeOffset SavedAt { get; set; }
 
     public bool IsRejected { get; set; }
@@ -38,7 +40,13 @@ public sealed class ScrapeResultEntity
 
     public string? HiringManagerName { get; set; }
 
+    public AppUserEntity? User { get; set; }
+
+    public InterviewEventEntity? InterviewEvent { get; set; }
+
     public List<ScrapeResultContactEntity> HiringManagerContacts { get; set; } = [];
+
+    public List<CalendarEventLinkEntity> CalendarEventLinks { get; set; } = [];
 }
 
 public sealed class ScrapeResultContactEntity
@@ -52,4 +60,92 @@ public sealed class ScrapeResultContactEntity
     public required string Value { get; set; }
 
     public string? Label { get; set; }
+}
+
+public sealed class AppUserEntity
+{
+    public Guid Id { get; set; }
+
+    public required string SupabaseUserId { get; set; }
+
+    public string? Email { get; set; }
+
+    public string? DisplayName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset LastSeenAt { get; set; }
+
+    public List<ScrapeResultEntity> ScrapeResults { get; set; } = [];
+
+    public List<ConnectedAccountEntity> ConnectedAccounts { get; set; } = [];
+}
+
+public sealed class ConnectedAccountEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public required string Provider { get; set; }
+
+    public required string ProviderUserId { get; set; }
+
+    public string? Email { get; set; }
+
+    public string? DisplayName { get; set; }
+
+    public required string AccessToken { get; set; }
+
+    public string? RefreshToken { get; set; }
+
+    public DateTimeOffset? ExpiresAt { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    public AppUserEntity? User { get; set; }
+
+    public List<CalendarEventLinkEntity> CalendarEventLinks { get; set; } = [];
+}
+
+public sealed class InterviewEventEntity
+{
+    public Guid ScrapeResultId { get; set; }
+
+    public DateTimeOffset StartUtc { get; set; }
+
+    public DateTimeOffset EndUtc { get; set; }
+
+    public required string TimeZone { get; set; }
+
+    public string? Location { get; set; }
+
+    public string? Notes { get; set; }
+
+    public ScrapeResultEntity? ScrapeResult { get; set; }
+}
+
+public sealed class CalendarEventLinkEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid ScrapeResultId { get; set; }
+
+    public Guid ConnectedAccountId { get; set; }
+
+    public required string Provider { get; set; }
+
+    public required string ExternalEventId { get; set; }
+
+    public string? ExternalEventUrl { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    public ScrapeResultEntity? ScrapeResult { get; set; }
+
+    public ConnectedAccountEntity? ConnectedAccount { get; set; }
 }

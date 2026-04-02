@@ -8,9 +8,10 @@ public sealed class ScrapeResultSaveService(
 {
     public async Task<SavedScrapeResult> SaveAsync(
         ScrapeResultDto request,
+        Guid? userId,
         CancellationToken cancellationToken = default)
     {
         var enrichedRequest = await enrichmentService.EnrichIfNeededAsync(request, cancellationToken);
-        return await store.SaveAsync(enrichedRequest, cancellationToken);
+        return await store.SaveAsync(enrichedRequest, userId, cancellationToken);
     }
 }

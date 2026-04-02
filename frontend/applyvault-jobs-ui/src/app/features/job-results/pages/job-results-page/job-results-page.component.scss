@@ -41,6 +41,11 @@ h1 {
   line-height: 1.75;
 }
 
+.jobs-page__session {
+  margin: 1rem 0 0;
+  color: rgba(191, 219, 254, 0.9);
+}
+
 .jobs-page__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -76,10 +81,11 @@ h1 {
 }
 
 .jobs-page__toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr) auto;
+  display: flex;
   gap: 1rem;
-  align-items: end;
+  justify-content: flex-end;
+  gap: 1rem;
+  align-items: center;
   padding: 1rem;
   margin-top: 1.5rem;
 }

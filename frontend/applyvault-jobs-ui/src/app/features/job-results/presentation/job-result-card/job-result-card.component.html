@@ -12,9 +12,9 @@
     <span class="job-card__status">Rejected</span>
   }
 
-  @if (job().interviewDate) {
+  @if (job().interviewEvent) {
     <span class="job-card__status job-card__status--interview">
-      Interview {{ formatInterviewDate(job().interviewDate) }}
+      Interview {{ formatInterviewEventWindow(job().interviewEvent) }}
     </span>
   }
 

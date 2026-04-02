@@ -7,37 +7,49 @@ namespace ApplyVault.Api.Services;
 public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : IScrapeResultStore
 {
     public async Task<IReadOnlyCollection<SavedScrapeResult>> GetAllAsync(
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
         var entities = await dbContext
             .ScrapeResults
             .AsNoTracking()
-            .Where((result) => !result.IsDeleted)
+            .Where((result) => !result.IsDeleted && (result.UserId == userId || result.UserId == null))
             .Include((result) => result.HiringManagerContacts)
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
             .OrderBy((result) => result.SavedAt)
             .ToArrayAsync(cancellationToken);
 
         return entities.Select(MapToSavedResult).ToArray();
     }
 
-    public async Task<SavedScrapeResult?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<SavedScrapeResult?> GetByIdAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
         var entity = await dbContext
             .ScrapeResults
             .AsNoTracking()
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
 
         return entity is null ? null : MapToSavedResult(entity);
     }
 
     public async Task<SavedScrapeResult> SaveAsync(
         ScrapeResultDto result,
+        Guid? userId,
         CancellationToken cancellationToken = default)
     {
         var entity = new ScrapeResultEntity
         {
             Id = Guid.NewGuid(),
+            UserId = userId,
             SavedAt = DateTimeOffset.UtcNow,
             IsRejected = false,
             IsDeleted = false,
@@ -72,13 +84,18 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
 
     public async Task<SavedScrapeResult?> SetRejectedAsync(
         Guid id,
+        Guid userId,
         bool isRejected,
         CancellationToken cancellationToken = default)
     {
         var entity = await dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
 
         if (entity is null)
         {
@@ -93,13 +110,18 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
 
     public async Task<SavedScrapeResult?> UpdateDescriptionAsync(
         Guid id,
+        Guid userId,
         string description,
         CancellationToken cancellationToken = default)
     {
         var entity = await dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
 
         if (entity is null)
         {
@@ -112,34 +134,81 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         return MapToSavedResult(entity);
     }
 
-    public async Task<SavedScrapeResult?> UpdateInterviewDateAsync(
+    public async Task<SavedScrapeResult?> UpsertInterviewEventAsync(
         Guid id,
-        DateOnly? interviewDate,
+        Guid userId,
+        UpdateInterviewEventRequest request,
         CancellationToken cancellationToken = default)
     {
         var entity = await dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
 
         if (entity is null)
         {
             return null;
         }
 
-        entity.InterviewDate = interviewDate;
+        entity.InterviewDate = DateOnly.FromDateTime(request.StartUtc.UtcDateTime);
+        entity.InterviewEvent ??= new InterviewEventEntity
+        {
+            ScrapeResultId = entity.Id,
+            TimeZone = request.TimeZone
+        };
+        entity.InterviewEvent.StartUtc = request.StartUtc.ToUniversalTime();
+        entity.InterviewEvent.EndUtc = request.EndUtc.ToUniversalTime();
+        entity.InterviewEvent.TimeZone = request.TimeZone.Trim();
+        entity.InterviewEvent.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
+        entity.InterviewEvent.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
     }
 
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<SavedScrapeResult?> ClearInterviewEventAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await dbContext
+            .ScrapeResults
+            .Include((result) => result.HiringManagerContacts)
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.InterviewDate = null;
+
+        if (entity.InterviewEvent is not null)
+        {
+            dbContext.InterviewEvents.Remove(entity.InterviewEvent);
+            entity.InterviewEvent = null;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return MapToSavedResult(entity);
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
         var entity = await dbContext
             .ScrapeResults
             .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
-        if (entity is null)
+        if (entity is null || (entity.UserId != userId && entity.UserId is not null))
         {
             return false;
         }
@@ -175,6 +244,34 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                         contact.Label))
                     .ToArray()));
 
-        return new SavedScrapeResult(entity.Id, entity.SavedAt, entity.IsRejected, entity.InterviewDate, payload);
+        var interviewEvent = entity.InterviewEvent is null
+            ? null
+            : new InterviewEventDto(
+                entity.InterviewEvent.StartUtc,
+                entity.InterviewEvent.EndUtc,
+                entity.InterviewEvent.TimeZone,
+                entity.InterviewEvent.Location,
+                entity.InterviewEvent.Notes);
+
+        var calendarEvents = entity.CalendarEventLinks
+            .OrderBy((link) => link.CreatedAt)
+            .Select((link) => new CalendarEventLinkDto(
+                link.Id,
+                link.ConnectedAccountId,
+                link.Provider,
+                link.ExternalEventId,
+                link.ExternalEventUrl,
+                link.CreatedAt,
+                link.UpdatedAt))
+            .ToArray();
+
+        return new SavedScrapeResult(
+            entity.Id,
+            entity.SavedAt,
+            entity.IsRejected,
+            entity.InterviewDate,
+            interviewEvent,
+            calendarEvents,
+            payload);
     }
 }

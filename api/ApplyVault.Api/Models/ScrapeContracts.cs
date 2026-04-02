@@ -32,6 +32,8 @@ public sealed record SavedScrapeResult(
     DateTimeOffset SavedAt,
     bool IsRejected,
     DateOnly? InterviewDate,
+    InterviewEventDto? InterviewEvent,
+    IReadOnlyList<CalendarEventLinkDto> CalendarEvents,
     ScrapeResultDto Payload
 );
 
@@ -50,4 +52,60 @@ public sealed record UpdateScrapeResultDescriptionRequest(
 
 public sealed record UpdateScrapeResultInterviewDateRequest(
     DateOnly? InterviewDate
+);
+
+public sealed record InterviewEventDto(
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    string TimeZone,
+    string? Location,
+    string? Notes
+);
+
+public sealed record UpdateInterviewEventRequest(
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    string TimeZone,
+    string? Location,
+    string? Notes
+);
+
+public sealed record CalendarEventLinkDto(
+    Guid Id,
+    Guid ConnectedAccountId,
+    string Provider,
+    string ExternalEventId,
+    string? ExternalEventUrl,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt
+);
+
+public sealed record ConnectedCalendarAccountDto(
+    Guid Id,
+    string Provider,
+    string ProviderUserId,
+    string? Email,
+    string? DisplayName,
+    DateTimeOffset? ExpiresAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt
+);
+
+public sealed record CurrentUserDto(
+    Guid Id,
+    string SupabaseUserId,
+    string? Email,
+    string? DisplayName
+);
+
+public sealed record CalendarAuthorizationStartRequest(
+    string? ReturnUrl
+);
+
+public sealed record CalendarAuthorizationStartResponse(
+    string AuthorizationUrl
+);
+
+public sealed record CreateCalendarEventRequest(
+    Guid ConnectedAccountId
 );

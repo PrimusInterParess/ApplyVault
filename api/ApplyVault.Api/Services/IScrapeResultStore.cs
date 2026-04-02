@@ -4,15 +4,23 @@ namespace ApplyVault.Api.Services;
 
 public interface IScrapeResultStore
 {
-    IReadOnlyCollection<SavedScrapeResult> GetAll();
+    Task<IReadOnlyCollection<SavedScrapeResult>> GetAllAsync(CancellationToken cancellationToken = default);
 
-    SavedScrapeResult? GetById(Guid id);
+    Task<SavedScrapeResult?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    SavedScrapeResult Save(ScrapeResultDto result);
+    Task<SavedScrapeResult> SaveAsync(ScrapeResultDto result, CancellationToken cancellationToken = default);
 
-    SavedScrapeResult? SetRejected(Guid id, bool isRejected);
+    Task<SavedScrapeResult?> SetRejectedAsync(Guid id, bool isRejected, CancellationToken cancellationToken = default);
 
-    SavedScrapeResult? UpdateDescription(Guid id, string description);
+    Task<SavedScrapeResult?> UpdateDescriptionAsync(
+        Guid id,
+        string description,
+        CancellationToken cancellationToken = default);
 
-    bool Delete(Guid id);
+    Task<SavedScrapeResult?> UpdateInterviewDateAsync(
+        Guid id,
+        DateOnly? interviewDate,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

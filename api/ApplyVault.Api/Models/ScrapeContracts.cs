@@ -31,6 +31,7 @@ public sealed record SavedScrapeResult(
     Guid Id,
     DateTimeOffset SavedAt,
     bool IsRejected,
+    DateOnly? InterviewDate,
     ScrapeResultDto Payload
 );
 
@@ -45,4 +46,8 @@ public sealed record UpdateScrapeResultRejectionRequest(
 
 public sealed record UpdateScrapeResultDescriptionRequest(
     string Description
+);
+
+public sealed record UpdateScrapeResultInterviewDateRequest(
+    DateOnly? InterviewDate
 );

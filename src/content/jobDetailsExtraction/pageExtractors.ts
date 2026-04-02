@@ -3,6 +3,7 @@ import {
   COMPANY_LABELS,
   DESCRIPTION_LABELS,
   GENERIC_COMPANY_SELECTORS,
+  GENERIC_DESCRIPTION_SELECTORS,
   GENERIC_LOCATION_SELECTORS,
   GENERIC_TITLE_SELECTORS,
   HIRING_MANAGER_SELECTORS,
@@ -18,6 +19,7 @@ import {
   extractHiringManagerNameFromSection
 } from './contacts';
 import {
+  getBestGenericDescription,
   getDescriptionFromSection,
   getFirstMatchingDescription
 } from './description';
@@ -65,6 +67,26 @@ function isLinkedInJobDetailPage(documentRef: Document): boolean {
   return hasJobTitle && (hasDescription || hasHiringTeam);
 }
 
+function hasGenericJobSignals(documentRef: Document): boolean {
+  const normalizedPath = documentRef.location.pathname.toLowerCase().replace(/[-_/]+/g, ' ');
+
+  if (/\b(job|jobs|career|careers|position|vacanc(?:y|ies)|opening|opportunity|role)\b/.test(normalizedPath)) {
+    return true;
+  }
+
+  const hasTitle = Boolean(getFirstMatchingText(documentRef, GENERIC_TITLE_SELECTORS));
+  const hasDescription = Boolean(
+    documentRef.querySelector(GENERIC_DESCRIPTION_SELECTORS.join(', ')) ||
+      findSectionByHeading(documentRef, DESCRIPTION_LABELS)
+  );
+  const hasApplyAction = Array.from(documentRef.querySelectorAll('a, button')).some((element) => {
+    const text = getTextFromElement(element)?.toLowerCase();
+    return Boolean(text && /\b(apply|apply now|ansøg|ansog)\b/.test(text));
+  });
+
+  return hasTitle && (hasDescription || hasApplyAction);
+}
+
 export function detectPageType(
   documentRef: Document,
   jsonLdJobPosting?: JsonLdJobPosting
@@ -76,6 +98,10 @@ export function detectPageType(
   }
 
   if (jsonLdJobPosting) {
+    return 'job-posting';
+  }
+
+  if (hasGenericJobSignals(documentRef)) {
     return 'job-posting';
   }
 
@@ -215,7 +241,9 @@ export function extractGenericDetails(
     companyName: pickBestCandidate(companyCandidates),
     location: pickBestCandidate(locationCandidates),
     jobDescription:
-      getDescriptionFromSection(descriptionSection) ?? extractLabeledValue(textLines, DESCRIPTION_LABELS),
+      getBestGenericDescription(documentRef) ??
+      getDescriptionFromSection(descriptionSection) ??
+      extractLabeledValue(textLines, DESCRIPTION_LABELS),
     hiringManagerName: extractHiringManagerName(documentRef, textLines)
   };
 }

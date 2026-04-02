@@ -35,6 +35,7 @@ export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultV
     savedAt: result.savedAt,
     extractedAt: payload.extractedAt,
     isRejected: result.isRejected,
+    interviewDate: result.interviewDate,
     title,
     company,
     location,

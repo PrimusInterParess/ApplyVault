@@ -1,9 +1,15 @@
 import {
   DESCRIPTION_BLOCK_TAGS,
+  GENERIC_DESCRIPTION_SELECTORS,
   DESCRIPTION_SKIPPED_TAGS,
   SAFE_DESCRIPTION_LINK_PROTOCOLS
 } from './constants';
 import { getNormalizedText } from './shared';
+
+const DESCRIPTION_HINT_PATTERN =
+  /\b(job[-\s]?description|description|about the job|about the role|about this role|responsibilit(?:y|ies)|requirements|qualifications|what you'll do|what you will do)\b/i;
+const DESCRIPTION_EXCLUDED_PATTERN =
+  /\b(related jobs|similar jobs|recommended jobs|share|apply now|cookie|privacy|sign in|log in|create account|search jobs)\b/i;
 
 function escapeHtmlText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -356,15 +362,69 @@ export function getDescriptionFromElement(element: Element | null | undefined): 
 }
 
 export function getFirstMatchingDescription(documentRef: Document, selectors: string[]): string | undefined {
-  for (const selector of selectors) {
-    const description = getDescriptionFromElement(documentRef.querySelector(selector));
+  const bestCandidates = new Map<Element, { description: string; score: number }>();
 
-    if (description) {
-      return description;
+  for (const [selectorIndex, selector] of selectors.entries()) {
+    const elements = Array.from(documentRef.querySelectorAll(selector)).slice(0, 6);
+
+    for (const element of elements) {
+      const description = getDescriptionFromElement(element);
+
+      if (!description || description.length < 80) {
+        continue;
+      }
+
+      const elementMarkers = [
+        element.id,
+        element.className,
+        element.getAttribute('data-test'),
+        element.getAttribute('data-qa'),
+        element.getAttribute('itemprop')
+      ]
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .join(' ');
+      const headingText = getNormalizedText(
+        element.querySelector('h1, h2, h3, h4, h5, h6, strong, summary')?.textContent
+      );
+      let score = Math.min(description.length, 6000) / 10 + Math.max(0, 220 - selectorIndex * 14);
+
+      if (element.matches('[itemprop="description"], article, main, section, [role="main"]')) {
+        score += 90;
+      }
+
+      if (DESCRIPTION_HINT_PATTERN.test(elementMarkers)) {
+        score += 180;
+      }
+
+      if (headingText && DESCRIPTION_HINT_PATTERN.test(headingText)) {
+        score += 140;
+      }
+
+      if (
+        /\b(responsibilit(?:y|ies)|requirements|qualifications|benefits|experience|about the role)\b/i.test(
+          description.slice(0, 1200)
+        )
+      ) {
+        score += 80;
+      }
+
+      if (
+        DESCRIPTION_EXCLUDED_PATTERN.test(elementMarkers) ||
+        (headingText && DESCRIPTION_EXCLUDED_PATTERN.test(headingText)) ||
+        /\b(cookie|privacy|sign in|log in|create account)\b/i.test(description.slice(0, 400))
+      ) {
+        score -= 260;
+      }
+
+      const currentBest = bestCandidates.get(element);
+
+      if (!currentBest || score > currentBest.score) {
+        bestCandidates.set(element, { description, score });
+      }
     }
   }
 
-  return undefined;
+  return Array.from(bestCandidates.values()).sort((left, right) => right.score - left.score)[0]?.description;
 }
 
 export function getDescriptionFromSection(section: Element | undefined): string | undefined {
@@ -373,4 +433,8 @@ export function getDescriptionFromSection(section: Element | undefined): string 
   }
 
   return getDescriptionFromElement(section);
+}
+
+export function getBestGenericDescription(documentRef: Document): string | undefined {
+  return getFirstMatchingDescription(documentRef, GENERIC_DESCRIPTION_SELECTORS);
 }

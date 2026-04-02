@@ -39,6 +39,11 @@
   text-transform: uppercase;
 }
 
+.job-card__status--interview {
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+}
+
 .job-card__eyebrow,
 .job-card__meta {
   display: flex;

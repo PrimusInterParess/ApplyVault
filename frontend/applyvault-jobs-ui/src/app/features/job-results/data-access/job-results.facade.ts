@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
 import { SavedJobResult } from '../models/job-result.model';
+import { isValidInterviewDate, normalizeInterviewDate } from '../utils/interview-date';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
 import { JobResultsApiService } from './job-results-api.service';
 
@@ -200,6 +201,37 @@ export class JobResultsFacade {
         this.updatingResultId.set(null);
       }
     });
+  }
+
+  updateInterviewDate(id: string, interviewDate: string | null): void {
+    const currentResult = this.results().find((result) => result.id === id);
+    const normalizedInterviewDate = normalizeInterviewDate(interviewDate);
+
+    if (
+      !currentResult ||
+      this.updatingResultId() === id ||
+      !isValidInterviewDate(normalizedInterviewDate) ||
+      normalizedInterviewDate === currentResult.interviewDate
+    ) {
+      return;
+    }
+
+    this.updatingResultId.set(id);
+    this.updateError.set(null);
+
+    this.apiService
+      .updateInterviewDate(id, { interviewDate: normalizedInterviewDate })
+      .subscribe({
+        next: (updatedResult) => {
+          this.results.update((results) => this.replaceResult(results, updatedResult));
+          this.updateError.set(null);
+          this.updatingResultId.set(null);
+        },
+        error: () => {
+          this.updateError.set('The interview date could not be updated. Please try again.');
+          this.updatingResultId.set(null);
+        }
+      });
   }
 
   private replaceResult(

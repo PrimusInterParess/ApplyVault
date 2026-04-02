@@ -14,7 +14,7 @@
           <div>
             <h1 class="popup__title">Capture and curate job details fast.</h1>
             <p class="popup__description">
-              Scrape the active tab, review the structured result, and save a cleaner record into ApplyVault.
+              Extract the active tab, review the structured result, and save a cleaner record into ApplyVault.
             </p>
           </div>
           <div class="popup__badge">Chrome companion</div>
@@ -27,13 +27,18 @@
             <p class="popup__panel-eyebrow">Workflow</p>
             <h2 class="popup__section-title">Extract the current page</h2>
           </div>
-          <button id="scrape-button" class="popup__button" type="button">
-            Scrape current page
-          </button>
+          <div class="popup__actions">
+            <button id="renew-button" class="popup__button popup__button--secondary" type="button" disabled>
+              Extract again
+            </button>
+            <button id="scrape-button" class="popup__button" type="button">
+              Extract current page
+            </button>
+          </div>
         </div>
 
         <p id="status" class="popup__status" aria-live="polite">
-          Ready to scrape the active tab.
+          Ready to extract the active tab.
         </p>
       </section>
 
@@ -48,8 +53,8 @@
 
         <dl class="popup__details">
           <div class="popup__detail">
-            <dt>Scraped at</dt>
-            <dd><input id="scraped-at" class="popup__field" type="text" placeholder="Not scraped yet." /></dd>
+            <dt>Captured at</dt>
+            <dd><input id="scraped-at" class="popup__field" type="text" placeholder="Not captured yet." /></dd>
           </div>
           <div class="popup__detail">
             <dt>Source</dt>
@@ -117,8 +122,8 @@
       <section class="popup__panel">
         <div class="popup__panel-header popup__panel-header--stacked">
           <div>
-            <p class="popup__panel-eyebrow">Raw scrape</p>
-            <label class="popup__label popup__label--section" for="scraped-text">Scraped text</label>
+            <p class="popup__panel-eyebrow">Page text</p>
+            <label class="popup__label popup__label--section" for="scraped-text">Captured text</label>
           </div>
         </div>
         <textarea id="scraped-text" class="popup__textarea"></textarea>

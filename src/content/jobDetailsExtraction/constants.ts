@@ -147,6 +147,20 @@ export const GENERIC_LOCATION_SELECTORS = [
   'address'
 ];
 
+export const GENERIC_DESCRIPTION_SELECTORS = [
+  '[itemprop="description"]',
+  '[data-test*="description"]',
+  '[data-qa*="description"]',
+  '[class*="job-description"]',
+  '[class*="posting-description"]',
+  '[class*="description__content"]',
+  '[class*="description__text"]',
+  '[class*="job-details"] article',
+  '[role="main"] article',
+  'main article',
+  'article'
+];
+
 export const DESCRIPTION_SKIPPED_TAGS = new Set([
   'button',
   'canvas',

@@ -130,6 +130,11 @@ h3 {
   color: #fecaca !important;
 }
 
+.job-detail__chip--interview {
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #bfdbfe !important;
+}
+
 .job-detail__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

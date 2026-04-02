@@ -12,6 +12,12 @@
     <span class="job-card__status">Rejected</span>
   }
 
+  @if (job().interviewDate) {
+    <span class="job-card__status job-card__status--interview">
+      Interview {{ formatInterviewDate(job().interviewDate) }}
+    </span>
+  }
+
   <h3>{{ job().title }}</h3>
   <p class="job-card__company">{{ job().company }}</p>
 

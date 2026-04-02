@@ -8,6 +8,10 @@
       </div>
 
       <div class="job-detail__actions">
+        <app-job-result-interview-date-editor
+          [interviewDate]="selectedJob.interviewDate"
+          [updating]="updating()"
+          (save)="saveInterviewDate.emit({ id: selectedJob.id, interviewDate: $event })" />
         <button
           type="button"
           class="job-detail__reject"
@@ -30,6 +34,11 @@
     <div class="job-detail__chips">
       @if (selectedJob.isRejected) {
         <span class="job-detail__chip job-detail__chip--rejected">Rejected</span>
+      }
+      @if (selectedJob.interviewDate) {
+        <span class="job-detail__chip job-detail__chip--interview">
+          Interview {{ formatInterviewDate(selectedJob.interviewDate) }}
+        </span>
       }
       <span>{{ selectedJob.location }}</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>

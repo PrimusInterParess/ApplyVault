@@ -29,9 +29,14 @@ export interface SavedJobResult {
   readonly id: string;
   readonly savedAt: string;
   readonly isRejected: boolean;
+  readonly interviewDate: string | null;
   readonly payload: ScrapeResultPayload;
 }
 
 export interface UpdateJobDescriptionRequest {
   readonly description: string;
+}
+
+export interface UpdateJobInterviewDateRequest {
+  readonly interviewDate: string | null;
 }

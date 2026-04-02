@@ -7,6 +7,7 @@ import { JobResultDetailComponent } from '../../presentation/job-result-detail/j
 
 @Component({
   selector: 'app-job-results-page',
+  standalone: true,
   imports: [CommonModule, JobResultCardComponent, JobResultDetailComponent],
   templateUrl: './job-results-page.component.html',
   styleUrl: './job-results-page.component.scss'

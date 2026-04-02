@@ -1,0 +1,52 @@
+<div class="interview-date">
+  @if (interviewDate()) {
+    <span class="interview-date__pill">Interview {{ formatInterviewDate(interviewDate()) }}</span>
+  }
+
+  <button
+    type="button"
+    class="interview-date__secondary-action"
+    [disabled]="updating()"
+    (click)="beginEdit()">
+    {{ interviewDate() ? 'Reschedule interview' : 'Schedule interview' }}
+  </button>
+
+  @if (editing()) {
+    <div class="interview-date__popover">
+      <label class="interview-date__editor">
+        <span class="interview-date__label">Interview date</span>
+        <input
+          type="date"
+          [value]="draft()"
+          [disabled]="updating()"
+          (input)="updateDraft($event)" />
+      </label>
+
+      <div class="interview-date__popover-actions">
+        <button
+          type="button"
+          class="interview-date__primary-action"
+          [disabled]="!canSave()"
+          (click)="submit()">
+          Save date
+        </button>
+        <button
+          type="button"
+          class="interview-date__secondary-action"
+          [disabled]="updating()"
+          (click)="cancelEdit()">
+          Cancel
+        </button>
+        @if (interviewDate()) {
+          <button
+            type="button"
+            class="interview-date__secondary-action"
+            [disabled]="updating()"
+            (click)="clear()">
+            Clear date
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

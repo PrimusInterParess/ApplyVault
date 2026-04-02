@@ -49,13 +49,11 @@ function isTextNodeVisible(node: Text): boolean {
   return true;
 }
 
-export function extractVisibleText(documentRef: Document = document): ScrapeResult {
-  const root = documentRef.body;
+function getNormalizedRenderedText(root: HTMLElement): string {
+  return normalizeLines((root.innerText || '').replace(/\r/g, '').split('\n'));
+}
 
-  if (!root) {
-    throw new Error('This page does not have a readable document body.');
-  }
-
+function getNormalizedTreeWalkerText(documentRef: Document, root: HTMLElement): string {
   const walker = documentRef.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const collectedLines: string[] = [];
   let currentNode = walker.nextNode();
@@ -74,7 +72,32 @@ export function extractVisibleText(documentRef: Document = document): ScrapeResu
     currentNode = walker.nextNode();
   }
 
-  const text = normalizeLines(collectedLines);
+  return normalizeLines(collectedLines);
+}
+
+function pickBestPageText(renderedText: string, treeWalkerText: string): string {
+  if (!renderedText) {
+    return treeWalkerText;
+  }
+
+  if (!treeWalkerText) {
+    return renderedText;
+  }
+
+  const renderedScore = renderedText.length + renderedText.split('\n').length * 24;
+  const treeWalkerScore = treeWalkerText.length + treeWalkerText.split('\n').length * 24;
+
+  return renderedScore >= treeWalkerScore ? renderedText : treeWalkerText;
+}
+
+export function extractVisibleText(documentRef: Document = document): ScrapeResult {
+  const root = documentRef.body;
+
+  if (!root) {
+    throw new Error('This page does not have a readable document body.');
+  }
+
+  const text = pickBestPageText(getNormalizedRenderedText(root), getNormalizedTreeWalkerText(documentRef, root));
 
   if (!text) {
     throw new Error('No visible text was found on this page.');

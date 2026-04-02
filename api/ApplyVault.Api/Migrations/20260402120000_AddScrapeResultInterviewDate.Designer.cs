@@ -4,6 +4,7 @@ using ApplyVault.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApplyVault.Api.Migrations
 {
     [DbContext(typeof(ApplyVaultDbContext))]
-    partial class ApplyVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402120000_AddScrapeResultInterviewDate")]
+    partial class AddScrapeResultInterviewDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

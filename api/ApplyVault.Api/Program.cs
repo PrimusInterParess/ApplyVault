@@ -1,4 +1,5 @@
 using ApplyVault.Api.Data;
+using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +21,19 @@ builder.Services.AddDbContext<ApplyVaultDbContext>((options) =>
 {
     options.UseSqlServer(connectionString);
 });
+
+builder.Services
+    .AddOptions<GoogleAiOptions>()
+    .Bind(builder.Configuration.GetSection(GoogleAiOptions.SectionName));
+
+builder.Services
+    .AddOptions<ScrapeResultEnrichmentOptions>()
+    .Bind(builder.Configuration.GetSection(ScrapeResultEnrichmentOptions.SectionName));
+
+builder.Services.AddHttpClient<IScrapeResultAiClient, GoogleAiScrapeResultClient>();
 builder.Services.AddScoped<IScrapeResultStore, EfCoreScrapeResultStore>();
+builder.Services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
+builder.Services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
 
 var app = builder.Build();
 

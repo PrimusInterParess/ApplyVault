@@ -3,7 +3,7 @@ import {
   type ExtensionRequest,
   type ExtractPageTextResponse
 } from '../shared/contracts/messages';
-import { extractVisibleText } from './extractVisibleText';
+import { extractVisibleTextWithRetries } from './extractionRunner';
 
 function createErrorResponse(message: string): ExtractPageTextResponse {
   return {
@@ -18,18 +18,18 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
-    try {
-      const result = extractVisibleText(document);
-
-      sendResponse({
-        success: true,
-        data: result
+    void extractVisibleTextWithRetries(document)
+      .then((result) => {
+        sendResponse({
+          success: true,
+          data: result
+        });
+      })
+      .catch((error) => {
+        const messageText = error instanceof Error ? error.message : 'Text extraction failed.';
+        sendResponse(createErrorResponse(messageText));
       });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Text extraction failed.';
-      sendResponse(createErrorResponse(messageText));
-    }
 
-    return false;
+    return true;
   }
 );

@@ -5,6 +5,7 @@ export interface JobResultViewModel {
   readonly savedAt: string;
   readonly extractedAt: string;
   readonly isRejected: boolean;
+  readonly interviewDate: string | null;
   readonly title: string;
   readonly company: string;
   readonly location: string;

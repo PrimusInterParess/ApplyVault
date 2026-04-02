@@ -1,0 +1,108 @@
+:host {
+  position: relative;
+  display: inline-flex;
+}
+
+.interview-date {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.interview-date__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  font-weight: 700;
+}
+
+.interview-date__editor {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.interview-date__label {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.88rem;
+}
+
+.interview-date__editor input {
+  min-height: 44px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  font: inherit;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.84);
+  color: #f8fafc;
+}
+
+.interview-date__popover {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  right: 0;
+  z-index: 10;
+  min-width: 19rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
+  box-shadow: 0 20px 45px rgba(2, 6, 23, 0.45);
+}
+
+.interview-date__popover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.interview-date__primary-action,
+.interview-date__secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.interview-date__primary-action {
+  background: linear-gradient(135deg, #60a5fa, #38bdf8);
+  color: #020617;
+}
+
+.interview-date__secondary-action {
+  background: rgba(51, 65, 85, 0.82);
+  color: #e2e8f0;
+}
+
+.interview-date__primary-action:disabled,
+.interview-date__secondary-action:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+@media (max-width: 960px) {
+  :host {
+    position: static;
+  }
+
+  .interview-date {
+    flex-wrap: wrap;
+  }
+
+  .interview-date__popover {
+    position: static;
+    min-width: 0;
+    width: 100%;
+  }
+}

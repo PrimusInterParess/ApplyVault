@@ -4,6 +4,7 @@ dist/
 .angular/
 coverage/
 tmp/
+.tmp/
 out-tsc/
 bazel-out/
 .sass-cache/

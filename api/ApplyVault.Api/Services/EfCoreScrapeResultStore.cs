@@ -6,30 +6,34 @@ namespace ApplyVault.Api.Services;
 
 public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : IScrapeResultStore
 {
-    public IReadOnlyCollection<SavedScrapeResult> GetAll()
+    public async Task<IReadOnlyCollection<SavedScrapeResult>> GetAllAsync(
+        CancellationToken cancellationToken = default)
     {
-        return dbContext
+        var entities = await dbContext
             .ScrapeResults
             .AsNoTracking()
             .Where((result) => !result.IsDeleted)
             .Include((result) => result.HiringManagerContacts)
             .OrderBy((result) => result.SavedAt)
-            .Select(MapToSavedResult)
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
+
+        return entities.Select(MapToSavedResult).ToArray();
     }
 
-    public SavedScrapeResult? GetById(Guid id)
+    public async Task<SavedScrapeResult?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = dbContext
+        var entity = await dbContext
             .ScrapeResults
             .AsNoTracking()
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
+            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
         return entity is null ? null : MapToSavedResult(entity);
     }
 
-    public SavedScrapeResult Save(ScrapeResultDto result)
+    public async Task<SavedScrapeResult> SaveAsync(
+        ScrapeResultDto result,
+        CancellationToken cancellationToken = default)
     {
         var entity = new ScrapeResultEntity
         {
@@ -60,18 +64,21 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                 .ToList()
         };
 
-        dbContext.ScrapeResults.Add(entity);
-        dbContext.SaveChanges();
+        await dbContext.ScrapeResults.AddAsync(entity, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
     }
 
-    public SavedScrapeResult? SetRejected(Guid id, bool isRejected)
+    public async Task<SavedScrapeResult?> SetRejectedAsync(
+        Guid id,
+        bool isRejected,
+        CancellationToken cancellationToken = default)
     {
-        var entity = dbContext
+        var entity = await dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
+            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
         if (entity is null)
         {
@@ -79,17 +86,20 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         }
 
         entity.IsRejected = isRejected;
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
     }
 
-    public SavedScrapeResult? UpdateDescription(Guid id, string description)
+    public async Task<SavedScrapeResult?> UpdateDescriptionAsync(
+        Guid id,
+        string description,
+        CancellationToken cancellationToken = default)
     {
-        var entity = dbContext
+        var entity = await dbContext
             .ScrapeResults
             .Include((result) => result.HiringManagerContacts)
-            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
+            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
         if (entity is null)
         {
@@ -97,16 +107,37 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         }
 
         entity.JobDescription = description;
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
     }
 
-    public bool Delete(Guid id)
+    public async Task<SavedScrapeResult?> UpdateInterviewDateAsync(
+        Guid id,
+        DateOnly? interviewDate,
+        CancellationToken cancellationToken = default)
     {
-        var entity = dbContext
+        var entity = await dbContext
             .ScrapeResults
-            .SingleOrDefault((result) => result.Id == id && !result.IsDeleted);
+            .Include((result) => result.HiringManagerContacts)
+            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.InterviewDate = interviewDate;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return MapToSavedResult(entity);
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await dbContext
+            .ScrapeResults
+            .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
         if (entity is null)
         {
@@ -114,7 +145,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         }
 
         entity.IsDeleted = true;
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }
@@ -144,6 +175,6 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                         contact.Label))
                     .ToArray()));
 
-        return new SavedScrapeResult(entity.Id, entity.SavedAt, entity.IsRejected, payload);
+        return new SavedScrapeResult(entity.Id, entity.SavedAt, entity.IsRejected, entity.InterviewDate, payload);
     }
 }

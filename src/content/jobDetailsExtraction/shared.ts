@@ -104,6 +104,10 @@ export function splitMetadataText(value: string): string[] {
     .filter((part): part is string => Boolean(part));
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function extractLabeledValue(lines: string[], labels: string[]): string | undefined {
   const normalizedLabels = labels.map((label) => label.toLowerCase());
 
@@ -127,15 +131,51 @@ export function extractLabeledValue(lines: string[], labels: string[]): string |
           return inlineValue;
         }
       }
+
+      const inlinePattern = new RegExp(`^${escapeRegExp(label)}\\s*[-|:]\\s*(.+)$`, 'i');
+      const spacedPattern = new RegExp(`^${escapeRegExp(label)}\\s{2,}(.+)$`, 'i');
+      const inlineMatch = currentLine.match(inlinePattern) ?? currentLine.match(spacedPattern);
+      const inlineValue = getNormalizedText(inlineMatch?.[1]);
+
+      if (inlineValue) {
+        return inlineValue;
+      }
     }
   }
 
   return undefined;
 }
 
+function extractAdjacentStructuredValue(element: Element): string | undefined {
+  if (element.tagName === 'DT' || element.tagName === 'TH') {
+    return getTextFromElement(element.nextElementSibling);
+  }
+
+  const parentElement = element.parentElement;
+
+  if (!parentElement) {
+    return getTextFromElement(element.nextElementSibling);
+  }
+
+  const siblingElements = Array.from(parentElement.children);
+  const elementIndex = siblingElements.indexOf(element);
+
+  if (elementIndex >= 0) {
+    for (const sibling of siblingElements.slice(elementIndex + 1, elementIndex + 3)) {
+      const siblingText = getTextFromElement(sibling);
+
+      if (siblingText && siblingText !== getTextFromElement(element)) {
+        return siblingText;
+      }
+    }
+  }
+
+  return getTextFromElement(element.nextElementSibling);
+}
+
 export function extractLabeledValueFromElements(documentRef: Document, labels: string[]): string | undefined {
   const normalizedLabels = labels.map((label) => label.toLowerCase());
-  const elements = Array.from(documentRef.querySelectorAll('p, li, div, section, article'));
+  const elements = Array.from(documentRef.querySelectorAll('dt, th, strong, b, label, span, p, li, div, td'));
 
   for (const element of elements) {
     const text = getTextFromElement(element);
@@ -147,6 +187,16 @@ export function extractLabeledValueFromElements(documentRef: Document, labels: s
     const normalizedText = text.toLowerCase();
 
     for (const label of normalizedLabels) {
+      const exactLabelMatch = normalizedText.replace(/:$/, '');
+
+      if (text.length <= 40 && exactLabelMatch === label) {
+        const adjacentValue = extractAdjacentStructuredValue(element);
+
+        if (adjacentValue) {
+          return adjacentValue;
+        }
+      }
+
       if (!normalizedText.startsWith(`${label}:`)) {
         continue;
       }

@@ -68,7 +68,8 @@
             [updating]="facade.updatingResultId() === facade.selectedResultId()"
             (toggleRejected)="facade.toggleRejected($event)"
             (deleteResult)="facade.deleteResult($event)"
-            (saveDescription)="facade.updateDescription($event.id, $event.description)" />
+            (saveDescription)="facade.updateDescription($event.id, $event.description)"
+            (saveInterviewDate)="facade.updateInterviewDate($event.id, $event.interviewDate)" />
         </section>
       </section>
     }

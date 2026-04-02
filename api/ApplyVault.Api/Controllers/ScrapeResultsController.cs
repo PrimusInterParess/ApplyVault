@@ -6,18 +6,21 @@ namespace ApplyVault.Api.Controllers;
 
 [ApiController]
 [Route("api/scrape-results")]
-public sealed class ScrapeResultsController(IScrapeResultStore store) : ControllerBase
+public sealed class ScrapeResultsController(
+    IScrapeResultStore store,
+    IScrapeResultSaveService saveService) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<IReadOnlyCollection<SavedScrapeResult>> GetAll()
+    public async Task<ActionResult<IReadOnlyCollection<SavedScrapeResult>>> GetAll(
+        CancellationToken cancellationToken)
     {
-        return Ok(store.GetAll());
+        return Ok(await store.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{id:guid}")]
-    public ActionResult<SavedScrapeResult> GetById(Guid id)
+    public async Task<ActionResult<SavedScrapeResult>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var result = store.GetById(id);
+        var result = await store.GetByIdAsync(id, cancellationToken);
 
         if (result is null)
         {
@@ -28,7 +31,9 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
     }
 
     [HttpPost]
-    public ActionResult<SaveScrapeResultResponse> Create([FromBody] ScrapeResultDto request)
+    public async Task<ActionResult<SaveScrapeResultResponse>> Create(
+        [FromBody] ScrapeResultDto request,
+        CancellationToken cancellationToken)
     {
         ValidateRequest(request);
 
@@ -37,18 +42,19 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
             return ValidationProblem(ModelState);
         }
 
-        var savedResult = store.Save(request);
+        var savedResult = await saveService.SaveAsync(request, cancellationToken);
         var response = new SaveScrapeResultResponse(savedResult.Id, savedResult.SavedAt);
 
         return CreatedAtAction(nameof(GetById), new { id = savedResult.Id }, response);
     }
 
     [HttpPatch("{id:guid}/rejection")]
-    public ActionResult<SavedScrapeResult> UpdateRejection(
+    public async Task<ActionResult<SavedScrapeResult>> UpdateRejection(
         Guid id,
-        [FromBody] UpdateScrapeResultRejectionRequest request)
+        [FromBody] UpdateScrapeResultRejectionRequest request,
+        CancellationToken cancellationToken)
     {
-        var updatedResult = store.SetRejected(id, request.IsRejected);
+        var updatedResult = await store.SetRejectedAsync(id, request.IsRejected, cancellationToken);
 
         if (updatedResult is null)
         {
@@ -59,9 +65,10 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
     }
 
     [HttpPatch("{id:guid}/description")]
-    public ActionResult<SavedScrapeResult> UpdateDescription(
+    public async Task<ActionResult<SavedScrapeResult>> UpdateDescription(
         Guid id,
-        [FromBody] UpdateScrapeResultDescriptionRequest request)
+        [FromBody] UpdateScrapeResultDescriptionRequest request,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Description))
         {
@@ -69,7 +76,23 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
             return ValidationProblem(ModelState);
         }
 
-        var updatedResult = store.UpdateDescription(id, request.Description.Trim());
+        var updatedResult = await store.UpdateDescriptionAsync(id, request.Description.Trim(), cancellationToken);
+
+        if (updatedResult is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(updatedResult);
+    }
+
+    [HttpPatch("{id:guid}/interview-date")]
+    public async Task<ActionResult<SavedScrapeResult>> UpdateInterviewDate(
+        Guid id,
+        [FromBody] UpdateScrapeResultInterviewDateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var updatedResult = await store.UpdateInterviewDateAsync(id, request.InterviewDate, cancellationToken);
 
         if (updatedResult is null)
         {
@@ -80,9 +103,9 @@ public sealed class ScrapeResultsController(IScrapeResultStore store) : Controll
     }
 
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var deleted = store.Delete(id);
+        var deleted = await store.DeleteAsync(id, cancellationToken);
 
         if (!deleted)
         {

@@ -13,6 +13,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
         {
             entity.HasKey((result) => result.Id);
             entity.Property((result) => result.IsRejected).HasDefaultValue(false);
+            entity.Property((result) => result.InterviewDate).HasColumnType("date");
             entity.Property((result) => result.IsDeleted).HasDefaultValue(false);
             entity.Property((result) => result.Title).IsRequired();
             entity.Property((result) => result.Url).IsRequired();

@@ -49,19 +49,24 @@ public sealed class ScrapeResultEnrichmentService(
         var originalContacts = original.JobDetails.HiringManagerContacts;
         var enrichedContacts = enriched.JobDetails.HiringManagerContacts;
 
-        return original with
+        return enriched with
         {
-            JobDetails = original.JobDetails with
+            Title = enriched.Title,
+            Url = original.Url,
+            Text = original.Text,
+            TextLength = original.TextLength,
+            ExtractedAt = original.ExtractedAt,
+            JobDetails = enriched.JobDetails with
             {
                 SourceHostname = CoalesceRequired(original.JobDetails.SourceHostname, enriched.JobDetails.SourceHostname),
                 DetectedPageType = CoalesceRequired(original.JobDetails.DetectedPageType, enriched.JobDetails.DetectedPageType),
-                JobTitle = CoalesceOptional(original.JobDetails.JobTitle, enriched.JobDetails.JobTitle),
-                CompanyName = CoalesceOptional(original.JobDetails.CompanyName, enriched.JobDetails.CompanyName),
-                Location = CoalesceOptional(original.JobDetails.Location, enriched.JobDetails.Location),
-                JobDescription = CoalesceOptional(original.JobDetails.JobDescription, enriched.JobDetails.JobDescription),
-                PositionSummary = CoalesceOptional(original.JobDetails.PositionSummary, enriched.JobDetails.PositionSummary),
-                HiringManagerName = CoalesceOptional(original.JobDetails.HiringManagerName, enriched.JobDetails.HiringManagerName),
-                HiringManagerContacts = originalContacts.Count > 0 ? originalContacts : enrichedContacts
+                JobTitle = CoalesceOptional(enriched.JobDetails.JobTitle, original.JobDetails.JobTitle),
+                CompanyName = CoalesceOptional(enriched.JobDetails.CompanyName, original.JobDetails.CompanyName),
+                Location = CoalesceOptional(enriched.JobDetails.Location, original.JobDetails.Location),
+                JobDescription = CoalesceOptional(enriched.JobDetails.JobDescription, original.JobDetails.JobDescription),
+                PositionSummary = CoalesceOptional(enriched.JobDetails.PositionSummary, original.JobDetails.PositionSummary),
+                HiringManagerName = CoalesceOptional(enriched.JobDetails.HiringManagerName, original.JobDetails.HiringManagerName),
+                HiringManagerContacts = SelectContacts(enrichedContacts, originalContacts)
             }
         };
     }
@@ -79,5 +84,12 @@ public sealed class ScrapeResultEnrichmentService(
     private static string? Normalize(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static IReadOnlyList<HiringManagerContactDto> SelectContacts(
+        IReadOnlyList<HiringManagerContactDto> primary,
+        IReadOnlyList<HiringManagerContactDto> fallback)
+    {
+        return primary.Count > 0 ? primary : fallback;
     }
 }

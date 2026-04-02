@@ -1,11 +1,13 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { JobResultViewModel } from '../../models/job-result-view.model';
-import { ConnectedCalendarAccount, UpdateInterviewEventRequest } from '../../models/job-result.model';
+import { UpdateInterviewEventRequest } from '../../models/job-result.model';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
 import { JobResultInterviewEventEditorComponent } from '../job-result-interview-event-editor/job-result-interview-event-editor.component';
+import { ConnectedCalendarAccount } from '../../../settings/models/calendar-connection.model';
 
 export interface JobDescriptionSaveEvent {
   readonly id: string;
@@ -20,7 +22,7 @@ export interface JobInterviewEventSaveEvent {
 @Component({
   selector: 'app-job-result-detail',
   standalone: true,
-  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent],
+  imports: [DatePipe, TitleCasePipe, RouterLink, JobResultInterviewEventEditorComponent],
   templateUrl: './job-result-detail.component.html',
   styleUrl: './job-result-detail.component.scss'
 })
@@ -31,14 +33,11 @@ export class JobResultDetailComponent {
   readonly connectionsLoading = input(false);
   readonly connectionError = input<string | null>(null);
   readonly syncingCalendarAccountId = input<string | null>(null);
-  readonly connectingProvider = input<string | null>(null);
   readonly toggleRejected = output<string>();
   readonly deleteResult = output<string>();
   readonly saveDescription = output<JobDescriptionSaveEvent>();
   readonly saveInterviewEvent = output<JobInterviewEventSaveEvent>();
   readonly clearInterviewEvent = output<string>();
-  readonly connectCalendar = output<string>();
-  readonly disconnectCalendar = output<string>();
   readonly createCalendarEvent = output<{ id: string; connectedAccountId: string }>();
   readonly editingDescription = signal(false);
   readonly descriptionDraft = signal('');

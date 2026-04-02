@@ -4,8 +4,6 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import {
-  CalendarAuthorizationStartResponse,
-  ConnectedCalendarAccount,
   CreateCalendarEventRequest,
   SavedJobResult,
   UpdateJobDescriptionRequest,
@@ -58,25 +56,6 @@ export class JobResultsApiService {
     return this.httpClient.delete<SavedJobResult>(
       `${this.apiConfig.baseUrl}/scrape-results/${id}/interview-event`
     );
-  }
-
-  getCalendarConnections(): Observable<readonly ConnectedCalendarAccount[]> {
-    return this.httpClient.get<readonly ConnectedCalendarAccount[]>(
-      `${this.apiConfig.baseUrl}/calendar-connections`
-    );
-  }
-
-  startCalendarConnection(provider: string): Observable<CalendarAuthorizationStartResponse> {
-    return this.httpClient.post<CalendarAuthorizationStartResponse>(
-      `${this.apiConfig.baseUrl}/calendar-connections/${provider}/start`,
-      {
-        returnUrl: `${window.location.origin}/integrations/calendar/callback`
-      }
-    );
-  }
-
-  deleteCalendarConnection(id: string): Observable<void> {
-    return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/calendar-connections/${id}`);
   }
 
   createCalendarEvent(

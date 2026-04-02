@@ -46,6 +46,7 @@
 
 .job-detail__reject,
 .job-detail__header a,
+.job-detail__settings-link,
 .job-detail__primary-action,
 .job-detail__secondary-action {
   display: inline-flex;
@@ -79,6 +80,11 @@
 .job-detail__header a {
   background: linear-gradient(135deg, #60a5fa, #38bdf8);
   color: #020617;
+}
+
+.job-detail__settings-link {
+  background: rgba(51, 65, 85, 0.82);
+  color: #e2e8f0;
 }
 
 .job-detail__eyebrow {
@@ -189,15 +195,11 @@ li strong {
   margin-top: 1rem;
 }
 
-.job-detail__calendar-actions,
+.job-detail__section-header a,
 .job-detail__calendar-row-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.job-detail__calendar-actions {
-  margin-bottom: 1rem;
 }
 
 .job-detail__calendar-list li {

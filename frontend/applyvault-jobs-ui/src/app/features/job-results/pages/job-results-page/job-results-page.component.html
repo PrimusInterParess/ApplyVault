@@ -1,7 +1,18 @@
 <main class="jobs-page">
+  <section class="jobs-page__topbar">
+    <div class="jobs-page__topbar-copy">
+      <p class="jobs-page__eyebrow jobs-page__eyebrow--compact">ApplyVault dashboard</p>
+      <p class="jobs-page__topbar-text">Review saved jobs, refresh your workspace, and manage integrations.</p>
+    </div>
+
+    <div class="jobs-page__toolbar">
+      <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh results</button>
+      <a routerLink="/settings" class="jobs-page__refresh jobs-page__refresh-link">Open settings</a>
+    </div>
+  </section>
+
   <section class="jobs-page__hero">
     <div>
-      <p class="jobs-page__eyebrow">ApplyVault dashboard</p>
       <h1>Saved job results, organized into a clean review workspace.</h1>
       @if (auth.currentUser(); as currentUser) {
         <p class="jobs-page__session">
@@ -29,11 +40,6 @@
       </article>
     </div>
   </section>
-
-  <div class="jobs-page__toolbar">
-    <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh</button>
-    <button type="button" class="jobs-page__refresh" (click)="signOut()">Sign out</button>
-  </div>
 
   @if (facade.updateError(); as updateError) {
     <p class="jobs-page__inline-error">{{ updateError }}</p>
@@ -73,18 +79,15 @@
           <app-job-result-detail
             [job]="facade.selectedResult()"
             [updating]="facade.updatingResultId() === facade.selectedResultId()"
-            [connections]="facade.connections()"
-            [connectionsLoading]="facade.connectionsLoading()"
-            [connectionError]="facade.connectionError()"
+            [connections]="calendarConnections.connections()"
+            [connectionsLoading]="calendarConnections.loading()"
+            [connectionError]="calendarConnections.error()"
             [syncingCalendarAccountId]="facade.syncingCalendarAccountId()"
-            [connectingProvider]="facade.connectingProvider()"
             (toggleRejected)="facade.toggleRejected($event)"
             (deleteResult)="facade.deleteResult($event)"
             (saveDescription)="facade.updateDescription($event.id, $event.description)"
             (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
             (clearInterviewEvent)="facade.clearInterviewEvent($event)"
-            (connectCalendar)="facade.connectCalendar($event)"
-            (disconnectCalendar)="facade.disconnectCalendar($event)"
             (createCalendarEvent)="facade.createCalendarEvent($event.id, $event.connectedAccountId)" />
         </section>
       </section>

@@ -29,3 +29,24 @@
 .calendar-callback p {
   color: #cbd5e1;
 }
+
+.calendar-callback__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.calendar-callback__actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: rgba(51, 65, 85, 0.82);
+  color: #e2e8f0;
+  text-decoration: none;
+  font-weight: 700;
+}

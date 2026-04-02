@@ -11,12 +11,15 @@
 
     <p>
       @if (success) {
-        The provider is now available when you create interview events.
+        The provider is now available in user settings and when you create interview events from saved jobs.
       } @else {
         The provider redirect did not complete successfully. Try connecting the account again.
       }
     </p>
 
-    <a routerLink="/jobs">Return to jobs</a>
+    <div class="calendar-callback__actions">
+      <a routerLink="/settings">Open settings</a>
+      <a routerLink="/jobs">Return to jobs</a>
+    </div>
   </section>
 </main>

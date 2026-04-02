@@ -48,26 +48,13 @@
     <article class="job-detail__description">
       <div class="job-detail__section-header">
         <div>
-          <h3>Calendar connections</h3>
-          <p class="job-detail__muted">Connect a provider, then push the saved interview event into your calendar.</p>
+          <h3>Calendar event sync</h3>
+          <p class="job-detail__muted">
+            Choose one of your connected providers to push the saved interview event into your calendar.
+          </p>
         </div>
-      </div>
 
-      <div class="job-detail__calendar-actions">
-        <button
-          type="button"
-          class="job-detail__primary-action"
-          [disabled]="connectingProvider() === 'google'"
-          (click)="connectCalendar.emit('google')">
-          {{ connectingProvider() === 'google' ? 'Connecting Google...' : 'Connect Google' }}
-        </button>
-        <button
-          type="button"
-          class="job-detail__primary-action"
-          [disabled]="connectingProvider() === 'microsoft'"
-          (click)="connectCalendar.emit('microsoft')">
-          {{ connectingProvider() === 'microsoft' ? 'Connecting Microsoft...' : 'Connect Microsoft' }}
-        </button>
+        <a routerLink="/settings" class="job-detail__settings-link">Manage providers in settings</a>
       </div>
 
       @if (connectionError(); as connectionErrorMessage) {
@@ -77,7 +64,9 @@
       @if (connectionsLoading()) {
         <p class="job-detail__muted">Loading connected providers...</p>
       } @else if (connections().length === 0) {
-        <p class="job-detail__muted">No providers connected yet.</p>
+        <p class="job-detail__muted">
+          No providers connected yet. Open user settings to connect Google or Microsoft before creating a calendar event.
+        </p>
       } @else {
         <ul class="job-detail__calendar-list">
           @for (connection of connections(); track connection.id) {
@@ -99,12 +88,6 @@
                         ? 'Create event'
                         : 'Save timing first'
                   }}
-                </button>
-                <button
-                  type="button"
-                  class="job-detail__secondary-action"
-                  (click)="disconnectCalendar.emit(connection.id)">
-                  Disconnect
                 </button>
               </div>
             </li>

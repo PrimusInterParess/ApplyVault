@@ -27,6 +27,15 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'settings',
+    title: 'ApplyVault Settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/pages/user-settings-page/user-settings-page.component').then(
+        (module) => module.UserSettingsPageComponent
+      )
+  },
+  {
     path: 'integrations/calendar/callback',
     title: 'Calendar Connection',
     canActivate: [authGuard],

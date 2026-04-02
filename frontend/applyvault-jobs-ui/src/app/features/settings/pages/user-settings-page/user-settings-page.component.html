@@ -1,0 +1,105 @@
+<main class="settings-page">
+  <section class="settings-page__hero">
+    <div>
+      <p class="settings-page__eyebrow">User settings</p>
+      <h1>Manage the calendar providers used for interview scheduling.</h1>
+      @if (auth.currentUser(); as currentUser) {
+        <p class="settings-page__session">
+          Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
+        </p>
+      }
+    </div>
+
+    <div class="settings-page__actions">
+      <a routerLink="/jobs" class="settings-page__secondary-action">Back to jobs</a>
+      <button type="button" class="settings-page__primary-action" (click)="signOut()">Sign out</button>
+    </div>
+  </section>
+
+  <section class="settings-page__panel">
+    <div class="settings-page__section-header">
+      <div>
+        <p class="settings-page__label">Calendar providers</p>
+        <h2>Connections</h2>
+        <p class="settings-page__muted">
+          Add or remove the accounts that appear when you create interview events from saved jobs.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="settings-page__secondary-action"
+        [disabled]="calendarConnections.loading()"
+        (click)="calendarConnections.load()">
+        Refresh
+      </button>
+    </div>
+
+    <div class="settings-page__connect-actions">
+      <button
+        type="button"
+        class="settings-page__primary-action"
+        [disabled]="calendarConnections.connectingProvider() === 'google'"
+        (click)="calendarConnections.connect('google')">
+        {{
+          calendarConnections.connectingProvider() === 'google'
+            ? 'Connecting Google...'
+            : 'Connect Google'
+        }}
+      </button>
+      <button
+        type="button"
+        class="settings-page__primary-action"
+        [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
+        (click)="calendarConnections.connect('microsoft')">
+        {{
+          calendarConnections.connectingProvider() === 'microsoft'
+            ? 'Connecting Microsoft...'
+            : 'Connect Microsoft'
+        }}
+      </button>
+    </div>
+
+    @if (calendarConnections.error(); as errorMessage) {
+      <p class="settings-page__error">{{ errorMessage }}</p>
+    }
+
+    @if (calendarConnections.loading()) {
+      <p class="settings-page__muted">Loading connected providers...</p>
+    } @else if (calendarConnections.connections().length === 0) {
+      <div class="settings-page__empty">
+        <h3>No providers connected</h3>
+        <p>Connect Google or Microsoft to make interview event sync available in the jobs workspace.</p>
+      </div>
+    } @else {
+      <ul class="settings-page__connection-list">
+        @for (connection of calendarConnections.connections(); track connection.id) {
+          <li>
+            <div>
+              <strong>{{ connection.provider | titlecase }}</strong>
+              <p>{{ connection.displayName || connection.email || connection.providerUserId }}</p>
+              <span>
+                Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                @if (connection.expiresAt) {
+                  · Expires {{ connection.expiresAt | date: 'MMM d, y, h:mm a' }}
+                }
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="settings-page__secondary-action"
+              [disabled]="calendarConnections.disconnectingConnectionId() === connection.id"
+              (click)="calendarConnections.disconnect(connection.id)">
+              {{
+                calendarConnections.disconnectingConnectionId() === connection.id
+                  ? 'Disconnecting...'
+                  : 'Disconnect'
+              }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</main>

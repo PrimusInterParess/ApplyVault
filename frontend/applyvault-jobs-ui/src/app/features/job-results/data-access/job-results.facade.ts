@@ -1,11 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
-import {
-  ConnectedCalendarAccount,
-  SavedJobResult,
-  UpdateInterviewEventRequest
-} from '../models/job-result.model';
+import { SavedJobResult, UpdateInterviewEventRequest } from '../models/job-result.model';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
 import { JobResultsApiService } from './job-results-api.service';
 
@@ -14,18 +10,14 @@ export class JobResultsFacade {
   private readonly apiService = inject(JobResultsApiService);
 
   readonly loading = signal(true);
-  readonly connectionsLoading = signal(true);
   readonly error = signal<string | null>(null);
   readonly updateError = signal<string | null>(null);
-  readonly connectionError = signal<string | null>(null);
   readonly searchTerm = signal('');
   readonly selectedSource = signal('all');
   readonly selectedId = signal<string | null>(null);
   readonly updatingResultId = signal<string | null>(null);
-  readonly connectingProvider = signal<string | null>(null);
   readonly syncingCalendarAccountId = signal<string | null>(null);
   readonly results = signal<readonly JobResultViewModel[]>([]);
-  readonly connections = signal<readonly ConnectedCalendarAccount[]>([]);
 
   readonly availableSources = computed(() =>
     Array.from(new Set(this.results().map((result) => result.sourceHostname))).sort((left, right) =>
@@ -95,7 +87,6 @@ export class JobResultsFacade {
     );
 
     this.load();
-    this.loadConnections();
   }
 
   load(): void {
@@ -121,23 +112,6 @@ export class JobResultsFacade {
         );
         this.results.set([]);
         this.loading.set(false);
-      }
-    });
-  }
-
-  loadConnections(): void {
-    this.connectionsLoading.set(true);
-    this.connectionError.set(null);
-
-    this.apiService.getCalendarConnections().subscribe({
-      next: (connections) => {
-        this.connections.set(connections);
-        this.connectionsLoading.set(false);
-      },
-      error: () => {
-        this.connectionError.set('Calendar connections could not be loaded.');
-        this.connections.set([]);
-        this.connectionsLoading.set(false);
       }
     });
   }
@@ -275,38 +249,6 @@ export class JobResultsFacade {
       error: () => {
         this.updateError.set('The interview event could not be cleared. Please try again.');
         this.updatingResultId.set(null);
-      }
-    });
-  }
-
-  connectCalendar(provider: string): void {
-    if (this.connectingProvider() === provider) {
-      return;
-    }
-
-    this.connectingProvider.set(provider);
-    this.connectionError.set(null);
-
-    this.apiService.startCalendarConnection(provider).subscribe({
-      next: (response) => {
-        window.location.assign(response.authorizationUrl);
-      },
-      error: () => {
-        this.connectionError.set(`The ${provider} connection flow could not be started.`);
-        this.connectingProvider.set(null);
-      }
-    });
-  }
-
-  disconnectCalendar(id: string): void {
-    this.connectionError.set(null);
-
-    this.apiService.deleteCalendarConnection(id).subscribe({
-      next: () => {
-        this.connections.update((connections) => connections.filter((connection) => connection.id !== id));
-      },
-      error: () => {
-        this.connectionError.set('The calendar connection could not be removed.');
       }
     });
   }

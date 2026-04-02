@@ -1,0 +1,184 @@
+:host {
+  display: block;
+}
+
+.settings-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.settings-page__hero,
+.settings-page__panel,
+.settings-page__empty {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 28px;
+  backdrop-filter: blur(14px);
+}
+
+.settings-page__hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.settings-page__hero,
+.settings-page__panel {
+  padding: 1.5rem;
+}
+
+.settings-page__eyebrow,
+.settings-page__label {
+  margin: 0 0 0.75rem;
+  color: #7dd3fc;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.settings-page h1,
+.settings-page h2,
+.settings-page h3,
+.settings-page p {
+  margin: 0;
+}
+
+.settings-page h1 {
+  max-width: 14ch;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  line-height: 1.02;
+}
+
+.settings-page h2 {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+}
+
+.settings-page__session,
+.settings-page__muted,
+.settings-page__connection-list p,
+.settings-page__connection-list span {
+  color: rgba(226, 232, 240, 0.76);
+  line-height: 1.65;
+}
+
+.settings-page__session {
+  margin-top: 1rem;
+}
+
+.settings-page__actions,
+.settings-page__section-header,
+.settings-page__connect-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.settings-page__actions {
+  justify-content: flex-end;
+}
+
+.settings-page__panel {
+  margin-top: 1.5rem;
+}
+
+.settings-page__section-header {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.settings-page__connect-actions {
+  margin-top: 1.25rem;
+}
+
+.settings-page__primary-action,
+.settings-page__secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.settings-page__primary-action {
+  background: linear-gradient(135deg, #38bdf8, #22c55e);
+  color: #020617;
+}
+
+.settings-page__secondary-action {
+  background: rgba(51, 65, 85, 0.82);
+  color: #e2e8f0;
+}
+
+.settings-page__primary-action:disabled,
+.settings-page__secondary-action:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.settings-page__error {
+  margin-top: 1rem;
+  color: #fca5a5;
+}
+
+.settings-page__empty {
+  margin-top: 1rem;
+  padding: 1.25rem;
+}
+
+.settings-page__empty p {
+  margin-top: 0.65rem;
+}
+
+.settings-page__connection-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.settings-page__connection-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 20px;
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.settings-page__connection-list strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.settings-page__connection-list span {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .settings-page {
+    padding: 1.25rem;
+  }
+
+  .settings-page__hero,
+  .settings-page__section-header,
+  .settings-page__connection-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-page__actions {
+    justify-content: flex-start;
+  }
+}

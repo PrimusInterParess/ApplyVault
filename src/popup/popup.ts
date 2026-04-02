@@ -42,6 +42,13 @@ interface PopupDetailsElements {
   contacts: HTMLTextAreaElement;
 }
 
+interface PopupResultPanels {
+  details: HTMLElement;
+  contacts: HTMLElement;
+  description: HTMLElement;
+  text: HTMLElement;
+}
+
 const POPUP_DRAFT_STORAGE_KEY = 'popupDraft';
 const DEFAULT_READY_STATUS = 'Ready to extract the active tab.';
 const DRAFT_SAVE_DELAY_MS = 250;
@@ -198,6 +205,15 @@ function clearRenderedResult(
   textArea.value = '';
   descriptionArea.value = '';
   resetStructuredDetails(details);
+}
+
+function setResultPanelsVisibility(panels: PopupResultPanels, isVisible: boolean): void {
+  const method = isVisible ? 'removeAttribute' : 'setAttribute';
+
+  panels.details[method]('hidden', '');
+  panels.contacts[method]('hidden', '');
+  panels.description[method]('hidden', '');
+  panels.text[method]('hidden', '');
 }
 
 function setFieldValue(element: EditableControl, value: string | undefined, emptyText: string): void {
@@ -395,6 +411,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusElementNode = document.getElementById('status');
   const textAreaElement = document.getElementById('scraped-text');
   const descriptionAreaElement = document.getElementById('job-description');
+  const resultDetailsPanelElement = document.getElementById('results-details-panel');
+  const resultContactsPanelElement = document.getElementById('results-contacts-panel');
+  const resultDescriptionPanelElement = document.getElementById('results-description-panel');
+  const resultTextPanelElement = document.getElementById('results-text-panel');
   const scrapedAtElement = document.getElementById('scraped-at');
   const sourceHostnameElement = document.getElementById('source-hostname');
   const pageTypeElement = document.getElementById('page-type');
@@ -421,6 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
     !statusElementNode ||
     !(textAreaElement instanceof HTMLTextAreaElement) ||
     !(descriptionAreaElement instanceof HTMLTextAreaElement) ||
+    !resultDetailsPanelElement ||
+    !resultContactsPanelElement ||
+    !resultDescriptionPanelElement ||
+    !resultTextPanelElement ||
     !(scrapedAtElement instanceof HTMLInputElement) ||
     !(sourceHostnameElement instanceof HTMLInputElement) ||
     !(pageTypeElement instanceof HTMLInputElement) ||
@@ -449,6 +473,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusElement = statusElementNode;
   const scrapedTextArea = textAreaElement;
   const jobDescriptionArea = descriptionAreaElement;
+  const resultPanels: PopupResultPanels = {
+    details: resultDetailsPanelElement,
+    contacts: resultContactsPanelElement,
+    description: resultDescriptionPanelElement,
+    text: resultTextPanelElement
+  };
 
   const details: PopupDetailsElements = {
     scrapedAt: scrapedAtElement,
@@ -555,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scrapedTextArea.value = '';
     jobDescriptionArea.value = '';
     resetStructuredDetails(details);
+    setResultPanelsVisibility(resultPanels, false);
     setButtonMode(primaryButton, popupMode);
     renderPopupState();
     setWorkflowStatus(statusMessage);
@@ -566,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scrapedTextArea.value = result.text;
     jobDescriptionArea.value = result.jobDetails.jobDescription ?? '';
     populateStructuredDetails(details, result.jobDetails, result.extractedAt);
+    setResultPanelsVisibility(resultPanels, true);
     setButtonMode(primaryButton, popupMode);
     renderPopupState();
     setWorkflowStatus(statusMessage);

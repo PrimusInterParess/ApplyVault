@@ -54,7 +54,12 @@ body {
 }
 
 .popup__hero {
-  padding: 1.3rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 22px;
+}
+
+.popup__hero .popup__eyebrow {
+  margin-bottom: 0.35rem;
 }
 
 .popup__eyebrow,
@@ -67,40 +72,27 @@ body {
   font-weight: 700;
 }
 
-.popup__hero-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  align-items: start;
-}
-
-.popup__badge {
-  align-self: start;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid rgba(125, 211, 252, 0.22);
-  border-radius: 999px;
-  background: rgba(8, 47, 73, 0.65);
-  color: #bae6fd;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.popup__hero-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .popup__title {
   margin: 0;
-  max-width: 12ch;
   font-family: 'Sora', 'Segoe UI', sans-serif;
-  font-size: 2rem;
-  line-height: 0.98;
-  letter-spacing: -0.03em;
+  font-size: 1rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .popup__description {
-  margin: 1rem 0 0;
-  max-width: 54ch;
+  margin: 0;
+  max-width: none;
   color: rgba(226, 232, 240, 0.8);
-  line-height: 1.7;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .popup__panel {

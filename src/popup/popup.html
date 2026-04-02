@@ -8,11 +8,15 @@
   </head>
   <body>
     <main class="popup">
-      <section class="popup__hero">
-        <p class="popup__eyebrow">ApplyVault</p>
+      <section class="popup__hero popup__hero--compact">
+        <div class="popup__hero-topline">
+          <p class="popup__eyebrow">ApplyVault extension</p>
+          <p class="popup__hero-stamp">Active tab</p>
+        </div>
+
         <div class="popup__hero-copy">
-          <h1 class="popup__title">ApplyVault extension</h1>
-          <p class="popup__description">Capture job details fast.</p>
+          <h1 class="popup__title">Capture current job page</h1>
+          <p class="popup__description">Review extracted details and save them to ApplyVault.</p>
         </div>
       </section>
 
@@ -20,8 +24,12 @@
         <div class="popup__panel-header">
           <div id="auth-connect-copy">
             <p class="popup__panel-eyebrow">Account</p>
-            <h2 class="popup__section-title">Connect your ApplyVault user</h2>
+            <h2 class="popup__section-title">Connect your ApplyVault profile</h2>
+            <p class="popup__section-copy">
+              Use a one-time email code so the extension can save records without storing a password.
+            </p>
           </div>
+          <div class="popup__panel-badge">01</div>
         </div>
 
         <p id="auth-status" class="popup__status popup__status--compact" aria-live="polite">
@@ -31,7 +39,7 @@
         <div id="auth-form" class="popup__auth-form">
           <label class="popup__auth-field" for="auth-email">
             <span class="popup__label">Email</span>
-            <input id="auth-email" class="popup__field" type="email" autocomplete="username" />
+            <input id="auth-email" class="popup__field" type="email" autocomplete="username" placeholder="name@example.com" />
           </label>
           <label class="popup__auth-field" for="auth-code">
             <span class="popup__label">Email sign-in code</span>
@@ -48,7 +56,7 @@
           </label>
           <div class="popup__auth-actions">
             <button id="send-code-button" class="popup__button popup__button--secondary" type="button">
-              Email sign-in code
+              Send code
             </button>
             <button id="verify-code-button" class="popup__button" type="button">Verify code</button>
           </div>
@@ -58,12 +66,17 @@
           <div class="popup__auth-user-header">
             <div class="popup__auth-user-copy">
               <p class="popup__auth-user-eyebrow">Connected</p>
-              <h3 class="popup__auth-user-title">You're signed in to ApplyVault</h3>
+              <h3 class="popup__auth-user-title">ApplyVault account linked</h3>
               <p class="popup__auth-user-description">
-                Your saved jobs and follow-up activity will be linked to this account.
+                Your saved jobs, notes, and follow-up workflow will stay attached to this profile.
               </p>
             </div>
-            <button id="sign-out-button" class="popup__button popup__button--secondary popup__button--compact" type="button" hidden>
+            <button
+              id="sign-out-button"
+              class="popup__button popup__button--secondary popup__button--compact"
+              type="button"
+              hidden
+            >
               Sign out
             </button>
           </div>
@@ -79,15 +92,20 @@
           <div>
             <p class="popup__panel-eyebrow">Workflow</p>
             <h2 class="popup__section-title">Extract the current page</h2>
+            <p class="popup__section-copy">
+              Scan the active tab, then review and polish the captured fields before saving.
+            </p>
           </div>
-          <div class="popup__actions">
-            <button id="renew-button" class="popup__button popup__button--secondary" type="button" disabled>
-              Extract again
-            </button>
-            <button id="scrape-button" class="popup__button" type="button">
-              Extract current page
-            </button>
-          </div>
+          <div class="popup__panel-badge popup__panel-badge--dark">02</div>
+        </div>
+
+        <div class="popup__actions">
+          <button id="renew-button" class="popup__button popup__button--secondary" type="button" disabled>
+            Extract again
+          </button>
+          <button id="scrape-button" class="popup__button" type="button">
+            Extract current page
+          </button>
         </div>
 
         <p id="status" class="popup__status" aria-live="polite">
@@ -95,7 +113,7 @@
         </p>
       </section>
 
-      <section id="results-details-panel" class="popup__panel" hidden>
+      <section id="results-details-panel" class="popup__panel popup__panel--results" hidden>
         <div class="popup__panel-header popup__panel-header--stacked">
           <div>
             <p class="popup__panel-eyebrow">Structured details</p>
@@ -147,7 +165,7 @@
         </dl>
       </section>
 
-      <section id="results-contacts-panel" class="popup__panel" hidden>
+      <section id="results-contacts-panel" class="popup__panel popup__panel--results" hidden>
         <div class="popup__panel-header popup__panel-header--stacked">
           <div>
             <p class="popup__panel-eyebrow">Contacts</p>
@@ -162,7 +180,7 @@
         ></textarea>
       </section>
 
-      <section id="results-description-panel" class="popup__panel" hidden>
+      <section id="results-description-panel" class="popup__panel popup__panel--results" hidden>
         <div class="popup__panel-header popup__panel-header--stacked">
           <div>
             <p class="popup__panel-eyebrow">Description</p>
@@ -172,7 +190,7 @@
         <textarea id="job-description" class="popup__textarea popup__textarea--secondary"></textarea>
       </section>
 
-      <section id="results-text-panel" class="popup__panel" hidden>
+      <section id="results-text-panel" class="popup__panel popup__panel--results" hidden>
         <div class="popup__panel-header popup__panel-header--stacked">
           <div>
             <p class="popup__panel-eyebrow">Page text</p>

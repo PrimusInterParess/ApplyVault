@@ -14,10 +14,12 @@
   align-items: center;
   min-height: 44px;
   padding: 0.75rem 1rem;
-  border-radius: 999px;
-  background: rgba(59, 130, 246, 0.18);
-  color: #bfdbfe;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
   font-weight: 700;
+  box-shadow: var(--app-shadow-sm);
 }
 
 .interview-date__editor {
@@ -26,18 +28,21 @@
 }
 
 .interview-date__label {
-  color: rgba(226, 232, 240, 0.72);
-  font-size: 0.88rem;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .interview-date__editor input {
   min-height: 44px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 999px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
   font: inherit;
   padding: 0.75rem 1rem;
-  background: rgba(15, 23, 42, 0.84);
-  color: #f8fafc;
+  background: rgba(255, 250, 244, 0.92);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .interview-date__popover {
@@ -47,11 +52,10 @@
   z-index: 10;
   min-width: 19rem;
   padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
-  box-shadow: 0 20px 45px rgba(2, 6, 23, 0.45);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  box-shadow: var(--app-shadow-lg);
 }
 
 .interview-date__popover-actions {
@@ -68,21 +72,30 @@
   justify-content: center;
   min-height: 44px;
   padding: 0.75rem 1rem;
-  border: 0;
-  border-radius: 999px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: var(--app-transition);
 }
 
 .interview-date__primary-action {
-  background: linear-gradient(135deg, #60a5fa, #38bdf8);
-  color: #020617;
+  background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-dark) 100%);
+  color: var(--app-surface);
+  box-shadow: var(--app-shadow-md);
 }
 
 .interview-date__secondary-action {
-  background: rgba(51, 65, 85, 0.82);
-  color: #e2e8f0;
+  background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.interview-date__primary-action:hover,
+.interview-date__secondary-action:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .interview-date__primary-action:disabled,

@@ -1,12 +1,13 @@
 .job-card {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 24px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
   padding: 1.15rem;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.72));
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
   color: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--app-shadow-md);
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -16,23 +17,23 @@
 
 .job-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(96, 165, 250, 0.5);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  border-color: var(--app-border-strong);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .job-card--selected {
-  border-color: rgba(96, 165, 250, 0.8);
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.82));
-  box-shadow: 0 20px 45px rgba(59, 130, 246, 0.2);
+  border-color: var(--app-accent);
+  background: linear-gradient(180deg, #fff4e9 0%, #efd8c0 100%);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .job-card__status {
   display: inline-flex;
   margin-top: 0.85rem;
   padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(248, 113, 113, 0.18);
-  color: #fecaca;
+  border-radius: var(--app-radius);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -40,8 +41,8 @@
 }
 
 .job-card__status--interview {
-  background: rgba(59, 130, 246, 0.18);
-  color: #bfdbfe;
+  background: var(--app-success-soft);
+  color: var(--app-accent-dark);
 }
 
 .job-card__eyebrow,
@@ -49,8 +50,8 @@
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
-  color: rgba(226, 232, 240, 0.72);
-  font-size: 0.78rem;
+  color: var(--app-text-muted);
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -63,19 +64,19 @@ h3 {
 
 .job-card__company {
   margin: 0;
-  color: #f8fafc;
+  color: var(--app-text);
   font-weight: 600;
 }
 
 .job-card__meta {
   margin-top: 0.9rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: none;
   letter-spacing: normal;
 }
 
 .job-card__excerpt {
   margin: 1rem 0 0;
-  color: rgba(226, 232, 240, 0.82);
+  color: var(--app-text-muted);
   line-height: 1.6;
 }

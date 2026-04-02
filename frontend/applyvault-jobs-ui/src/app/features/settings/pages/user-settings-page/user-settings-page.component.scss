@@ -10,11 +10,12 @@
 
 .settings-page__hero,
 .settings-page__panel,
-.settings-page__empty {
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(15, 23, 42, 0.72);
-  border-radius: 28px;
-  backdrop-filter: blur(14px);
+.settings-page__empty,
+.settings-page__connection-list li {
+  border: 1px solid var(--app-border);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow-lg);
 }
 
 .settings-page__hero {
@@ -32,10 +33,11 @@
 .settings-page__eyebrow,
 .settings-page__label {
   margin: 0 0 0.75rem;
-  color: #7dd3fc;
+  color: var(--app-text-muted);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .settings-page h1,
@@ -47,19 +49,19 @@
 
 .settings-page h1 {
   max-width: 14ch;
-  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
   line-height: 1.02;
 }
 
 .settings-page h2 {
-  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
 }
 
 .settings-page__session,
 .settings-page__muted,
 .settings-page__connection-list p,
 .settings-page__connection-list span {
-  color: rgba(226, 232, 240, 0.76);
+  color: var(--app-text-muted);
   line-height: 1.65;
 }
 
@@ -98,23 +100,32 @@
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 0.75rem 1rem;
-  border: 0;
-  border-radius: 999px;
+  padding: 0.82rem 1.05rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
+  transition: var(--app-transition);
 }
 
 .settings-page__primary-action {
-  background: linear-gradient(135deg, #38bdf8, #22c55e);
-  color: #020617;
+  background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-dark) 100%);
+  color: var(--app-surface);
+  box-shadow: var(--app-shadow-md);
 }
 
 .settings-page__secondary-action {
-  background: rgba(51, 65, 85, 0.82);
-  color: #e2e8f0;
+  background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.settings-page__primary-action:hover:not(:disabled),
+.settings-page__secondary-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .settings-page__primary-action:disabled,
@@ -125,7 +136,7 @@
 
 .settings-page__error {
   margin-top: 1rem;
-  color: #fca5a5;
+  color: var(--app-danger);
 }
 
 .settings-page__empty {
@@ -151,13 +162,12 @@
   gap: 1rem;
   align-items: center;
   padding: 1rem;
-  border-radius: 20px;
-  background: rgba(30, 41, 59, 0.72);
 }
 
 .settings-page__connection-list strong {
   display: block;
   margin-bottom: 0.35rem;
+  color: var(--app-text);
 }
 
 .settings-page__connection-list span {

@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   color-scheme: dark;
 }
@@ -108,6 +112,10 @@ body {
   padding: 1.1rem;
 }
 
+.popup__panel--auth {
+  padding: 1.1rem;
+}
+
 .popup__panel-header {
   display: flex;
   gap: 1rem;
@@ -171,6 +179,12 @@ body {
   box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.18);
 }
 
+.popup__button--compact {
+  min-height: 42px;
+  padding: 0.72rem 1rem;
+  white-space: nowrap;
+}
+
 .popup__button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 18px 42px rgba(56, 189, 248, 0.2);
@@ -202,6 +216,19 @@ body {
   line-height: 1.6;
 }
 
+.popup__status--compact {
+  min-height: 0;
+}
+
+.popup__status--error {
+  border-color: rgba(248, 113, 113, 0.42);
+  background: linear-gradient(180deg, rgba(69, 10, 10, 0.92), rgba(127, 29, 29, 0.72));
+  color: #fecaca;
+  box-shadow:
+    inset 0 0 0 1px rgba(248, 113, 113, 0.14),
+    0 14px 30px rgba(69, 10, 10, 0.18);
+}
+
 .popup__label {
   display: block;
   margin: 0;
@@ -212,6 +239,103 @@ body {
 
 .popup__label--section {
   margin-top: 0;
+}
+
+.popup__auth-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.popup__auth-field {
+  display: block;
+}
+
+.popup__auth-actions {
+  display: flex;
+  gap: 0.65rem;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+}
+
+.popup__auth-field .popup__label {
+  margin-bottom: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.popup__auth-user {
+  margin-top: 1rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.82));
+  box-shadow:
+    inset 0 0 0 1px rgba(74, 222, 128, 0.08),
+    0 18px 40px rgba(2, 6, 23, 0.18);
+}
+
+.popup__auth-user-header {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.popup__auth-user-copy {
+  min-width: 0;
+}
+
+.popup__auth-user-eyebrow {
+  margin: 0 0 0.45rem;
+  color: #86efac;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.popup__auth-user-title {
+  margin: 0;
+  font-family: 'Sora', 'Segoe UI', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.popup__auth-user-description {
+  margin: 0.45rem 0 0;
+  max-width: 38ch;
+  color: rgba(226, 232, 240, 0.76);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.popup__auth-user-identity {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+.popup__auth-user-label {
+  margin: 0 0 0.35rem;
+  color: rgba(226, 232, 240, 0.66);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.popup__auth-user-email {
+  margin: 0;
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .popup__details {

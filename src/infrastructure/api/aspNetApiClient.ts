@@ -1,7 +1,9 @@
 import type { SaveScrapeResultData } from '../../shared/contracts/messages';
 import type { ScrapeResult } from '../../shared/models/scrapeResult';
+import { getAccessToken } from '../auth/supabaseAuth';
+import { API_BASE_URL } from './apiConfig';
 
-const SCRAPE_RESULTS_ENDPOINT = 'http://localhost:5173/api/scrape-results';
+const SCRAPE_RESULTS_ENDPOINT = `${API_BASE_URL}/scrape-results`;
 
 export interface ScrapeResultGateway {
   send(result: ScrapeResult): Promise<SaveScrapeResultData>;
@@ -20,10 +22,17 @@ async function buildErrorMessage(response: Response): Promise<string> {
 
 export class AspNetApiClient implements ScrapeResultGateway {
   async send(result: ScrapeResult): Promise<SaveScrapeResultData> {
+    const accessToken = await getAccessToken();
+
+    if (!accessToken) {
+      throw new Error('Sign in to ApplyVault before saving from the extension.');
+    }
+
     const response = await fetch(SCRAPE_RESULTS_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`
       },
       body: JSON.stringify(result)
     });

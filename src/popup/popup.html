@@ -21,6 +21,64 @@
         </div>
       </section>
 
+      <section class="popup__panel popup__panel--auth">
+        <div class="popup__panel-header">
+          <div id="auth-connect-copy">
+            <p class="popup__panel-eyebrow">Account</p>
+            <h2 class="popup__section-title">Connect your ApplyVault user</h2>
+          </div>
+        </div>
+
+        <p id="auth-status" class="popup__status popup__status--compact" aria-live="polite">
+          Request a one-time email code so you never type your password into the extension.
+        </p>
+
+        <div id="auth-form" class="popup__auth-form">
+          <label class="popup__auth-field" for="auth-email">
+            <span class="popup__label">Email</span>
+            <input id="auth-email" class="popup__field" type="email" autocomplete="username" />
+          </label>
+          <label class="popup__auth-field" for="auth-code">
+            <span class="popup__label">Email sign-in code</span>
+            <input
+              id="auth-code"
+              class="popup__field"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="8"
+              pattern="[0-9]{6,8}"
+              placeholder="12345678"
+            />
+          </label>
+          <div class="popup__auth-actions">
+            <button id="send-code-button" class="popup__button popup__button--secondary" type="button">
+              Email sign-in code
+            </button>
+            <button id="verify-code-button" class="popup__button" type="button">Verify code</button>
+          </div>
+        </div>
+
+        <div id="auth-user" class="popup__auth-user" hidden>
+          <div class="popup__auth-user-header">
+            <div class="popup__auth-user-copy">
+              <p class="popup__auth-user-eyebrow">Connected</p>
+              <h3 class="popup__auth-user-title">You're signed in to ApplyVault</h3>
+              <p class="popup__auth-user-description">
+                Your saved jobs and follow-up activity will be linked to this account.
+              </p>
+            </div>
+            <button id="sign-out-button" class="popup__button popup__button--secondary popup__button--compact" type="button" hidden>
+              Sign out
+            </button>
+          </div>
+          <div class="popup__auth-user-identity">
+            <p class="popup__auth-user-label">Signed in as</p>
+            <p id="auth-user-email" class="popup__auth-user-email">user@example.com</p>
+          </div>
+        </div>
+      </section>
+
       <section class="popup__panel popup__panel--action">
         <div class="popup__panel-header">
           <div>

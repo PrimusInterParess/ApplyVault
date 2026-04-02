@@ -11,10 +11,18 @@ import type {
   JobDetails,
   ScrapeResult
 } from '../shared/models/scrapeResult';
+import {
+  getAuthState,
+  requestSignInCode,
+  verifySignInCode,
+  signOut,
+  type ExtensionAuthState
+} from '../infrastructure/auth/supabaseAuth';
 import { evaluateScrapeResult } from '../shared/utils/scrapeQuality';
 
 type PopupMode = 'scrape' | 'save';
 type EditableControl = HTMLInputElement | HTMLTextAreaElement;
+type AuthStatusTone = 'default' | 'error';
 
 interface PopupDraft {
   mode: PopupMode;
@@ -37,6 +45,8 @@ interface PopupDetailsElements {
 const POPUP_DRAFT_STORAGE_KEY = 'popupDraft';
 const DEFAULT_READY_STATUS = 'Ready to extract the active tab.';
 const DRAFT_SAVE_DELAY_MS = 250;
+const DEFAULT_AUTH_STATUS = 'Request a one-time email code so you never type your password into the extension.';
+const EMAIL_SIGN_IN_CODE_PATTERN = /^\d{6,8}$/;
 
 function sendScrapeRequest(): Promise<ScrapeActiveTabResponse> {
   const request: ScrapeActiveTabRequest = {
@@ -161,9 +171,10 @@ function syncActionButtons(
   primaryButton: HTMLButtonElement,
   renewButton: HTMLButtonElement,
   popupMode: PopupMode,
-  isPending: boolean
+  isPending: boolean,
+  canSave: boolean
 ): void {
-  primaryButton.disabled = isPending;
+  primaryButton.disabled = isPending || (popupMode === 'save' && !canSave);
   renewButton.disabled = isPending || popupMode === 'scrape';
 }
 
@@ -172,9 +183,10 @@ function setPendingState(
   renewButton: HTMLButtonElement,
   status: HTMLElement,
   popupMode: PopupMode,
-  pendingMessage: string
+  pendingMessage: string,
+  canSave: boolean
 ): void {
-  syncActionButtons(primaryButton, renewButton, popupMode, true);
+  syncActionButtons(primaryButton, renewButton, popupMode, true, canSave);
   status.textContent = pendingMessage;
 }
 
@@ -368,61 +380,166 @@ function buildScrapeResultForSave(
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const button = document.getElementById('scrape-button');
-  const renewButton = document.getElementById('renew-button');
-  const status = document.getElementById('status');
-  const textArea = document.getElementById('scraped-text');
-  const descriptionArea = document.getElementById('job-description');
-  const scrapedAt = document.getElementById('scraped-at');
-  const sourceHostname = document.getElementById('source-hostname');
-  const pageType = document.getElementById('page-type');
-  const jobTitle = document.getElementById('job-title');
-  const companyName = document.getElementById('company-name');
-  const jobLocation = document.getElementById('job-location');
-  const hiringManager = document.getElementById('hiring-manager');
-  const positionSummary = document.getElementById('position-summary');
-  const contactList = document.getElementById('hiring-manager-contacts');
+  const authEmailElement = document.getElementById('auth-email');
+  const authCodeElement = document.getElementById('auth-code');
+  const authStatusElement = document.getElementById('auth-status');
+  const authConnectCopyElement = document.getElementById('auth-connect-copy');
+  const authFormElement = document.getElementById('auth-form');
+  const authUserElement = document.getElementById('auth-user');
+  const authUserEmailElement = document.getElementById('auth-user-email');
+  const sendCodeButtonElement = document.getElementById('send-code-button');
+  const verifyCodeButtonElement = document.getElementById('verify-code-button');
+  const signOutButtonElement = document.getElementById('sign-out-button');
+  const buttonElement = document.getElementById('scrape-button');
+  const renewButtonElement = document.getElementById('renew-button');
+  const statusElementNode = document.getElementById('status');
+  const textAreaElement = document.getElementById('scraped-text');
+  const descriptionAreaElement = document.getElementById('job-description');
+  const scrapedAtElement = document.getElementById('scraped-at');
+  const sourceHostnameElement = document.getElementById('source-hostname');
+  const pageTypeElement = document.getElementById('page-type');
+  const jobTitleElement = document.getElementById('job-title');
+  const companyNameElement = document.getElementById('company-name');
+  const jobLocationElement = document.getElementById('job-location');
+  const hiringManagerElement = document.getElementById('hiring-manager');
+  const positionSummaryElement = document.getElementById('position-summary');
+  const contactListElement = document.getElementById('hiring-manager-contacts');
 
   if (
-    !(button instanceof HTMLButtonElement) ||
-    !(renewButton instanceof HTMLButtonElement) ||
-    !status ||
-    !(textArea instanceof HTMLTextAreaElement) ||
-    !(descriptionArea instanceof HTMLTextAreaElement) ||
-    !(scrapedAt instanceof HTMLInputElement) ||
-    !(sourceHostname instanceof HTMLInputElement) ||
-    !(pageType instanceof HTMLInputElement) ||
-    !(jobTitle instanceof HTMLInputElement) ||
-    !(companyName instanceof HTMLInputElement) ||
-    !(jobLocation instanceof HTMLInputElement) ||
-    !(hiringManager instanceof HTMLInputElement) ||
-    !(positionSummary instanceof HTMLTextAreaElement) ||
-    !(contactList instanceof HTMLTextAreaElement)
+    !(authEmailElement instanceof HTMLInputElement) ||
+    !(authCodeElement instanceof HTMLInputElement) ||
+    !authStatusElement ||
+    !authConnectCopyElement ||
+    !authFormElement ||
+    !authUserElement ||
+    !authUserEmailElement ||
+    !(sendCodeButtonElement instanceof HTMLButtonElement) ||
+    !(verifyCodeButtonElement instanceof HTMLButtonElement) ||
+    !(signOutButtonElement instanceof HTMLButtonElement) ||
+    !(buttonElement instanceof HTMLButtonElement) ||
+    !(renewButtonElement instanceof HTMLButtonElement) ||
+    !statusElementNode ||
+    !(textAreaElement instanceof HTMLTextAreaElement) ||
+    !(descriptionAreaElement instanceof HTMLTextAreaElement) ||
+    !(scrapedAtElement instanceof HTMLInputElement) ||
+    !(sourceHostnameElement instanceof HTMLInputElement) ||
+    !(pageTypeElement instanceof HTMLInputElement) ||
+    !(jobTitleElement instanceof HTMLInputElement) ||
+    !(companyNameElement instanceof HTMLInputElement) ||
+    !(jobLocationElement instanceof HTMLInputElement) ||
+    !(hiringManagerElement instanceof HTMLInputElement) ||
+    !(positionSummaryElement instanceof HTMLTextAreaElement) ||
+    !(contactListElement instanceof HTMLTextAreaElement)
   ) {
     throw new Error('Popup UI elements are missing.');
   }
 
-  const primaryButton = button;
-  const renewScrapeButton = renewButton;
-  const statusElement = status;
-  const scrapedTextArea = textArea;
-  const jobDescriptionArea = descriptionArea;
+  const authEmail = authEmailElement;
+  const authCode = authCodeElement;
+  const authStatus = authStatusElement;
+  const authConnectCopy = authConnectCopyElement;
+  const authForm = authFormElement;
+  const authUser = authUserElement;
+  const authUserEmail = authUserEmailElement;
+  const sendCodeButton = sendCodeButtonElement;
+  const verifyCodeButton = verifyCodeButtonElement;
+  const signOutButton = signOutButtonElement;
+  const primaryButton = buttonElement;
+  const renewScrapeButton = renewButtonElement;
+  const statusElement = statusElementNode;
+  const scrapedTextArea = textAreaElement;
+  const jobDescriptionArea = descriptionAreaElement;
 
   const details: PopupDetailsElements = {
-    scrapedAt,
-    sourceHostname,
-    pageType,
-    jobTitle,
-    companyName,
-    jobLocation,
-    hiringManager,
-    positionSummary,
-    contacts: contactList
+    scrapedAt: scrapedAtElement,
+    sourceHostname: sourceHostnameElement,
+    pageType: pageTypeElement,
+    jobTitle: jobTitleElement,
+    companyName: companyNameElement,
+    jobLocation: jobLocationElement,
+    hiringManager: hiringManagerElement,
+    positionSummary: positionSummaryElement,
+    contacts: contactListElement
   };
 
   let popupMode: PopupMode = 'scrape';
   let lastScrapeResult: ScrapeResult | null = null;
   let draftSaveTimeoutId: number | null = null;
+  let workflowStatusMessage = DEFAULT_READY_STATUS;
+  let authState: ExtensionAuthState = {
+    session: null,
+    currentUser: null,
+    apiError: null
+  };
+  let authPending = false;
+  let authFeedbackMessage: string | null = null;
+  let authFeedbackTone: AuthStatusTone = 'default';
+
+  function canSaveToApi(): boolean {
+    return authState.currentUser !== null && authState.apiError === null;
+  }
+
+  function setWorkflowStatus(message: string): void {
+    workflowStatusMessage = message;
+    statusElement.textContent =
+      popupMode === 'save' && !canSaveToApi()
+        ? `${message} Sign in to save the extracted record to ApplyVault.`
+        : message;
+  }
+
+  function setAuthStatus(message: string | null, tone: AuthStatusTone = 'default'): void {
+    if (!message) {
+      authStatus.textContent = '';
+      authStatus.setAttribute('hidden', '');
+      authStatus.classList.remove('popup__status--error');
+      return;
+    }
+
+    authStatus.textContent = message;
+    authStatus.removeAttribute('hidden');
+    authStatus.classList.toggle('popup__status--error', tone === 'error');
+  }
+
+  function renderAuthState(): void {
+    const sessionUser = authState.session?.user;
+    const email = authState.currentUser?.email || sessionUser?.email || 'No email returned by Supabase.';
+
+    authEmail.disabled = authPending || authState.session !== null;
+    authCode.disabled = authPending || authState.session !== null;
+    sendCodeButton.disabled = authPending || authState.session !== null;
+    verifyCodeButton.disabled = authPending || authState.session !== null;
+    signOutButton.disabled = authPending || authState.session === null;
+
+    if (authState.session) {
+      authConnectCopy.setAttribute('hidden', '');
+      authForm.setAttribute('hidden', '');
+      authUser.removeAttribute('hidden');
+      signOutButton.removeAttribute('hidden');
+      authUserEmail.textContent = email;
+
+      setAuthStatus(
+        authFeedbackMessage ?? authState.apiError,
+        authState.apiError ? 'error' : authFeedbackTone
+      );
+    } else {
+      authConnectCopy.removeAttribute('hidden');
+      authForm.removeAttribute('hidden');
+      authUser.setAttribute('hidden', '');
+      signOutButton.setAttribute('hidden', '');
+      setAuthStatus(authFeedbackMessage ?? DEFAULT_AUTH_STATUS, authFeedbackTone);
+    }
+  }
+
+  function renderPopupState(isBusy = false): void {
+    renderAuthState();
+    syncActionButtons(primaryButton, renewScrapeButton, popupMode, isBusy || authPending, canSaveToApi());
+    setWorkflowStatus(workflowStatusMessage);
+  }
+
+  async function refreshAuthState(): Promise<void> {
+    authState = await getAuthState();
+    renderPopupState();
+  }
 
   function clearDraftSaveTimeout(): void {
     if (draftSaveTimeoutId !== null) {
@@ -439,8 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
     jobDescriptionArea.value = '';
     resetStructuredDetails(details);
     setButtonMode(primaryButton, popupMode);
-    syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-    statusElement.textContent = statusMessage;
+    renderPopupState();
+    setWorkflowStatus(statusMessage);
   }
 
   function renderResult(result: ScrapeResult, statusMessage: string): void {
@@ -450,8 +567,8 @@ document.addEventListener('DOMContentLoaded', () => {
     jobDescriptionArea.value = result.jobDetails.jobDescription ?? '';
     populateStructuredDetails(details, result.jobDetails, result.extractedAt);
     setButtonMode(primaryButton, popupMode);
-    syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-    statusElement.textContent = statusMessage;
+    renderPopupState();
+    setWorkflowStatus(statusMessage);
   }
 
   function buildCurrentDraft(): PopupDraft | null {
@@ -530,7 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renewScrapeButton,
       statusElement,
       popupMode,
-      'Extracting visible text from the current page...'
+      'Extracting visible text from the current page...',
+      canSaveToApi()
     );
 
     try {
@@ -548,8 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         popupMode = 'scrape';
         lastScrapeResult = null;
-        syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-        statusElement.textContent = response.error;
+        renderPopupState();
+        setWorkflowStatus(response.error);
         return;
       }
 
@@ -569,8 +687,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       popupMode = 'scrape';
       lastScrapeResult = null;
-      syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-      statusElement.textContent = errorMessage;
+      renderPopupState();
+      setWorkflowStatus(errorMessage);
     }
   }
 
@@ -595,11 +713,159 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setButtonMode(primaryButton, popupMode);
-  syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
   resetStructuredDetails(details);
-  statusElement.textContent = DEFAULT_READY_STATUS;
+  renderPopupState();
+  setWorkflowStatus(DEFAULT_READY_STATUS);
 
-  void restoreDraftIfAvailable();
+  void (async () => {
+    try {
+      await refreshAuthState();
+    } catch (error) {
+      authFeedbackMessage =
+        error instanceof Error ? error.message : 'Loading the saved authentication state failed.';
+      authFeedbackTone = 'error';
+      renderPopupState();
+    }
+
+    await restoreDraftIfAvailable();
+  })();
+
+  async function runRequestSignInCode(): Promise<void> {
+    const email = authEmail.value.trim();
+
+    if (!email) {
+      authFeedbackMessage = 'Enter your email address to receive a sign-in code.';
+      authFeedbackTone = 'error';
+      renderPopupState();
+      return;
+    }
+
+    authPending = true;
+    authFeedbackMessage = 'Sending a one-time sign-in code to your email...';
+    authFeedbackTone = 'default';
+    renderPopupState();
+
+    try {
+      await requestSignInCode(email);
+      authCode.focus();
+      authFeedbackMessage =
+        'Check your email for the ApplyVault sign-in code, then enter it below. If you only received a magic link, update the Supabase Magic Link email template to include {{ .Token }}.';
+      authFeedbackTone = 'default';
+    } catch (error) {
+      authFeedbackMessage = error instanceof Error ? error.message : 'Sending the sign-in code failed.';
+      authFeedbackTone = 'error';
+    } finally {
+      authPending = false;
+      renderPopupState();
+    }
+  }
+
+  async function runVerifySignInCode(): Promise<void> {
+    const email = authEmail.value.trim();
+    const code = authCode.value.trim();
+
+    if (!email || !code) {
+      authFeedbackMessage = 'Enter both your email address and the sign-in code from your email.';
+      authFeedbackTone = 'error';
+      renderPopupState();
+      return;
+    }
+
+    if (!EMAIL_SIGN_IN_CODE_PATTERN.test(code)) {
+      authFeedbackMessage = 'Enter the numeric sign-in code from your email.';
+      authFeedbackTone = 'error';
+      renderPopupState();
+      return;
+    }
+
+    authPending = true;
+    authFeedbackMessage = 'Verifying your sign-in code...';
+    authFeedbackTone = 'default';
+    renderPopupState();
+
+    try {
+      await verifySignInCode(email, code);
+      authCode.value = '';
+      authFeedbackMessage = null;
+      authFeedbackTone = 'default';
+      await refreshAuthState();
+
+      if (popupMode === 'save' && lastScrapeResult) {
+        setWorkflowStatus('Signed in. You can now save the extracted record to ApplyVault.');
+      }
+    } catch (error) {
+      authCode.value = '';
+      authFeedbackMessage = error instanceof Error ? error.message : 'Verifying the sign-in code failed.';
+      authFeedbackTone = 'error';
+    } finally {
+      authPending = false;
+      renderPopupState();
+    }
+  }
+
+  async function runSignOut(): Promise<void> {
+    authPending = true;
+    authFeedbackMessage = 'Signing out from ApplyVault...';
+    authFeedbackTone = 'default';
+    renderPopupState();
+
+    try {
+      await signOut();
+      authCode.value = '';
+      authFeedbackMessage = null;
+      authFeedbackTone = 'default';
+      await refreshAuthState();
+
+      if (popupMode === 'save' && lastScrapeResult) {
+        setWorkflowStatus('Signed out. Sign in again to save the extracted record to ApplyVault.');
+      }
+    } catch (error) {
+      authFeedbackMessage = error instanceof Error ? error.message : 'Sign out failed.';
+      authFeedbackTone = 'error';
+    } finally {
+      authPending = false;
+      renderPopupState();
+    }
+  }
+
+  sendCodeButton.addEventListener('click', () => {
+    void runRequestSignInCode();
+  });
+
+  verifyCodeButton.addEventListener('click', () => {
+    void runVerifySignInCode();
+  });
+
+  signOutButton.addEventListener('click', () => {
+    void runSignOut();
+  });
+
+  for (const input of [authEmail, authCode]) {
+    input.addEventListener('input', () => {
+      if (!authPending && authFeedbackMessage) {
+        authFeedbackMessage = null;
+        authFeedbackTone = 'default';
+        renderPopupState();
+      }
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || authState.session) {
+        return;
+      }
+
+      event.preventDefault();
+      void (authCode.value.trim() ? runVerifySignInCode() : runRequestSignInCode());
+    });
+  }
+
+  authCode.addEventListener('input', () => {
+    const sanitizedCode = authCode.value.replace(/\D/g, '').slice(0, 8);
+
+    if (authCode.value !== sanitizedCode) {
+      authCode.value = sanitizedCode;
+    }
+  });
 
   primaryButton.addEventListener('click', async () => {
     if (popupMode === 'scrape') {
@@ -610,6 +876,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!lastScrapeResult) {
       resetPopupState('Extract a page before saving.');
       await clearPopupDraft();
+      return;
+    }
+
+    if (!canSaveToApi()) {
+      renderPopupState();
+      setWorkflowStatus('Sign in to save the extracted record to ApplyVault.');
       return;
     }
 
@@ -629,15 +901,16 @@ document.addEventListener('DOMContentLoaded', () => {
       renewScrapeButton,
       statusElement,
       popupMode,
-      'Saving extracted data to the ASP.NET API...'
+      'Saving extracted data to the ApplyVault API...',
+      canSaveToApi()
     );
 
     try {
       const response = await sendSaveRequest(draft.result);
 
       if (!response.success) {
-        syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-        statusElement.textContent = response.error;
+        renderPopupState();
+        setWorkflowStatus(response.error);
         await savePopupDraft({
           ...draft,
           statusMessage: response.error
@@ -652,8 +925,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const errorMessage =
         error instanceof Error ? error.message : 'Saving the extracted result failed.';
 
-      syncActionButtons(primaryButton, renewScrapeButton, popupMode, false);
-      statusElement.textContent = errorMessage;
+      renderPopupState();
+      setWorkflowStatus(errorMessage);
       await savePopupDraft({
         ...draft,
         statusMessage: errorMessage

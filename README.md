@@ -10,6 +10,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 
 - Scrape page text plus structured job details such as title, company, location, description, summary, and hiring-manager contacts.
 - Review and edit extracted fields in the extension popup before saving them to the API.
+- Sign in to the extension with a one-time Supabase email code instead of entering a password.
 - Store saved results in LocalDB through EF Core migrations applied automatically at API startup.
 - Browse saved jobs in the Angular dashboard and inspect a dedicated detail panel.
 - Mark saved results as rejected and update the saved job description from the dashboard.
@@ -90,18 +91,24 @@ The dashboard runs on `http://localhost:4200/` and reads saved results from `htt
 3. Click Load unpacked.
 4. Select the root `dist` folder from this project.
 
+## Supabase Email-Code Setup
+
+The extension sign-in flow expects a typed numeric email OTP, not a clicked magic link.
+
+In your Supabase project's `Magic Link` email template, include `{{ .Token }}` in the email body so users receive the code that `verifyOtp({ email, token, type: 'email' })` expects. If the template only uses `{{ .ConfirmationURL }}`, Supabase will send a magic link instead of the code required by the extension.
+
 ## Typical Flow
 
 1. Start the API.
 2. Build and load the extension in Chrome.
-3. Open a job listing and click `Scrape current page`.
+3. Open a supported job listing and click `Scrape current page`.
 4. Review the scraped text and structured fields in the popup, make any needed edits, and click `Save`.
 5. Start the Angular dashboard and review saved results in the browser.
 6. Open a saved result to update the description or mark it as rejected.
 
 ## Manual Verification
 
-1. Open a normal website or job page in Chrome.
+1. Open a supported job page in Chrome such as LinkedIn, Workday, Greenhouse, or Lever.
 2. Use the extension to scrape the current page.
 3. Confirm the popup fills in structured fields such as job title, company, location, description, and contacts.
 4. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.

@@ -167,7 +167,24 @@ h3 {
   color: var(--app-accent-dark) !important;
 }
 
+.job-detail__chip--review {
+  background: rgba(255, 215, 140, 0.35) !important;
+  color: #8b5c00 !important;
+}
+
+.job-detail__chip--reviewed {
+  background: rgba(146, 217, 179, 0.3) !important;
+  color: #1b6a44 !important;
+}
+
 .job-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.job-detail__capture-grid,
+.job-detail__review-editor-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
@@ -204,12 +221,34 @@ h3 {
   box-shadow: var(--app-shadow-sm);
 }
 
+.job-detail__field-editor {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.job-detail__field-editor span {
+  color: var(--app-text-muted);
+  font-size: 0.84rem;
+}
+
+.job-detail__field-editor input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--app-border-strong);
+  background: rgba(255, 250, 244, 0.92);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+}
+
 .job-detail__validation-message {
   color: var(--app-danger);
 }
 
 @media (max-width: 960px) {
-  .job-detail__grid {
+  .job-detail__grid,
+  .job-detail__capture-grid,
+  .job-detail__review-editor-grid {
     grid-template-columns: 1fr;
   }
 

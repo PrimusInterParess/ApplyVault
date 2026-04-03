@@ -4,8 +4,12 @@ import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { JobResultsFacade } from '../../data-access/job-results.facade';
+import { UpdateJobCaptureReviewRequest } from '../../models/job-result.model';
 import { JobResultCardComponent } from '../../presentation/job-result-card/job-result-card.component';
-import { JobResultDetailComponent } from '../../presentation/job-result-detail/job-result-detail.component';
+import {
+  JobCaptureReviewSaveEvent,
+  JobResultDetailComponent
+} from '../../presentation/job-result-detail/job-result-detail.component';
 import { CalendarConnectionsFacade } from '../../../settings/data-access/calendar-connections.facade';
 
 @Component({
@@ -16,11 +20,22 @@ import { CalendarConnectionsFacade } from '../../../settings/data-access/calenda
   styleUrl: './job-results-page.component.scss'
 })
 export class JobResultsPageComponent {
-  protected readonly facade = inject(JobResultsFacade);
-  protected readonly auth = inject(AuthService);
+  readonly facade = inject(JobResultsFacade);
+  readonly auth = inject(AuthService);
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
 
   protected asValue(event: Event): string {
     return (event.target as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
+  }
+
+  protected handleCaptureReviewSave(event: JobCaptureReviewSaveEvent): void {
+    const request: UpdateJobCaptureReviewRequest = {
+      jobTitle: event.jobTitle,
+      companyName: event.companyName,
+      location: event.location,
+      jobDescription: event.jobDescription
+    };
+
+    this.facade.updateCaptureReview(event.id, request);
   }
 }

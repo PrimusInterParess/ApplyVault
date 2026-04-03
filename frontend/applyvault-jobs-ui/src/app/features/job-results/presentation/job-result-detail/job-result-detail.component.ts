@@ -1,10 +1,9 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { JobResultViewModel } from '../../models/job-result-view.model';
-import { UpdateInterviewEventRequest } from '../../models/job-result.model';
+import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
 import { JobResultInterviewEventEditorComponent } from '../job-result-interview-event-editor/job-result-interview-event-editor.component';
 import { ConnectedCalendarAccount } from '../../../settings/models/calendar-connection.model';
@@ -19,10 +18,18 @@ export interface JobInterviewEventSaveEvent {
   readonly request: UpdateInterviewEventRequest;
 }
 
+export interface JobCaptureReviewSaveEvent {
+  readonly id: string;
+  readonly jobTitle: string | null;
+  readonly companyName: string | null;
+  readonly location: string | null;
+  readonly jobDescription: string | null;
+}
+
 @Component({
   selector: 'app-job-result-detail',
   standalone: true,
-  imports: [DatePipe, TitleCasePipe, RouterLink, JobResultInterviewEventEditorComponent],
+  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent],
   templateUrl: './job-result-detail.component.html',
   styleUrl: './job-result-detail.component.scss'
 })
@@ -36,12 +43,41 @@ export class JobResultDetailComponent {
   readonly toggleRejected = output<string>();
   readonly deleteResult = output<string>();
   readonly saveDescription = output<JobDescriptionSaveEvent>();
+  readonly saveCaptureReview = output<JobCaptureReviewSaveEvent>();
   readonly saveInterviewEvent = output<JobInterviewEventSaveEvent>();
   readonly clearInterviewEvent = output<string>();
   readonly createCalendarEvent = output<{ id: string; connectedAccountId: string }>();
+  readonly editingCaptureReview = signal(false);
+  readonly jobTitleDraft = signal('');
+  readonly companyNameDraft = signal('');
+  readonly locationDraft = signal('');
   readonly editingDescription = signal(false);
   readonly descriptionDraft = signal('');
+  readonly normalizedJobTitleDraft = computed(() => this.normalizeOptionalDraft(this.jobTitleDraft()));
+  readonly normalizedCompanyNameDraft = computed(() => this.normalizeOptionalDraft(this.companyNameDraft()));
+  readonly normalizedLocationDraft = computed(() => this.normalizeOptionalDraft(this.locationDraft()));
   readonly normalizedDraftDescription = computed(() => this.descriptionDraft().trim());
+  readonly hasCaptureReviewChanges = computed(() => {
+    const job = this.job();
+
+    if (!job) {
+      return false;
+    }
+
+    return (
+      this.normalizedJobTitleDraft() !== this.normalizeOptionalDraft(job.captureQuality.jobTitle.effectiveValue) ||
+      this.normalizedCompanyNameDraft() !== this.normalizeOptionalDraft(job.captureQuality.companyName.effectiveValue) ||
+      this.normalizedLocationDraft() !== this.normalizeOptionalDraft(job.captureQuality.location.effectiveValue)
+    );
+  });
+  readonly canSaveCaptureReview = computed(() => {
+    return Boolean(
+      this.job() &&
+        this.editingCaptureReview() &&
+        !this.updating() &&
+        this.hasCaptureReviewChanges()
+    );
+  });
   readonly hasDescriptionChanges = computed(() => {
     const currentDescription = this.job()?.description ?? '';
     return this.normalizedDraftDescription() !== currentDescription.trim();
@@ -74,10 +110,69 @@ export class JobResultDetailComponent {
 
   constructor() {
     effect(() => {
-      const description = this.job()?.description ?? '';
+      const job = this.job();
+      const description = job?.description ?? '';
 
+      this.jobTitleDraft.set(job?.captureQuality.jobTitle.effectiveValue ?? '');
+      this.companyNameDraft.set(job?.captureQuality.companyName.effectiveValue ?? '');
+      this.locationDraft.set(job?.captureQuality.location.effectiveValue ?? '');
+      this.editingCaptureReview.set(false);
       this.descriptionDraft.set(description);
       this.editingDescription.set(false);
+    });
+  }
+
+  beginCaptureReviewEdit(): void {
+    const job = this.job();
+
+    if (!job || this.updating()) {
+      return;
+    }
+
+    this.jobTitleDraft.set(job.captureQuality.jobTitle.effectiveValue ?? '');
+    this.companyNameDraft.set(job.captureQuality.companyName.effectiveValue ?? '');
+    this.locationDraft.set(job.captureQuality.location.effectiveValue ?? '');
+    this.editingCaptureReview.set(true);
+  }
+
+  cancelCaptureReviewEdit(): void {
+    const job = this.job();
+
+    this.jobTitleDraft.set(job?.captureQuality.jobTitle.effectiveValue ?? '');
+    this.companyNameDraft.set(job?.captureQuality.companyName.effectiveValue ?? '');
+    this.locationDraft.set(job?.captureQuality.location.effectiveValue ?? '');
+    this.editingCaptureReview.set(false);
+  }
+
+  updateCaptureReviewDraft(field: 'jobTitle' | 'companyName' | 'location', event: Event): void {
+    const value = (event.target as HTMLInputElement | null)?.value ?? '';
+
+    switch (field) {
+      case 'jobTitle':
+        this.jobTitleDraft.set(value);
+        return;
+      case 'companyName':
+        this.companyNameDraft.set(value);
+        return;
+      case 'location':
+        this.locationDraft.set(value);
+        return;
+    }
+  }
+
+  submitCaptureReview(): void {
+    const job = this.job();
+
+    if (!job || !this.canSaveCaptureReview()) {
+      return;
+    }
+
+    this.saveCaptureReview.emit({
+      id: job.id,
+      jobTitle: this.normalizedJobTitleDraft(),
+      companyName: this.normalizedCompanyNameDraft(),
+      location: this.normalizedLocationDraft(),
+      jobDescription: job.captureQuality.jobDescription.effectiveValue
     });
   }
 
@@ -149,5 +244,29 @@ export class JobResultDetailComponent {
       id: job.id,
       connectedAccountId
     });
+  }
+
+  captureReviewVisible(): boolean {
+    const job = this.job();
+    return !!job && (job.captureQuality.needsReview || job.captureQuality.reviewStatus === 'reviewed');
+  }
+
+  describeCaptureField(field: CaptureQualityField): string {
+    const confidence = `${Math.round(field.confidence * 100)}% confidence`;
+
+    if (field.needsReview && field.reviewReason) {
+      return `${confidence}. ${field.reviewReason}`;
+    }
+
+    if (field.userOverrideValue) {
+      return `${confidence}. Reviewed and overridden.`;
+    }
+
+    return confidence;
+  }
+
+  private normalizeOptionalDraft(value: string | null | undefined): string | null {
+    const normalized = value?.trim() ?? '';
+    return normalized.length > 0 ? normalized : null;
   }
 }

@@ -6,6 +6,8 @@ namespace ApplyVault.Api.Services;
 
 public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : IScrapeResultStore
 {
+    private const double LowConfidenceThreshold = 0.7;
+
     public async Task<IReadOnlyCollection<SavedScrapeResult>> GetAllAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
@@ -42,10 +44,11 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
     }
 
     public async Task<SavedScrapeResult> SaveAsync(
-        ScrapeResultDto result,
+        AssessedScrapeResult result,
         Guid? userId,
         CancellationToken cancellationToken = default)
     {
+        var payload = result.Payload;
         var entity = new ScrapeResultEntity
         {
             Id = Guid.NewGuid(),
@@ -53,20 +56,30 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             SavedAt = DateTimeOffset.UtcNow,
             IsRejected = false,
             IsDeleted = false,
-            Title = result.Title,
-            Url = result.Url,
-            Text = result.Text,
-            TextLength = result.TextLength,
-            ExtractedAt = result.ExtractedAt,
-            SourceHostname = result.JobDetails.SourceHostname,
-            DetectedPageType = result.JobDetails.DetectedPageType,
-            JobTitle = result.JobDetails.JobTitle,
-            CompanyName = result.JobDetails.CompanyName,
-            Location = result.JobDetails.Location,
-            JobDescription = result.JobDetails.JobDescription,
-            PositionSummary = result.JobDetails.PositionSummary,
-            HiringManagerName = result.JobDetails.HiringManagerName,
-            HiringManagerContacts = result.JobDetails.HiringManagerContacts
+            Title = payload.Title,
+            Url = payload.Url,
+            Text = payload.Text,
+            TextLength = payload.TextLength,
+            ExtractedAt = payload.ExtractedAt,
+            SourceHostname = payload.JobDetails.SourceHostname,
+            DetectedPageType = payload.JobDetails.DetectedPageType,
+            JobTitle = payload.JobDetails.JobTitle,
+            JobTitleConfidence = result.CaptureQuality.JobTitle.Confidence,
+            JobTitleReviewReason = result.CaptureQuality.JobTitle.ReviewReason,
+            CompanyName = payload.JobDetails.CompanyName,
+            CompanyNameConfidence = result.CaptureQuality.CompanyName.Confidence,
+            CompanyNameReviewReason = result.CaptureQuality.CompanyName.ReviewReason,
+            Location = payload.JobDetails.Location,
+            LocationConfidence = result.CaptureQuality.Location.Confidence,
+            LocationReviewReason = result.CaptureQuality.Location.ReviewReason,
+            JobDescription = payload.JobDetails.JobDescription,
+            JobDescriptionConfidence = result.CaptureQuality.JobDescription.Confidence,
+            JobDescriptionReviewReason = result.CaptureQuality.JobDescription.ReviewReason,
+            PositionSummary = payload.JobDetails.PositionSummary,
+            HiringManagerName = payload.JobDetails.HiringManagerName,
+            CaptureOverallConfidence = result.CaptureQuality.OverallConfidence,
+            CaptureReviewStatus = CaptureReviewStatuses.NotRequired,
+            HiringManagerContacts = payload.JobDetails.HiringManagerContacts
                 .Select((contact) => new ScrapeResultContactEntity
                 {
                     Type = contact.Type,
@@ -75,8 +88,44 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                 })
                 .ToList()
         };
+        UpdateCaptureReviewStatus(entity);
 
         await dbContext.ScrapeResults.AddAsync(entity, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return MapToSavedResult(entity);
+    }
+
+    public async Task<SavedScrapeResult?> UpdateCaptureReviewAsync(
+        Guid id,
+        Guid userId,
+        UpdateScrapeResultCaptureReviewRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await dbContext
+            .ScrapeResults
+            .Include((result) => result.HiringManagerContacts)
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.JobTitleOverride = NormalizeOverride(request.JobTitle, entity.JobTitle);
+        entity.CompanyNameOverride = NormalizeOverride(request.CompanyName, entity.CompanyName);
+        entity.LocationOverride = NormalizeOverride(request.Location, entity.Location);
+
+        if (request.JobDescription is not null)
+        {
+            entity.JobDescriptionOverride = NormalizeOverride(request.JobDescription, entity.JobDescription);
+        }
+
+        UpdateCaptureReviewStatus(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
@@ -128,7 +177,8 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             return null;
         }
 
-        entity.JobDescription = description;
+        entity.JobDescriptionOverride = NormalizeOverride(description, entity.JobDescription);
+        UpdateCaptureReviewStatus(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
@@ -221,6 +271,10 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
 
     private static SavedScrapeResult MapToSavedResult(ScrapeResultEntity entity)
     {
+        var effectiveJobTitle = ResolveEffectiveValue(entity.JobTitle, entity.JobTitleOverride);
+        var effectiveCompanyName = ResolveEffectiveValue(entity.CompanyName, entity.CompanyNameOverride);
+        var effectiveLocation = ResolveEffectiveValue(entity.Location, entity.LocationOverride);
+        var effectiveJobDescription = ResolveEffectiveValue(entity.JobDescription, entity.JobDescriptionOverride);
         var payload = new ScrapeResultDto(
             entity.Title,
             entity.Url,
@@ -230,10 +284,10 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             new JobDetailsDto(
                 entity.SourceHostname,
                 entity.DetectedPageType,
-                entity.JobTitle,
-                entity.CompanyName,
-                entity.Location,
-                entity.JobDescription,
+                effectiveJobTitle,
+                effectiveCompanyName,
+                effectiveLocation,
+                effectiveJobDescription,
                 entity.PositionSummary,
                 entity.HiringManagerName,
                 entity.HiringManagerContacts
@@ -264,6 +318,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                 link.CreatedAt,
                 link.UpdatedAt))
             .ToArray();
+        var captureQuality = BuildCaptureQuality(entity);
 
         return new SavedScrapeResult(
             entity.Id,
@@ -272,6 +327,106 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             entity.InterviewDate,
             interviewEvent,
             calendarEvents,
-            payload);
+            payload,
+            captureQuality);
+    }
+
+    private static CaptureQualityDto BuildCaptureQuality(ScrapeResultEntity entity)
+    {
+        return new CaptureQualityDto(
+            entity.CaptureReviewStatus,
+            string.Equals(entity.CaptureReviewStatus, CaptureReviewStatuses.NeedsReview, StringComparison.Ordinal),
+            entity.CaptureOverallConfidence,
+            BuildField(
+                entity.JobTitle,
+                entity.JobTitleOverride,
+                entity.JobTitleConfidence,
+                entity.JobTitleReviewReason),
+            BuildField(
+                entity.CompanyName,
+                entity.CompanyNameOverride,
+                entity.CompanyNameConfidence,
+                entity.CompanyNameReviewReason),
+            BuildField(
+                entity.Location,
+                entity.LocationOverride,
+                entity.LocationConfidence,
+                entity.LocationReviewReason),
+            BuildField(
+                entity.JobDescription,
+                entity.JobDescriptionOverride,
+                entity.JobDescriptionConfidence,
+                entity.JobDescriptionReviewReason));
+    }
+
+    private static CaptureQualityFieldDto BuildField(
+        string? originalValue,
+        string? userOverrideValue,
+        double confidence,
+        string? reviewReason)
+    {
+        var needsReview = IsUnresolvedLowConfidence(confidence, userOverrideValue);
+        return new CaptureQualityFieldDto(
+            originalValue,
+            ResolveEffectiveValue(originalValue, userOverrideValue),
+            userOverrideValue,
+            confidence,
+            needsReview,
+            needsReview ? reviewReason : null);
+    }
+
+    private static void UpdateCaptureReviewStatus(ScrapeResultEntity entity)
+    {
+        var hasUnresolvedLowConfidenceField =
+            IsUnresolvedLowConfidence(entity.JobTitleConfidence, entity.JobTitleOverride) ||
+            IsUnresolvedLowConfidence(entity.CompanyNameConfidence, entity.CompanyNameOverride) ||
+            IsUnresolvedLowConfidence(entity.LocationConfidence, entity.LocationOverride) ||
+            IsUnresolvedLowConfidence(entity.JobDescriptionConfidence, entity.JobDescriptionOverride);
+
+        if (hasUnresolvedLowConfidenceField)
+        {
+            entity.CaptureReviewStatus = CaptureReviewStatuses.NeedsReview;
+            return;
+        }
+
+        entity.CaptureReviewStatus = HasAnyOverride(entity)
+            ? CaptureReviewStatuses.Reviewed
+            : CaptureReviewStatuses.NotRequired;
+    }
+
+    private static bool HasAnyOverride(ScrapeResultEntity entity)
+    {
+        return entity.JobTitleOverride is not null ||
+            entity.CompanyNameOverride is not null ||
+            entity.LocationOverride is not null ||
+            entity.JobDescriptionOverride is not null;
+    }
+
+    private static bool IsUnresolvedLowConfidence(double confidence, string? userOverrideValue)
+    {
+        return confidence < LowConfidenceThreshold && string.IsNullOrWhiteSpace(userOverrideValue);
+    }
+
+    private static string? ResolveEffectiveValue(string? originalValue, string? userOverrideValue)
+    {
+        return string.IsNullOrWhiteSpace(userOverrideValue) ? originalValue : userOverrideValue;
+    }
+
+    private static string? NormalizeOverride(string? newValue, string? originalValue)
+    {
+        var normalizedOriginal = NormalizeValue(originalValue);
+        var normalizedNewValue = NormalizeValue(newValue);
+
+        if (string.Equals(normalizedOriginal, normalizedNewValue, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return normalizedNewValue;
+    }
+
+    private static string? NormalizeValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

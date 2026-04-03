@@ -14,8 +14,14 @@ public interface IScrapeResultStore
         CancellationToken cancellationToken = default);
 
     Task<SavedScrapeResult> SaveAsync(
-        ScrapeResultDto result,
+        AssessedScrapeResult result,
         Guid? userId,
+        CancellationToken cancellationToken = default);
+
+    Task<SavedScrapeResult?> UpdateCaptureReviewAsync(
+        Guid id,
+        Guid userId,
+        UpdateScrapeResultCaptureReviewRequest request,
         CancellationToken cancellationToken = default);
 
     Task<SavedScrapeResult?> SetRejectedAsync(

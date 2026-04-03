@@ -4,16 +4,20 @@ ApplyVault is a job-capture workspace built from three connected parts:
 
 - a Chrome Manifest V3 extension that scrapes job listing details from the active tab
 - a local ASP.NET Core API backed by EF Core and SQL Server LocalDB
-- an Angular dashboard for browsing and filtering saved job results
+- an Angular dashboard for reviewing saved jobs, fixing weak captures, and managing interview follow-up
 
 ## Current Capabilities
 
-- Scrape page text plus structured job details such as title, company, location, description, summary, and hiring-manager contacts.
+- Scrape raw page text plus structured job details such as title, company, location, description, summary, and hiring-manager contacts.
 - Review and edit extracted fields in the extension popup before saving them to the API.
-- Sign in to the extension with a one-time Supabase email code instead of entering a password.
+- Score capture quality for key fields and flag low-confidence results for follow-up review.
+- Run optional Google AI enrichment to repair low-confidence fields before the result is stored.
+- Persist original values, effective values, user overrides, overall confidence, and review status for each saved result.
+- Sign in to the extension and dashboard with Supabase-backed authentication.
 - Store saved results in LocalDB through EF Core migrations applied automatically at API startup.
 - Browse saved jobs in the Angular dashboard and inspect a dedicated detail panel.
-- Mark saved results as rejected and update the saved job description from the dashboard.
+- Mark saved results as rejected, review key capture fields, and clean up Markdown descriptions from the dashboard.
+- Save interview timing on a job and create linked calendar events for connected Google or Microsoft accounts.
 - Render saved job descriptions as Markdown in the dashboard detail view.
 
 ## Repository Layout
@@ -24,6 +28,8 @@ ApplyVault is a job-capture workspace built from three connected parts:
   ASP.NET Core API that stores and serves captured job results.
 - `frontend/applyvault-jobs-ui/`
   Angular application for reviewing saved results in a dashboard-style UI.
+- `plans/`
+  Product and implementation planning documents for upcoming roadmap work.
 - `md/`
   Project notes and reusable prompt or style guidance documents.
 
@@ -69,12 +75,33 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/scrape-results`
 - `PATCH /api/scrape-results/{id}/rejection`
 - `PATCH /api/scrape-results/{id}/description`
+- `PATCH /api/scrape-results/{id}/capture-review`
+- `PUT /api/scrape-results/{id}/interview-event`
+- `DELETE /api/scrape-results/{id}/interview-event`
+- `POST /api/scrape-results/{id}/calendar-events`
 
-Saved results include the raw scrape payload plus structured job details and a persisted `isRejected` flag.
+`POST /api/scrape-results` is available for ingestion from the extension. The review and dashboard endpoints require authentication.
+
+Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, and capture-quality metadata for reviewable fields.
 
 By default, the API uses the `ApplyVault` SQL Server LocalDB database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`. Startup applies EF Core migrations automatically with `Database.Migrate()`.
 
-### 3. Run the Angular dashboard
+### 3. Configure API integrations
+
+The API reads several option sections from `api/ApplyVault.Api/appsettings.json` and local environment overrides:
+
+- `GoogleAi`
+  Optional AI repair for low-confidence captures. Provide an API key and model when you want enrichment enabled.
+- `ScrapeResultEnrichment`
+  Turns the low-confidence enrichment pass on or off and controls whether AI failures should block saving.
+- `Supabase`
+  Configures JWT validation for authenticated dashboard and extension requests.
+- `CalendarIntegration`
+  Configures the OAuth client details and redirect URLs used to connect Google and Microsoft calendar providers.
+
+Prefer local overrides, environment variables, or user secrets for development credentials instead of checking secrets into source-controlled config files.
+
+### 4. Run the Angular dashboard
 
 ```bash
 cd frontend/applyvault-jobs-ui
@@ -83,6 +110,13 @@ npm start
 ```
 
 The dashboard runs on `http://localhost:4200/` and reads saved results from `http://localhost:5173/api`.
+
+The saved-job detail view now supports:
+
+- capture quality review with field-level confidence and review reasons
+- Markdown description cleanup and rendering
+- interview event editing
+- calendar-event creation for connected providers
 
 ## Load The Extension In Chrome
 
@@ -103,20 +137,25 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 2. Build and load the extension in Chrome.
 3. Open a supported job listing and click `Scrape current page`.
 4. Review the scraped text and structured fields in the popup, make any needed edits, and click `Save`.
-5. Start the Angular dashboard and review saved results in the browser.
-6. Open a saved result to update the description or mark it as rejected.
+5. Let the API score capture quality and optionally enrich weak fields before persisting the result.
+6. Start the Angular dashboard and review saved results in the browser.
+7. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
+8. If the role progresses, save an interview time and push it to a connected calendar provider.
 
 ## Manual Verification
 
 1. Open a supported job page in Chrome such as LinkedIn, Workday, Greenhouse, or Lever.
 2. Use the extension to scrape the current page.
-3. Confirm the popup fills in structured fields such as job title, company, location, description, and contacts.
+3. Confirm the popup fills in structured fields such as job title, company, location, description, summary, and contacts.
 4. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.
 5. Open the dashboard and verify the new job appears in the list.
-6. Use the search and source filters to confirm filtering works.
-7. Open a saved result, toggle its rejected state, and verify the change persists after refresh.
+6. Check that the detail view shows capture confidence, review state, and field-level review guidance.
+7. If the result is flagged for review, update the job title, company, or location and verify the reviewed state persists after refresh.
 8. Edit the saved description in the dashboard and verify the rendered Markdown updates.
-9. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+9. Save an interview event, refresh, and verify the interview timing persists.
+10. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
+11. Toggle the rejected state and verify the change persists after refresh.
+12. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
 
 ## Notes
 

@@ -4,5 +4,7 @@ namespace ApplyVault.Api.Services;
 
 public interface IScrapeResultEnrichmentService
 {
-    Task<ScrapeResultDto> EnrichIfNeededAsync(ScrapeResultDto request, CancellationToken cancellationToken = default);
+    Task<ScrapeResultDto> EnrichLowConfidenceFieldsAsync(
+        AssessedScrapeResult assessment,
+        CancellationToken cancellationToken = default);
 }

@@ -1,8 +1,9 @@
-import { SavedJobResult } from '../models/job-result.model';
+import { CaptureQuality, CaptureQualityField, SavedJobResult } from '../models/job-result.model';
 import { JobResultViewModel } from '../models/job-result-view.model';
 
 export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultViewModel {
   const { payload } = result;
+  const captureQuality = result.captureQuality ?? buildFallbackCaptureQuality(result);
   const title = firstNonEmpty(payload.jobDetails.jobTitle, payload.title, 'Untitled role');
   const company = firstNonEmpty(payload.jobDetails.companyName, extractHostnameLabel(payload.url), 'Unknown company');
   const location = firstNonEmpty(payload.jobDetails.location, 'Location not specified');
@@ -38,6 +39,7 @@ export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultV
     interviewDate: result.interviewDate,
     interviewEvent: result.interviewEvent,
     calendarEvents: result.calendarEvents,
+    captureQuality,
     title,
     company,
     location,
@@ -51,6 +53,29 @@ export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultV
     url: payload.url,
     textLength: payload.textLength,
     searchText
+  };
+}
+
+function buildFallbackCaptureQuality(result: SavedJobResult): CaptureQuality {
+  return {
+    reviewStatus: 'not_required',
+    needsReview: false,
+    overallConfidence: 1,
+    jobTitle: buildFallbackField(result.payload.jobDetails.jobTitle),
+    companyName: buildFallbackField(result.payload.jobDetails.companyName),
+    location: buildFallbackField(result.payload.jobDetails.location),
+    jobDescription: buildFallbackField(result.payload.jobDetails.jobDescription)
+  };
+}
+
+function buildFallbackField(value: string | null): CaptureQualityField {
+  return {
+    originalValue: value,
+    effectiveValue: value,
+    userOverrideValue: null,
+    confidence: value && value.trim().length > 0 ? 1 : 0,
+    needsReview: false,
+    reviewReason: null
   };
 }
 

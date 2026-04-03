@@ -18,6 +18,32 @@ public sealed record JobDetailsDto(
     IReadOnlyList<HiringManagerContactDto> HiringManagerContacts
 );
 
+public sealed record CaptureQualityFieldDto(
+    string? OriginalValue,
+    string? EffectiveValue,
+    string? UserOverrideValue,
+    double Confidence,
+    bool NeedsReview,
+    string? ReviewReason
+);
+
+public sealed record CaptureQualityDto(
+    string ReviewStatus,
+    bool NeedsReview,
+    double OverallConfidence,
+    CaptureQualityFieldDto JobTitle,
+    CaptureQualityFieldDto CompanyName,
+    CaptureQualityFieldDto Location,
+    CaptureQualityFieldDto JobDescription
+);
+
+public static class CaptureReviewStatuses
+{
+    public const string NotRequired = "not_required";
+    public const string NeedsReview = "needs_review";
+    public const string Reviewed = "reviewed";
+}
+
 public sealed record ScrapeResultDto(
     string Title,
     string Url,
@@ -34,7 +60,8 @@ public sealed record SavedScrapeResult(
     DateOnly? InterviewDate,
     InterviewEventDto? InterviewEvent,
     IReadOnlyList<CalendarEventLinkDto> CalendarEvents,
-    ScrapeResultDto Payload
+    ScrapeResultDto Payload,
+    CaptureQualityDto CaptureQuality
 );
 
 public sealed record SaveScrapeResultResponse(
@@ -48,6 +75,13 @@ public sealed record UpdateScrapeResultRejectionRequest(
 
 public sealed record UpdateScrapeResultDescriptionRequest(
     string Description
+);
+
+public sealed record UpdateScrapeResultCaptureReviewRequest(
+    string? JobTitle,
+    string? CompanyName,
+    string? Location,
+    string? JobDescription
 );
 
 public sealed record UpdateScrapeResultInterviewDateRequest(

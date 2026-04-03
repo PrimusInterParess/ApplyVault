@@ -30,15 +30,43 @@ public sealed class ScrapeResultEntity
 
     public string? JobTitle { get; set; }
 
+    public string? JobTitleOverride { get; set; }
+
+    public double JobTitleConfidence { get; set; }
+
+    public string? JobTitleReviewReason { get; set; }
+
     public string? CompanyName { get; set; }
+
+    public string? CompanyNameOverride { get; set; }
+
+    public double CompanyNameConfidence { get; set; }
+
+    public string? CompanyNameReviewReason { get; set; }
 
     public string? Location { get; set; }
 
+    public string? LocationOverride { get; set; }
+
+    public double LocationConfidence { get; set; }
+
+    public string? LocationReviewReason { get; set; }
+
     public string? JobDescription { get; set; }
+
+    public string? JobDescriptionOverride { get; set; }
+
+    public double JobDescriptionConfidence { get; set; }
+
+    public string? JobDescriptionReviewReason { get; set; }
 
     public string? PositionSummary { get; set; }
 
     public string? HiringManagerName { get; set; }
+
+    public double CaptureOverallConfidence { get; set; }
+
+    public required string CaptureReviewStatus { get; set; }
 
     public AppUserEntity? User { get; set; }
 

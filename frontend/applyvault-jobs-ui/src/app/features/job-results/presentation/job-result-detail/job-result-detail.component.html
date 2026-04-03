@@ -36,17 +36,23 @@
       @if (selectedJob.isRejected) {
         <span class="job-detail__chip job-detail__chip--rejected">Rejected</span>
       }
+      @if (selectedJob.captureQuality.needsReview) {
+        <span class="job-detail__chip job-detail__chip--review">Needs review</span>
+      } @else if (selectedJob.captureQuality.reviewStatus === 'reviewed') {
+        <span class="job-detail__chip job-detail__chip--reviewed">Reviewed</span>
+      }
       @if (selectedJob.interviewEvent) {
         <span class="job-detail__chip job-detail__chip--interview">
           Interview {{ formatInterviewEventWindow(selectedJob.interviewEvent) }}
         </span>
       }
       <span>{{ selectedJob.location }}</span>
+      <span>Capture {{ (selectedJob.captureQuality.overallConfidence * 100).toFixed(0) }}%</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
     </div>
 
     <article class="job-detail__description">
-      <div class="job-detail__section-header">
+      <!-- <div class="job-detail__section-header">
         <div>
           <h3>Calendar event sync</h3>
           <p class="job-detail__muted">
@@ -55,7 +61,7 @@
         </div>
 
         <a routerLink="/settings" class="job-detail__settings-link">Manage providers in settings</a>
-      </div>
+      </div> -->
 
       @if (connectionError(); as connectionErrorMessage) {
         <p class="job-detail__validation-message">{{ connectionErrorMessage }}</p>
@@ -72,8 +78,7 @@
           @for (connection of connections(); track connection.id) {
             <li>
               <div>
-                <strong>{{ connection.provider | titlecase }}</strong>
-                <p>{{ connection.displayName || connection.email || connection.providerUserId }}</p>
+                <strong>{{ connection.provider | titlecase }}</strong> Calendar
               </div>
               <div class="job-detail__calendar-row-actions">
                 <button
@@ -95,6 +100,105 @@
         </ul>
       }
     </article>
+
+    @if (captureReviewVisible()) {
+      <article class="job-detail__description">
+        <div class="job-detail__section-header">
+          <div>
+            <h3>Capture review</h3>
+            <p class="job-detail__muted">
+              Review low-confidence fields without editing the raw scrape under the hood.
+            </p>
+          </div>
+
+          @if (!editingCaptureReview()) {
+            <button
+              type="button"
+              class="job-detail__secondary-action"
+              [disabled]="updating()"
+              (click)="beginCaptureReviewEdit()">
+              Review key fields
+            </button>
+          }
+        </div>
+
+        @if (editingCaptureReview()) {
+          <div class="job-detail__review-editor-grid">
+            <label class="job-detail__field-editor">
+              <span>Role title</span>
+              <input
+                type="text"
+                [value]="jobTitleDraft()"
+                [disabled]="updating()"
+                (input)="updateCaptureReviewDraft('jobTitle', $event)" />
+            </label>
+
+            <label class="job-detail__field-editor">
+              <span>Company</span>
+              <input
+                type="text"
+                [value]="companyNameDraft()"
+                [disabled]="updating()"
+                (input)="updateCaptureReviewDraft('companyName', $event)" />
+            </label>
+
+            <label class="job-detail__field-editor">
+              <span>Location</span>
+              <input
+                type="text"
+                [value]="locationDraft()"
+                [disabled]="updating()"
+                (input)="updateCaptureReviewDraft('location', $event)" />
+            </label>
+          </div>
+
+          <div class="job-detail__editor-actions">
+            <button
+              type="button"
+              class="job-detail__primary-action"
+              [disabled]="!canSaveCaptureReview()"
+              (click)="submitCaptureReview()">
+              Save reviewed fields
+            </button>
+            <button
+              type="button"
+              class="job-detail__secondary-action"
+              [disabled]="updating()"
+              (click)="cancelCaptureReviewEdit()">
+              Cancel
+            </button>
+          </div>
+        } @else {
+          <div class="job-detail__capture-grid">
+            <article>
+              <h3>Role title</h3>
+              <p>{{ selectedJob.title }}</p>
+              <p class="job-detail__muted">{{ describeCaptureField(selectedJob.captureQuality.jobTitle) }}</p>
+            </article>
+
+            <article>
+              <h3>Company</h3>
+              <p>{{ selectedJob.company }}</p>
+              <p class="job-detail__muted">{{ describeCaptureField(selectedJob.captureQuality.companyName) }}</p>
+            </article>
+
+            <article>
+              <h3>Location</h3>
+              <p>{{ selectedJob.location }}</p>
+              <p class="job-detail__muted">{{ describeCaptureField(selectedJob.captureQuality.location) }}</p>
+            </article>
+
+            <article>
+              <h3>Description snapshot</h3>
+              <p class="job-detail__muted">{{ describeCaptureField(selectedJob.captureQuality.jobDescription) }}</p>
+              @if (selectedJob.captureQuality.jobDescription.needsReview) {
+                <p class="job-detail__muted">Use the description editor below to clean it up.</p>
+              }
+            </article>
+          </div>
+        }
+      </article>
+    }
 
     <div class="job-detail__grid">
       <article>
@@ -125,7 +229,12 @@
       <div class="job-detail__section-header">
         <div>
           <h3>Description snapshot</h3>
-          <p class="job-detail__muted">Markdown is supported for manual cleanup and formatting.</p>
+          <p class="job-detail__muted">
+            Markdown is supported for manual cleanup and formatting.
+            @if (selectedJob.captureQuality.jobDescription.needsReview) {
+              Saving a cleaned description will also resolve the description review flag.
+            }
+          </p>
         </div>
 
         @if (!editingDescription()) {

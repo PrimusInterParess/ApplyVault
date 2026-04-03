@@ -12,7 +12,8 @@ public sealed class ScrapeResultsController(
     IAppUserService appUserService,
     IScrapeResultStore store,
     IScrapeResultSaveService saveService,
-    ICalendarEventService calendarEventService) : ControllerBase
+    ICalendarEventService calendarEventService,
+    IHostApplicationLifetime applicationLifetime) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyCollection<SavedScrapeResult>>> GetAll(
@@ -50,7 +51,11 @@ public sealed class ScrapeResultsController(
         }
 
         var currentUser = await appUserService.TryGetCurrentUserAsync(cancellationToken);
-        var savedResult = await saveService.SaveAsync(request, currentUser?.Id, cancellationToken);
+        // Let long-running enrichment/save work finish even if the extension closes the HTTP request.
+        var savedResult = await saveService.SaveAsync(
+            request,
+            currentUser?.Id,
+            applicationLifetime.ApplicationStopping);
         var response = new SaveScrapeResultResponse(savedResult.Id, savedResult.SavedAt);
 
         return CreatedAtAction(nameof(GetById), new { id = savedResult.Id }, response);
@@ -92,6 +97,23 @@ public sealed class ScrapeResultsController(
             user.Id,
             request.Description.Trim(),
             cancellationToken);
+
+        if (updatedResult is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(updatedResult);
+    }
+
+    [HttpPatch("{id:guid}/capture-review")]
+    public async Task<ActionResult<SavedScrapeResult>> UpdateCaptureReview(
+        Guid id,
+        [FromBody] UpdateScrapeResultCaptureReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var updatedResult = await store.UpdateCaptureReviewAsync(id, user.Id, request, cancellationToken);
 
         if (updatedResult is null)
         {

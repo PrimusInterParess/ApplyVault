@@ -3,7 +3,11 @@ import { Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
-import { SavedJobResult, UpdateInterviewEventRequest } from '../models/job-result.model';
+import {
+  SavedJobResult,
+  UpdateInterviewEventRequest,
+  UpdateJobCaptureReviewRequest
+} from '../models/job-result.model';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
 import { JobResultsApiService } from './job-results-api.service';
 
@@ -235,6 +239,45 @@ export class JobResultsFacade {
       },
       error: () => {
         this.updateError.set('The description could not be updated. Please try again.');
+        this.updatingResultId.set(null);
+      }
+    });
+  }
+
+  updateCaptureReview(id: string, request: UpdateJobCaptureReviewRequest): void {
+    const currentResult = this.results().find((result) => result.id === id);
+    const normalizedRequest: UpdateJobCaptureReviewRequest = {
+      jobTitle: request.jobTitle?.trim() || null,
+      companyName: request.companyName?.trim() || null,
+      location: request.location?.trim() || null,
+      jobDescription: request.jobDescription?.trim() || null
+    };
+
+    if (!currentResult || this.updatingResultId() === id) {
+      return;
+    }
+
+    const hasChanges =
+      normalizedRequest.jobTitle !== currentResult.captureQuality.jobTitle.effectiveValue ||
+      normalizedRequest.companyName !== currentResult.captureQuality.companyName.effectiveValue ||
+      normalizedRequest.location !== currentResult.captureQuality.location.effectiveValue ||
+      normalizedRequest.jobDescription !== currentResult.captureQuality.jobDescription.effectiveValue;
+
+    if (!hasChanges) {
+      return;
+    }
+
+    this.updatingResultId.set(id);
+    this.updateError.set(null);
+
+    this.apiService.updateCaptureReview(id, normalizedRequest).subscribe({
+      next: (updatedResult) => {
+        this.results.update((results) => this.replaceResult(results, updatedResult));
+        this.updateError.set(null);
+        this.updatingResultId.set(null);
+      },
+      error: () => {
+        this.updateError.set('The capture review changes could not be saved. Please try again.');
         this.updatingResultId.set(null);
       }
     });

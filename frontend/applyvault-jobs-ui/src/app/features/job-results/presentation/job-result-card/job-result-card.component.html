@@ -12,6 +12,10 @@
     <span class="job-card__status">Rejected</span>
   }
 
+  @if (job().captureQuality.needsReview) {
+    <span class="job-card__status job-card__status--review">Needs review</span>
+  }
+
   @if (job().interviewEvent) {
     <span class="job-card__status job-card__status--interview">
       Interview {{ formatInterviewEventWindow(job().interviewEvent) }}

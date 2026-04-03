@@ -25,6 +25,25 @@ export interface ScrapeResultPayload {
   readonly jobDetails: JobDetails;
 }
 
+export interface CaptureQualityField {
+  readonly originalValue: string | null;
+  readonly effectiveValue: string | null;
+  readonly userOverrideValue: string | null;
+  readonly confidence: number;
+  readonly needsReview: boolean;
+  readonly reviewReason: string | null;
+}
+
+export interface CaptureQuality {
+  readonly reviewStatus: 'not_required' | 'needs_review' | 'reviewed';
+  readonly needsReview: boolean;
+  readonly overallConfidence: number;
+  readonly jobTitle: CaptureQualityField;
+  readonly companyName: CaptureQualityField;
+  readonly location: CaptureQualityField;
+  readonly jobDescription: CaptureQualityField;
+}
+
 export interface SavedJobResult {
   readonly id: string;
   readonly savedAt: string;
@@ -33,10 +52,18 @@ export interface SavedJobResult {
   readonly interviewEvent: InterviewEvent | null;
   readonly calendarEvents: readonly CalendarEventLink[];
   readonly payload: ScrapeResultPayload;
+  readonly captureQuality?: CaptureQuality;
 }
 
 export interface UpdateJobDescriptionRequest {
   readonly description: string;
+}
+
+export interface UpdateJobCaptureReviewRequest {
+  readonly jobTitle: string | null;
+  readonly companyName: string | null;
+  readonly location: string | null;
+  readonly jobDescription: string | null;
 }
 
 export interface UpdateJobInterviewDateRequest {

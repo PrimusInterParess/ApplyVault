@@ -19,6 +19,7 @@ public sealed class GoogleAiScrapeResultClient(
 
     public async Task<ScrapeResultDto> EnrichAsync(
         ScrapeResultDto request,
+        string? repairGuidance,
         CancellationToken cancellationToken = default)
     {
         var options = googleAiOptions.Value;
@@ -41,7 +42,7 @@ public sealed class GoogleAiScrapeResultClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(request),
+            BuildRequest(request, repairGuidance),
             SerializerOptions,
             timeoutCts.Token);
 
@@ -54,7 +55,7 @@ public sealed class GoogleAiScrapeResultClient(
         return result ?? throw new InvalidOperationException("Google AI returned an empty scrape result payload.");
     }
 
-    private object BuildRequest(ScrapeResultDto request)
+    private object BuildRequest(ScrapeResultDto request, string? repairGuidance)
     {
         var payloadJson = JsonSerializer.Serialize(request, SerializerOptions);
         var options = googleAiOptions.Value;
@@ -79,7 +80,7 @@ public sealed class GoogleAiScrapeResultClient(
                     {
                         new
                         {
-                            text = RenderUserPrompt(options.UserPromptTemplate, payloadJson)
+                            text = RenderUserPrompt(options.UserPromptTemplate, payloadJson, repairGuidance)
                         }
                     }
                 }
@@ -140,9 +141,16 @@ public sealed class GoogleAiScrapeResultClient(
         };
     }
 
-    private static string RenderUserPrompt(string template, string payloadJson)
+    private static string RenderUserPrompt(string template, string payloadJson, string? repairGuidance)
     {
-        return template.Replace("{{payloadJson}}", payloadJson, StringComparison.Ordinal);
+        var prompt = template.Replace("{{payloadJson}}", payloadJson, StringComparison.Ordinal);
+
+        if (string.IsNullOrWhiteSpace(repairGuidance))
+        {
+            return prompt;
+        }
+
+        return $"{prompt}\n\nTargeted repair guidance:\n{repairGuidance.Trim()}";
     }
 
     private static string ExtractGeneratedJson(string responsePayload)

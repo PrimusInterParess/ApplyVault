@@ -6,6 +6,7 @@ import { API_CONFIG } from '../../../core/config/api.config';
 import {
   CreateCalendarEventRequest,
   SavedJobResult,
+  UpdateJobCaptureReviewRequest,
   UpdateJobDescriptionRequest,
   UpdateInterviewEventRequest
 } from '../models/job-result.model';
@@ -38,6 +39,16 @@ export class JobResultsApiService {
   ): Observable<SavedJobResult> {
     return this.httpClient.patch<SavedJobResult>(
       `${this.apiConfig.baseUrl}/scrape-results/${id}/description`,
+      request
+    );
+  }
+
+  updateCaptureReview(
+    id: string,
+    request: UpdateJobCaptureReviewRequest
+  ): Observable<SavedJobResult> {
+    return this.httpClient.patch<SavedJobResult>(
+      `${this.apiConfig.baseUrl}/scrape-results/${id}/capture-review`,
       request
     );
   }

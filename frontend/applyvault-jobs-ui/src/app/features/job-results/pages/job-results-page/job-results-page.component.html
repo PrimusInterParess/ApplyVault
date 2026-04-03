@@ -3,8 +3,13 @@
     <div class="jobs-page__topbar-copy">
       <p class="jobs-page__eyebrow jobs-page__eyebrow--compact">ApplyVault dashboard</p>
       <p class="jobs-page__topbar-text">Review saved jobs, refresh your workspace, and manage integrations.</p>
+       @if (auth.currentUser(); as currentUser) {
+        <p class="jobs-page__session">
+          Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
+        </p>
+      }
     </div>
-
+    
     <div class="jobs-page__toolbar">
       <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh results</button>
       <a routerLink="/settings" class="jobs-page__refresh jobs-page__refresh-link">Open settings</a>
@@ -14,30 +19,6 @@
   <section class="jobs-page__hero">
     <div>
       <h1>Saved job results, organized into a clean review workspace.</h1>
-      @if (auth.currentUser(); as currentUser) {
-        <p class="jobs-page__session">
-          Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
-        </p>
-      }
-    </div>
-
-    <div class="jobs-page__stats">
-      <article>
-        <span>Total results</span>
-        <strong>{{ facade.stats().totalResults }}</strong>
-      </article>
-      <article>
-        <span>Companies</span>
-        <strong>{{ facade.stats().companies }}</strong>
-      </article>
-      <article>
-        <span>Sources</span>
-        <strong>{{ facade.stats().sources }}</strong>
-      </article>
-      <article>
-        <span>Rejected</span>
-        <strong>{{ facade.stats().rejected }}</strong>
-      </article>
     </div>
   </section>
 
@@ -85,6 +66,7 @@
             [syncingCalendarAccountId]="facade.syncingCalendarAccountId()"
             (toggleRejected)="facade.toggleRejected($event)"
             (deleteResult)="facade.deleteResult($event)"
+            (saveCaptureReview)="handleCaptureReviewSave($event)"
             (saveDescription)="facade.updateDescription($event.id, $event.description)"
             (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
             (clearInterviewEvent)="facade.clearInterviewEvent($event)"

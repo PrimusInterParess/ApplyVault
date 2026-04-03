@@ -4,6 +4,7 @@ namespace ApplyVault.Api.Services;
 
 public sealed class ScrapeResultSaveService(
     IScrapeResultEnrichmentService enrichmentService,
+    IScrapeResultCaptureQualityService captureQualityService,
     IScrapeResultStore store) : IScrapeResultSaveService
 {
     public async Task<SavedScrapeResult> SaveAsync(
@@ -11,7 +12,11 @@ public sealed class ScrapeResultSaveService(
         Guid? userId,
         CancellationToken cancellationToken = default)
     {
-        var enrichedRequest = await enrichmentService.EnrichIfNeededAsync(request, cancellationToken);
-        return await store.SaveAsync(enrichedRequest, userId, cancellationToken);
+        var initialAssessment = captureQualityService.Assess(request);
+        var enrichedRequest = await enrichmentService.EnrichLowConfidenceFieldsAsync(
+            initialAssessment,
+            cancellationToken);
+        var finalAssessment = captureQualityService.Assess(enrichedRequest);
+        return await store.SaveAsync(finalAssessment, userId, cancellationToken);
     }
 }

@@ -1,3 +1,4 @@
+using ApplyVault.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Data;
@@ -33,6 +34,14 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((result) => result.ExtractedAt).IsRequired();
             entity.Property((result) => result.SourceHostname).IsRequired();
             entity.Property((result) => result.DetectedPageType).IsRequired();
+            entity.Property((result) => result.JobTitleConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.CompanyNameConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.LocationConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.JobDescriptionConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.CaptureOverallConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.CaptureReviewStatus)
+                .IsRequired()
+                .HasDefaultValue(CaptureReviewStatuses.NotRequired);
             entity.HasIndex((result) => result.UserId);
             entity.HasOne((result) => result.User)
                 .WithMany((user) => user.ScrapeResults)

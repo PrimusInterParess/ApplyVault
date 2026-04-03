@@ -81,6 +81,7 @@ builder.Services.AddScoped<IAppUserService, AppUserService>();
 builder.Services.AddScoped<IScrapeResultStore, EfCoreScrapeResultStore>();
 builder.Services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
 builder.Services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
+builder.Services.AddScoped<IScrapeResultCaptureQualityService, ScrapeResultCaptureQualityService>();
 
 var app = builder.Build();
 

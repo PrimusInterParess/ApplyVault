@@ -45,6 +45,11 @@
   color: var(--app-accent-dark);
 }
 
+.job-card__status--review {
+  background: rgba(255, 215, 140, 0.35);
+  color: #8b5c00;
+}
+
 .job-card__eyebrow,
 .job-card__meta {
   display: flex;

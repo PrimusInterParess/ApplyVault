@@ -20,6 +20,8 @@ Make the app dependable enough to trust with capture, then valuable enough to us
 
 ## Phase 1: Make Capture Quality Extremely Reliable
 
+Status: Completed
+
 ### Objective
 
 Create a dependable ingestion layer that works across major ATS and job-board sources with minimal cleanup.
@@ -81,6 +83,14 @@ If capture is flaky, every later feature inherits bad data. Reliable ingestion i
 - Manual cleanup rate drops meaningfully.
 - Duplicate-job complaints are rare.
 - Users can trust imported jobs enough to start tracking applications inside the app.
+
+### Completion Notes
+
+- Canonical scrape/job shape and validation are now part of the API contract.
+- Capture quality scoring exists with field-level confidence and review reasons.
+- Low-confidence review and correction fields are wired into the saved result workflow.
+- AI-assisted repair is in place as a fallback path for weak captures.
+- The dashboard now exposes capture quality details so users can review questionable imports.
 
 ### Risks
 
@@ -343,9 +353,9 @@ AI is most valuable after the app already captures dependable structured data an
 
 ## MVP Next
 
-- Capture reliability foundation.
 - Pipeline stages with dates and next steps.
 - Basic reminders for follow-up and interview prep.
+- Per-job notes, contacts, and linked artifacts.
 
 ## Good V1
 

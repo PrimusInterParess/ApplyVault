@@ -1,35 +1,71 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Injectable, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { CalendarConnectionsApiService } from './calendar-connections-api.service';
 import { ConnectedCalendarAccount } from '../models/calendar-connection.model';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarConnectionsFacade {
+  private readonly authService = inject(AuthService);
   private readonly apiService = inject(CalendarConnectionsApiService);
+  private loadSubscription: Subscription | null = null;
+  private loadedUserId: string | null = null;
 
-  readonly loading = signal(true);
+  readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly connectingProvider = signal<string | null>(null);
   readonly disconnectingConnectionId = signal<string | null>(null);
   readonly connections = signal<readonly ConnectedCalendarAccount[]>([]);
 
   constructor() {
-    this.load();
+    effect(
+      () => {
+        const session = this.authService.session();
+        const currentUserId = this.authService.currentUser()?.id ?? null;
+
+        if (!session) {
+          this.loadedUserId = null;
+          this.cancelPendingLoad();
+          this.resetState();
+          return;
+        }
+
+        if (!currentUserId) {
+          this.cancelPendingLoad();
+          this.resetState();
+          this.loading.set(true);
+          return;
+        }
+
+        if (this.loadedUserId === currentUserId) {
+          return;
+        }
+
+        this.loadedUserId = currentUserId;
+        this.resetState();
+        this.load();
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   load(): void {
+    this.cancelPendingLoad();
     this.loading.set(true);
     this.error.set(null);
 
-    this.apiService.getAll().subscribe({
+    this.loadSubscription = this.apiService.getAll().subscribe({
       next: (connections) => {
         this.connections.set(connections);
         this.loading.set(false);
+        this.loadSubscription = null;
       },
       error: () => {
         this.error.set('Calendar connections could not be loaded.');
         this.connections.set([]);
         this.loading.set(false);
+        this.loadSubscription = null;
       }
     });
   }
@@ -71,5 +107,18 @@ export class CalendarConnectionsFacade {
         this.disconnectingConnectionId.set(null);
       }
     });
+  }
+
+  private cancelPendingLoad(): void {
+    this.loadSubscription?.unsubscribe();
+    this.loadSubscription = null;
+  }
+
+  private resetState(): void {
+    this.loading.set(false);
+    this.error.set(null);
+    this.connectingProvider.set(null);
+    this.disconnectingConnectionId.set(null);
+    this.connections.set([]);
   }
 }

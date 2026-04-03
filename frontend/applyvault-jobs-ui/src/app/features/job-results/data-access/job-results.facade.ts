@@ -1,5 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
 import { SavedJobResult, UpdateInterviewEventRequest } from '../models/job-result.model';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
@@ -7,9 +9,12 @@ import { JobResultsApiService } from './job-results-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class JobResultsFacade {
+  private readonly authService = inject(AuthService);
   private readonly apiService = inject(JobResultsApiService);
+  private loadSubscription: Subscription | null = null;
+  private loadedUserId: string | null = null;
 
-  readonly loading = signal(true);
+  readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly updateError = signal<string | null>(null);
   readonly searchTerm = signal('');
@@ -66,6 +71,36 @@ export class JobResultsFacade {
   constructor() {
     effect(
       () => {
+        const session = this.authService.session();
+        const currentUserId = this.authService.currentUser()?.id ?? null;
+
+        if (!session) {
+          this.loadedUserId = null;
+          this.cancelPendingLoad();
+          this.resetState();
+          return;
+        }
+
+        if (!currentUserId) {
+          this.cancelPendingLoad();
+          this.resetState();
+          this.loading.set(true);
+          return;
+        }
+
+        if (this.loadedUserId === currentUserId) {
+          return;
+        }
+
+        this.loadedUserId = currentUserId;
+        this.resetState();
+        this.load();
+      },
+      { allowSignalWrites: true }
+    );
+
+    effect(
+      () => {
         const filtered = this.filteredResults();
         const selectedId = this.selectedId();
 
@@ -86,15 +121,15 @@ export class JobResultsFacade {
       { allowSignalWrites: true }
     );
 
-    this.load();
   }
 
   load(): void {
+    this.cancelPendingLoad();
     this.loading.set(true);
     this.error.set(null);
     this.updateError.set(null);
 
-    this.apiService.getAll().subscribe({
+    this.loadSubscription = this.apiService.getAll().subscribe({
       next: (results) => {
         const viewModels = [...results]
           .map(mapSavedJobResultToViewModel)
@@ -105,6 +140,7 @@ export class JobResultsFacade {
 
         this.results.set(viewModels);
         this.loading.set(false);
+        this.loadSubscription = null;
       },
       error: () => {
         this.error.set(
@@ -112,6 +148,7 @@ export class JobResultsFacade {
         );
         this.results.set([]);
         this.loading.set(false);
+        this.loadSubscription = null;
       }
     });
   }
@@ -284,5 +321,22 @@ export class JobResultsFacade {
     const updatedViewModel = mapSavedJobResultToViewModel(updatedResult);
 
     return results.map((result) => (result.id === updatedViewModel.id ? updatedViewModel : result));
+  }
+
+  private cancelPendingLoad(): void {
+    this.loadSubscription?.unsubscribe();
+    this.loadSubscription = null;
+  }
+
+  private resetState(): void {
+    this.loading.set(false);
+    this.error.set(null);
+    this.updateError.set(null);
+    this.searchTerm.set('');
+    this.selectedSource.set('all');
+    this.selectedId.set(null);
+    this.updatingResultId.set(null);
+    this.syncingCalendarAccountId.set(null);
+    this.results.set([]);
   }
 }

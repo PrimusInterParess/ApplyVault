@@ -16,7 +16,7 @@ public static class CalendarProviders
     public const string Microsoft = "microsoft";
 
     public static bool IsSupported(string provider) =>
-        provider is Google or Microsoft;
+        provider is Google or Microsoft;https://dribbble.com/shots/19309678-CamLife-Retro-Vintage-UI
 }
 
 public sealed record CalendarAuthorizationState(

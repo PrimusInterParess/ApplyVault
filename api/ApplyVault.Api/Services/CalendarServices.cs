@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -485,6 +486,10 @@ public sealed class GoogleCalendarProvider(
         string? externalEventId,
         CancellationToken cancellationToken)
     {
+        var googleTimeZone = CalendarTimeZoneResolver.NormalizeForGoogle(draft.TimeZone);
+        var startLocal = CalendarTimeZoneResolver.ConvertUtcToLocalTime(draft.StartUtc, draft.TimeZone);
+        var endLocal = CalendarTimeZoneResolver.ConvertUtcToLocalTime(draft.EndUtc, draft.TimeZone);
+
         using var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccessToken);
         request.Content = JsonContent.Create(new
@@ -495,13 +500,13 @@ public sealed class GoogleCalendarProvider(
             location = draft.Location,
             start = new
             {
-                dateTime = draft.StartUtc.ToUniversalTime().ToString("O"),
-                timeZone = draft.TimeZone
+                dateTime = CalendarTimeZoneResolver.FormatLocalDateTime(startLocal),
+                timeZone = googleTimeZone
             },
             end = new
             {
-                dateTime = draft.EndUtc.ToUniversalTime().ToString("O"),
-                timeZone = draft.TimeZone
+                dateTime = CalendarTimeZoneResolver.FormatLocalDateTime(endLocal),
+                timeZone = googleTimeZone
             }
         });
 
@@ -639,6 +644,10 @@ public sealed class MicrosoftCalendarProvider(
         CalendarEventDraft draft,
         CancellationToken cancellationToken)
     {
+        var microsoftTimeZone = CalendarTimeZoneResolver.NormalizeForMicrosoft(draft.TimeZone);
+        var startLocal = CalendarTimeZoneResolver.ConvertUtcToLocalTime(draft.StartUtc, draft.TimeZone);
+        var endLocal = CalendarTimeZoneResolver.ConvertUtcToLocalTime(draft.EndUtc, draft.TimeZone);
+
         using var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccessToken);
         request.Content = JsonContent.Create(new
@@ -657,13 +666,13 @@ public sealed class MicrosoftCalendarProvider(
                 },
             start = new
             {
-                dateTime = draft.StartUtc.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                timeZone = draft.TimeZone
+                dateTime = CalendarTimeZoneResolver.FormatLocalDateTime(startLocal),
+                timeZone = microsoftTimeZone
             },
             end = new
             {
-                dateTime = draft.EndUtc.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                timeZone = draft.TimeZone
+                dateTime = CalendarTimeZoneResolver.FormatLocalDateTime(endLocal),
+                timeZone = microsoftTimeZone
             }
         });
 
@@ -720,6 +729,108 @@ public sealed class MicrosoftCalendarProvider(
             refreshToken,
             expiresAt);
     }
+}
+
+internal static class CalendarTimeZoneResolver
+{
+    public static string NormalizeForGoogle(string timeZone)
+    {
+        var normalized = NormalizeInput(timeZone);
+
+        if (IsUtc(normalized))
+        {
+            return "UTC";
+        }
+
+        if (TimeZoneInfo.TryConvertIanaIdToWindowsId(normalized, out _))
+        {
+            return normalized;
+        }
+
+        if (TimeZoneInfo.TryConvertWindowsIdToIanaId(normalized, out var ianaId))
+        {
+            return ianaId;
+        }
+
+        var resolvedZone = ResolveTimeZoneInfo(normalized);
+        return TimeZoneInfo.TryConvertWindowsIdToIanaId(resolvedZone.Id, out ianaId)
+            ? ianaId
+            : resolvedZone.Id;
+    }
+
+    public static string NormalizeForMicrosoft(string timeZone)
+    {
+        var normalized = NormalizeInput(timeZone);
+
+        if (IsUtc(normalized))
+        {
+            return "UTC";
+        }
+
+        if (TimeZoneInfo.TryConvertWindowsIdToIanaId(normalized, out _))
+        {
+            return normalized;
+        }
+
+        if (TimeZoneInfo.TryConvertIanaIdToWindowsId(normalized, out var windowsId))
+        {
+            return windowsId;
+        }
+
+        var resolvedZone = ResolveTimeZoneInfo(normalized);
+        return TimeZoneInfo.TryConvertIanaIdToWindowsId(resolvedZone.Id, out windowsId)
+            ? windowsId
+            : resolvedZone.Id;
+    }
+
+    public static DateTimeOffset ConvertUtcToLocalTime(DateTimeOffset utcInstant, string timeZone) =>
+        TimeZoneInfo.ConvertTime(utcInstant.ToUniversalTime(), ResolveTimeZoneInfo(timeZone));
+
+    public static string FormatLocalDateTime(DateTimeOffset localTime) =>
+        localTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+
+    private static TimeZoneInfo ResolveTimeZoneInfo(string timeZone)
+    {
+        var normalized = NormalizeInput(timeZone);
+
+        foreach (var candidate in GetCandidates(normalized))
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(candidate);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        throw new InvalidOperationException($"The time zone '{timeZone}' is not supported.");
+    }
+
+    private static IEnumerable<string> GetCandidates(string timeZone)
+    {
+        yield return timeZone;
+
+        if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZone, out var windowsId))
+        {
+            yield return windowsId;
+        }
+
+        if (TimeZoneInfo.TryConvertWindowsIdToIanaId(timeZone, out var ianaId))
+        {
+            yield return ianaId;
+        }
+    }
+
+    private static string NormalizeInput(string timeZone) =>
+        string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone.Trim();
+
+    private static bool IsUtc(string timeZone) =>
+        string.Equals(timeZone, "UTC", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(timeZone, "Etc/UTC", StringComparison.OrdinalIgnoreCase);
 }
 
 internal static class CalendarHttpResponse

@@ -61,7 +61,8 @@ public sealed record SavedScrapeResult(
     InterviewEventDto? InterviewEvent,
     IReadOnlyList<CalendarEventLinkDto> CalendarEvents,
     ScrapeResultDto Payload,
-    CaptureQualityDto CaptureQuality
+    CaptureQualityDto CaptureQuality,
+    JobStatusSyncInfoDto? StatusSync
 );
 
 public sealed record SaveScrapeResultResponse(
@@ -125,6 +126,30 @@ public sealed record ConnectedCalendarAccountDto(
     DateTimeOffset UpdatedAt
 );
 
+public sealed record ConnectedMailAccountDto(
+    Guid Id,
+    string Provider,
+    string ProviderUserId,
+    string? Email,
+    string? DisplayName,
+    DateTimeOffset? ExpiresAt,
+    string SyncStatus,
+    DateTimeOffset? LastSyncedAt,
+    string? LastSyncError,
+    string? LastHistoryId,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt
+);
+
+public sealed record JobStatusSyncInfoDto(
+    string Source,
+    string Kind,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? EmailReceivedAt,
+    string? EmailFrom,
+    string? EmailSubject
+);
+
 public sealed record CurrentUserDto(
     Guid Id,
     string SupabaseUserId,
@@ -137,6 +162,14 @@ public sealed record CalendarAuthorizationStartRequest(
 );
 
 public sealed record CalendarAuthorizationStartResponse(
+    string AuthorizationUrl
+);
+
+public sealed record MailAuthorizationStartRequest(
+    string? ReturnUrl
+);
+
+public sealed record MailAuthorizationStartResponse(
     string AuthorizationUrl
 );
 

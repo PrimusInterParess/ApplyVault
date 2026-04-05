@@ -10,6 +10,18 @@ public sealed class ScrapeResultEntity
 
     public bool IsRejected { get; set; }
 
+    public string? LastStatusSource { get; set; }
+
+    public string? LastStatusKind { get; set; }
+
+    public DateTimeOffset? LastStatusUpdatedAt { get; set; }
+
+    public DateTimeOffset? LastStatusEmailReceivedAt { get; set; }
+
+    public string? LastStatusEmailFrom { get; set; }
+
+    public string? LastStatusEmailSubject { get; set; }
+
     public DateOnly? InterviewDate { get; set; }
 
     public bool IsDeleted { get; set; }
@@ -128,6 +140,14 @@ public sealed class ConnectedAccountEntity
     public string? RefreshToken { get; set; }
 
     public DateTimeOffset? ExpiresAt { get; set; }
+
+    public string? SyncStatus { get; set; }
+
+    public DateTimeOffset? LastSyncedAt { get; set; }
+
+    public string? LastSyncError { get; set; }
+
+    public string? LastHistoryId { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

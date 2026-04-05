@@ -42,7 +42,6 @@
 :is(
   .job-detail__reject,
   .job-detail__header a,
-  .job-detail__settings-link,
   .job-detail__primary-action,
   .job-detail__secondary-action
 ) {
@@ -65,7 +64,7 @@
   box-shadow: var(--app-shadow-md);
 }
 
-:is(.job-detail__settings-link, .job-detail__secondary-action) {
+:is(.job-detail__secondary-action) {
   background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
   color: var(--app-text);
   box-shadow: var(--app-shadow-sm);
@@ -85,7 +84,6 @@
 :is(
   .job-detail__reject,
   .job-detail__header a,
-  .job-detail__settings-link,
   .job-detail__primary-action,
   .job-detail__secondary-action
 ):hover:not(:disabled) {
@@ -122,14 +120,9 @@ h3 {
   font-size: 1rem;
 }
 
-.job-detail__company,
 .job-detail__muted,
 .job-detail p {
   color: var(--app-text-muted);
-}
-
-.job-detail__company {
-  margin-top: 0.45rem;
 }
 
 .job-detail__chips,

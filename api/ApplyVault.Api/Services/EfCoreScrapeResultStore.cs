@@ -152,6 +152,12 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         }
 
         entity.IsRejected = isRejected;
+        entity.LastStatusKind = JobStatusKinds.Rejection;
+        entity.LastStatusSource = JobStatusSources.Manual;
+        entity.LastStatusUpdatedAt = DateTimeOffset.UtcNow;
+        entity.LastStatusEmailReceivedAt = null;
+        entity.LastStatusEmailFrom = null;
+        entity.LastStatusEmailSubject = null;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
@@ -215,6 +221,12 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         entity.InterviewEvent.TimeZone = request.TimeZone.Trim();
         entity.InterviewEvent.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
         entity.InterviewEvent.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        entity.LastStatusKind = JobStatusKinds.Interview;
+        entity.LastStatusSource = JobStatusSources.Manual;
+        entity.LastStatusUpdatedAt = DateTimeOffset.UtcNow;
+        entity.LastStatusEmailReceivedAt = null;
+        entity.LastStatusEmailFrom = null;
+        entity.LastStatusEmailSubject = null;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
@@ -246,6 +258,13 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             dbContext.InterviewEvents.Remove(entity.InterviewEvent);
             entity.InterviewEvent = null;
         }
+
+        entity.LastStatusKind = JobStatusKinds.Interview;
+        entity.LastStatusSource = JobStatusSources.Manual;
+        entity.LastStatusUpdatedAt = DateTimeOffset.UtcNow;
+        entity.LastStatusEmailReceivedAt = null;
+        entity.LastStatusEmailFrom = null;
+        entity.LastStatusEmailSubject = null;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -319,6 +338,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                 link.UpdatedAt))
             .ToArray();
         var captureQuality = BuildCaptureQuality(entity);
+        var statusSync = BuildStatusSync(entity);
 
         return new SavedScrapeResult(
             entity.Id,
@@ -328,7 +348,26 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             interviewEvent,
             calendarEvents,
             payload,
-            captureQuality);
+            captureQuality,
+            statusSync);
+    }
+
+    private static JobStatusSyncInfoDto? BuildStatusSync(ScrapeResultEntity entity)
+    {
+        if (string.IsNullOrWhiteSpace(entity.LastStatusSource) ||
+            string.IsNullOrWhiteSpace(entity.LastStatusKind) ||
+            entity.LastStatusUpdatedAt is null)
+        {
+            return null;
+        }
+
+        return new JobStatusSyncInfoDto(
+            entity.LastStatusSource,
+            entity.LastStatusKind,
+            entity.LastStatusUpdatedAt.Value,
+            entity.LastStatusEmailReceivedAt,
+            entity.LastStatusEmailFrom,
+            entity.LastStatusEmailSubject);
     }
 
     private static CaptureQualityDto BuildCaptureQuality(ScrapeResultEntity entity)

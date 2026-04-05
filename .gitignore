@@ -45,6 +45,9 @@ Thumbs.db
 # .NET build artifacts
 bin/
 obj/
+.cursor-test-obj/
+.tmp-test-bin/
+.tmp-test-obj/
 
 # Local ASP.NET development settings
 appsettings.Development.json

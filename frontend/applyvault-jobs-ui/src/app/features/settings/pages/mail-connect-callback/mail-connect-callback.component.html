@@ -1,0 +1,25 @@
+<main class="mail-callback">
+  <section class="mail-callback__card">
+    <p class="mail-callback__eyebrow">Mailbox connection</p>
+    <h1>
+      @if (success) {
+        {{ provider | titlecase }} connected
+      } @else {
+        Connection failed
+      }
+    </h1>
+
+    <p>
+      @if (success) {
+        The mailbox is now available in user settings for Gmail interview and rejection sync.
+      } @else {
+        The provider redirect did not complete successfully. Try connecting Gmail again.
+      }
+    </p>
+
+    <div class="mail-callback__actions">
+      <a routerLink="/settings">Open settings</a>
+      <a routerLink="/jobs">Return to jobs</a>
+    </div>
+  </section>
+</main>

@@ -40,6 +40,7 @@ export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultV
     interviewEvent: result.interviewEvent,
     calendarEvents: result.calendarEvents,
     captureQuality,
+    statusSync: result.statusSync,
     title,
     company,
     location,

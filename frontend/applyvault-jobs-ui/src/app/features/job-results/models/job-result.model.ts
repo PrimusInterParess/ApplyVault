@@ -53,6 +53,7 @@ export interface SavedJobResult {
   readonly calendarEvents: readonly CalendarEventLink[];
   readonly payload: ScrapeResultPayload;
   readonly captureQuality?: CaptureQuality;
+  readonly statusSync: JobStatusSyncInfo | null;
 }
 
 export interface UpdateJobDescriptionRequest {
@@ -98,4 +99,13 @@ export interface CalendarEventLink {
 
 export interface CreateCalendarEventRequest {
   readonly connectedAccountId: string;
+}
+
+export interface JobStatusSyncInfo {
+  readonly source: 'manual' | 'gmail' | string;
+  readonly kind: 'rejection' | 'interview' | string;
+  readonly updatedAt: string;
+  readonly emailReceivedAt: string | null;
+  readonly emailFrom: string | null;
+  readonly emailSubject: string | null;
 }

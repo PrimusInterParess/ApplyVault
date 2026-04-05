@@ -102,4 +102,84 @@
       </ul>
     }
   </section>
+
+  <section class="settings-page__panel">
+    <div class="settings-page__section-header">
+      <div>
+        <p class="settings-page__label">Mailbox sync</p>
+        <h2>Gmail</h2>
+        <p class="settings-page__muted">
+          Connect Gmail to let the dashboard detect interview and rejection emails for saved jobs.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="settings-page__secondary-action"
+        [disabled]="mailConnections.loading()"
+        (click)="mailConnections.load()">
+        Refresh
+      </button>
+    </div>
+
+    <div class="settings-page__connect-actions">
+      <button
+        type="button"
+        class="settings-page__primary-action"
+        [disabled]="mailConnections.connectingProvider() === 'gmail'"
+        (click)="mailConnections.connect('gmail')">
+        {{
+          mailConnections.connectingProvider() === 'gmail'
+            ? 'Connecting Gmail...'
+            : 'Connect Gmail'
+        }}
+      </button>
+    </div>
+
+    @if (mailConnections.error(); as errorMessage) {
+      <p class="settings-page__error">{{ errorMessage }}</p>
+    }
+
+    @if (mailConnections.loading()) {
+      <p class="settings-page__muted">Loading connected mailboxes...</p>
+    } @else if (mailConnections.connections().length === 0) {
+      <div class="settings-page__empty">
+        <h3>No Gmail mailbox connected</h3>
+        <p>Connect Gmail to keep rejection and interview status changes in sync with your dashboard.</p>
+      </div>
+    } @else {
+      <ul class="settings-page__connection-list">
+        @for (connection of mailConnections.connections(); track connection.id) {
+          <li>
+            <div>
+              <strong>{{ connection.displayName || connection.email || connection.providerUserId }}</strong>
+              <p>{{ connection.provider | titlecase }} mailbox</p>
+              <span>
+                Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                @if (connection.lastSyncedAt) {
+                  · Last sync {{ connection.lastSyncedAt | date: 'MMM d, y, h:mm a' }}
+                }
+              </span>
+              <span>Status: {{ formatSyncStatus(connection.syncStatus) }}</span>
+              @if (connection.lastSyncError) {
+                <span>Latest sync issue: {{ connection.lastSyncError }}</span>
+              }
+            </div>
+
+            <button
+              type="button"
+              class="settings-page__secondary-action"
+              [disabled]="mailConnections.disconnectingConnectionId() === connection.id"
+              (click)="mailConnections.disconnect(connection.id)">
+              {{
+                mailConnections.disconnectingConnectionId() === connection.id
+                  ? 'Disconnecting...'
+                  : 'Disconnect'
+              }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
 </main>

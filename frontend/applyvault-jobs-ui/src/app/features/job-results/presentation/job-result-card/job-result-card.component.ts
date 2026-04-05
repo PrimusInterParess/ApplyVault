@@ -16,4 +16,16 @@ export class JobResultCardComponent {
   readonly selected = input(false);
   readonly choose = output<string>();
   readonly formatInterviewEventWindow = formatInterviewEventWindow;
+
+  protected statusSyncLabel(): string | null {
+    const statusSync = this.job().statusSync;
+
+    if (!statusSync || statusSync.source !== 'gmail') {
+      return null;
+    }
+
+    return statusSync.kind === 'interview'
+      ? 'Interview synced from Gmail'
+      : 'Rejected from Gmail';
+  }
 }

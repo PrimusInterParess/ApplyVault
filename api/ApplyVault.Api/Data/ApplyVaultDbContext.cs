@@ -26,6 +26,10 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
         {
             entity.HasKey((result) => result.Id);
             entity.Property((result) => result.IsRejected).HasDefaultValue(false);
+            entity.Property((result) => result.LastStatusSource).HasMaxLength(32);
+            entity.Property((result) => result.LastStatusKind).HasMaxLength(32);
+            entity.Property((result) => result.LastStatusEmailFrom).HasMaxLength(320);
+            entity.Property((result) => result.LastStatusEmailSubject).HasMaxLength(512);
             entity.Property((result) => result.InterviewDate).HasColumnType("date");
             entity.Property((result) => result.IsDeleted).HasDefaultValue(false);
             entity.Property((result) => result.Title).IsRequired();
@@ -74,6 +78,9 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((account) => account.Provider).IsRequired();
             entity.Property((account) => account.ProviderUserId).IsRequired();
             entity.Property((account) => account.AccessToken).IsRequired();
+            entity.Property((account) => account.SyncStatus).HasMaxLength(32);
+            entity.Property((account) => account.LastSyncError).HasMaxLength(1024);
+            entity.Property((account) => account.LastHistoryId).HasMaxLength(128);
             entity.HasIndex((account) => new { account.UserId, account.Provider, account.ProviderUserId }).IsUnique();
             entity.HasOne((account) => account.User)
                 .WithMany((user) => user.ConnectedAccounts)

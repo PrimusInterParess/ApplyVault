@@ -41,6 +41,10 @@ builder.Services
     .AddOptions<CalendarIntegrationOptions>()
     .Bind(builder.Configuration.GetSection(CalendarIntegrationOptions.SectionName));
 
+builder.Services
+    .AddOptions<MailIntegrationOptions>()
+    .Bind(builder.Configuration.GetSection(MailIntegrationOptions.SectionName));
+
 var supabaseOptions = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new SupabaseOptions();
 var supabaseAuthority = string.IsNullOrWhiteSpace(supabaseOptions.Url)
     ? string.Empty
@@ -72,16 +76,25 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient<IScrapeResultAiClient, GoogleAiScrapeResultClient>();
 builder.Services.AddHttpClient<GoogleCalendarProvider>();
 builder.Services.AddHttpClient<MicrosoftCalendarProvider>();
+builder.Services.AddHttpClient<IGmailMailClient, GmailMailClient>();
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<GoogleCalendarProvider>());
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<MicrosoftCalendarProvider>());
 builder.Services.AddScoped<ICalendarProviderFactory, CalendarProviderFactory>();
 builder.Services.AddScoped<ICalendarConnectionService, CalendarConnectionService>();
 builder.Services.AddScoped<ICalendarEventService, CalendarEventService>();
+builder.Services.AddScoped<IInterviewScheduleExtractor, InterviewScheduleExtractor>();
+builder.Services.AddScoped<IEmailJobStatusClassifier, EmailJobStatusClassifier>();
+builder.Services.AddScoped<IScrapeResultEmailMatcher, ScrapeResultEmailMatcher>();
+builder.Services.AddScoped<IMailConnectionService, MailConnectionService>();
+builder.Services.AddScoped<IMailSyncProcessor, MailSyncProcessor>();
+builder.Services.AddScoped<IEmailDrivenInterviewCalendarSyncService, EmailDrivenInterviewCalendarSyncService>();
+builder.Services.AddScoped<IEmailDrivenJobUpdateService, EmailDrivenJobUpdateService>();
 builder.Services.AddScoped<IAppUserService, AppUserService>();
 builder.Services.AddScoped<IScrapeResultStore, EfCoreScrapeResultStore>();
 builder.Services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
 builder.Services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
 builder.Services.AddScoped<IScrapeResultCaptureQualityService, ScrapeResultCaptureQualityService>();
+builder.Services.AddHostedService<GmailMailSyncBackgroundService>();
 
 var app = builder.Build();
 

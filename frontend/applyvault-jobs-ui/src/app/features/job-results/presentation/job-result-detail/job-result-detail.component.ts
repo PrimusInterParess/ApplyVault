@@ -265,6 +265,33 @@ export class JobResultDetailComponent {
     return confidence;
   }
 
+  describeStatusSync(): string | null {
+    const statusSync = this.job()?.statusSync;
+
+    if (!statusSync) {
+      return null;
+    }
+
+    if (statusSync.source === 'gmail') {
+      const when = statusSync.emailReceivedAt ?? statusSync.updatedAt;
+      const timestamp = new Date(when).toLocaleString();
+      const summary =
+        statusSync.kind === 'interview'
+          ? `Interview details auto-synced from Gmail on ${timestamp}.`
+          : `Rejection status auto-synced from Gmail on ${timestamp}.`;
+      const emailFrom = statusSync.emailFrom ? ` From: ${statusSync.emailFrom}.` : '';
+      const subject = statusSync.emailSubject ? ` Subject: ${statusSync.emailSubject}.` : '';
+      return `${summary}${emailFrom}${subject}`;
+    }
+
+    if (statusSync.source === 'manual') {
+      const timestamp = new Date(statusSync.updatedAt).toLocaleString();
+      return `Last ${statusSync.kind} update was saved manually on ${timestamp}.`;
+    }
+
+    return null;
+  }
+
   private normalizeOptionalDraft(value: string | null | undefined): string | null {
     const normalized = value?.trim() ?? '';
     return normalized.length > 0 ? normalized : null;

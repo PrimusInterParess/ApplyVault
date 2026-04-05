@@ -22,6 +22,12 @@
     </span>
   }
 
+  @if (statusSyncLabel(); as syncLabel) {
+    <span class="job-card__status" [class.job-card__status--interview]="job().statusSync?.kind === 'interview'">
+      {{ syncLabel }}
+    </span>
+  }
+
   <h3>{{ job().title }}</h3>
   <p class="job-card__company">{{ job().company }}</p>
 

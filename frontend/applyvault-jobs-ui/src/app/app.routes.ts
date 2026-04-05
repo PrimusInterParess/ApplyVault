@@ -45,6 +45,15 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'integrations/mail/callback',
+    title: 'Mailbox Connection',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/pages/mail-connect-callback/mail-connect-callback.component').then(
+        (module) => module.MailConnectCallbackComponent
+      )
+  },
+  {
     path: '**',
     redirectTo: 'login'
   }

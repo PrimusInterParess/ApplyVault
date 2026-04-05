@@ -1,0 +1,65 @@
+.mail-callback {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.mail-callback__card {
+  width: min(100%, 32rem);
+  padding: 2rem;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  text-align: center;
+  box-shadow: var(--app-shadow-lg);
+}
+
+.mail-callback__eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--app-text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.mail-callback h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+}
+
+.mail-callback p {
+  margin: 0;
+  color: var(--app-text-muted);
+  line-height: 1.65;
+}
+
+.mail-callback__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.mail-callback__actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: var(--app-shadow-sm);
+  transition: var(--app-transition);
+}
+
+.mail-callback__actions a:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--app-shadow-hover);
+}

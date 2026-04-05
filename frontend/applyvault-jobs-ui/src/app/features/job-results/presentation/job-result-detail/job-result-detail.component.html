@@ -46,6 +46,13 @@
           Interview {{ formatInterviewEventWindow(selectedJob.interviewEvent) }}
         </span>
       }
+      @if (selectedJob.statusSync; as statusSync) {
+        @if (statusSync.source === 'gmail') {
+        <span class="job-detail__chip job-detail__chip--interview">
+          Gmail synced {{ statusSync.kind }}
+        </span>
+        }
+      }
       <span>{{ selectedJob.location }}</span>
       <span>Capture {{ (selectedJob.captureQuality.overallConfidence * 100).toFixed(0) }}%</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
@@ -205,6 +212,13 @@
         <h3>Role summary</h3>
         <p>{{ selectedJob.summary }}</p>
       </article>
+
+      @if (describeStatusSync(); as statusSyncDescription) {
+        <article>
+          <h3>Status source</h3>
+          <p>{{ statusSyncDescription }}</p>
+        </article>
+      }
 
       <article>
         <h3>Hiring manager</h3>

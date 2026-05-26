@@ -22,6 +22,8 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
 - Show whether the latest rejection or interview update came from Gmail sync or a manual dashboard action.
 - Render saved job descriptions as Markdown in the dashboard detail view.
+- Search public EURES job listings from the dashboard with multi-keyword filters, country codes, and paginated results.
+- Inspect EURES listing details in the dashboard and open the original posting in a new tab.
 
 ## Repository Layout
 
@@ -30,7 +32,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `api/ApplyVault.Api/`
   ASP.NET Core API that stores and serves captured job results.
 - `api/ApplyVault.Api.Tests/`
-  xUnit coverage for mail sync, Gmail client behavior, job-status classification, and related API services.
+  xUnit coverage for mail sync, Gmail client behavior, job-status classification, EURES job search, and related API services.
 - `frontend/applyvault-jobs-ui/`
   Angular application for reviewing saved results in a dashboard-style UI.
 - `plans/`
@@ -88,8 +90,10 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/mail-connections/gmail/start`
 - `GET /api/mail-connections/gmail/callback`
 - `DELETE /api/mail-connections/{id}`
+- `POST /api/eures/jobs/search`
+- `GET /api/eures/jobs/{id}`
 
-`POST /api/scrape-results` is available for ingestion from the extension. The review, dashboard, and mail-connection management endpoints require authentication, except for the provider callback that completes OAuth.
+`POST /api/scrape-results` is available for ingestion from the extension. The review, dashboard, mail-connection, and EURES search endpoints require authentication, except for the provider callback that completes OAuth.
 
 Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, capture-quality metadata for reviewable fields, and status-sync metadata that records whether the latest rejection or interview update came from Gmail or a manual edit.
 
@@ -109,6 +113,8 @@ The API reads several option sections from `api/ApplyVault.Api/appsettings.json`
   Configures the OAuth client details and redirect URLs used to connect Google and Microsoft calendar providers.
 - `MailIntegration`
   Enables Gmail sync, configures the Gmail OAuth client and callback URL, sets the Angular post-connect redirect, and controls poll cadence plus the initial mailbox lookback window used by the background sync worker.
+- `EuresIntegration`
+  Configures the EURES API base URL, default country/location code, max results per page, and request timeout used by the job search endpoints.
 
 Prefer local overrides, environment variables, or user secrets for development credentials instead of checking secrets into source-controlled config files.
 
@@ -135,13 +141,22 @@ The settings page also supports:
 - connecting and disconnecting Gmail mailboxes through the API
 - showing mailbox sync status, last sync time, and the most recent sync error
 
+The EURES job search page is available at `http://localhost:4200/eures` and supports:
+
+- multi-keyword search with removable keyword chips and popular IT suggestion groups
+- country/location code filtering such as `dk`
+- paginated result browsing with a detail panel for employer, contract, work hours, and description
+- opening the original EURES listing in a new tab
+
+Use the `Search EURES` link from the saved jobs page to reach the search view.
+
 ### 5. Run backend tests
 
 ```bash
 dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
 ```
 
-This test project covers the Gmail mail client, mail sync processor, email classification rules, and the email-driven job/interview update services.
+This test project covers the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, and the EURES job search client, mapper, relevance scoring, and request normalization.
 
 ## Load The Extension In Chrome
 
@@ -168,6 +183,7 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 8. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
 9. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
 10. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
+11. Optionally open the EURES job search page, run a keyword search for a country code, and inspect listing details before opening the source posting.
 
 ## Manual Verification
 
@@ -187,6 +203,8 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 14. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
 15. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
 16. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+17. Open `/eures`, run a keyword search with a location code, and verify paginated results load with a selectable detail panel.
+18. Select a listing, confirm the detail view shows employer and description content, and verify the external listing link opens the source posting.
 
 ## Notes
 

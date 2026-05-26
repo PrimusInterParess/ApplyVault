@@ -78,6 +78,10 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'login'
+    title: 'Page Not Found',
+    loadComponent: () =>
+      import('./features/not-found/pages/not-found-page/not-found-page.component').then(
+        (module) => module.NotFoundPageComponent
+      )
   }
 ];

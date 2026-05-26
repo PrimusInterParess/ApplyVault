@@ -38,6 +38,10 @@
   line-height: 1.65;
 }
 
+.auth-page__form {
+  display: contents;
+}
+
 .auth-page__mode-switch {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

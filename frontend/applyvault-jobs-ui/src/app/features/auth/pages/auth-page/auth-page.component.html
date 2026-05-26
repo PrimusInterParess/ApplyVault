@@ -21,34 +21,44 @@
       </button>
     </div>
 
-    <label class="auth-page__field">
-      <span>Email</span>
-      <input
-        type="email"
-        [value]="email()"
-        autocomplete="email"
-        (input)="updateEmail(readInputValue($event))" />
-    </label>
+    <form class="auth-page__form" (submit)="onSubmit($event)">
+      <label class="auth-page__field">
+        <span>Email</span>
+        <input
+          id="auth-email"
+          name="email"
+          type="email"
+          [value]="email()"
+          autocomplete="email"
+          [attr.aria-invalid]="emailInvalid() || null"
+          [attr.aria-describedby]="emailDescribedBy()"
+          (input)="updateEmail(readInputValue($event))" />
+      </label>
 
-    <label class="auth-page__field">
-      <span>Password</span>
-      <input
-        type="password"
-        [value]="password()"
-        autocomplete="current-password"
-        (input)="updatePassword(readInputValue($event))" />
-    </label>
+      <label class="auth-page__field">
+        <span>Password</span>
+        <input
+          id="auth-password"
+          name="password"
+          type="password"
+          [value]="password()"
+          [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+          [attr.aria-invalid]="passwordInvalid() || null"
+          [attr.aria-describedby]="passwordDescribedBy()"
+          (input)="updatePassword(readInputValue($event))" />
+      </label>
 
-    @if (infoMessage(); as infoMessage) {
-      <p class="auth-page__message">{{ infoMessage }}</p>
-    }
+      @if (infoMessage(); as infoMessage) {
+        <p id="auth-info-message" class="auth-page__message">{{ infoMessage }}</p>
+      }
 
-    @if (auth.error(); as errorMessage) {
-      <p class="auth-page__message auth-page__message--error">{{ errorMessage }}</p>
-    }
+      @if (auth.error(); as errorMessage) {
+        <p id="auth-error-message" class="auth-page__message auth-page__message--error">{{ errorMessage }}</p>
+      }
 
-    <button type="button" class="auth-page__submit" [disabled]="auth.loading()" (click)="submit()">
-      {{ auth.loading() ? 'Working...' : mode() === 'login' ? 'Sign in' : 'Create account' }}
-    </button>
+      <button type="submit" class="auth-page__submit" [disabled]="auth.loading()">
+        {{ auth.loading() ? 'Working...' : mode() === 'login' ? 'Sign in' : 'Create account' }}
+      </button>
+    </form>
   </section>
 </main>

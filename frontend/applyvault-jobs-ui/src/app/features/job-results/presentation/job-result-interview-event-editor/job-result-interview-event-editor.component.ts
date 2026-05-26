@@ -84,6 +84,7 @@ export class JobResultInterviewEventEditorComponent {
       location: this.location().trim() || null,
       notes: this.notes().trim() || null
     });
+    this.editing.set(false);
   }
 
   clearEvent(): void {

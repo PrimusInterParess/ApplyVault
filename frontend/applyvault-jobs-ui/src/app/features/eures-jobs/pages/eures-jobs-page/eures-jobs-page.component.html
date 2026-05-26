@@ -55,7 +55,7 @@
     </div>
 
     @if (facade.locationInitWarning(); as locationWarning) {
-      <p class="eures-page__inline-error" role="status">{{ locationWarning }}</p>
+      <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
     }
 
     <div class="eures-page__suggestions" aria-label="Popular IT search terms">
@@ -85,8 +85,10 @@
     </div>
   </section>
 
+  <div class="visually-hidden" aria-live="polite">{{ searchCompletionMessage() }}</div>
+
   @if (facade.error(); as errorMessage) {
-    <section class="eures-page__state eures-page__state--error">
+    <section class="eures-page__state eures-page__state--error" aria-live="polite">
       <h2>Search unavailable</h2>
       <p>{{ errorMessage }}</p>
       @if (canSearch()) {
@@ -148,7 +150,7 @@
       </section>
     </section>
   } @else if (facade.results().length > 0 || facade.totalResults() > 0) {
-    <p class="eures-page__summary">
+    <p #resultsSummary class="eures-page__summary" tabindex="-1">
       {{ facade.totalResults() }} matching listings found
       @if (facade.keywordsLabel()) {
         <span>· keywords: {{ facade.keywordsLabel() }}</span>
@@ -213,6 +215,7 @@
                 type="button"
                 class="eures-page__card"
                 [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
+                [attr.aria-current]="facade.selectedJobId() === job.id ? 'true' : null"
                 (click)="selectJob(job.id)">
                 <h2>{{ job.title || 'Untitled listing' }}</h2>
                 <p>{{ job.employer || 'Unknown employer' }}</p>
@@ -230,6 +233,7 @@
             <button
               type="button"
               class="eures-page__pagination-button"
+              aria-label="Go to previous page"
               (click)="goToPreviousPage()"
               [disabled]="!facade.canGoToPreviousPage()">
               Previous
@@ -240,6 +244,7 @@
             <button
               type="button"
               class="eures-page__pagination-button"
+              aria-label="Go to next page"
               (click)="goToNextPage()"
               [disabled]="!facade.canGoToNextPage()">
               Next
@@ -258,7 +263,11 @@
                   placeholder="Page number"
                   (input)="updateJumpToPageValue($event)" />
               </label>
-              <button type="submit" class="eures-page__pagination-button" [disabled]="facade.loading()">
+              <button
+                type="submit"
+                class="eures-page__pagination-button"
+                aria-label="Go to page"
+                [disabled]="facade.loading()">
                 Go
               </button>
             </form>
@@ -281,7 +290,7 @@
             <app-skeleton-block width="100%" height="12rem" />
           </div>
         } @else if (facade.detailError()) {
-          <div class="eures-page__state eures-page__state--error">
+          <div class="eures-page__state eures-page__state--error" aria-live="polite">
             <h2>Detail unavailable</h2>
             <p>{{ facade.detailError() }}</p>
             @if (facade.selectedJobId(); as selectedId) {
@@ -322,7 +331,7 @@
               </div>
 
               @if (facade.saveError(); as saveErrorMessage) {
-                <div class="eures-page__save-state eures-page__save-state--error">
+                <div class="eures-page__save-state eures-page__save-state--error" aria-live="polite">
                   <p>{{ saveErrorMessage }}</p>
                   <button type="button" class="eures-page__search-button" (click)="saveSelectedJob()">
                     Try again
@@ -360,7 +369,7 @@
     </section>
   } @else if (!facade.error() && facade.hasSearched() && facade.totalResults() === 0) {
     <section class="eures-page__state">
-      <h2>No matching listings</h2>
+      <h2 #noResultsHeading tabindex="-1">No matching listings</h2>
       <p>
         Nothing matched
         @if (facade.keywordsLabel()) {

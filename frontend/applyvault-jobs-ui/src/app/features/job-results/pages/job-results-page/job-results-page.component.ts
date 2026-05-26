@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { take } from 'rxjs';
 
@@ -24,9 +24,27 @@ import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.com
 export class JobResultsPageComponent implements OnInit {
   readonly facade = inject(JobResultsFacade);
   readonly skeletonCardCount = [0, 1, 2, 3, 4, 5];
+  readonly loadCompletionMessage = signal('');
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
   protected readonly readInputValue = readInputValue;
   private readonly route = inject(ActivatedRoute);
+  private wasLoading = false;
+
+  constructor() {
+    effect(() => {
+      const loading = this.facade.loading();
+      const error = this.facade.error();
+
+      if (this.wasLoading && !loading && !error) {
+        const count = this.facade.results().length;
+        this.loadCompletionMessage.set(
+          count === 0 ? 'Saved results loaded' : `Saved results loaded, ${count} jobs`
+        );
+      }
+
+      this.wasLoading = loading;
+    });
+  }
 
   ngOnInit(): void {
     this.route.queryParamMap.pipe(take(1)).subscribe((params) => {

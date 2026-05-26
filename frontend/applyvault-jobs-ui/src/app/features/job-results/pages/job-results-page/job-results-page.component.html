@@ -8,8 +8,10 @@
     </div>
   </section>
 
+  <div class="visually-hidden" aria-live="polite">{{ loadCompletionMessage() }}</div>
+
   @if (facade.updateError(); as updateError) {
-    <p class="jobs-page__inline-error">{{ updateError }}</p>
+    <p class="jobs-page__inline-error" role="status" aria-live="polite">{{ updateError }}</p>
   }
 
   @if (facade.loading()) {
@@ -63,7 +65,7 @@
       </section>
     </section>
   } @else if (facade.error()) {
-      <section class="jobs-page__state jobs-page__state--error">
+      <section class="jobs-page__state jobs-page__state--error" aria-live="polite">
         <h2>Dashboard unavailable</h2>
         <p>{{ facade.error() }}</p>
         <button type="button" (click)="facade.load()">Try again</button>

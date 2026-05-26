@@ -2,6 +2,7 @@
   type="button"
   class="job-card"
   [class.job-card--selected]="selected()"
+  [attr.aria-current]="selected() ? 'true' : null"
   (click)="choose.emit(job().id)">
   <div class="job-card__eyebrow">
     <span>{{ job().sourceHostname }}</span>

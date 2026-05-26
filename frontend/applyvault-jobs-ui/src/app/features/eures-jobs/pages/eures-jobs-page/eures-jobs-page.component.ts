@@ -1,5 +1,16 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { filter, skip } from 'rxjs';
@@ -34,12 +45,17 @@ export class EuresJobsPageComponent implements OnInit {
   protected readonly skeletonListIndexes = computed(() =>
     Array.from({ length: this.facade.resultsPerPage() }, (_, index) => index)
   );
+  protected readonly searchCompletionMessage = signal('');
 
+  private readonly resultsSummary = viewChild<ElementRef<HTMLElement>>('resultsSummary');
+  private readonly noResultsHeading = viewChild<ElementRef<HTMLElement>>('noResultsHeading');
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private suppressUrlSync = false;
   private lastSyncedQueryKey = '';
+  private lastFocusedGeneration = 0;
+  private shouldFocusAfterSearch = false;
 
   constructor() {
     effect(() => {
@@ -48,6 +64,44 @@ export class EuresJobsPageComponent implements OnInit {
       if (this.facade.hasSearched()) {
         this.syncUrlIfNeeded();
       }
+    });
+
+    effect(() => {
+      const generation = this.facade.searchGeneration();
+
+      if (generation === 0 || this.facade.loading()) {
+        return;
+      }
+
+      if (this.facade.error()) {
+        this.searchCompletionMessage.set('');
+        return;
+      }
+
+      const total = this.facade.totalResults();
+
+      if (total === 0) {
+        this.searchCompletionMessage.set('No matching listings found');
+      } else {
+        this.searchCompletionMessage.set(`${total} matching listings found`);
+      }
+    });
+
+    effect(() => {
+      const generation = this.facade.searchGeneration();
+
+      if (generation === 0 || this.facade.loading() || !this.shouldFocusAfterSearch) {
+        return;
+      }
+
+      if (generation === this.lastFocusedGeneration) {
+        return;
+      }
+
+      this.lastFocusedGeneration = generation;
+      this.shouldFocusAfterSearch = false;
+
+      afterNextRender(() => this.focusAfterSearch());
     });
   }
 
@@ -90,6 +144,7 @@ export class EuresJobsPageComponent implements OnInit {
     }
 
     this.mobilePanel.set('results');
+    this.shouldFocusAfterSearch = true;
     this.facade.search(this.draftKeyword());
     this.draftKeyword.set('');
     this.syncUrlIfNeeded();
@@ -118,6 +173,7 @@ export class EuresJobsPageComponent implements OnInit {
   }
 
   protected retrySearch(): void {
+    this.shouldFocusAfterSearch = true;
     this.facade.refreshCurrentSearch();
     this.syncUrlIfNeeded();
   }
@@ -205,6 +261,21 @@ export class EuresJobsPageComponent implements OnInit {
       .subscribe((params) => {
         this.applyRouteParams(params, { triggerSearch: true });
       });
+  }
+
+  private focusAfterSearch(): void {
+    const summary = this.resultsSummary()?.nativeElement;
+
+    if (summary) {
+      summary.focus();
+      return;
+    }
+
+    const empty = this.noResultsHeading()?.nativeElement;
+
+    if (empty) {
+      empty.focus();
+    }
   }
 
   private applyRouteParams(params: ParamMap, options: { triggerSearch: boolean }): void {

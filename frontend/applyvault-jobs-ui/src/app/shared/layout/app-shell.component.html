@@ -1,0 +1,46 @@
+<div class="app-shell">
+  <header class="app-shell__header">
+    <div class="app-shell__header-inner">
+      <div class="app-shell__brand">
+        <p class="app-shell__eyebrow">ApplyVault dashboard</p>
+        @if (subtitle(); as pageSubtitle) {
+          <p class="app-shell__subtitle">{{ pageSubtitle }}</p>
+        }
+      </div>
+
+      <nav class="app-shell__nav" aria-label="Primary navigation">
+        <a
+          routerLink="/jobs"
+          routerLinkActive="app-shell__nav-link--active"
+          class="app-shell__nav-link">
+          Jobs
+        </a>
+        <a
+          routerLink="/eures"
+          routerLinkActive="app-shell__nav-link--active"
+          class="app-shell__nav-link">
+          EURES
+        </a>
+        <a
+          routerLink="/settings"
+          routerLinkActive="app-shell__nav-link--active"
+          class="app-shell__nav-link">
+          Settings
+        </a>
+      </nav>
+
+      <div class="app-shell__user">
+        @if (auth.currentUser(); as currentUser) {
+          <p class="app-shell__session">
+            Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
+          </p>
+        }
+        <button type="button" class="app-shell__sign-out" (click)="signOut()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell__content">
+    <router-outlet />
+  </main>
+</div>

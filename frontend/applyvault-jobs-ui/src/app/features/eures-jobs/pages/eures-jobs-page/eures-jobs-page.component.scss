@@ -8,7 +8,6 @@
   margin: 0 auto;
 }
 
-.eures-page__topbar,
 .eures-page__state,
 .eures-page__list-panel,
 .eures-page__card,
@@ -20,21 +19,6 @@
   box-shadow: var(--app-shadow-lg);
 }
 
-.eures-page__topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
-  padding: 1rem 1.2rem;
-  margin-bottom: 1.5rem;
-}
-
-.eures-page__topbar-copy {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.eures-page__topbar-text,
 .eures-page__intro,
 .eures-page__summary,
 .eures-page__meta {

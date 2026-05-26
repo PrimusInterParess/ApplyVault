@@ -8,7 +8,6 @@
   margin: 0 auto;
 }
 
-.jobs-page__topbar,
 .jobs-page__stats article,
 .jobs-page__state,
 .jobs-page__empty {
@@ -18,31 +17,17 @@
   box-shadow: var(--app-shadow-lg);
 }
 
-.jobs-page__topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
-  padding: 1rem 1.2rem;
-  margin-bottom: 1.5rem;
-}
-
-.jobs-page__topbar-copy {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.jobs-page__topbar-text {
-  margin: 0;
-  color: var(--app-text-muted);
-  line-height: 1.5;
-}
-
 .jobs-page__hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
   gap: 1.5rem;
   align-items: stretch;
+}
+
+.jobs-page__hero-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .jobs-page__eyebrow {
@@ -76,11 +61,6 @@ h1 {
   line-height: 1.75;
 }
 
-.jobs-page__session {
-  margin: 1rem 0 0;
-  color: var(--app-text-muted);
-}
-
 .jobs-page__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -104,14 +84,6 @@ h1 {
   margin-top: 0.7rem;
   font-size: clamp(1.8rem, 3vw, 2.5rem);
   color: var(--app-text);
-}
-
-.jobs-page__toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .jobs-page__field {
@@ -171,13 +143,6 @@ h1 {
 .jobs-page__field select:focus-visible {
   outline: 2px solid rgba(196, 127, 77, 0.3);
   outline-offset: 2px;
-}
-
-.jobs-page__refresh-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
 }
 
 .jobs-page__controls {
@@ -244,11 +209,6 @@ h1 {
     padding: 1.25rem;
   }
 
-  .jobs-page__topbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .jobs-page__hero,
   .jobs-page__content {
     grid-template-columns: 1fr;
@@ -258,12 +218,11 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .jobs-page__toolbar {
+  .jobs-page__hero-actions {
     justify-content: stretch;
   }
 
-  .jobs-page__refresh,
-  .jobs-page__refresh-link {
+  .jobs-page__refresh {
     flex: 1 1 220px;
   }
 

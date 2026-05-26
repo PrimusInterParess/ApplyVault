@@ -18,31 +18,45 @@ export const routes: Routes = [
       )
   },
   {
-    path: 'jobs',
-    title: 'ApplyVault Job Results',
+    path: '',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/job-results/pages/job-results-page/job-results-page.component').then(
-        (module) => module.JobResultsPageComponent
-      )
-  },
-  {
-    path: 'eures',
-    title: 'EURES Job Search',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/eures-jobs/pages/eures-jobs-page/eures-jobs-page.component').then(
-        (module) => module.EuresJobsPageComponent
-      )
-  },
-  {
-    path: 'settings',
-    title: 'ApplyVault Settings',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/settings/pages/user-settings-page/user-settings-page.component').then(
-        (module) => module.UserSettingsPageComponent
-      )
+      import('./shared/layout/app-shell.component').then((module) => module.AppShellComponent),
+    children: [
+      {
+        path: 'jobs',
+        title: 'ApplyVault Job Results',
+        data: {
+          shellSubtitle: 'Review saved jobs, refresh your workspace, and manage integrations.'
+        },
+        loadComponent: () =>
+          import('./features/job-results/pages/job-results-page/job-results-page.component').then(
+            (module) => module.JobResultsPageComponent
+          )
+      },
+      {
+        path: 'eures',
+        title: 'EURES Job Search',
+        data: {
+          shellSubtitle: 'Search public job listings from the EURES portal.'
+        },
+        loadComponent: () =>
+          import('./features/eures-jobs/pages/eures-jobs-page/eures-jobs-page.component').then(
+            (module) => module.EuresJobsPageComponent
+          )
+      },
+      {
+        path: 'settings',
+        title: 'ApplyVault Settings',
+        data: {
+          shellSubtitle: 'Manage calendar and mailbox integrations.'
+        },
+        loadComponent: () =>
+          import('./features/settings/pages/user-settings-page/user-settings-page.component').then(
+            (module) => module.UserSettingsPageComponent
+          )
+      }
+    ]
   },
   {
     path: 'integrations/calendar/callback',

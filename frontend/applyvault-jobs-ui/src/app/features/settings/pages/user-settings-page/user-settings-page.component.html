@@ -3,16 +3,6 @@
     <div>
       <p class="settings-page__eyebrow">User settings</p>
       <h1>Manage the calendar providers used for interview scheduling.</h1>
-      @if (auth.currentUser(); as currentUser) {
-        <p class="settings-page__session">
-          Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
-        </p>
-      }
-    </div>
-
-    <div class="settings-page__actions">
-      <a routerLink="/jobs" class="settings-page__secondary-action">Back to jobs</a>
-      <button type="button" class="settings-page__primary-action" (click)="signOut()">Sign out</button>
     </div>
   </section>
 

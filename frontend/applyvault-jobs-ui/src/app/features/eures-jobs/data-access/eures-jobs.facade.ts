@@ -74,8 +74,71 @@ export class EuresJobsFacade {
   readonly savedJobId = signal<string | null>(null);
   readonly saveAlreadyExists = signal(false);
   readonly searchGeneration = signal(0);
+  readonly lastSearchedAt = signal<Date | null>(null);
+  readonly pendingSelectedId = signal<string | null>(null);
 
   readonly keywordsLabel = computed(() => this.keywords().join(', '));
+
+  readonly hasActiveSearch = computed(
+    () => this.keywords().length > 0 && this.hasValidLocation()
+  );
+
+  readonly initialLoading = computed(() => this.loading() && this.results().length === 0);
+
+  readonly resultsSummary = computed(() => {
+    if (!this.hasSearched()) {
+      return 'Run a search to load EURES listings';
+    }
+
+    if (this.loading() && this.results().length === 0) {
+      return 'Searching EURES listings...';
+    }
+
+    const total = this.totalResults();
+
+    if (total === 0) {
+      return 'No matching listings';
+    }
+
+    const range = this.pageRangeLabel();
+    const keywords = this.keywordsLabel();
+
+    return range ? `${range} · ${keywords}` : keywords;
+  });
+
+  readonly pageAnnouncement = computed(() => {
+    const totalPages = this.totalPages();
+
+    if (totalPages <= 1) {
+      return '';
+    }
+
+    return `Page ${this.page()} of ${totalPages}`;
+  });
+
+  readonly savedListingIds = computed(() => {
+    const savedByUrl = new Map<string, string>();
+
+    for (const result of this.jobResultsFacade.results()) {
+      const url = result.url.trim();
+
+      if (url) {
+        savedByUrl.set(url, result.id);
+      }
+    }
+
+    const listingToSaved = new Map<string, string>();
+
+    for (const job of this.results()) {
+      const sourceUrl = job.sourceUrl?.trim();
+
+      if (sourceUrl && savedByUrl.has(sourceUrl)) {
+        listingToSaved.set(job.id, savedByUrl.get(sourceUrl)!);
+      }
+    }
+
+    return listingToSaved;
+  });
 
   readonly totalPages = computed(() => {
     const total = this.totalResults();
@@ -136,8 +199,13 @@ export class EuresJobsFacade {
         this.totalResults.set(response.totalResults);
         this.results.set(response.jobs);
         this.loading.set(false);
+        this.lastSearchedAt.set(new Date());
         this.syncSelectionAfterSearch(response.jobs, options);
         this.searchGeneration.update((generation) => generation + 1);
+
+        if (this.authService.session()) {
+          this.jobResultsFacade.load();
+        }
       });
 
     this.detailIntent$
@@ -185,6 +253,7 @@ export class EuresJobsFacade {
         this.saveAlreadyExists.set(result.response.alreadyExists);
         this.saveError.set(null);
         this.saving.set(false);
+        void this.jobResultsFacade.load();
       });
 
     effect(
@@ -301,6 +370,38 @@ export class EuresJobsFacade {
     }
 
     this.fetchPage(this.page(), { resetSelection: false, autoSelectFirst: false });
+  }
+
+  isListingSaved(id: string): boolean {
+    return this.savedListingIds().has(id);
+  }
+
+  savedJobIdForListing(id: string): string | null {
+    return this.savedListingIds().get(id) ?? null;
+  }
+
+  selectWhenLoaded(id: string): void {
+    const normalizedId = id.trim();
+
+    if (!normalizedId) {
+      return;
+    }
+
+    if (this.results().some((job) => job.id === normalizedId)) {
+      this.pendingSelectedId.set(null);
+      this.select(normalizedId);
+      return;
+    }
+
+    this.pendingSelectedId.set(normalizedId);
+
+    if (!this.loading() && this.hasSearched()) {
+      this.fetchPage(this.page(), {
+        resetSelection: false,
+        autoSelectFirst: false,
+        selectJobId: normalizedId
+      });
+    }
   }
 
   toggleKeyword(keyword: string): void {
@@ -430,6 +531,15 @@ export class EuresJobsFacade {
     });
   }
 
+  clearSelection(): void {
+    this.cancelPendingDetail();
+    this.resetSaveState();
+    this.selectedJobId.set(null);
+    this.selectedJob.set(null);
+    this.detailLoading.set(false);
+    this.detailError.set(null);
+  }
+
   updateLocationCode(value: string): void {
     const normalizedLocation = normalizeEuresLocationCode(value);
 
@@ -555,7 +665,16 @@ export class EuresJobsFacade {
     jobs: readonly EuresJobListing[],
     options: FetchPageOptions
   ): void {
+    const pendingId = this.pendingSelectedId();
+
+    if (pendingId && jobs.some((job) => job.id === pendingId)) {
+      this.pendingSelectedId.set(null);
+      this.select(pendingId);
+      return;
+    }
+
     if (options.selectJobId) {
+      this.pendingSelectedId.set(null);
       this.select(options.selectJobId);
       return;
     }
@@ -631,6 +750,8 @@ export class EuresJobsFacade {
     this.error.set(null);
     this.detailError.set(null);
     this.hasSearched.set(false);
+    this.lastSearchedAt.set(null);
+    this.pendingSelectedId.set(null);
     this.resetResults();
   }
 

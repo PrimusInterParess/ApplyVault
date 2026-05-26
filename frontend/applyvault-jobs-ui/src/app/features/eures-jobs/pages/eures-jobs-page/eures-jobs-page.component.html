@@ -1,7 +1,11 @@
 <main class="eures-page">
   <section class="eures-page__hero">
-    <h1>EURES job search</h1>
-    <p class="eures-page__intro">Combine keywords and a country to narrow EURES listings, then open the source posting.</p>
+    <div>
+      <h1>EURES job search</h1>
+      <p class="eures-page__intro">
+        Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
+      </p>
+    </div>
   </section>
 
   <section class="eures-page__search">
@@ -24,21 +28,30 @@
     }
 
     <div class="eures-page__search-row">
-      <label class="eures-page__field">
+      <label class="jobs-page__field jobs-page__field--search">
         <span>Keywords</span>
-        <input
-          type="search"
-          [value]="draftKeyword()"
-          placeholder="software, Angular, dotnet"
-          (input)="updateDraftKeyword($event)"
-          (keydown.enter)="runSearchFromKeyboard($event)" />
+        <div class="jobs-page__search-wrap">
+          <input
+            type="search"
+            [value]="draftKeyword()"
+            placeholder="software, Angular, dotnet"
+            (input)="updateDraftKeyword($event)"
+            (keydown.enter)="runSearchFromKeyboard($event)" />
+          @if (draftKeyword().length > 0) {
+            <button
+              type="button"
+              class="jobs-page__search-clear"
+              aria-label="Clear keyword draft"
+              (click)="clearDraftKeyword()">
+              ×
+            </button>
+          }
+        </div>
       </label>
 
-      <label class="eures-page__field">
+      <label class="jobs-page__field">
         <span>Country</span>
-        <select
-          [value]="facade.locationCode()"
-          (change)="updateLocationCode($event)">
+        <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
           @for (option of locationOptions; track option.code) {
             <option [value]="option.code">{{ option.label }}</option>
           }
@@ -47,12 +60,17 @@
 
       <button
         type="button"
-        class="eures-page__search-button"
+        class="jobs-page__primary-action"
         (click)="runSearch()"
-        [disabled]="facade.loading() || !canSearch()">
+        [disabled]="!canSearch()"
+        [attr.aria-describedby]="searchDisabledHint() ? 'eures-search-hint' : null">
         {{ facade.loading() ? 'Searching...' : 'Search EURES' }}
       </button>
     </div>
+
+    @if (searchDisabledHint(); as hint) {
+      <p id="eures-search-hint" class="eures-page__search-hint">{{ hint }}</p>
+    }
 
     @if (facade.locationInitWarning(); as locationWarning) {
       <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
@@ -61,7 +79,9 @@
     <div class="eures-page__suggestions" aria-label="Popular IT search terms">
       <div class="eures-page__suggestions-header">
         <p class="eures-page__suggestions-title">Popular IT searches</p>
-        <p class="eures-page__suggestions-hint">Select multiple terms. Results must match at least one term in the listing.</p>
+        <p class="eures-page__suggestions-hint">
+          Select multiple terms. Results must match at least one term in the listing.
+        </p>
       </div>
 
       @for (group of keywordSuggestionGroups; track group.label) {
@@ -71,8 +91,8 @@
             @for (keyword of group.keywords; track keyword) {
               <button
                 type="button"
-                class="eures-page__suggestion-chip"
-                [class.eures-page__suggestion-chip--active]="isActiveSuggestion(keyword)"
+                class="eures-page__workflow-chip"
+                [class.eures-page__workflow-chip--active]="isActiveSuggestion(keyword)"
                 [attr.aria-pressed]="isActiveSuggestion(keyword)"
                 [disabled]="facade.loading()"
                 (click)="toggleSuggestion(keyword)">
@@ -85,303 +105,210 @@
     </div>
   </section>
 
-  <div class="visually-hidden" aria-live="polite">{{ searchCompletionMessage() }}</div>
-
-  @if (facade.error(); as errorMessage) {
-    <section class="eures-page__state eures-page__state--error" aria-live="polite">
-      <h2>Search unavailable</h2>
-      <p>{{ errorMessage }}</p>
-      @if (canSearch()) {
-        <button type="button" class="eures-page__search-button" (click)="retrySearch()">
-          Try again
-        </button>
-      }
-    </section>
+  @if (loadBannerMessage(); as bannerMessage) {
+    <div class="jobs-page__banner" role="status" aria-live="polite">
+      <p>{{ bannerMessage }}</p>
+      <button type="button" class="jobs-page__banner-dismiss" (click)="dismissLoadBanner()">Dismiss</button>
+    </div>
   }
 
-  @if (facade.loading() && facade.results().length === 0 && !facade.error()) {
-    <section
-      class="eures-page__content"
-      [class.eures-page__content--mobile-detail]="mobilePanel() === 'detail'"
-      aria-busy="true"
-      aria-label="Searching EURES listings">
-      <div class="eures-page__mobile-tabs" role="tablist" aria-label="Results and detail">
-        <button
-          type="button"
-          role="tab"
-          class="eures-page__mobile-tab"
-          [class.eures-page__mobile-tab--active]="mobilePanel() === 'results'"
-          [attr.aria-selected]="mobilePanel() === 'results'"
-          (click)="showMobilePanel('results')">
-          Results
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="eures-page__mobile-tab"
-          [class.eures-page__mobile-tab--active]="mobilePanel() === 'detail'"
-          [attr.aria-selected]="mobilePanel() === 'detail'"
-          (click)="showMobilePanel('detail')">
-          Detail
-        </button>
+  <p class="jobs-page__live-region" aria-live="polite">{{ facade.resultsSummary() }}</p>
+
+  @if (pageAnnouncement()) {
+    <p class="visually-hidden" aria-live="polite">{{ pageAnnouncement() }}</p>
+  }
+
+  @if (facade.saveError(); as saveErrorMessage) {
+    <div class="jobs-page__error-bar" role="alert">
+      <p>{{ saveErrorMessage }}</p>
+      <button type="button" class="jobs-page__secondary-action" (click)="saveSelectedJob()">Retry save</button>
+    </div>
+  }
+
+  @if (facade.initialLoading() && !facade.error()) {
+    <section class="jobs-page__content" aria-busy="true" aria-label="Searching EURES listings">
+      <aside class="jobs-page__list">
+        @for (index of skeletonListIndexes(); track index) {
+          <div class="jobs-page__skeleton-card">
+            <app-skeleton-block width="78%" height="1.1rem" />
+            <app-skeleton-block width="62%" height="0.95rem" />
+            <app-skeleton-block width="54%" height="0.9rem" />
+            <app-skeleton-block width="38%" height="0.8rem" />
+          </div>
+        }
+      </aside>
+
+      <section class="jobs-page__detail">
+        <div class="jobs-page__skeleton-detail">
+          <div class="jobs-page__skeleton-detail-header">
+            <div class="jobs-page__skeleton-detail-copy">
+              <app-skeleton-block width="34%" height="0.75rem" />
+              <app-skeleton-block width="68%" height="1.8rem" />
+              <app-skeleton-block width="52%" height="0.95rem" />
+            </div>
+            <div class="jobs-page__skeleton-actions">
+              <app-skeleton-block width="7.5rem" height="2.75rem" />
+              <app-skeleton-block width="9.5rem" height="2.75rem" />
+            </div>
+          </div>
+          <app-skeleton-block width="100%" height="12rem" />
+        </div>
+      </section>
+    </section>
+  } @else if (facade.error()) {
+    <section class="jobs-page__state jobs-page__state--error" aria-live="polite">
+      <h2>Search unavailable</h2>
+      <p>{{ facade.error() }}</p>
+      @if (canSearch()) {
+        <button type="button" class="jobs-page__primary-action" (click)="retrySearch()">Try again</button>
+      }
+    </section>
+  } @else if (facade.hasSearched() && facade.totalResults() === 0) {
+    <section class="jobs-page__state">
+      <h2 tabindex="-1">No matching listings</h2>
+      <p>
+        Nothing matched
+        @if (facade.keywordsLabel()) {
+          <strong>{{ facade.keywordsLabel() }}</strong>
+        }
+        in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
+      </p>
+      <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
+      <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
+    </section>
+  } @else if (facade.hasSearched()) {
+    <section class="jobs-page__controls">
+      <div class="jobs-page__controls-row">
+        <p class="jobs-page__filter-summary">{{ facade.resultsSummary() }}</p>
+        <div class="jobs-page__controls-actions">
+          @if (lastSearchedLabel(); as searchedLabel) {
+            <p class="jobs-page__last-updated">{{ searchedLabel }}</p>
+          }
+          <button type="button" class="jobs-page__refresh" (click)="retrySearch()">Refresh results</button>
+        </div>
       </div>
+    </section>
+
+    <section
+      class="jobs-page__content"
+      [class.jobs-page__content--mobile-detail]="showMobileDetail()">
       <aside
-        class="eures-page__list-panel"
-        [style.--eures-list-visible-count]="facade.resultsPerPage()">
-        <div class="eures-page__list">
+        #listRegion
+        class="jobs-page__list"
+        tabindex="0"
+        aria-label="EURES search results"
+        (keydown)="handleListKeydown($event)">
+        @if (facade.loading()) {
           @for (index of skeletonListIndexes(); track index) {
-            <div class="eures-page__skeleton-card">
+            <div class="jobs-page__skeleton-card">
               <app-skeleton-block width="78%" height="1.1rem" />
               <app-skeleton-block width="62%" height="0.95rem" />
               <app-skeleton-block width="54%" height="0.9rem" />
               <app-skeleton-block width="38%" height="0.8rem" />
             </div>
           }
-        </div>
-      </aside>
+        } @else {
+          @for (job of facade.results(); track job.id) {
+            <app-eures-job-card
+              [job]="job"
+              [selected]="facade.selectedJobId() === job.id"
+              [saved]="facade.isListingSaved(job.id)"
+              (choose)="selectJob($event)" />
+          }
+        }
 
-      <section class="eures-page__detail">
-        <div class="eures-page__skeleton-detail">
-          <app-skeleton-block width="34%" height="0.75rem" />
-          <app-skeleton-block width="68%" height="1.8rem" />
-          <app-skeleton-block width="52%" height="0.95rem" />
-          <app-skeleton-block width="48%" height="0.95rem" />
-        </div>
-      </section>
-    </section>
-  } @else if (facade.results().length > 0 || facade.totalResults() > 0) {
-    <p #resultsSummary class="eures-page__summary" tabindex="-1">
-      {{ facade.totalResults() }} matching listings found
-      @if (facade.keywordsLabel()) {
-        <span>· keywords: {{ facade.keywordsLabel() }}</span>
-      }
-      @if (facade.pageRangeLabel()) {
-        <span>· showing {{ facade.pageRangeLabel() }}</span>
-      }
-    </p>
-
-    <section
-      class="eures-page__content"
-      [class.eures-page__content--mobile-detail]="mobilePanel() === 'detail'">
-      <div class="eures-page__mobile-tabs" role="tablist" aria-label="Results and detail">
-        <button
-          type="button"
-          role="tab"
-          class="eures-page__mobile-tab"
-          [class.eures-page__mobile-tab--active]="mobilePanel() === 'results'"
-          [attr.aria-selected]="mobilePanel() === 'results'"
-          (click)="showMobilePanel('results')">
-          Results
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="eures-page__mobile-tab"
-          [class.eures-page__mobile-tab--active]="mobilePanel() === 'detail'"
-          [attr.aria-selected]="mobilePanel() === 'detail'"
-          (click)="showMobilePanel('detail')">
-          Detail
-        </button>
-      </div>
-      <aside
-        class="eures-page__list-panel"
-        [style.--eures-list-visible-count]="facade.resultsPerPage()">
-        <div class="eures-page__list-controls">
-          <label class="eures-page__field eures-page__field--compact">
-            <span>Results per page</span>
-            <select
-              [value]="facade.resultsPerPage()"
-              (change)="updatePageSize($event)">
+        <footer class="eures-page__list-footer">
+          <label class="eures-page__page-size">
+            <span>Per page</span>
+            <select [value]="facade.resultsPerPage()" (change)="updatePageSize($event)">
               @for (pageSize of pageSizeOptions; track pageSize) {
                 <option [value]="pageSize">{{ pageSize }}</option>
               }
             </select>
           </label>
-        </div>
 
-        <div class="eures-page__list">
-          @if (facade.loading()) {
-            @for (index of skeletonListIndexes(); track index) {
-              <div class="eures-page__skeleton-card">
-                <app-skeleton-block width="78%" height="1.1rem" />
-                <app-skeleton-block width="62%" height="0.95rem" />
-                <app-skeleton-block width="54%" height="0.9rem" />
-                <app-skeleton-block width="38%" height="0.8rem" />
-              </div>
-            }
-          } @else {
-            @for (job of facade.results(); track job.id) {
+          @if (facade.totalPages() > 1) {
+            <div class="eures-page__pagination">
               <button
                 type="button"
-                class="eures-page__card"
-                [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
-                [attr.aria-current]="facade.selectedJobId() === job.id ? 'true' : null"
-                (click)="selectJob(job.id)">
-                <h2>{{ job.title || 'Untitled listing' }}</h2>
-                <p>{{ job.employer || 'Unknown employer' }}</p>
-                <p>{{ job.location || 'Location not specified' }}</p>
-                @if (formatPublicationDate(job.publicationDate); as postedAt) {
-                  <p class="eures-page__meta">Posted {{ postedAt | date:'MMM d, y':'UTC' }}</p>
-                }
+                class="jobs-page__secondary-action"
+                aria-label="Go to previous page"
+                (click)="goToPreviousPage()"
+                [disabled]="!facade.canGoToPreviousPage()">
+                Previous
               </button>
+              <span class="eures-page__pagination-label">
+                Page {{ facade.page() }} of {{ facade.totalPages() }}
+              </span>
+              <button
+                type="button"
+                class="jobs-page__secondary-action"
+                aria-label="Go to next page"
+                (click)="goToNextPage()"
+                [disabled]="!facade.canGoToNextPage()">
+                Next
+              </button>
+            </div>
+
+            @if (showJumpToPage()) {
+              <form class="eures-page__jump-to-page" (submit)="jumpToPage($event)">
+                <label class="eures-page__jump-field">
+                  <span class="visually-hidden">Jump to page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    [max]="facade.totalPages()"
+                    [value]="jumpToPageValue()"
+                    placeholder="Page #"
+                    aria-label="Jump to page"
+                    (input)="updateJumpToPageValue($event)" />
+                </label>
+                <button
+                  type="submit"
+                  class="jobs-page__secondary-action"
+                  aria-label="Go to page"
+                  [disabled]="facade.loading()">
+                  Go
+                </button>
+              </form>
             }
           }
-        </div>
-
-        @if (facade.totalPages() > 1) {
-          <div class="eures-page__pagination">
-            <button
-              type="button"
-              class="eures-page__pagination-button"
-              aria-label="Go to previous page"
-              (click)="goToPreviousPage()"
-              [disabled]="!facade.canGoToPreviousPage()">
-              Previous
-            </button>
-            <span class="eures-page__pagination-label">
-              Page {{ facade.page() }} of {{ facade.totalPages() }}
-            </span>
-            <button
-              type="button"
-              class="eures-page__pagination-button"
-              aria-label="Go to next page"
-              (click)="goToNextPage()"
-              [disabled]="!facade.canGoToNextPage()">
-              Next
-            </button>
-          </div>
-
-          @if (showJumpToPage()) {
-            <form class="eures-page__jump-to-page" (submit)="jumpToPage($event)">
-              <label class="eures-page__field eures-page__field--compact">
-                <span>Jump to page</span>
-                <input
-                  type="number"
-                  min="1"
-                  [max]="facade.totalPages()"
-                  [value]="jumpToPageValue()"
-                  placeholder="Page number"
-                  (input)="updateJumpToPageValue($event)" />
-              </label>
-              <button
-                type="submit"
-                class="eures-page__pagination-button"
-                aria-label="Go to page"
-                [disabled]="facade.loading()">
-                Go
-              </button>
-            </form>
-          }
-        }
+        </footer>
       </aside>
 
-      <section class="eures-page__detail">
-        @if (facade.detailLoading()) {
-          <div class="eures-page__skeleton-detail" aria-busy="true" aria-label="Loading job detail">
-            <app-skeleton-block width="34%" height="0.75rem" />
-            <app-skeleton-block width="68%" height="1.8rem" />
-            <app-skeleton-block width="52%" height="0.95rem" />
-            <app-skeleton-block width="48%" height="0.95rem" />
-            <app-skeleton-block width="44%" height="0.95rem" />
-            <div class="eures-page__skeleton-detail-actions">
-              <app-skeleton-block width="7.5rem" height="2.75rem" />
-              <app-skeleton-block width="9.5rem" height="2.75rem" />
-            </div>
-            <app-skeleton-block width="100%" height="12rem" />
-          </div>
-        } @else if (facade.detailError()) {
-          <div class="eures-page__state eures-page__state--error" aria-live="polite">
-            <h2>Detail unavailable</h2>
-            <p>{{ facade.detailError() }}</p>
-            @if (facade.selectedJobId(); as selectedId) {
-              <button type="button" class="eures-page__search-button" (click)="selectJob(selectedId)">
-                Retry detail
-              </button>
+      <section class="jobs-page__detail">
+        @if (showMobileDetail()) {
+          <div class="jobs-page__mobile-back">
+            <button type="button" class="jobs-page__back-button" (click)="backToList()">← Back to list</button>
+            @if (facade.selectedJob(); as selected) {
+              <p class="jobs-page__mobile-title">{{ selected.title || 'Untitled listing' }}</p>
             }
           </div>
-        } @else {
-          @if (facade.selectedJob(); as selectedJob) {
-            <div class="eures-page__detail-card">
-              <p class="eures-page__eyebrow">Selected listing</p>
-              <h2>{{ selectedJob.title || 'Untitled listing' }}</h2>
-              <p><strong>Employer:</strong> {{ selectedJob.employer || 'Unknown employer' }}</p>
-              <p><strong>Location:</strong> {{ selectedJob.location || 'Location not specified' }}</p>
-              @if (formatPublicationDate(selectedJob.publicationDate); as postedAt) {
-                <p><strong>Posted:</strong> {{ postedAt | date:'MMM d, y':'UTC' }}</p>
-              }
-              @if (selectedJob.contractType) {
-                <p><strong>Contract:</strong> {{ selectedJob.contractType }}</p>
-              }
-              @if (selectedJob.workHours) {
-                <p><strong>Work hours:</strong> {{ selectedJob.workHours }}</p>
-              }
-
-              <div class="eures-page__detail-actions">
-                @if (detailUrl(); as openUrl) {
-                  <a [href]="openUrl" target="_blank" rel="noreferrer" class="eures-page__link">Open listing</a>
-                }
-
-                <button
-                  type="button"
-                  class="eures-page__save-button"
-                  (click)="saveSelectedJob()"
-                  [disabled]="facade.saving() || !!facade.savedJobId()">
-                  {{ facade.saving() ? 'Saving...' : 'Save to ApplyVault' }}
-                </button>
-              </div>
-
-              @if (facade.saveError(); as saveErrorMessage) {
-                <div class="eures-page__save-state eures-page__save-state--error" aria-live="polite">
-                  <p>{{ saveErrorMessage }}</p>
-                  <button type="button" class="eures-page__search-button" (click)="saveSelectedJob()">
-                    Try again
-                  </button>
-                </div>
-              }
-
-              @if (facade.savedJobId(); as savedJobId) {
-                <div class="eures-page__save-state eures-page__save-state--success">
-                  <p>
-                    {{
-                      facade.saveAlreadyExists()
-                        ? 'This listing is already saved in ApplyVault.'
-                        : 'Saved to ApplyVault.'
-                    }}
-                  </p>
-                  <a
-                    [routerLink]="['/jobs']"
-                    [queryParams]="{ selected: savedJobId }"
-                    class="eures-page__link">
-                    View saved job
-                  </a>
-                </div>
-              }
-
-              @if (selectedJob.description) {
-                <article class="eures-page__description" [innerHTML]="selectedJob.description | safeHtml"></article>
-              } @else {
-                <p class="eures-page__meta">No description was returned for this listing.</p>
-              }
-            </div>
-          }
         }
+
+        <app-eures-job-detail
+          [job]="facade.selectedJob()"
+          [detailLoading]="facade.detailLoading()"
+          [detailError]="facade.detailError()"
+          [saving]="facade.saving()"
+          [saveError]="null"
+          [savedJobId]="facade.savedJobId()"
+          [saveAlreadyExists]="facade.saveAlreadyExists()"
+          [detailUrl]="detailUrl()"
+          (save)="saveSelectedJob()"
+          (retryDetail)="retryDetail()" />
       </section>
     </section>
-  } @else if (!facade.error() && facade.hasSearched() && facade.totalResults() === 0) {
-    <section class="eures-page__state">
-      <h2 #noResultsHeading tabindex="-1">No matching listings</h2>
-      <p>
-        Nothing matched
-        @if (facade.keywordsLabel()) {
-          <strong>{{ facade.keywordsLabel() }}</strong>
-        }
-        in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>. Try fewer or broader keywords.
-      </p>
-    </section>
-  } @else if (!facade.error()) {
-    <section class="eures-page__state">
+  } @else {
+    <section class="jobs-page__state">
       <h2>No results yet</h2>
-      <p>Run a search to load EURES listings.</p>
+      <p>Run a search to load EURES listings, or try a popular IT search below.</p>
+      <ol class="jobs-page__onboarding-steps">
+        <li>Add keywords or select suggestion chips</li>
+        <li>Choose a country and search EURES</li>
+        <li>Select a listing to read details and save to ApplyVault</li>
+      </ol>
+      <a routerLink="/jobs" class="jobs-page__secondary-action">View saved jobs</a>
     </section>
   }
 </main>

@@ -8,6 +8,7 @@ import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { JobResultViewModel } from '../../models/job-result-view.model';
 import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
+import { describeCaptureQualitySummary } from '../../utils/job-result-status.util';
 import { JobResultInterviewEventEditorComponent } from '../job-result-interview-event-editor/job-result-interview-event-editor.component';
 import { ConnectedCalendarAccount } from '../../../settings/models/calendar-connection.model';
 
@@ -110,6 +111,8 @@ export class JobResultDetailComponent {
     return typeof rendered === 'string' ? rendered : '';
   });
   readonly formatInterviewEventWindow = formatInterviewEventWindow;
+  readonly calendarExpanded = signal(false);
+  readonly describeCaptureQualitySummary = describeCaptureQualitySummary;
 
   constructor() {
     effect(() => {
@@ -122,7 +125,26 @@ export class JobResultDetailComponent {
       this.editingCaptureReview.set(false);
       this.descriptionDraft.set(description);
       this.editingDescription.set(false);
+      this.calendarExpanded.set(false);
     });
+  }
+
+  protected calendarSummary(): string {
+    const connectionCount = this.connections().length;
+
+    if (this.connectionsLoading()) {
+      return 'Loading connected providers...';
+    }
+
+    if (connectionCount === 0) {
+      return 'No providers connected';
+    }
+
+    return `${connectionCount} provider${connectionCount === 1 ? '' : 's'} connected`;
+  }
+
+  protected toggleCalendarExpanded(): void {
+    this.calendarExpanded.update((expanded) => !expanded);
   }
 
   requestDelete(): void {

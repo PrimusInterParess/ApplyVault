@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 import { JobResultViewModel } from '../../models/job-result-view.model';
-import { formatInterviewEventWindow } from '../../utils/interview-event';
+import { resolveJobCardStatus, sourceMonogram } from '../../utils/job-result-status.util';
 
 @Component({
   selector: 'app-job-result-card',
@@ -15,17 +15,7 @@ export class JobResultCardComponent {
   readonly job = input.required<JobResultViewModel>();
   readonly selected = input(false);
   readonly choose = output<string>();
-  readonly formatInterviewEventWindow = formatInterviewEventWindow;
 
-  protected statusSyncLabel(): string | null {
-    const statusSync = this.job().statusSync;
-
-    if (!statusSync || statusSync.source !== 'gmail') {
-      return null;
-    }
-
-    return statusSync.kind === 'interview'
-      ? 'Interview synced from Gmail'
-      : 'Rejected from Gmail';
-  }
+  protected readonly cardStatus = computed(() => resolveJobCardStatus(this.job()));
+  protected readonly sourceMonogram = sourceMonogram;
 }

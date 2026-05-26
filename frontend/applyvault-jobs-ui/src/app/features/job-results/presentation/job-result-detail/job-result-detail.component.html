@@ -5,30 +5,15 @@
         <p class="job-detail__eyebrow">{{ selectedJob.sourceHostname }} · {{ selectedJob.detectedPageType }}</p>
         <h2>{{ selectedJob.title }}</h2>
         <p class="job-detail__company">{{ selectedJob.company }}</p>
+        @if (selectedJob.location) {
+          <p class="job-detail__location">{{ selectedJob.location }}</p>
+        }
       </div>
 
-      <div class="job-detail__actions">
-        <app-job-result-interview-event-editor
-          [interviewEvent]="selectedJob.interviewEvent"
-          [updating]="updating()"
-          (save)="submitInterviewEvent($event)"
-          (clear)="clearScheduledInterview()" />
-        <button
-          type="button"
-          class="job-detail__reject"
-          [class.job-detail__reject--active]="selectedJob.isRejected"
-          [disabled]="updating()"
-          (click)="toggleRejected.emit(selectedJob.id)">
-          {{ selectedJob.isRejected ? 'Undo rejection' : 'Mark as rejected' }}
-        </button>
-        <button
-          type="button"
-          class="job-detail__secondary-action"
-          [disabled]="updating()"
-          (click)="requestDelete()">
-          Delete
-        </button>
-        <a [href]="selectedJob.url" target="_blank" rel="noreferrer">Open source listing</a>
+      <div class="job-detail__actions job-detail__actions--primary">
+        <a [href]="selectedJob.url" target="_blank" rel="noreferrer" class="job-detail__primary-link">
+          Open source listing
+        </a>
       </div>
     </div>
 
@@ -48,73 +33,22 @@
       }
       @if (selectedJob.statusSync; as statusSync) {
         @if (statusSync.source === 'gmail') {
-        <span class="job-detail__chip job-detail__chip--interview">
-          Gmail synced {{ statusSync.kind }}
-        </span>
+          <span class="job-detail__chip job-detail__chip--interview">
+            Gmail synced {{ statusSync.kind }}
+          </span>
         }
       }
-      <span>{{ selectedJob.location }}</span>
-      <span>Capture {{ (selectedJob.captureQuality.overallConfidence * 100).toFixed(0) }}%</span>
+      <span>{{ describeCaptureQualitySummary(selectedJob.captureQuality) }}</span>
       <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
     </div>
 
-    <article class="job-detail__description">
-      <div class="job-detail__section-header">
-        <div>
-          <h3>Calendar event sync</h3>
-          <p class="job-detail__muted">
-            Choose one of your connected providers to push the saved interview event into your calendar.
-          </p>
-        </div>
-
-        <a routerLink="/settings" class="job-detail__settings-link">Manage providers in settings</a>
-      </div>
-
-      @if (connectionError(); as connectionErrorMessage) {
-        <p class="job-detail__validation-message">{{ connectionErrorMessage }}</p>
-      }
-
-      @if (connectionsLoading()) {
-        <p class="job-detail__muted">Loading connected providers...</p>
-      } @else if (connections().length === 0) {
-        <p class="job-detail__muted">
-          No providers connected yet. Open user settings to connect Google or Microsoft before creating a calendar event.
-        </p>
-      } @else {
-        <ul class="job-detail__calendar-list">
-          @for (connection of connections(); track connection.id) {
-            <li>
-              <div>
-                <strong>{{ connection.provider | titlecase }}</strong> Calendar
-              </div>
-              <div class="job-detail__calendar-row-actions">
-                <button
-                  type="button"
-                  class="job-detail__secondary-action"
-                  [disabled]="!selectedJob.interviewEvent || syncingCalendarAccountId() === connection.id"
-                  (click)="syncCalendar(connection.id)">
-                  {{
-                    syncingCalendarAccountId() === connection.id
-                      ? 'Syncing...'
-                      : selectedJob.interviewEvent
-                        ? 'Create event'
-                        : 'Save timing first'
-                  }}
-                </button>
-              </div>
-            </li>
-          }
-        </ul>
-      }
-    </article>
-
     @if (captureReviewVisible()) {
-      <article class="job-detail__description">
+      <article class="job-detail__panel job-detail__panel--attention">
         <div class="job-detail__section-header">
           <div>
-            <h3>Capture review</h3>
+            <h3>Needs attention</h3>
             <p class="job-detail__muted">
-              Review low-confidence fields without editing the raw scrape under the hood.
+              {{ describeCaptureQualitySummary(selectedJob.captureQuality) }}
             </p>
           </div>
 
@@ -239,7 +173,7 @@
       </article>
     </div>
 
-    <article class="job-detail__description">
+    <article class="job-detail__panel">
       <div class="job-detail__section-header">
         <div>
           <h3>Description snapshot</h3>
@@ -296,9 +230,110 @@
         <div class="job-detail__description-body" [innerHTML]="renderedDescription() | safeHtml"></div>
       }
     </article>
+
+    <article class="job-detail__panel">
+      <div class="job-detail__section-header">
+        <div>
+          <h3>Interview</h3>
+          <p class="job-detail__muted">Schedule or update interview timing for this role.</p>
+        </div>
+      </div>
+
+      <app-job-result-interview-event-editor
+        [interviewEvent]="selectedJob.interviewEvent"
+        [updating]="updating()"
+        (save)="submitInterviewEvent($event)"
+        (clear)="clearScheduledInterview()" />
+    </article>
+
+    <article class="job-detail__panel job-detail__panel--collapsible">
+      <button
+        type="button"
+        class="job-detail__collapse-trigger"
+        [attr.aria-expanded]="calendarExpanded()"
+        (click)="toggleCalendarExpanded()">
+        <span>
+          <h3>Calendar event sync</h3>
+          <p class="job-detail__muted">{{ calendarSummary() }}</p>
+        </span>
+        <span class="job-detail__collapse-icon" aria-hidden="true">{{ calendarExpanded() ? '−' : '+' }}</span>
+      </button>
+
+      @if (calendarExpanded()) {
+        <div class="job-detail__collapse-body">
+          <div class="job-detail__section-header">
+            <p class="job-detail__muted">
+              Choose a connected provider to push the saved interview event into your calendar.
+            </p>
+            <a routerLink="/settings" class="job-detail__settings-link">Manage providers</a>
+          </div>
+
+          @if (connectionError(); as connectionErrorMessage) {
+            <p class="job-detail__validation-message">{{ connectionErrorMessage }}</p>
+          }
+
+          @if (connectionsLoading()) {
+            <p class="job-detail__muted">Loading connected providers...</p>
+          } @else if (connections().length === 0) {
+            <p class="job-detail__muted">
+              No providers connected yet. Open settings to connect Google or Microsoft before creating a calendar event.
+            </p>
+          } @else {
+            <ul class="job-detail__calendar-list">
+              @for (connection of connections(); track connection.id) {
+                <li>
+                  <div>
+                    <strong>{{ connection.provider | titlecase }}</strong> Calendar
+                  </div>
+                  <div class="job-detail__calendar-row-actions">
+                    <button
+                      type="button"
+                      class="job-detail__secondary-action"
+                      [disabled]="!selectedJob.interviewEvent || syncingCalendarAccountId() === connection.id"
+                      (click)="syncCalendar(connection.id)">
+                      {{
+                        syncingCalendarAccountId() === connection.id
+                          ? 'Syncing...'
+                          : selectedJob.interviewEvent
+                            ? 'Create event'
+                            : 'Save timing first'
+                      }}
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </article>
+
+    <article class="job-detail__panel job-detail__panel--danger">
+      <h3>Danger zone</h3>
+      <p class="job-detail__muted">Reject roles you are not pursuing or delete them from your workspace.</p>
+      <div class="job-detail__danger-actions">
+        <button
+          type="button"
+          class="job-detail__reject"
+          [class.job-detail__reject--active]="selectedJob.isRejected"
+          [disabled]="updating()"
+          (click)="toggleRejected.emit(selectedJob.id)">
+          {{ selectedJob.isRejected ? 'Undo rejection' : 'Mark as rejected' }}
+        </button>
+        <button
+          type="button"
+          class="job-detail__secondary-action"
+          [disabled]="updating()"
+          (click)="requestDelete()">
+          Delete saved job
+        </button>
+      </div>
+    </article>
   </section>
 } @else {
   <section class="job-detail job-detail--empty">
-    <p>Select a result from the list to inspect its captured details.</p>
+    <h3>Select a saved job</h3>
+    <p>Choose a result from the list to inspect captured details, fix low-confidence fields, and schedule interviews.</p>
+    <p class="job-detail__muted">Tip: use arrow keys while the list is focused, then Enter to open.</p>
   </section>
 }

@@ -37,3 +37,5 @@ export interface JobResultsStats {
   readonly sources: number;
   readonly rejected: number;
 }
+
+export type { JobWorkflowFilter, JobResultsSortOption } from '../utils/job-result-status.util';

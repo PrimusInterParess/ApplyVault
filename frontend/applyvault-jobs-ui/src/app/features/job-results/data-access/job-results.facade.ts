@@ -11,7 +11,15 @@ import {
   UpdateJobCaptureReviewRequest
 } from '../models/job-result.model';
 import { mapSavedJobResultToViewModel } from '../utils/job-result.mapper';
+import {
+  compareJobResults,
+  JobResultsSortOption,
+  JobWorkflowFilter,
+  matchesWorkflowFilter
+} from '../utils/job-result-status.util';
 import { JobResultsApiService } from './job-results-api.service';
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 @Injectable({ providedIn: 'root' })
 export class JobResultsFacade {
@@ -24,13 +32,21 @@ export class JobResultsFacade {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly updateError = signal<string | null>(null);
+  readonly searchTermInput = signal('');
   readonly searchTerm = signal('');
   readonly selectedSource = signal('all');
+  readonly workflowFilter = signal<JobWorkflowFilter>('all');
+  readonly sortOption = signal<JobResultsSortOption>('saved_desc');
   readonly selectedId = signal<string | null>(null);
   readonly pendingSelectedId = signal<string | null>(null);
   readonly updatingResultId = signal<string | null>(null);
   readonly syncingCalendarAccountId = signal<string | null>(null);
+  readonly lastLoadedAt = signal<Date | null>(null);
+  readonly selectionChangedNotice = signal(false);
   readonly results = signal<readonly JobResultViewModel[]>([]);
+
+  private readonly suppressAutoSelect = signal(false);
+  private searchDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly availableSources = computed(() =>
     Array.from(new Set(this.results().map((result) => result.sourceHostname))).sort((left, right) =>
@@ -38,19 +54,43 @@ export class JobResultsFacade {
     )
   );
 
+  readonly hasActiveFilters = computed(() => {
+    return (
+      this.searchTerm().trim().length > 0 ||
+      this.selectedSource() !== 'all' ||
+      this.workflowFilter() !== 'all'
+    );
+  });
+
   readonly filteredResults = computed(() => {
     const activeSource = this.selectedSource();
+    const workflow = this.workflowFilter();
+    const sort = this.sortOption();
     const term = this.searchTerm().trim().toLowerCase();
 
-    return this.results().filter((result) => {
+    const filtered = this.results().filter((result) => {
       const matchesSource = activeSource === 'all' || result.sourceHostname === activeSource;
+      const matchesWorkflow = matchesWorkflowFilter(result, workflow);
       const matchesSearch =
         term.length === 0 ||
         result.searchText.includes(term) ||
         result.detectedPageType.toLowerCase().includes(term);
 
-      return matchesSource && matchesSearch;
+      return matchesSource && matchesWorkflow && matchesSearch;
     });
+
+    return [...filtered].sort((left, right) => compareJobResults(left, right, sort));
+  });
+
+  readonly filterSummary = computed(() => {
+    const total = this.results().length;
+    const shown = this.filteredResults().length;
+
+    if (!this.hasActiveFilters()) {
+      return total === 0 ? 'No saved jobs' : `${total} saved ${total === 1 ? 'job' : 'jobs'}`;
+    }
+
+    return `Showing ${shown} of ${total}`;
   });
 
   readonly selectedResult = computed(() => {
@@ -108,6 +148,7 @@ export class JobResultsFacade {
           );
 
         this.results.set(viewModels);
+        this.lastLoadedAt.set(new Date());
         this.loading.set(false);
       });
 
@@ -154,9 +195,18 @@ export class JobResultsFacade {
           return;
         }
 
+        if (this.suppressAutoSelect() && selectedId === null) {
+          return;
+        }
+
         const hasSelection = selectedId !== null && filtered.some((result) => result.id === selectedId);
 
         if (!hasSelection) {
+          if (selectedId !== null) {
+            this.selectionChangedNotice.set(true);
+          }
+
+          this.suppressAutoSelect.set(false);
           this.selectedId.set(filtered[0].id);
         }
       },
@@ -193,15 +243,60 @@ export class JobResultsFacade {
   }
 
   updateSearchTerm(value: string): void {
-    this.searchTerm.set(value);
+    this.searchTermInput.set(value);
+
+    if (this.searchDebounceHandle !== null) {
+      clearTimeout(this.searchDebounceHandle);
+    }
+
+    this.searchDebounceHandle = setTimeout(() => {
+      this.searchTerm.set(value);
+      this.searchDebounceHandle = null;
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  clearSearchTerm(): void {
+    if (this.searchDebounceHandle !== null) {
+      clearTimeout(this.searchDebounceHandle);
+      this.searchDebounceHandle = null;
+    }
+
+    this.searchTermInput.set('');
+    this.searchTerm.set('');
   }
 
   updateSource(value: string): void {
     this.selectedSource.set(value);
   }
 
+  updateWorkflowFilter(value: JobWorkflowFilter): void {
+    this.workflowFilter.set(value);
+  }
+
+  updateSortOption(value: JobResultsSortOption): void {
+    this.sortOption.set(value);
+  }
+
+  clearFilters(): void {
+    this.clearSearchTerm();
+    this.selectedSource.set('all');
+    this.workflowFilter.set('all');
+    this.sortOption.set('saved_desc');
+  }
+
+  dismissSelectionChangedNotice(): void {
+    this.selectionChangedNotice.set(false);
+  }
+
   select(id: string): void {
+    this.selectionChangedNotice.set(false);
+    this.suppressAutoSelect.set(false);
     this.selectedId.set(id);
+  }
+
+  clearSelection(): void {
+    this.suppressAutoSelect.set(true);
+    this.selectedId.set(null);
   }
 
   selectWhenLoaded(id: string): void {
@@ -492,12 +587,23 @@ export class JobResultsFacade {
     this.loading.set(false);
     this.error.set(null);
     this.updateError.set(null);
+    this.searchTermInput.set('');
     this.searchTerm.set('');
     this.selectedSource.set('all');
+    this.workflowFilter.set('all');
+    this.sortOption.set('saved_desc');
     this.selectedId.set(null);
     this.pendingSelectedId.set(null);
     this.updatingResultId.set(null);
     this.syncingCalendarAccountId.set(null);
+    this.lastLoadedAt.set(null);
+    this.selectionChangedNotice.set(false);
+    this.suppressAutoSelect.set(false);
     this.results.set([]);
+
+    if (this.searchDebounceHandle !== null) {
+      clearTimeout(this.searchDebounceHandle);
+      this.searchDebounceHandle = null;
+    }
   }
 }

@@ -1,17 +1,25 @@
 <main class="jobs-page">
   <section class="jobs-page__hero">
     <div>
-      <h1>Saved job results, organized into a clean review workspace.</h1>
-    </div>
-    <div class="jobs-page__hero-actions">
-      <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh results</button>
+      <h1>Saved jobs</h1>
+      <p class="jobs-page__intro">Triage captures, fix low-confidence fields, and schedule interviews in one workspace.</p>
     </div>
   </section>
 
-  <div class="visually-hidden" aria-live="polite">{{ loadCompletionMessage() }}</div>
+  @if (loadBannerMessage(); as bannerMessage) {
+    <div class="jobs-page__banner" role="status" aria-live="polite">
+      <p>{{ bannerMessage }}</p>
+      <button type="button" class="jobs-page__banner-dismiss" (click)="dismissLoadBanner()">Dismiss</button>
+    </div>
+  }
+
+  <p class="jobs-page__live-region" aria-live="polite">{{ facade.filterSummary() }}</p>
 
   @if (facade.updateError(); as updateError) {
-    <p class="jobs-page__inline-error" role="status" aria-live="polite">{{ updateError }}</p>
+    <div class="jobs-page__error-bar" role="alert">
+      <p>{{ updateError }}</p>
+      <button type="button" class="jobs-page__secondary-action" (click)="facade.load()">Retry</button>
+    </div>
   }
 
   @if (facade.loading()) {
@@ -65,109 +73,186 @@
       </section>
     </section>
   } @else if (facade.error()) {
-      <section class="jobs-page__state jobs-page__state--error" aria-live="polite">
-        <h2>Dashboard unavailable</h2>
-        <p>{{ facade.error() }}</p>
-        <button type="button" (click)="facade.load()">Try again</button>
-      </section>
-    } @else {
-      <section class="jobs-page__controls">
+    <section class="jobs-page__state jobs-page__state--error" aria-live="polite">
+      <h2>Dashboard unavailable</h2>
+      <p>{{ facade.error() }}</p>
+      <button type="button" (click)="facade.load()">Try again</button>
+    </section>
+  } @else {
+    <section class="jobs-page__controls">
+      <div class="jobs-page__controls-row">
         <div class="jobs-page__filters">
-          <label class="jobs-page__field">
+          <label class="jobs-page__field jobs-page__field--search">
             <span>Search</span>
-            <input
-              type="search"
-              [value]="facade.searchTerm()"
-              placeholder="Search title, company, location..."
-              (input)="facade.updateSearchTerm(readInputValue($event))" />
+            <div class="jobs-page__search-wrap">
+              <input
+                type="search"
+                [value]="facade.searchTermInput()"
+                placeholder="Search title, company, location..."
+                (input)="facade.updateSearchTerm(readInputValue($event))" />
+              @if (facade.searchTermInput().length > 0) {
+                <button
+                  type="button"
+                  class="jobs-page__search-clear"
+                  aria-label="Clear search"
+                  (click)="clearSearch()">
+                  ×
+                </button>
+              }
+            </div>
           </label>
 
           <label class="jobs-page__field">
             <span>Source</span>
-            <select (change)="facade.updateSource(readInputValue($event))">
-              <option value="all" [selected]="facade.selectedSource() === 'all'">All sources</option>
+            <select [value]="facade.selectedSource()" (change)="facade.updateSource(readInputValue($event))">
+              <option value="all">All sources</option>
               @for (source of facade.availableSources(); track source) {
-                <option [value]="source" [selected]="facade.selectedSource() === source">{{ source }}</option>
+                <option [value]="source">{{ source }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="jobs-page__field">
+            <span>Sort</span>
+            <select [value]="facade.sortOption()" (change)="setSortOption(readInputValue($event))">
+              @for (option of sortOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
               }
             </select>
           </label>
         </div>
 
-        @if (facade.stats(); as stats) {
-          <div class="jobs-page__stats">
-            <article>
-              <span>Total results</span>
-              <strong>{{ stats.totalResults }}</strong>
-            </article>
-            <article>
-              <span>Companies</span>
-              <strong>{{ stats.companies }}</strong>
-            </article>
-            <article>
-              <span>Sources</span>
-              <strong>{{ stats.sources }}</strong>
-            </article>
-            <article>
-              <span>Rejected</span>
-              <strong>{{ stats.rejected }}</strong>
-            </article>
+        <div class="jobs-page__controls-actions">
+          @if (lastLoadedLabel(); as loadedLabel) {
+            <p class="jobs-page__last-updated">{{ loadedLabel }}</p>
+          }
+          <button type="button" class="jobs-page__refresh" (click)="facade.load()">Refresh results</button>
+        </div>
+      </div>
+
+      <div class="jobs-page__workflow-filters" role="group" aria-label="Filter saved jobs by status">
+        @for (option of workflowFilterOptions; track option.value) {
+          <button
+            type="button"
+            class="jobs-page__workflow-chip"
+            [class.jobs-page__workflow-chip--active]="isWorkflowFilterActive(option.value)"
+            [attr.aria-pressed]="isWorkflowFilterActive(option.value)"
+            (click)="setWorkflowFilter(option.value)">
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
+      <div class="jobs-page__controls-meta">
+        <p class="jobs-page__filter-summary">{{ facade.filterSummary() }}</p>
+        @if (facade.hasActiveFilters()) {
+          <button type="button" class="jobs-page__text-action" (click)="clearAllFilters()">Clear filters</button>
+        }
+      </div>
+
+      @if (facade.selectionChangedNotice()) {
+        <div class="jobs-page__notice" role="status">
+          <p>Selection changed — showing the next matching result.</p>
+          <button type="button" class="jobs-page__text-action" (click)="facade.dismissSelectionChangedNotice()">
+            Dismiss
+          </button>
+        </div>
+      }
+
+      @if (!facade.hasActiveFilters() && facade.stats(); as stats) {
+        <div class="jobs-page__stats">
+          <article>
+            <span>Total results</span>
+            <strong>{{ stats.totalResults }}</strong>
+          </article>
+          <article>
+            <span>Companies</span>
+            <strong>{{ stats.companies }}</strong>
+          </article>
+          <article>
+            <span>Sources</span>
+            <strong>{{ stats.sources }}</strong>
+          </article>
+          <article>
+            <span>Rejected</span>
+            <strong>{{ stats.rejected }}</strong>
+          </article>
+        </div>
+      }
+    </section>
+
+    <section
+      class="jobs-page__content"
+      [class.jobs-page__content--mobile-detail]="showMobileDetail()">
+      <aside
+        #listRegion
+        class="jobs-page__list"
+        tabindex="0"
+        aria-label="Saved job results"
+        (keydown)="handleListKeydown($event)">
+        @if (facade.results().length === 0) {
+          <div class="jobs-page__empty">
+            <h2>No saved jobs yet</h2>
+            <p>Save jobs from the browser extension to build your review workspace.</p>
+            <ol class="jobs-page__onboarding-steps">
+              <li>Install the ApplyVault browser extension</li>
+              <li>Save a job listing from any supported board</li>
+              <li>Return here to review and organize captures</li>
+            </ol>
+            <a routerLink="/eures" class="jobs-page__primary-action">Search EURES listings</a>
+          </div>
+        } @else if (facade.filteredResults().length === 0) {
+          <div class="jobs-page__empty">
+            <h2>No matching results</h2>
+            <p>Try a different search term, source, or status filter.</p>
+            <button type="button" class="jobs-page__primary-action" (click)="clearAllFilters()">Clear filters</button>
+          </div>
+        } @else {
+          @for (job of facade.filteredResults(); track job.id) {
+            <app-job-result-card
+              [job]="job"
+              [selected]="facade.selectedResultId() === job.id"
+              (choose)="selectResult($event)" />
+          }
+        }
+      </aside>
+
+      <section class="jobs-page__detail">
+        @if (showMobileDetail()) {
+          <div class="jobs-page__mobile-back">
+            <button type="button" class="jobs-page__back-button" (click)="backToList()">← Back to list</button>
+            @if (facade.selectedResult(); as selected) {
+              <p class="jobs-page__mobile-title">{{ selected.title }}</p>
+            }
           </div>
         }
-      </section>
 
-      <section class="jobs-page__content">
-        <aside class="jobs-page__list">
-          @if (facade.results().length === 0) {
-            <div class="jobs-page__empty">
-              <h2>No saved jobs yet</h2>
-              <p>Save jobs from the browser extension to build your review workspace.</p>
-            </div>
-          } @else if (facade.filteredResults().length === 0) {
-            <div class="jobs-page__empty">
-              <h2>No matching results</h2>
-              <p>Try a different search term or source filter.</p>
-            </div>
-          } @else {
-            @for (job of facade.filteredResults(); track job.id) {
-              <app-job-result-card
-                [job]="job"
-                [selected]="facade.selectedResultId() === job.id"
-                (choose)="facade.select($event)" />
-            }
-          }
-        </aside>
-
-        <section class="jobs-page__detail">
-          <app-job-result-detail
-            [job]="facade.selectedResult()"
-            [updating]="facade.updatingResultId() === facade.selectedResultId()"
-            [connections]="calendarConnections.connections()"
-            [connectionsLoading]="calendarConnections.loading()"
-            [connectionError]="calendarConnections.error()"
-            [syncingCalendarAccountId]="facade.syncingCalendarAccountId()"
-            (toggleRejected)="facade.toggleRejected($event)"
-            (deleteResult)="beginDeleteConfirm($event)"
-            (saveCaptureReview)="handleCaptureReviewSave($event)"
-            (saveDescription)="facade.updateDescription($event.id, $event.description)"
-            (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
-            (clearInterviewEvent)="facade.clearInterviewEvent($event)"
-            (createCalendarEvent)="facade.createCalendarEvent($event.id, $event.connectedAccountId)" />
-        </section>
+        <app-job-result-detail
+          [job]="facade.selectedResult()"
+          [updating]="facade.updatingResultId() === facade.selectedResultId()"
+          [connections]="calendarConnections.connections()"
+          [connectionsLoading]="calendarConnections.loading()"
+          [connectionError]="calendarConnections.error()"
+          [syncingCalendarAccountId]="facade.syncingCalendarAccountId()"
+          (toggleRejected)="facade.toggleRejected($event)"
+          (deleteResult)="beginDeleteConfirm($event)"
+          (saveCaptureReview)="handleCaptureReviewSave($event)"
+          (saveDescription)="facade.updateDescription($event.id, $event.description)"
+          (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
+          (clearInterviewEvent)="facade.clearInterviewEvent($event)"
+          (createCalendarEvent)="facade.createCalendarEvent($event.id, $event.connectedAccountId)" />
       </section>
-    }
+    </section>
+  }
 
   @if (deleteConfirm(); as confirmTarget) {
-    <div
-      class="jobs-page__dialog-backdrop"
-      role="presentation"
-      (click)="cancelDeleteConfirm()">
+    <div class="jobs-page__dialog-backdrop" role="presentation">
       <div
         class="jobs-page__dialog"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-        (click)="$event.stopPropagation()">
+        aria-describedby="delete-dialog-description">
         <h3 id="delete-dialog-title">Delete saved job?</h3>
         <p id="delete-dialog-description">{{ deleteConfirmMessage() }}</p>
         <div class="jobs-page__dialog-actions">
@@ -183,9 +268,7 @@
             class="jobs-page__primary-action jobs-page__delete-confirm"
             [disabled]="facade.updatingResultId() === confirmTarget.id"
             (click)="confirmDelete()">
-            {{
-              facade.updatingResultId() === confirmTarget.id ? 'Deleting...' : 'Delete'
-            }}
+            {{ facade.updatingResultId() === confirmTarget.id ? 'Deleting...' : 'Delete' }}
           </button>
         </div>
       </div>

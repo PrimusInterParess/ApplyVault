@@ -2,32 +2,27 @@
   type="button"
   class="job-card"
   [class.job-card--selected]="selected()"
+  [attr.data-job-id]="job().id"
   [attr.aria-current]="selected() ? 'true' : null"
   (click)="choose.emit(job().id)">
-  <div class="job-card__eyebrow">
-    <span>{{ job().sourceHostname }}</span>
-    <span>{{ job().savedAt | date: 'MMM d, y' }}</span>
+  <div class="job-card__top">
+    <span class="job-card__monogram" aria-hidden="true">{{ sourceMonogram(job().sourceHostname) }}</span>
+    <div class="job-card__eyebrow">
+      <span>{{ job().sourceHostname }}</span>
+      <span>{{ job().savedAt | date: 'MMM d, y' }}</span>
+    </div>
+    @if (cardStatus(); as status) {
+      <span
+        class="job-card__status"
+        [class.job-card__status--interview]="status.variant === 'interview' || status.variant === 'gmail'"
+        [class.job-card__status--review]="status.variant === 'review'">
+        {{ status.label }}
+        @if (status.overflowCount > 0) {
+          <span class="job-card__status-overflow">+{{ status.overflowCount }}</span>
+        }
+      </span>
+    }
   </div>
-
-  @if (job().isRejected) {
-    <span class="job-card__status">Rejected</span>
-  }
-
-  @if (job().captureQuality.needsReview) {
-    <span class="job-card__status job-card__status--review">Needs review</span>
-  }
-
-  @if (job().interviewEvent) {
-    <span class="job-card__status job-card__status--interview">
-      Interview {{ formatInterviewEventWindow(job().interviewEvent) }}
-    </span>
-  }
-
-  @if (statusSyncLabel(); as syncLabel) {
-    <span class="job-card__status" [class.job-card__status--interview]="job().statusSync?.kind === 'interview'">
-      {{ syncLabel }}
-    </span>
-  }
 
   <h3>{{ job().title }}</h3>
   <p class="job-card__company">{{ job().company }}</p>
@@ -37,5 +32,7 @@
     <span>{{ job().detectedPageType }}</span>
   </div>
 
-  <p class="job-card__excerpt">{{ job().excerpt }}</p>
+  @if (job().excerpt) {
+    <p class="job-card__excerpt">{{ job().excerpt }}</p>
+  }
 </button>

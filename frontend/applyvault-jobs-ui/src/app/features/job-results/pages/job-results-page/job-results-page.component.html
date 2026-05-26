@@ -40,12 +40,61 @@
         <button type="button" (click)="facade.load()">Try again</button>
       </section>
     } @else {
+      <section class="jobs-page__controls">
+        <div class="jobs-page__filters">
+          <label class="jobs-page__field">
+            <span>Search</span>
+            <input
+              type="search"
+              [value]="facade.searchTerm()"
+              placeholder="Search title, company, location..."
+              (input)="facade.updateSearchTerm(asValue($event))" />
+          </label>
+
+          <label class="jobs-page__field">
+            <span>Source</span>
+            <select (change)="facade.updateSource(asValue($event))">
+              <option value="all" [selected]="facade.selectedSource() === 'all'">All sources</option>
+              @for (source of facade.availableSources(); track source) {
+                <option [value]="source" [selected]="facade.selectedSource() === source">{{ source }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        @if (facade.stats(); as stats) {
+          <div class="jobs-page__stats">
+            <article>
+              <span>Total results</span>
+              <strong>{{ stats.totalResults }}</strong>
+            </article>
+            <article>
+              <span>Companies</span>
+              <strong>{{ stats.companies }}</strong>
+            </article>
+            <article>
+              <span>Sources</span>
+              <strong>{{ stats.sources }}</strong>
+            </article>
+            <article>
+              <span>Rejected</span>
+              <strong>{{ stats.rejected }}</strong>
+            </article>
+          </div>
+        }
+      </section>
+
       <section class="jobs-page__content">
         <aside class="jobs-page__list">
-          @if (facade.filteredResults().length === 0) {
+          @if (facade.results().length === 0) {
+            <div class="jobs-page__empty">
+              <h2>No saved jobs yet</h2>
+              <p>Save jobs from the browser extension to build your review workspace.</p>
+            </div>
+          } @else if (facade.filteredResults().length === 0) {
             <div class="jobs-page__empty">
               <h2>No matching results</h2>
-              <p>Adjust your filters or save more jobs from the extension.</p>
+              <p>Try a different search term or source filter.</p>
             </div>
           } @else {
             @for (job of facade.filteredResults(); track job.id) {

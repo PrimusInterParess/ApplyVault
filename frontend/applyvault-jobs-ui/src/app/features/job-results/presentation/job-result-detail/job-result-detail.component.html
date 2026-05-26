@@ -293,7 +293,7 @@
           <p class="job-detail__validation-message">Description cannot be empty.</p>
         }
       } @else {
-        <div class="job-detail__description-body" [innerHTML]="renderedDescription()"></div>
+        <div class="job-detail__description-body" [innerHTML]="renderedDescription() | safeHtml"></div>
       }
     </article>
   </section>

@@ -2,6 +2,7 @@ import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { marked } from 'marked';
 
+import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { JobResultViewModel } from '../../models/job-result-view.model';
 import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
@@ -29,7 +30,7 @@ export interface JobCaptureReviewSaveEvent {
 @Component({
   selector: 'app-job-result-detail',
   standalone: true,
-  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent],
+  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent, SafeHtmlPipe],
   templateUrl: './job-result-detail.component.html',
   styleUrl: './job-result-detail.component.scss'
 })

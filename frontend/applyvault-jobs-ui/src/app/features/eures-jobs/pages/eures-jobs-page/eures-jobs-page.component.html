@@ -197,7 +197,7 @@
               }
 
               @if (selectedJob.description) {
-                <article class="eures-page__description" [innerHTML]="selectedJob.description"></article>
+                <article class="eures-page__description" [innerHTML]="selectedJob.description | safeHtml"></article>
               } @else {
                 <p class="eures-page__meta">No description was returned for this listing.</p>
               }

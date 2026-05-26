@@ -30,19 +30,6 @@
   justify-content: flex-end;
 }
 
-.jobs-page__eyebrow {
-  margin: 0 0 1rem;
-  color: var(--app-text-muted);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.jobs-page__eyebrow--compact {
-  margin-bottom: 0;
-}
-
 h1,
 h2 {
   margin: 0;
@@ -52,13 +39,6 @@ h1 {
   max-width: 12ch;
   font-size: clamp(2.6rem, 5vw, 4.4rem);
   line-height: 0.98;
-}
-
-.jobs-page__intro {
-  max-width: 60ch;
-  margin: 1.2rem 0 0;
-  color: var(--app-text-muted);
-  line-height: 1.75;
 }
 
 .jobs-page__stats {

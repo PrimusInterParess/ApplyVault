@@ -1,5 +1,6 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
@@ -31,7 +32,7 @@ export interface JobCaptureReviewSaveEvent {
 @Component({
   selector: 'app-job-result-detail',
   standalone: true,
-  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent, SafeHtmlPipe],
+  imports: [DatePipe, TitleCasePipe, JobResultInterviewEventEditorComponent, SafeHtmlPipe, RouterLink],
   templateUrl: './job-result-detail.component.html',
   styleUrl: './job-result-detail.component.scss'
 })

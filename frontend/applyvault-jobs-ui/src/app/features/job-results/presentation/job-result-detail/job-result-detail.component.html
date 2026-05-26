@@ -79,7 +79,7 @@
     </div>
 
     <article class="job-detail__description">
-      <!-- <div class="job-detail__section-header">
+      <div class="job-detail__section-header">
         <div>
           <h3>Calendar event sync</h3>
           <p class="job-detail__muted">
@@ -88,7 +88,7 @@
         </div>
 
         <a routerLink="/settings" class="job-detail__settings-link">Manage providers in settings</a>
-      </div> -->
+      </div>
 
       @if (connectionError(); as connectionErrorMessage) {
         <p class="job-detail__validation-message">{{ connectionErrorMessage }}</p>

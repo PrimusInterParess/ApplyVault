@@ -2,15 +2,29 @@
   <section class="settings-page__hero">
     <div>
       <p class="settings-page__eyebrow">User settings</p>
-      <h1>Manage the calendar providers used for interview scheduling.</h1>
+      <h1>Integrations</h1>
+      <p class="settings-page__subtitle">
+        Connect calendar and Gmail for interview scheduling and status sync.
+      </p>
     </div>
   </section>
 
-  <section class="settings-page__panel">
+  <section class="settings-page__panel" aria-labelledby="calendar-settings-heading">
     <div class="settings-page__section-header">
-      <div>
-        <p class="settings-page__label">Calendar providers</p>
-        <h2>Connections</h2>
+      <div class="settings-page__section-intro">
+        <div class="settings-page__section-title-row">
+          <div>
+            <p class="settings-page__label">Calendar providers</p>
+            <h2 id="calendar-settings-heading">Connections</h2>
+          </div>
+          <span
+            class="settings-page__status-chip"
+            [class.settings-page__status-chip--success]="calendarSectionStatus().variant === 'success'"
+            [class.settings-page__status-chip--warning]="calendarSectionStatus().variant === 'warning'"
+            [class.settings-page__status-chip--danger]="calendarSectionStatus().variant === 'danger'">
+            {{ calendarSectionStatus().label }}
+          </span>
+        </div>
         <p class="settings-page__muted">
           Add or remove the accounts that appear when you create interview events from saved jobs.
         </p>
@@ -20,67 +34,156 @@
         type="button"
         class="settings-page__secondary-action"
         [disabled]="calendarConnections.loading()"
+        [attr.aria-busy]="calendarConnections.loading()"
         (click)="calendarConnections.load()">
-        Refresh
-      </button>
-    </div>
-
-    <div class="settings-page__connect-actions">
-      <button
-        type="button"
-        class="settings-page__primary-action"
-        [disabled]="calendarConnections.connectingProvider() === 'google'"
-        (click)="calendarConnections.connect('google')">
-        {{
-          calendarConnections.connectingProvider() === 'google'
-            ? 'Connecting Google...'
-            : 'Connect Google'
-        }}
-      </button>
-      <button
-        type="button"
-        class="settings-page__primary-action"
-        [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
-        (click)="calendarConnections.connect('microsoft')">
-        {{
-          calendarConnections.connectingProvider() === 'microsoft'
-            ? 'Connecting Microsoft...'
-            : 'Connect Microsoft'
-        }}
+        {{ calendarConnections.loading() ? 'Refreshing...' : 'Refresh' }}
       </button>
     </div>
 
     @if (calendarConnections.error(); as errorMessage) {
-      <p class="settings-page__error">{{ errorMessage }}</p>
+      <div class="settings-page__alert" role="alert" aria-live="polite">
+        {{ errorMessage }}
+      </div>
     }
 
     @if (calendarConnections.loading()) {
-      <p class="settings-page__muted">Loading connected providers...</p>
+      <div class="settings-page__skeleton-list" aria-busy="true" aria-label="Loading calendar connections">
+        @for (index of skeletonRowIndexes; track index) {
+          <div class="settings-page__skeleton-row">
+            <app-skeleton-block width="2.5rem" height="2.5rem" [rounded]="true" />
+            <div class="settings-page__skeleton-copy">
+              <app-skeleton-block width="42%" height="1rem" />
+              <app-skeleton-block width="58%" height="0.9rem" />
+            </div>
+            <app-skeleton-block width="6.5rem" height="2.75rem" />
+          </div>
+        }
+      </div>
     } @else if (calendarConnections.connections().length === 0) {
       <div class="settings-page__empty">
         <h3>No providers connected</h3>
-        <p>Connect Google or Microsoft to make interview event sync available in the jobs workspace.</p>
+        <p class="settings-page__muted">
+          Connect Google or Microsoft to make interview event sync available in the jobs workspace.
+        </p>
+        <div class="settings-page__provider-actions">
+          <button
+            type="button"
+            class="settings-page__provider-action"
+            [disabled]="calendarConnections.connectingProvider() === 'google'"
+            (click)="calendarConnections.connect('google')">
+            <span class="settings-page__provider-badge settings-page__provider-badge--google" aria-hidden="true">
+              {{ providerInitial('google') }}
+            </span>
+            <span class="settings-page__provider-action-copy">
+              <strong>{{ providerLabel('google') }}</strong>
+              <span class="settings-page__muted">Calendar for interview events</span>
+            </span>
+            <span class="settings-page__provider-action-label">
+              {{
+                calendarConnections.connectingProvider() === 'google'
+                  ? 'Connecting...'
+                  : 'Connect'
+              }}
+            </span>
+          </button>
+          <button
+            type="button"
+            class="settings-page__provider-action"
+            [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
+            (click)="calendarConnections.connect('microsoft')">
+            <span class="settings-page__provider-badge settings-page__provider-badge--microsoft" aria-hidden="true">
+              {{ providerInitial('microsoft') }}
+            </span>
+            <span class="settings-page__provider-action-copy">
+              <strong>{{ providerLabel('microsoft') }}</strong>
+              <span class="settings-page__muted">Calendar for interview events</span>
+            </span>
+            <span class="settings-page__provider-action-label">
+              {{
+                calendarConnections.connectingProvider() === 'microsoft'
+                  ? 'Connecting...'
+                  : 'Connect'
+              }}
+            </span>
+          </button>
+        </div>
       </div>
     } @else {
+      <div class="settings-page__connect-actions">
+        <button
+          type="button"
+          class="settings-page__primary-action"
+          [class.settings-page__secondary-action]="isCalendarProviderConnected('google')"
+          [disabled]="
+            isCalendarProviderConnected('google') ||
+            calendarConnections.connectingProvider() === 'google'
+          "
+          (click)="calendarConnections.connect('google')">
+          {{
+            isCalendarProviderConnected('google')
+              ? 'Google connected'
+              : calendarConnections.connectingProvider() === 'google'
+                ? 'Connecting Google...'
+                : 'Connect Google'
+          }}
+        </button>
+        <button
+          type="button"
+          class="settings-page__primary-action"
+          [class.settings-page__secondary-action]="isCalendarProviderConnected('microsoft')"
+          [disabled]="
+            isCalendarProviderConnected('microsoft') ||
+            calendarConnections.connectingProvider() === 'microsoft'
+          "
+          (click)="calendarConnections.connect('microsoft')">
+          {{
+            isCalendarProviderConnected('microsoft')
+              ? 'Microsoft connected'
+              : calendarConnections.connectingProvider() === 'microsoft'
+                ? 'Connecting Microsoft...'
+                : 'Connect Microsoft'
+          }}
+        </button>
+      </div>
+
       <ul class="settings-page__connection-list">
         @for (connection of calendarConnections.connections(); track connection.id) {
-          <li>
-            <div>
-              <strong>{{ connection.provider | titlecase }}</strong>
-              <p>{{ connection.displayName || connection.email || connection.providerUserId }}</p>
-              <span>
-                Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
-                @if (connection.expiresAt) {
-                  · Expires {{ connection.expiresAt | date: 'MMM d, y, h:mm a' }}
-                }
+          <li class="settings-page__connection-row">
+            <div class="settings-page__connection-main">
+              <span [class]="providerBadgeClass(connection.provider)" aria-hidden="true">
+                {{ providerInitial(connection.provider) }}
               </span>
+              <div class="settings-page__connection-copy">
+                <div class="settings-page__connection-title-row">
+                  <strong>{{ providerLabel(connection.provider) }}</strong>
+                  @if (expiryPresentation(connection.expiresAt); as expiryStatus) {
+                    <span
+                      class="settings-page__status-chip settings-page__status-chip--compact"
+                      [class.settings-page__status-chip--warning]="expiryStatus.variant === 'warning'"
+                      [class.settings-page__status-chip--danger]="expiryStatus.variant === 'danger'">
+                      {{ expiryStatus.label }}
+                    </span>
+                  } @else {
+                    <span class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
+                      Connected
+                    </span>
+                  }
+                </div>
+                <p>{{ connectionDisplayName(connection) }}</p>
+                <p class="settings-page__meta">
+                  Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                  @if (connection.expiresAt) {
+                    · Expires {{ connection.expiresAt | date: 'MMM d, y, h:mm a' }}
+                  }
+                </p>
+              </div>
             </div>
 
             <button
               type="button"
-              class="settings-page__secondary-action"
+              class="settings-page__secondary-action settings-page__connection-action"
               [disabled]="calendarConnections.disconnectingConnectionId() === connection.id"
-              (click)="calendarConnections.disconnect(connection.id)">
+              (click)="beginDisconnectCalendar(connection.id, connection.provider)">
               {{
                 calendarConnections.disconnectingConnectionId() === connection.id
                   ? 'Disconnecting...'
@@ -93,11 +196,22 @@
     }
   </section>
 
-  <section class="settings-page__panel">
+  <section class="settings-page__panel" aria-labelledby="mail-settings-heading">
     <div class="settings-page__section-header">
-      <div>
-        <p class="settings-page__label">Mailbox sync</p>
-        <h2>Gmail</h2>
+      <div class="settings-page__section-intro">
+        <div class="settings-page__section-title-row">
+          <div>
+            <p class="settings-page__label">Mailbox sync</p>
+            <h2 id="mail-settings-heading">Gmail</h2>
+          </div>
+          <span
+            class="settings-page__status-chip"
+            [class.settings-page__status-chip--success]="mailSectionStatus().variant === 'success'"
+            [class.settings-page__status-chip--warning]="mailSectionStatus().variant === 'warning'"
+            [class.settings-page__status-chip--danger]="mailSectionStatus().variant === 'danger'">
+            {{ mailSectionStatus().label }}
+          </span>
+        </div>
         <p class="settings-page__muted">
           Connect Gmail to let the dashboard detect interview and rejection emails for saved jobs.
         </p>
@@ -107,60 +221,117 @@
         type="button"
         class="settings-page__secondary-action"
         [disabled]="mailConnections.loading()"
+        [attr.aria-busy]="mailConnections.loading()"
         (click)="mailConnections.load()">
-        Refresh
-      </button>
-    </div>
-
-    <div class="settings-page__connect-actions">
-      <button
-        type="button"
-        class="settings-page__primary-action"
-        [disabled]="mailConnections.connectingProvider() === 'gmail'"
-        (click)="mailConnections.connect('gmail')">
-        {{
-          mailConnections.connectingProvider() === 'gmail'
-            ? 'Connecting Gmail...'
-            : 'Connect Gmail'
-        }}
+        {{ mailConnections.loading() ? 'Refreshing...' : 'Refresh' }}
       </button>
     </div>
 
     @if (mailConnections.error(); as errorMessage) {
-      <p class="settings-page__error">{{ errorMessage }}</p>
+      <div class="settings-page__alert" role="alert" aria-live="polite">
+        {{ errorMessage }}
+      </div>
     }
 
     @if (mailConnections.loading()) {
-      <p class="settings-page__muted">Loading connected mailboxes...</p>
+      <div class="settings-page__skeleton-list" aria-busy="true" aria-label="Loading mailbox connections">
+        @for (index of skeletonRowIndexes; track index) {
+          <div class="settings-page__skeleton-row">
+            <app-skeleton-block width="2.5rem" height="2.5rem" [rounded]="true" />
+            <div class="settings-page__skeleton-copy">
+              <app-skeleton-block width="48%" height="1rem" />
+              <app-skeleton-block width="64%" height="0.9rem" />
+            </div>
+            <app-skeleton-block width="6.5rem" height="2.75rem" />
+          </div>
+        }
+      </div>
     } @else if (mailConnections.connections().length === 0) {
       <div class="settings-page__empty">
         <h3>No Gmail mailbox connected</h3>
-        <p>Connect Gmail to keep rejection and interview status changes in sync with your dashboard.</p>
+        <p class="settings-page__muted">
+          Connect Gmail to keep rejection and interview status changes in sync with your dashboard.
+        </p>
+        <div class="settings-page__provider-actions">
+          <button
+            type="button"
+            class="settings-page__provider-action"
+            [disabled]="mailConnections.connectingProvider() === 'gmail'"
+            (click)="mailConnections.connect('gmail')">
+            <span class="settings-page__provider-badge settings-page__provider-badge--gmail" aria-hidden="true">
+              {{ providerInitial('gmail') }}
+            </span>
+            <span class="settings-page__provider-action-copy">
+              <strong>{{ providerLabel('gmail') }}</strong>
+              <span class="settings-page__muted">Interview and rejection email sync</span>
+            </span>
+            <span class="settings-page__provider-action-label">
+              {{
+                mailConnections.connectingProvider() === 'gmail'
+                  ? 'Connecting...'
+                  : 'Connect'
+              }}
+            </span>
+          </button>
+        </div>
       </div>
     } @else {
+      @if (!isMailProviderConnected('gmail')) {
+        <div class="settings-page__connect-actions">
+          <button
+            type="button"
+            class="settings-page__primary-action"
+            [disabled]="mailConnections.connectingProvider() === 'gmail'"
+            (click)="mailConnections.connect('gmail')">
+            {{
+              mailConnections.connectingProvider() === 'gmail'
+                ? 'Connecting Gmail...'
+                : 'Connect Gmail'
+            }}
+          </button>
+        </div>
+      }
+
       <ul class="settings-page__connection-list">
         @for (connection of mailConnections.connections(); track connection.id) {
-          <li>
-            <div>
-              <strong>{{ connection.displayName || connection.email || connection.providerUserId }}</strong>
-              <p>{{ connection.provider | titlecase }} mailbox</p>
-              <span>
-                Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
-                @if (connection.lastSyncedAt) {
-                  · Last sync {{ connection.lastSyncedAt | date: 'MMM d, y, h:mm a' }}
-                }
+          <li class="settings-page__connection-row">
+            <div class="settings-page__connection-main">
+              <span [class]="providerBadgeClass(connection.provider)" aria-hidden="true">
+                {{ providerInitial(connection.provider) }}
               </span>
-              <span>Status: {{ formatSyncStatus(connection.syncStatus) }}</span>
-              @if (connection.lastSyncError) {
-                <span>Latest sync issue: {{ connection.lastSyncError }}</span>
-              }
+              <div class="settings-page__connection-copy">
+                <div class="settings-page__connection-title-row">
+                  <strong>{{ connectionDisplayName(connection) }}</strong>
+                  @if (syncStatusPresentation(connection.syncStatus); as syncStatus) {
+                    <span
+                      class="settings-page__status-chip settings-page__status-chip--compact"
+                      [class.settings-page__status-chip--success]="syncStatus.variant === 'success'"
+                      [class.settings-page__status-chip--warning]="syncStatus.variant === 'warning'"
+                      [class.settings-page__status-chip--danger]="syncStatus.variant === 'danger'">
+                      {{ syncStatus.label }}
+                    </span>
+                  }
+                </div>
+                <p>{{ providerLabel(connection.provider) }} mailbox</p>
+                <p class="settings-page__meta">
+                  Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                  @if (connection.lastSyncedAt) {
+                    · Last sync {{ connection.lastSyncedAt | date: 'MMM d, y, h:mm a' }}
+                  }
+                </p>
+                @if (connection.lastSyncError) {
+                  <div class="settings-page__inline-alert" role="alert">
+                    {{ connection.lastSyncError }}
+                  </div>
+                }
+              </div>
             </div>
 
             <button
               type="button"
-              class="settings-page__secondary-action"
+              class="settings-page__secondary-action settings-page__connection-action"
               [disabled]="mailConnections.disconnectingConnectionId() === connection.id"
-              (click)="mailConnections.disconnect(connection.id)">
+              (click)="beginDisconnectMail(connection.id)">
               {{
                 mailConnections.disconnectingConnectionId() === connection.id
                   ? 'Disconnecting...'
@@ -172,4 +343,54 @@
       </ul>
     }
   </section>
+
+  @if (disconnectConfirm(); as confirmTarget) {
+    <div
+      class="settings-page__dialog-backdrop"
+      role="presentation"
+      (click)="cancelDisconnectConfirm()">
+      <div
+        class="settings-page__dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="disconnect-dialog-title"
+        aria-describedby="disconnect-dialog-description"
+        (click)="$event.stopPropagation()">
+        <h3 id="disconnect-dialog-title">Disconnect account?</h3>
+        <p id="disconnect-dialog-description">{{ disconnectConfirmMessage() }}</p>
+        <div class="settings-page__dialog-actions">
+          <button
+            type="button"
+            class="settings-page__secondary-action"
+            [disabled]="
+              confirmTarget.kind === 'calendar'
+                ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+            "
+            (click)="cancelDisconnectConfirm()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="settings-page__primary-action settings-page__disconnect-confirm"
+            [disabled]="
+              confirmTarget.kind === 'calendar'
+                ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+            "
+            (click)="confirmDisconnect()">
+            {{
+              confirmTarget.kind === 'calendar'
+                ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                  ? 'Disconnecting...'
+                  : 'Disconnect'
+                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                  ? 'Disconnecting...'
+                  : 'Disconnect'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </main>

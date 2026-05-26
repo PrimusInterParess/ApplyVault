@@ -88,7 +88,7 @@ h1 {
   padding: 0.35rem 0.55rem 0.35rem 0.75rem;
   border: 1px solid var(--app-border-strong);
   border-radius: calc(var(--app-radius) - 4px);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-success-soft) 100%);
   color: inherit;
   font: inherit;
   font-size: 0.88rem;
@@ -179,13 +179,13 @@ h1 {
 
 .eures-page__suggestion-chip:hover:not(:disabled) {
   border-color: var(--app-border-strong);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-surface-alt) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-surface-alt) 100%);
   box-shadow: var(--app-shadow-sm);
 }
 
 .eures-page__suggestion-chip--active {
   border-color: var(--app-accent-dark);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-success-soft) 100%);
   box-shadow: var(--app-shadow-sm);
 }
 
@@ -253,7 +253,7 @@ h1 {
   padding: 0.75rem 1rem;
   border-radius: calc(var(--app-radius) - 4px);
   border: 1px solid var(--app-accent-dark);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-success-soft) 100%);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -278,17 +278,17 @@ h1 {
 }
 
 .eures-page__save-state--error {
-  border-color: color-mix(in srgb, #b42318 35%, var(--app-border));
+  border-color: var(--app-error-border);
 }
 
 .eures-page__save-state--success {
   border-color: color-mix(in srgb, var(--app-accent-dark) 35%, var(--app-border));
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-success-soft) 100%);
 }
 
 .eures-page__inline-error {
   margin: 0 0 1rem;
-  color: #b42318;
+  color: var(--app-error-text);
 }
 
 .eures-page__content {
@@ -432,7 +432,7 @@ h1 {
 }
 
 .eures-page__state--error {
-  border-color: color-mix(in srgb, #b42318 35%, var(--app-border));
+  border-color: var(--app-error-border);
 }
 
 .eures-page__mobile-tabs {
@@ -461,7 +461,7 @@ h1 {
 
 .eures-page__mobile-tab--active {
   border-color: var(--app-accent-dark);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-success-soft) 100%);
   box-shadow: var(--app-shadow-sm);
 }
 

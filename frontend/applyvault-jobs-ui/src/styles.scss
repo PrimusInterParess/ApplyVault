@@ -14,7 +14,14 @@
   --app-accent-dark: #8a5634;
   --app-danger: #8f4e37;
   --app-danger-soft: #f1d6c9;
+  --app-error-text: var(--app-danger);
+  --app-error-border: color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
   --app-success-soft: #ecddc9;
+  --app-surface-highlight: #fff8f1;
+  --app-warning: #8b5c00;
+  --app-warning-soft: #f5e0b8;
+  --app-positive: #1b6a44;
+  --app-positive-soft: #d4edd9;
   --app-border: #d6b38e;
   --app-border-strong: #bf9168;
   --app-shadow-sm: 0 8px 14px rgba(0, 0, 0, 0.24);

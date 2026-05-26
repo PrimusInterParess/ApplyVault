@@ -159,7 +159,7 @@ h3 {
 .job-detail li,
 .job-detail article {
   border: 1px solid var(--app-border);
-  background: linear-gradient(180deg, #fff8f1 0%, var(--app-surface-alt) 100%);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-surface-alt) 100%);
   box-shadow: var(--app-shadow-sm);
 }
 
@@ -179,13 +179,13 @@ h3 {
 }
 
 .job-detail__chip--review {
-  background: rgba(255, 215, 140, 0.35) !important;
-  color: #8b5c00 !important;
+  background: var(--app-warning-soft) !important;
+  color: var(--app-warning) !important;
 }
 
 .job-detail__chip--reviewed {
-  background: rgba(146, 217, 179, 0.3) !important;
-  color: #1b6a44 !important;
+  background: var(--app-positive-soft) !important;
+  color: var(--app-positive) !important;
 }
 
 .job-detail__grid {

@@ -23,7 +23,7 @@
 
 .job-card--selected {
   border-color: var(--app-accent);
-  background: linear-gradient(180deg, #fff4e9 0%, #efd8c0 100%);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-bg-soft) 100%);
   box-shadow: var(--app-shadow-hover);
 }
 
@@ -46,8 +46,8 @@
 }
 
 .job-card__status--review {
-  background: rgba(255, 215, 140, 0.35);
-  color: #8b5c00;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .job-card__eyebrow,

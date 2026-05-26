@@ -1,0 +1,226 @@
+<main class="eures-page">
+  <section class="eures-page__topbar">
+    <div class="eures-page__topbar-copy">
+      <p class="eures-page__eyebrow eures-page__eyebrow--compact">ApplyVault dashboard</p>
+      <p class="eures-page__topbar-text">Search public job listings from the EURES portal.</p>
+    </div>
+
+    <div class="eures-page__toolbar">
+      <a routerLink="/jobs" class="eures-page__link">Back to saved jobs</a>
+    </div>
+  </section>
+
+  <section class="eures-page__hero">
+    <h1>EURES job search</h1>
+    <p class="eures-page__intro">Combine keywords and a country code to narrow EURES listings, then open the source posting.</p>
+  </section>
+
+  <section class="eures-page__search">
+    @if (facade.keywords().length > 0) {
+      <div class="eures-page__selected-keywords" aria-label="Selected keywords">
+        @for (keyword of facade.keywords(); track keyword) {
+          <button
+            type="button"
+            class="eures-page__selected-keyword"
+            (click)="removeKeyword(keyword)"
+            [attr.aria-label]="'Remove keyword ' + keyword">
+            <span>{{ keyword }}</span>
+            <span class="eures-page__selected-keyword-remove" aria-hidden="true">×</span>
+          </button>
+        }
+        <button type="button" class="eures-page__clear-keywords" (click)="facade.clearKeywords()">
+          Clear all
+        </button>
+      </div>
+    }
+
+    <div class="eures-page__search-row">
+      <label class="eures-page__field">
+        <span>Keywords</span>
+        <input
+          type="search"
+          [value]="draftKeyword()"
+          placeholder="software, Angular, dotnet"
+          (input)="updateDraftKeyword($event)"
+          (keydown.enter)="runSearchFromKeyboard($event)" />
+      </label>
+
+      <label class="eures-page__field">
+        <span>Location code</span>
+        <input
+          type="text"
+          [value]="facade.locationCode()"
+          placeholder="dk"
+          (input)="facade.updateLocationCode(asValue($event))"
+          (keydown.enter)="runSearchFromKeyboard($event)" />
+      </label>
+
+      <button
+        type="button"
+        class="eures-page__search-button"
+        (click)="runSearch()"
+        [disabled]="facade.loading() || !canSearch()">
+        {{ facade.loading() ? 'Searching...' : 'Search EURES' }}
+      </button>
+    </div>
+
+    <div class="eures-page__suggestions" aria-label="Popular IT search terms">
+      <div class="eures-page__suggestions-header">
+        <p class="eures-page__suggestions-title">Popular IT searches</p>
+        <p class="eures-page__suggestions-hint">Select multiple terms. Results must match at least one term in the listing.</p>
+      </div>
+
+      @for (group of keywordSuggestionGroups; track group.label) {
+        <div class="eures-page__suggestion-group">
+          <span class="eures-page__suggestion-label">{{ group.label }}</span>
+          <div class="eures-page__suggestion-chips">
+            @for (keyword of group.keywords; track keyword) {
+              <button
+                type="button"
+                class="eures-page__suggestion-chip"
+                [class.eures-page__suggestion-chip--active]="isActiveSuggestion(keyword)"
+                [attr.aria-pressed]="isActiveSuggestion(keyword)"
+                (click)="toggleSuggestion(keyword)">
+                {{ keyword }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (facade.error(); as errorMessage) {
+    <section class="eures-page__state eures-page__state--error">
+      <h2>Search unavailable</h2>
+      <p>{{ errorMessage }}</p>
+      @if (canSearch()) {
+        <button type="button" class="eures-page__search-button" (click)="retrySearch()">
+          Try again
+        </button>
+      }
+    </section>
+  }
+
+  @if (facade.loading() && facade.results().length === 0) {
+    <section class="eures-page__state">
+      <h2>Searching EURES...</h2>
+      <p>Fetching the latest matching listings.</p>
+    </section>
+  } @else if (facade.results().length > 0 || facade.totalResults() > 0) {
+    <p class="eures-page__summary">
+      {{ facade.totalResults() }} matching listings found
+      @if (facade.keywordsLabel()) {
+        <span>· keywords: {{ facade.keywordsLabel() }}</span>
+      }
+      @if (facade.pageRangeLabel()) {
+        <span>· showing {{ facade.pageRangeLabel() }}</span>
+      }
+    </p>
+
+    <section class="eures-page__content">
+      <aside class="eures-page__list-panel">
+        <div class="eures-page__list">
+          @for (job of facade.results(); track job.id) {
+            <button
+              type="button"
+              class="eures-page__card"
+              [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
+              (click)="facade.select(job.id)">
+              <h2>{{ job.title || 'Untitled listing' }}</h2>
+              <p>{{ job.employer || 'Unknown employer' }}</p>
+              <p>{{ job.location || 'Location not specified' }}</p>
+              @if (job.publicationDate) {
+                <p class="eures-page__meta">Posted {{ job.publicationDate }}</p>
+              }
+            </button>
+          }
+        </div>
+
+        @if (facade.totalPages() > 1) {
+          <div class="eures-page__pagination">
+            <button
+              type="button"
+              class="eures-page__pagination-button"
+              (click)="facade.goToPreviousPage()"
+              [disabled]="!facade.canGoToPreviousPage()">
+              Previous
+            </button>
+            <span class="eures-page__pagination-label">
+              Page {{ facade.page() }} of {{ facade.totalPages() }}
+            </span>
+            <button
+              type="button"
+              class="eures-page__pagination-button"
+              (click)="facade.goToNextPage()"
+              [disabled]="!facade.canGoToNextPage()">
+              Next
+            </button>
+          </div>
+        }
+      </aside>
+
+      <section class="eures-page__detail">
+        @if (facade.detailLoading()) {
+          <div class="eures-page__state">
+            <h2>Loading job detail...</h2>
+          </div>
+        } @else if (facade.detailError()) {
+          <div class="eures-page__state eures-page__state--error">
+            <h2>Detail unavailable</h2>
+            <p>{{ facade.detailError() }}</p>
+            @if (facade.selectedJobId(); as selectedId) {
+              <button type="button" class="eures-page__search-button" (click)="facade.select(selectedId)">
+                Retry detail
+              </button>
+            }
+          </div>
+        } @else {
+          @if (facade.selectedJob(); as selectedJob) {
+            <div class="eures-page__detail-card">
+              <p class="eures-page__eyebrow">Selected listing</p>
+              <h2>{{ selectedJob.title || 'Untitled listing' }}</h2>
+              <p><strong>Employer:</strong> {{ selectedJob.employer || 'Unknown employer' }}</p>
+              <p><strong>Location:</strong> {{ selectedJob.location || 'Location not specified' }}</p>
+              @if (selectedJob.publicationDate) {
+                <p><strong>Posted:</strong> {{ selectedJob.publicationDate }}</p>
+              }
+              @if (selectedJob.contractType) {
+                <p><strong>Contract:</strong> {{ selectedJob.contractType }}</p>
+              }
+              @if (selectedJob.workHours) {
+                <p><strong>Work hours:</strong> {{ selectedJob.workHours }}</p>
+              }
+
+              @if (detailUrl(); as openUrl) {
+                <a [href]="openUrl" target="_blank" rel="noreferrer" class="eures-page__link">Open listing</a>
+              }
+
+              @if (selectedJob.description) {
+                <article class="eures-page__description" [innerHTML]="selectedJob.description"></article>
+              } @else {
+                <p class="eures-page__meta">No description was returned for this listing.</p>
+              }
+            </div>
+          }
+        }
+      </section>
+    </section>
+  } @else if (!facade.error() && facade.hasSearched() && facade.totalResults() === 0) {
+    <section class="eures-page__state">
+      <h2>No matching listings</h2>
+      <p>
+        Nothing matched
+        @if (facade.keywordsLabel()) {
+          <strong>{{ facade.keywordsLabel() }}</strong>
+        }
+        in EURES for location <strong>{{ facade.locationCode() }}</strong>. Try fewer or broader keywords.
+      </p>
+    </section>
+  } @else if (!facade.error()) {
+    <section class="eures-page__state">
+      <h2>No results yet</h2>
+      <p>Run a search to load EURES listings.</p>
+    </section>
+  }
+</main>

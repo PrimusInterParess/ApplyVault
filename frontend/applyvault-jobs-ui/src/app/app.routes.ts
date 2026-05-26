@@ -27,6 +27,15 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'eures',
+    title: 'EURES Job Search',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/eures-jobs/pages/eures-jobs-page/eures-jobs-page.component').then(
+        (module) => module.EuresJobsPageComponent
+      )
+  },
+  {
     path: 'settings',
     title: 'ApplyVault Settings',
     canActivate: [authGuard],

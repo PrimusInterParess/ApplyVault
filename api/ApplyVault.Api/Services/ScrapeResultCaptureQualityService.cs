@@ -91,8 +91,7 @@ public sealed partial class ScrapeResultCaptureQualityService : IScrapeResultCap
             normalizedPayload.JobDetails.SourceHostname);
         var locationAssessment = AssessLocation(normalizedPayload.JobDetails.Location);
         var descriptionAssessment = AssessDescription(
-            normalizedPayload.JobDetails.JobDescription,
-            normalizedPayload.Text);
+            normalizedPayload.JobDetails.JobDescription);
         var overallConfidence = Math.Round(new[]
         {
             jobTitleAssessment.Confidence,
@@ -198,10 +197,15 @@ public sealed partial class ScrapeResultCaptureQualityService : IScrapeResultCap
         return new ScrapeResultFieldAssessment(0.8, null);
     }
 
-    private static ScrapeResultFieldAssessment AssessDescription(string? jobDescription, string fallbackText)
+    private static ScrapeResultFieldAssessment AssessDescription(string? jobDescription)
     {
-        var description = string.IsNullOrWhiteSpace(jobDescription) ? fallbackText : jobDescription;
-        var normalizedLength = description.Trim().Length;
+        if (jobDescription == null)
+        {
+            return new ScrapeResultFieldAssessment(0.1, "No description text was captured.");
+        }
+
+        var description =  jobDescription;
+        var normalizedLength = description?.Trim().Length;
 
         if (normalizedLength == 0)
         {

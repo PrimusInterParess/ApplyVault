@@ -1,13 +1,20 @@
 using ApplyVault.Api.Data;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.Eures;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions((options) =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors((options) =>
@@ -45,6 +52,10 @@ builder.Services
     .AddOptions<MailIntegrationOptions>()
     .Bind(builder.Configuration.GetSection(MailIntegrationOptions.SectionName));
 
+builder.Services
+    .AddOptions<EuresIntegrationOptions>()
+    .Bind(builder.Configuration.GetSection(EuresIntegrationOptions.SectionName));
+
 var supabaseOptions = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new SupabaseOptions();
 var supabaseAuthority = string.IsNullOrWhiteSpace(supabaseOptions.Url)
     ? string.Empty
@@ -77,6 +88,16 @@ builder.Services.AddHttpClient<IScrapeResultAiClient, GoogleAiScrapeResultClient
 builder.Services.AddHttpClient<GoogleCalendarProvider>();
 builder.Services.AddHttpClient<MicrosoftCalendarProvider>();
 builder.Services.AddHttpClient<IGmailMailClient, GmailMailClient>();
+builder.Services.AddExceptionHandler<EuresJobClientExceptionHandler>();
+builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<IEuresJobSearchRequestNormalizer, EuresJobSearchRequestNormalizer>();
+builder.Services.AddHttpClient<EuresApiClient>((serviceProvider, client) =>
+{
+    var euresOptions = serviceProvider.GetRequiredService<IOptions<EuresIntegrationOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(5, euresOptions.TimeoutSeconds));
+});
+builder.Services.AddScoped<EuresJobSearchService>();
+builder.Services.AddScoped<IEuresJobClient, EuresJobClient>();
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<GoogleCalendarProvider>());
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<MicrosoftCalendarProvider>());
 builder.Services.AddScoped<ICalendarProviderFactory, CalendarProviderFactory>();
@@ -110,6 +131,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

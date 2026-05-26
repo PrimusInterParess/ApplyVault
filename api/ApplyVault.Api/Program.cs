@@ -90,6 +90,7 @@ builder.Services.AddHttpClient<MicrosoftCalendarProvider>();
 builder.Services.AddHttpClient<IGmailMailClient, GmailMailClient>();
 builder.Services.AddExceptionHandler<EuresJobClientExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IEuresJobSearchRequestNormalizer, EuresJobSearchRequestNormalizer>();
 builder.Services.AddHttpClient<EuresApiClient>((serviceProvider, client) =>
 {

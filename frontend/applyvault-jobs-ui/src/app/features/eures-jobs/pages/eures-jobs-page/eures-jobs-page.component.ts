@@ -6,6 +6,7 @@ import {
   DestroyRef,
   effect,
   ElementRef,
+  HostListener,
   inject,
   OnInit,
   signal,
@@ -18,10 +19,7 @@ import { filter, skip } from 'rxjs';
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { JobResultsFacade } from '../../../job-results/data-access/job-results.facade';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
-import {
-  EURES_PAGE_SIZE_OPTIONS,
-  EuresJobsFacade
-} from '../../data-access/eures-jobs.facade';
+import { EuresJobsFacade } from '../../data-access/eures-jobs.facade';
 import { EURES_KEYWORD_SUGGESTION_GROUPS } from '../../models/eures-keyword-suggestions';
 import { EURES_LOCATION_OPTIONS } from '../../models/eures-location-options';
 import { EuresJobCardComponent } from '../../presentation/eures-job-card/eures-job-card.component';
@@ -47,15 +45,12 @@ export class EuresJobsPageComponent implements OnInit {
   private readonly jobResultsFacade = inject(JobResultsFacade);
   readonly keywordSuggestionGroups = EURES_KEYWORD_SUGGESTION_GROUPS;
   readonly locationOptions = EURES_LOCATION_OPTIONS;
-  readonly pageSizeOptions = EURES_PAGE_SIZE_OPTIONS;
-  readonly skeletonCardCount = [0, 1, 2, 3, 4, 5];
+  readonly loadMoreSkeletonIndexes = [0, 1];
   readonly readInputValue = readInputValue;
 
   protected readonly draftKeyword = signal('');
-  protected readonly jumpToPageValue = signal('');
   protected readonly mobileDetailEngaged = signal(false);
   protected readonly loadBannerMessage = signal('');
-  protected readonly pageAnnouncement = signal('');
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
 
   private readonly route = inject(ActivatedRoute);
@@ -103,14 +98,6 @@ export class EuresJobsPageComponent implements OnInit {
     });
 
     effect(() => {
-      const announcement = this.facade.pageAnnouncement();
-
-      if (announcement) {
-        this.pageAnnouncement.set(announcement);
-      }
-    });
-
-    effect(() => {
       const generation = this.facade.searchGeneration();
 
       if (generation === 0 || this.facade.loading() || !this.shouldFocusAfterSearch) {
@@ -124,15 +111,28 @@ export class EuresJobsPageComponent implements OnInit {
       this.lastFocusedGeneration = generation;
       this.shouldFocusAfterSearch = false;
 
-      afterNextRender(() => this.focusAfterSearch());
+      afterNextRender(() => {
+        this.scrollListToTop();
+        this.focusAfterSearch();
+        this.prefetchIfListShort();
+      });
     });
 
     effect(() => {
-      this.facade.page();
+      this.facade.results().length;
+      this.facade.loadingMore();
+      this.facade.loading();
 
-      if (this.facade.hasSearched() && !this.facade.initialLoading()) {
-        afterNextRender(() => this.scrollListToTop());
+      if (
+        !this.facade.hasSearched() ||
+        this.facade.loading() ||
+        this.facade.loadingMore() ||
+        !this.facade.hasMoreResults()
+      ) {
+        return;
       }
+
+      afterNextRender(() => this.prefetchIfListShort());
     });
   }
 
@@ -192,21 +192,6 @@ export class EuresJobsPageComponent implements OnInit {
     this.syncUrlIfNeeded();
   }
 
-  protected updatePageSize(event: Event): void {
-    const parsedPageSize = Number.parseInt(readInputValue(event), 10);
-
-    if (Number.isNaN(parsedPageSize)) {
-      return;
-    }
-
-    this.facade.updateResultsPerPage(parsedPageSize);
-    this.syncUrlIfNeeded();
-  }
-
-  protected updateJumpToPageValue(event: Event): void {
-    this.jumpToPageValue.set(readInputValue(event));
-  }
-
   protected toggleSuggestion(keyword: string): void {
     this.facade.toggleKeyword(keyword);
     this.syncUrlIfNeeded();
@@ -257,6 +242,14 @@ export class EuresJobsPageComponent implements OnInit {
     this.syncUrlIfNeeded();
   }
 
+  protected loadMore(): void {
+    this.facade.loadMore();
+  }
+
+  protected retryLoadMore(): void {
+    this.facade.loadMore();
+  }
+
   protected saveSelectedJob(): void {
     this.facade.saveSelectedJob();
   }
@@ -275,34 +268,6 @@ export class EuresJobsPageComponent implements OnInit {
     this.mobileDetailEngaged.set(false);
     this.facade.clearSelection();
     this.syncUrlIfNeeded();
-  }
-
-  protected goToPreviousPage(): void {
-    this.facade.goToPreviousPage();
-    this.syncUrlIfNeeded();
-  }
-
-  protected goToNextPage(): void {
-    this.facade.goToNextPage();
-    this.syncUrlIfNeeded();
-  }
-
-  protected jumpToPage(event: Event): void {
-    event.preventDefault();
-
-    const parsedPage = Number.parseInt(this.jumpToPageValue().trim(), 10);
-
-    if (Number.isNaN(parsedPage)) {
-      return;
-    }
-
-    this.facade.goToPage(parsedPage);
-    this.jumpToPageValue.set('');
-    this.syncUrlIfNeeded();
-  }
-
-  protected showJumpToPage(): boolean {
-    return this.facade.totalPages() > 5;
   }
 
   protected locationLabel(code: string): string {
@@ -325,6 +290,35 @@ export class EuresJobsPageComponent implements OnInit {
     }
 
     return selectedJob.applicationUrl ?? selectedJob.sourceUrl;
+  }
+
+  @HostListener('window:scroll')
+  protected onListScroll(): void {
+    if (!this.facade.hasSearched() || this.facade.loading() || this.facade.loadingMore()) {
+      return;
+    }
+
+    const thresholdPx = 160;
+    const list = this.listRegion()?.nativeElement;
+
+    if (list && list.scrollHeight > list.clientHeight + 8) {
+      const listNearBottom =
+        list.scrollTop + list.clientHeight >= list.scrollHeight - thresholdPx;
+
+      if (listNearBottom) {
+        this.facade.loadMore();
+      }
+
+      return;
+    }
+
+    const documentElement = document.documentElement;
+    const windowNearBottom =
+      window.scrollY + window.innerHeight >= documentElement.scrollHeight - thresholdPx;
+
+    if (windowNearBottom) {
+      this.facade.loadMore();
+    }
   }
 
   protected handleListKeydown(event: KeyboardEvent): void {
@@ -361,6 +355,20 @@ export class EuresJobsPageComponent implements OnInit {
     }
   }
 
+  private prefetchIfListShort(): void {
+    const list = this.listRegion()?.nativeElement;
+
+    if (!list || !this.facade.hasMoreResults() || this.facade.loading() || this.facade.loadingMore()) {
+      return;
+    }
+
+    const listFillsViewport = list.scrollHeight <= list.clientHeight + 8;
+
+    if (listFillsViewport) {
+      this.facade.loadMore();
+    }
+  }
+
   private focusCard(cards: readonly HTMLButtonElement[], index: number): void {
     const card = cards[index];
     const jobId = card.dataset['jobId'];
@@ -391,13 +399,6 @@ export class EuresJobsPageComponent implements OnInit {
     const listElement = this.listRegion()?.nativeElement;
 
     if (!listElement) {
-      return;
-    }
-
-    const firstCard = listElement.querySelector<HTMLButtonElement>('.job-card');
-
-    if (firstCard) {
-      listElement.focus();
       return;
     }
 

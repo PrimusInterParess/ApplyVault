@@ -114,10 +114,6 @@
 
   <p class="jobs-page__live-region" aria-live="polite">{{ facade.resultsSummary() }}</p>
 
-  @if (pageAnnouncement()) {
-    <p class="visually-hidden" aria-live="polite">{{ pageAnnouncement() }}</p>
-  }
-
   @if (facade.saveError(); as saveErrorMessage) {
     <div class="jobs-page__error-bar" role="alert">
       <p>{{ saveErrorMessage }}</p>
@@ -197,8 +193,9 @@
         class="jobs-page__list"
         tabindex="0"
         aria-label="EURES search results"
+        (scroll)="onListScroll()"
         (keydown)="handleListKeydown($event)">
-        @if (facade.loading()) {
+        @if (facade.initialLoading()) {
           @for (index of skeletonListIndexes(); track index) {
             <div class="jobs-page__skeleton-card">
               <app-skeleton-block width="78%" height="1.1rem" />
@@ -215,63 +212,38 @@
               [saved]="facade.isListingSaved(job.id)"
               (choose)="selectJob($event)" />
           }
+
+          @if (facade.loadingMore()) {
+            @for (index of loadMoreSkeletonIndexes; track index) {
+              <div class="jobs-page__skeleton-card">
+                <app-skeleton-block width="78%" height="1.1rem" />
+                <app-skeleton-block width="62%" height="0.95rem" />
+                <app-skeleton-block width="54%" height="0.9rem" />
+              </div>
+            }
+          }
+
+          @if (facade.loadMoreError(); as loadMoreErrorMessage) {
+            <div class="eures-page__load-more-error" role="alert">
+              <p>{{ loadMoreErrorMessage }}</p>
+              <button type="button" class="jobs-page__secondary-action" (click)="retryLoadMore()">
+                Try again
+              </button>
+            </div>
+          }
         }
 
         <footer class="eures-page__list-footer">
-          <label class="eures-page__page-size">
-            <span>Per page</span>
-            <select [value]="facade.resultsPerPage()" (change)="updatePageSize($event)">
-              @for (pageSize of pageSizeOptions; track pageSize) {
-                <option [value]="pageSize">{{ pageSize }}</option>
-              }
-            </select>
-          </label>
-
-          @if (facade.totalPages() > 1) {
-            <div class="eures-page__pagination">
-              <button
-                type="button"
-                class="jobs-page__secondary-action"
-                aria-label="Go to previous page"
-                (click)="goToPreviousPage()"
-                [disabled]="!facade.canGoToPreviousPage()">
-                Previous
-              </button>
-              <span class="eures-page__pagination-label">
-                Page {{ facade.page() }} of {{ facade.totalPages() }}
-              </span>
-              <button
-                type="button"
-                class="jobs-page__secondary-action"
-                aria-label="Go to next page"
-                (click)="goToNextPage()"
-                [disabled]="!facade.canGoToNextPage()">
-                Next
-              </button>
-            </div>
-
-            @if (showJumpToPage()) {
-              <form class="eures-page__jump-to-page" (submit)="jumpToPage($event)">
-                <label class="eures-page__jump-field">
-                  <span class="visually-hidden">Jump to page</span>
-                  <input
-                    type="number"
-                    min="1"
-                    [max]="facade.totalPages()"
-                    [value]="jumpToPageValue()"
-                    placeholder="Page #"
-                    aria-label="Jump to page"
-                    (input)="updateJumpToPageValue($event)" />
-                </label>
-                <button
-                  type="submit"
-                  class="jobs-page__secondary-action"
-                  aria-label="Go to page"
-                  [disabled]="facade.loading()">
-                  Go
-                </button>
-              </form>
-            }
+          @if (facade.hasMoreResults()) {
+            <button
+              type="button"
+              class="jobs-page__secondary-action"
+              [disabled]="facade.loadingMore()"
+              (click)="loadMore()">
+              {{ facade.loadingMore() ? 'Loading more...' : 'Load more' }}
+            </button>
+          } @else if (facade.results().length > 0) {
+            <span class="eures-page__end-of-results">All results loaded</span>
           }
         </footer>
       </aside>

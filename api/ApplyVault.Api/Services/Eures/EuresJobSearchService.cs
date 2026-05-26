@@ -1,13 +1,17 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services.Eures;
 
 internal sealed class EuresJobSearchService(
     EuresApiClient apiClient,
-    IOptions<EuresIntegrationOptions> options)
+    IOptions<EuresIntegrationOptions> options,
+    IMemoryCache cache)
 {
+    private static readonly TimeSpan RankedResultsCacheLifetime = TimeSpan.FromMinutes(5);
+
     public async Task<EuresJobSearchResponse> SearchAsync(
         EuresJobSearchRequest request,
         CancellationToken cancellationToken = default)
@@ -18,67 +22,94 @@ internal sealed class EuresJobSearchService(
         var locationCode = string.IsNullOrWhiteSpace(request.LocationCode)
             ? integrationOptions.DefaultLocationCode
             : request.LocationCode.Trim();
-        var fetchSize = Math.Max(request.ResultsPerPage, integrationOptions.MaxResultsPerPage);
-
-        if (euresSearchTerms.Length == 1 && keywords.Count == 1)
-        {
-            return await SearchSingleKeywordPageAsync(
-                keywords,
-                euresSearchTerms[0],
-                request,
-                locationCode,
-                fetchSize,
-                cancellationToken);
-        }
-
-        return await SearchKeywordUnionAsync(
+        var sortSearch = ResolveSortSearch(request.SortSearch, euresSearchTerms.Length > 1);
+        var cacheKey = BuildCacheKey(
             keywords,
             euresSearchTerms,
-            request,
             locationCode,
-            fetchSize,
-            cancellationToken);
+            sortSearch,
+            request.RequestLanguage);
+        var sessionId = BuildSessionId(cacheKey);
+
+        var rankedJobs = await cache.GetOrCreateAsync(
+            cacheKey,
+            async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = RankedResultsCacheLifetime;
+
+                if (euresSearchTerms.Length == 1 && keywords.Count == 1)
+                {
+                    return await FetchSingleKeywordRankedJobsAsync(
+                        keywords,
+                        euresSearchTerms[0],
+                        request,
+                        locationCode,
+                        sortSearch,
+                        sessionId,
+                        integrationOptions,
+                        cancellationToken);
+                }
+
+                return await FetchKeywordUnionRankedJobsAsync(
+                    keywords,
+                    euresSearchTerms,
+                    request,
+                    locationCode,
+                    sortSearch,
+                    sessionId,
+                    integrationOptions,
+                    cancellationToken);
+            }) ?? [];
+
+        return PaginateResults(rankedJobs, request.Page, request.ResultsPerPage);
     }
 
-    private async Task<EuresJobSearchResponse> SearchSingleKeywordPageAsync(
+    private async Task<EuresJobListingDto[]> FetchSingleKeywordRankedJobsAsync(
         IReadOnlyList<string> userKeywords,
         string euresSearchTerm,
         EuresJobSearchRequest request,
         string locationCode,
-        int fetchSize,
+        string sortSearch,
+        string sessionId,
+        EuresIntegrationOptions integrationOptions,
         CancellationToken cancellationToken)
     {
+        var fetchSize = Math.Max(request.ResultsPerPage, integrationOptions.MaxResultsPerPage);
         var searchResponse = await apiClient.SearchAsync(
             EuresApiClient.BuildSearchPayload(
                 euresSearchTerm,
                 fetchSize,
                 page: 1,
-                ResolveSortSearch(request.SortSearch, multipleKeywords: false),
+                sortSearch,
                 locationCode,
-                request.RequestLanguage),
+                request.RequestLanguage,
+                sessionId),
             cancellationToken);
 
-        var rankedJobs = RankJobs(searchResponse, userKeywords, request.RequestLanguage);
-        return PaginateResults(rankedJobs, request.Page, request.ResultsPerPage);
+        return RankJobs(searchResponse, userKeywords, request.RequestLanguage);
     }
 
-    private async Task<EuresJobSearchResponse> SearchKeywordUnionAsync(
+    private async Task<EuresJobListingDto[]> FetchKeywordUnionRankedJobsAsync(
         IReadOnlyList<string> userKeywords,
         IReadOnlyList<string> euresSearchTerms,
         EuresJobSearchRequest request,
         string locationCode,
-        int fetchPerKeyword,
+        string sortSearch,
+        string sessionId,
+        EuresIntegrationOptions integrationOptions,
         CancellationToken cancellationToken)
     {
+        var fetchPerKeyword = Math.Max(request.ResultsPerPage, integrationOptions.MaxResultsPerPage);
         var searchTasks = euresSearchTerms
             .Select((searchTerm) => apiClient.SearchAsync(
                 EuresApiClient.BuildSearchPayload(
                     searchTerm,
                     fetchPerKeyword,
                     page: 1,
-                    ResolveSortSearch(request.SortSearch, multipleKeywords: true),
+                    sortSearch,
                     locationCode,
-                    request.RequestLanguage),
+                    request.RequestLanguage,
+                    sessionId),
                 cancellationToken))
             .ToArray();
 
@@ -90,13 +121,36 @@ internal sealed class EuresJobSearchService(
             MergeRankedJobs(mergedJobs, searchResponse, userKeywords, request.RequestLanguage);
         }
 
-        var rankedJobs = mergedJobs.Values
+        return mergedJobs.Values
             .OrderByDescending((entry) => entry.RelevanceScore)
             .ThenByDescending((entry) => entry.CreationDate)
             .Select((entry) => entry.Listing)
             .ToArray();
+    }
 
-        return PaginateResults(rankedJobs, request.Page, request.ResultsPerPage);
+    private static string BuildCacheKey(
+        IReadOnlyList<string> keywords,
+        IReadOnlyList<string> euresSearchTerms,
+        string locationCode,
+        string sortSearch,
+        string requestLanguage)
+    {
+        var keywordFingerprint = string.Join('\u001f', keywords.OrderBy((keyword) => keyword, StringComparer.OrdinalIgnoreCase));
+        var termFingerprint = string.Join('\u001f', euresSearchTerms.OrderBy((term) => term, StringComparer.OrdinalIgnoreCase));
+
+        return string.Join(
+            '\u001e',
+            keywordFingerprint,
+            termFingerprint,
+            locationCode.Trim().ToLowerInvariant(),
+            sortSearch.Trim().ToUpperInvariant(),
+            requestLanguage.Trim().ToLowerInvariant());
+    }
+
+    private static string BuildSessionId(string cacheKey)
+    {
+        var hash = cacheKey.GetHashCode(StringComparison.Ordinal);
+        return $"applyvault-{hash:X8}";
     }
 
     private static EuresJobListingDto[] RankJobs(

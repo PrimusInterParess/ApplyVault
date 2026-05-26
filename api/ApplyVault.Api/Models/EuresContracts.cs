@@ -10,10 +10,13 @@ public sealed class EuresJobSearchRequest
     [JsonPropertyName("keyword")]
     public string? Keyword { get; set; }
 
+    [JsonPropertyName("locationCode")]
     public string? LocationCode { get; set; }
 
+    [JsonPropertyName("page")]
     public int Page { get; set; } = 1;
 
+    [JsonPropertyName("resultsPerPage")]
     public int ResultsPerPage { get; set; } = 20;
 
     public string RequestLanguage { get; set; } = "en";

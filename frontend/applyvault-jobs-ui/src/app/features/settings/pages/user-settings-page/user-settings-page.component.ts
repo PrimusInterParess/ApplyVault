@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
@@ -28,7 +28,7 @@ interface DisconnectConfirmTarget {
 @Component({
   selector: 'app-user-settings-page',
   standalone: true,
-  imports: [CommonModule, TitleCasePipe, DatePipe, SkeletonBlockComponent],
+  imports: [CommonModule, DatePipe, SkeletonBlockComponent],
   templateUrl: './user-settings-page.component.html',
   styleUrl: './user-settings-page.component.scss'
 })

@@ -83,7 +83,8 @@ internal sealed class EuresApiClient(
         int page,
         string sortSearch,
         string locationCode,
-        string requestLanguage)
+        string requestLanguage,
+        string? sessionId = null)
     {
         return new EuresSearchPayload
         {
@@ -101,7 +102,9 @@ internal sealed class EuresApiClient(
             LocationCodes = [NormalizeLocationCode(locationCode)],
             PublicationPeriod = null,
             MinNumberPost = null,
-            SessionId = $"applyvault-{Guid.NewGuid():N}",
+            SessionId = string.IsNullOrWhiteSpace(sessionId)
+                ? $"applyvault-{Guid.NewGuid():N}"
+                : sessionId.Trim(),
             RequestLanguage = string.IsNullOrWhiteSpace(requestLanguage) ? "en" : requestLanguage.Trim()
         };
     }

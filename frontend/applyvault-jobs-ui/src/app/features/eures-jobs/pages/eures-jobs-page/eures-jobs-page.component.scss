@@ -183,66 +183,31 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.55rem 0.75rem;
   margin-top: 0.35rem;
   padding-top: 0.55rem;
   border-top: 1px solid var(--app-border);
 }
 
-.eures-page__page-size {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.82rem;
+.eures-page__end-of-results {
   color: var(--app-text-muted);
+  font-size: 0.82rem;
 }
 
-.eures-page__page-size span {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.eures-page__page-size select {
-  min-height: 30px;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--app-border-strong);
-  border-radius: var(--app-radius);
-  background: rgba(255, 250, 244, 0.92);
-  color: var(--app-text);
-  font: inherit;
-  font-size: 0.86rem;
-}
-
-.eures-page__pagination {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+.eures-page__load-more-error {
+  display: grid;
   gap: 0.55rem;
-  margin-left: auto;
-}
-
-.eures-page__pagination-label {
-  color: var(--app-text-muted);
-  font-size: 0.82rem;
-  text-align: center;
-}
-
-.eures-page__jump-to-page {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.eures-page__jump-field input {
-  width: 4.5rem;
-  min-height: 30px;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--app-border-strong);
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--app-danger);
   border-radius: var(--app-radius);
-  background: rgba(255, 250, 244, 0.92);
-  color: var(--app-text);
-  font: inherit;
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+}
+
+.eures-page__load-more-error p {
+  margin: 0;
+  color: var(--app-text-muted);
   font-size: 0.86rem;
 }
 
@@ -576,8 +541,8 @@ h1 {
   }
 
   .jobs-page__list {
-    max-height: none;
-    overflow: visible;
+    max-height: min(70vh, calc(100vh - 12rem));
+    overflow: auto;
     padding-right: 0;
   }
 

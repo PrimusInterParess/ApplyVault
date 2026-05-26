@@ -1,7 +1,7 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ParamMap } from '@angular/router';
-import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, exhaustMap, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 
 import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -27,14 +27,13 @@ import {
 } from '../utils/eures-url-state.utils';
 import { EuresJobsApiService } from './eures-jobs-api.service';
 
-export const EURES_DEFAULT_RESULTS_PER_PAGE = 15;
-
-export const EURES_PAGE_SIZE_OPTIONS = [10, 15, 20] as const;
+export const EURES_RESULTS_PER_PAGE = 5;
 
 type FetchPageOptions = {
   resetSelection: boolean;
   autoSelectFirst: boolean;
   selectJobId?: string | null;
+  append?: boolean;
 };
 
 type SearchIntent = { request: EuresJobSearchRequest; options: FetchPageOptions };
@@ -53,7 +52,7 @@ export class EuresJobsFacade {
   private readonly saveIntent$ = new Subject<SaveIntent>();
   private readonly saveCancel$ = new Subject<void>();
 
-  readonly resultsPerPage = signal(EURES_DEFAULT_RESULTS_PER_PAGE);
+  readonly resultsPerPage = signal(EURES_RESULTS_PER_PAGE);
 
   readonly keywords = signal<string[]>(['software']);
   readonly locationCode = signal(EURES_DEFAULT_LOCATION_CODE);
@@ -61,6 +60,8 @@ export class EuresJobsFacade {
   readonly requestLanguage = signal('en');
   readonly page = signal(1);
   readonly loading = signal(false);
+  readonly loadingMore = signal(false);
+  readonly loadMoreError = signal<string | null>(null);
   readonly detailLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly detailError = signal<string | null>(null);
@@ -100,20 +101,24 @@ export class EuresJobsFacade {
       return 'No matching listings';
     }
 
-    const range = this.pageRangeLabel();
+    const loaded = this.results().length;
     const keywords = this.keywordsLabel();
 
-    return range ? `${range} · ${keywords}` : keywords;
-  });
-
-  readonly pageAnnouncement = computed(() => {
-    const totalPages = this.totalPages();
-
-    if (totalPages <= 1) {
-      return '';
+    if (loaded < total) {
+      return `Showing ${loaded} of ${total} · ${keywords}`;
     }
 
-    return `Page ${this.page()} of ${totalPages}`;
+    return `${total} ${total === 1 ? 'listing' : 'listings'} · ${keywords}`;
+  });
+
+  readonly hasMoreResults = computed(() => {
+    const total = this.totalResults();
+
+    if (total === 0) {
+      return false;
+    }
+
+    return this.page() * this.resultsPerPage() < total;
   });
 
   readonly savedListingIds = computed(() => {
@@ -140,34 +145,6 @@ export class EuresJobsFacade {
     return listingToSaved;
   });
 
-  readonly totalPages = computed(() => {
-    const total = this.totalResults();
-
-    if (total <= 0) {
-      return 0;
-    }
-
-    return Math.ceil(total / this.resultsPerPage());
-  });
-
-  readonly pageRangeLabel = computed(() => {
-    const total = this.totalResults();
-    const currentPage = this.page();
-
-    if (total <= 0) {
-      return '';
-    }
-
-    const start = (currentPage - 1) * this.resultsPerPage() + 1;
-    const end = Math.min(currentPage * this.resultsPerPage(), total);
-    return `${start}-${end} of ${total}`;
-  });
-
-  readonly canGoToPreviousPage = computed(() => this.page() > 1 && !this.loading());
-  readonly canGoToNextPage = computed(
-    () => this.page() < this.totalPages() && !this.loading()
-  );
-
   readonly hasValidLocation = computed(() => isKnownEuresLocationCode(this.locationCode()));
 
   constructor() {
@@ -175,7 +152,7 @@ export class EuresJobsFacade {
 
     this.searchIntent$
       .pipe(
-        switchMap(({ request, options }) =>
+        exhaustMap(({ request, options }) =>
           this.apiService.search(request).pipe(
             takeUntil(this.searchCancel$),
             map((response) => ({ kind: 'success' as const, response, options })),
@@ -186,22 +163,48 @@ export class EuresJobsFacade {
       )
       .subscribe((result) => {
         if (result.kind === 'error') {
+          const message = this.resolveSearchError(result.error);
+
+          if (result.options.append) {
+            this.loadMoreError.set(message);
+            this.loadingMore.set(false);
+            return;
+          }
+
           this.hasSearched.set(true);
-          this.error.set(this.resolveSearchError(result.error));
+          this.error.set(message);
           this.resetResults();
           this.loading.set(false);
+          this.loadingMore.set(false);
           return;
         }
 
         const { response, options } = result;
+        const mergedResults = this.mergeResults(this.results(), response.jobs, options.append);
+
+        if (options.append && mergedResults.length === this.results().length) {
+          this.totalResults.set(this.results().length);
+          this.loadingMore.set(false);
+          this.loadMoreError.set(null);
+          return;
+        }
+
         this.hasSearched.set(true);
         this.page.set(response.page);
         this.totalResults.set(response.totalResults);
-        this.results.set(response.jobs);
+        this.results.set(mergedResults);
         this.loading.set(false);
+        this.loadingMore.set(false);
+        this.loadMoreError.set(null);
         this.lastSearchedAt.set(new Date());
-        this.syncSelectionAfterSearch(response.jobs, options);
-        this.searchGeneration.update((generation) => generation + 1);
+        this.syncSelectionAfterSearch(
+          options.append ? this.results() : response.jobs,
+          options
+        );
+
+        if (!options.append) {
+          this.searchGeneration.update((generation) => generation + 1);
+        }
 
         if (this.authService.session()) {
           this.jobResultsFacade.load();
@@ -294,25 +297,6 @@ export class EuresJobsFacade {
       }
     }
 
-    const pageParam = params.get('page');
-
-    if (pageParam) {
-      const parsedPage = Number.parseInt(pageParam, 10);
-
-      if (!Number.isNaN(parsedPage) && parsedPage >= 1) {
-        this.page.set(parsedPage);
-      }
-    }
-
-    const pageSizeParam = params.get('pageSize');
-
-    if (pageSizeParam) {
-      const parsedPageSize = Number.parseInt(pageSizeParam, 10);
-
-      if (EURES_PAGE_SIZE_OPTIONS.includes(parsedPageSize as (typeof EURES_PAGE_SIZE_OPTIONS)[number])) {
-        this.resultsPerPage.set(parsedPageSize);
-      }
-    }
   }
 
   loadInitialSearch(selectJobId?: string | null): void {
@@ -324,7 +308,7 @@ export class EuresJobsFacade {
       return;
     }
 
-    this.fetchPage(this.page(), {
+    this.fetchPage(1, {
       resetSelection: !selectJobId,
       autoSelectFirst: !selectJobId,
       selectJobId: selectJobId ?? null
@@ -336,7 +320,7 @@ export class EuresJobsFacade {
       return;
     }
 
-    this.fetchPage(this.page(), {
+    this.fetchPage(1, {
       resetSelection: !selectJobId,
       autoSelectFirst: !selectJobId,
       selectJobId: selectJobId ?? null
@@ -347,10 +331,7 @@ export class EuresJobsFacade {
     return buildEuresUrlQueryParams({
       keywords: this.keywords(),
       locationCode: this.locationCode(),
-      page: this.page(),
-      selectedJobId: this.selectedJobId(),
-      resultsPerPage: this.resultsPerPage(),
-      defaultResultsPerPage: EURES_DEFAULT_RESULTS_PER_PAGE
+      selectedJobId: this.selectedJobId()
     });
   }
 
@@ -369,7 +350,20 @@ export class EuresJobsFacade {
       return;
     }
 
-    this.fetchPage(this.page(), { resetSelection: false, autoSelectFirst: false });
+    this.fetchPage(1, { resetSelection: false, autoSelectFirst: false });
+  }
+
+  loadMore(): void {
+    if (this.loading() || this.loadingMore() || !this.hasMoreResults()) {
+      return;
+    }
+
+    this.loadMoreError.set(null);
+    this.fetchPage(this.page() + 1, {
+      resetSelection: false,
+      autoSelectFirst: false,
+      append: true
+    });
   }
 
   isListingSaved(id: string): boolean {
@@ -387,20 +381,15 @@ export class EuresJobsFacade {
       return;
     }
 
+    this.pendingSelectedId.set(null);
+
     if (this.results().some((job) => job.id === normalizedId)) {
-      this.pendingSelectedId.set(null);
       this.select(normalizedId);
       return;
     }
 
-    this.pendingSelectedId.set(normalizedId);
-
-    if (!this.loading() && this.hasSearched()) {
-      this.fetchPage(this.page(), {
-        resetSelection: false,
-        autoSelectFirst: false,
-        selectJobId: normalizedId
-      });
+    if (this.hasSearched()) {
+      this.select(normalizedId);
     }
   }
 
@@ -479,39 +468,6 @@ export class EuresJobsFacade {
     return this.keywords().some((currentKeyword) =>
       matchesEuresKeyword(currentKeyword, canonicalKeyword)
     );
-  }
-
-  goToPreviousPage(): void {
-    this.fetchPage(this.page() - 1, { resetSelection: false, autoSelectFirst: true });
-  }
-
-  goToNextPage(): void {
-    this.fetchPage(this.page() + 1, { resetSelection: false, autoSelectFirst: true });
-  }
-
-  goToPage(page: number): void {
-    if (page < 1 || this.loading()) {
-      return;
-    }
-
-    this.fetchPage(page, { resetSelection: false, autoSelectFirst: true });
-  }
-
-  updateResultsPerPage(value: number): void {
-    if (!EURES_PAGE_SIZE_OPTIONS.includes(value as (typeof EURES_PAGE_SIZE_OPTIONS)[number])) {
-      return;
-    }
-
-    if (this.resultsPerPage() === value) {
-      return;
-    }
-
-    this.resultsPerPage.set(value);
-    this.page.set(1);
-
-    if (this.hasSearched()) {
-      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
-    }
   }
 
   select(id: string): void {
@@ -632,9 +588,16 @@ export class EuresJobsFacade {
 
     this.keywords.set(normalizedKeywords);
 
-    const targetPage = this.clampPage(page);
-    this.loading.set(true);
-    this.error.set(null);
+    const targetPage = Math.max(1, page);
+    const isAppend = options.append === true;
+
+    if (isAppend) {
+      this.loadingMore.set(true);
+    } else {
+      this.loading.set(true);
+      this.error.set(null);
+    }
+
     this.detailError.set(null);
 
     if (options.resetSelection) {
@@ -645,7 +608,22 @@ export class EuresJobsFacade {
 
     const request = this.buildSearchRequest(normalizedKeywords, targetPage);
 
-    this.searchIntent$.next({ request, options });
+    this.searchIntent$.next({ request, options: { ...options, append: isAppend } });
+  }
+
+  private mergeResults(
+    current: readonly EuresJobListing[],
+    incoming: readonly EuresJobListing[],
+    append?: boolean
+  ): readonly EuresJobListing[] {
+    if (!append) {
+      return incoming;
+    }
+
+    const existingIds = new Set(current.map((job) => job.id));
+    const uniqueIncoming = incoming.filter((job) => !existingIds.has(job.id));
+
+    return [...current, ...uniqueIncoming];
   }
 
   private buildSearchRequest(
@@ -701,11 +679,6 @@ export class EuresJobsFacade {
     }
   }
 
-  private clampPage(page: number): number {
-    const totalPages = this.totalPages();
-    return Math.max(1, totalPages > 0 ? Math.min(page, totalPages) : page);
-  }
-
   private resolveSearchError(error: unknown): string {
     return resolveHttpErrorMessage(error, {
       fallback: 'EURES search failed. Check that the API is running and you are signed in.',
@@ -743,9 +716,11 @@ export class EuresJobsFacade {
     this.keywords.set(['software']);
     this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
     this.locationInitWarning.set(null);
-    this.resultsPerPage.set(EURES_DEFAULT_RESULTS_PER_PAGE);
+    this.resultsPerPage.set(EURES_RESULTS_PER_PAGE);
     this.requestLanguage.set('en');
     this.loading.set(false);
+    this.loadingMore.set(false);
+    this.loadMoreError.set(null);
     this.detailLoading.set(false);
     this.error.set(null);
     this.detailError.set(null);

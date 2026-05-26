@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { filter, skip } from 'rxjs';
 
+import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import {
@@ -50,21 +51,17 @@ export class EuresJobsPageComponent implements OnInit {
     });
   }
 
-  protected asValue(event: Event): string {
-    return (event.target as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
-  }
-
   protected updateDraftKeyword(event: Event): void {
-    this.draftKeyword.set(this.asValue(event));
+    this.draftKeyword.set(readInputValue(event));
   }
 
   protected updateLocationCode(event: Event): void {
-    this.facade.updateLocationCode(this.asValue(event));
+    this.facade.updateLocationCode(readInputValue(event));
     this.syncUrlIfNeeded();
   }
 
   protected updatePageSize(event: Event): void {
-    const parsedPageSize = Number.parseInt(this.asValue(event), 10);
+    const parsedPageSize = Number.parseInt(readInputValue(event), 10);
 
     if (Number.isNaN(parsedPageSize)) {
       return;
@@ -75,7 +72,7 @@ export class EuresJobsPageComponent implements OnInit {
   }
 
   protected updateJumpToPageValue(event: Event): void {
-    this.jumpToPageValue.set(this.asValue(event));
+    this.jumpToPageValue.set(readInputValue(event));
   }
 
   protected toggleSuggestion(keyword: string): void {

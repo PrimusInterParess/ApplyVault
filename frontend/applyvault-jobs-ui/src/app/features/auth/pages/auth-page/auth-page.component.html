@@ -27,7 +27,7 @@
         type="email"
         [value]="email()"
         autocomplete="email"
-        (input)="updateEmail(($any($event.target)).value)" />
+        (input)="updateEmail(readInputValue($event))" />
     </label>
 
     <label class="auth-page__field">
@@ -36,7 +36,7 @@
         type="password"
         [value]="password()"
         autocomplete="current-password"
-        (input)="updatePassword(($any($event.target)).value)" />
+        (input)="updatePassword(readInputValue($event))" />
     </label>
 
     @if (infoMessage(); as infoMessage) {

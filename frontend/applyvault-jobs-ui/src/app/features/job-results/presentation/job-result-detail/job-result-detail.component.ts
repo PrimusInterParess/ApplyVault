@@ -2,6 +2,7 @@ import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { marked } from 'marked';
 
+import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { JobResultViewModel } from '../../models/job-result-view.model';
 import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
@@ -171,7 +172,7 @@ export class JobResultDetailComponent {
   }
 
   updateCaptureReviewDraft(field: 'jobTitle' | 'companyName' | 'location', event: Event): void {
-    const value = (event.target as HTMLInputElement | null)?.value ?? '';
+    const value = readInputValue(event);
 
     switch (field) {
       case 'jobTitle':
@@ -219,8 +220,7 @@ export class JobResultDetailComponent {
   }
 
   updateDescriptionDraft(event: Event): void {
-    const value = (event.target as HTMLTextAreaElement | null)?.value ?? '';
-    this.descriptionDraft.set(value);
+    this.descriptionDraft.set(readInputValue(event));
   }
 
   submitDescriptionEdit(): void {

@@ -77,12 +77,12 @@
               type="search"
               [value]="facade.searchTerm()"
               placeholder="Search title, company, location..."
-              (input)="facade.updateSearchTerm(asValue($event))" />
+              (input)="facade.updateSearchTerm(readInputValue($event))" />
           </label>
 
           <label class="jobs-page__field">
             <span>Source</span>
-            <select (change)="facade.updateSource(asValue($event))">
+            <select (change)="facade.updateSource(readInputValue($event))">
               <option value="all" [selected]="facade.selectedSource() === 'all'">All sources</option>
               @for (source of facade.availableSources(); track source) {
                 <option [value]="source" [selected]="facade.selectedSource() === source">{{ source }}</option>

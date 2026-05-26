@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { readInputValue } from '../../../../core/dom/input-value.util';
 
 type AuthMode = 'login' | 'signup';
 
@@ -24,6 +25,7 @@ export class AuthPageComponent {
   readonly password = signal('');
   readonly infoMessage = signal<string | null>(null);
   readonly auth = this.authService;
+  protected readonly readInputValue = readInputValue;
 
   switchMode(mode: AuthMode): void {
     this.mode.set(mode);

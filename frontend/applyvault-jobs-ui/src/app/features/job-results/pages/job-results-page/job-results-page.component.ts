@@ -10,6 +10,7 @@ import {
   JobCaptureReviewSaveEvent,
   JobResultDetailComponent
 } from '../../presentation/job-result-detail/job-result-detail.component';
+import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CalendarConnectionsFacade } from '../../../settings/data-access/calendar-connections.facade';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 
@@ -24,6 +25,7 @@ export class JobResultsPageComponent implements OnInit {
   readonly facade = inject(JobResultsFacade);
   readonly skeletonCardCount = [0, 1, 2, 3, 4, 5];
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
+  protected readonly readInputValue = readInputValue;
   private readonly route = inject(ActivatedRoute);
 
   ngOnInit(): void {
@@ -34,10 +36,6 @@ export class JobResultsPageComponent implements OnInit {
         this.facade.selectWhenLoaded(selectedId);
       }
     });
-  }
-
-  protected asValue(event: Event): string {
-    return (event.target as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
   }
 
   protected handleCaptureReviewSave(event: JobCaptureReviewSaveEvent): void {

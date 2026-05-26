@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { EuresJobsFacade } from '../../data-access/eures-jobs.facade';
@@ -8,7 +9,7 @@ import { EURES_KEYWORD_SUGGESTION_GROUPS } from '../../models/eures-keyword-sugg
 @Component({
   selector: 'app-eures-jobs-page',
   standalone: true,
-  imports: [CommonModule, SafeHtmlPipe],
+  imports: [CommonModule, SafeHtmlPipe, RouterLink],
   providers: [EuresJobsFacade],
   templateUrl: './eures-jobs-page.component.html',
   styleUrl: './eures-jobs-page.component.scss'
@@ -62,6 +63,10 @@ export class EuresJobsPageComponent implements OnInit {
 
   protected retrySearch(): void {
     this.facade.refreshCurrentSearch();
+  }
+
+  protected saveSelectedJob(): void {
+    this.facade.saveSelectedJob();
   }
 
   protected detailUrl(): string | null {

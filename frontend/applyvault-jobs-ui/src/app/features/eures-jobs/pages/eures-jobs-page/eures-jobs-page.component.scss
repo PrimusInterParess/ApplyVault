@@ -229,6 +229,54 @@ h1 {
   cursor: wait;
 }
 
+.eures-page__detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.eures-page__save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--app-radius) - 4px);
+  border: 1px solid var(--app-accent-dark);
+  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.eures-page__save-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.eures-page__save-state {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: calc(var(--app-radius) - 4px);
+  border: 1px solid var(--app-border);
+}
+
+.eures-page__save-state p {
+  margin: 0;
+}
+
+.eures-page__save-state--error {
+  border-color: color-mix(in srgb, #b42318 35%, var(--app-border));
+}
+
+.eures-page__save-state--success {
+  border-color: color-mix(in srgb, var(--app-accent-dark) 35%, var(--app-border));
+  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+}
+
 .eures-page__inline-error {
   margin: 0 0 1rem;
   color: #b42318;

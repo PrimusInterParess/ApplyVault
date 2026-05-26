@@ -6,7 +6,8 @@ import { API_CONFIG } from '../../../core/config/api.config';
 import {
   EuresJobDetail,
   EuresJobSearchRequest,
-  EuresJobSearchResponse
+  EuresJobSearchResponse,
+  SaveEuresJobResponse
 } from '../models/eures-job.model';
 
 @Injectable({ providedIn: 'root' })
@@ -26,6 +27,16 @@ export class EuresJobsApiService {
 
     return this.httpClient.get<EuresJobDetail>(
       `${this.apiConfig.baseUrl}/eures/jobs/${encodeURIComponent(id)}`,
+      { params }
+    );
+  }
+
+  saveListing(id: string, requestLanguage = 'en'): Observable<SaveEuresJobResponse> {
+    const params = new HttpParams().set('requestLanguage', requestLanguage);
+
+    return this.httpClient.post<SaveEuresJobResponse>(
+      `${this.apiConfig.baseUrl}/eures/jobs/${encodeURIComponent(id)}/save`,
+      null,
       { params }
     );
   }

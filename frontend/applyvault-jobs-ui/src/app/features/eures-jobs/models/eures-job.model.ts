@@ -35,3 +35,9 @@ export interface EuresJobDetail {
   contractType: string | null;
   workHours: string | null;
 }
+
+export interface SaveEuresJobResponse {
+  id: string;
+  savedAt: string;
+  alreadyExists: boolean;
+}

@@ -181,8 +181,45 @@
                 <p><strong>Work hours:</strong> {{ selectedJob.workHours }}</p>
               }
 
-              @if (detailUrl(); as openUrl) {
-                <a [href]="openUrl" target="_blank" rel="noreferrer" class="eures-page__link">Open listing</a>
+              <div class="eures-page__detail-actions">
+                @if (detailUrl(); as openUrl) {
+                  <a [href]="openUrl" target="_blank" rel="noreferrer" class="eures-page__link">Open listing</a>
+                }
+
+                <button
+                  type="button"
+                  class="eures-page__save-button"
+                  (click)="saveSelectedJob()"
+                  [disabled]="facade.saving() || !!facade.savedJobId()">
+                  {{ facade.saving() ? 'Saving...' : 'Save to ApplyVault' }}
+                </button>
+              </div>
+
+              @if (facade.saveError(); as saveErrorMessage) {
+                <div class="eures-page__save-state eures-page__save-state--error">
+                  <p>{{ saveErrorMessage }}</p>
+                  <button type="button" class="eures-page__search-button" (click)="saveSelectedJob()">
+                    Try again
+                  </button>
+                </div>
+              }
+
+              @if (facade.savedJobId(); as savedJobId) {
+                <div class="eures-page__save-state eures-page__save-state--success">
+                  <p>
+                    {{
+                      facade.saveAlreadyExists()
+                        ? 'This listing is already saved in ApplyVault.'
+                        : 'Saved to ApplyVault.'
+                    }}
+                  </p>
+                  <a
+                    [routerLink]="['/jobs']"
+                    [queryParams]="{ selected: savedJobId }"
+                    class="eures-page__link">
+                    View saved job
+                  </a>
+                </div>
               }
 
               @if (selectedJob.description) {

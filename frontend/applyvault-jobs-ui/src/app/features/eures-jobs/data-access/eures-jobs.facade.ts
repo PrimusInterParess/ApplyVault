@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 
 import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
 import { AuthService } from '../../../core/auth/auth.service';
+import { JobResultsFacade } from '../../job-results/data-access/job-results.facade';
 import {
   EuresJobDetail,
   EuresJobListing,
@@ -19,8 +20,10 @@ import { EuresJobsApiService } from './eures-jobs-api.service';
 export class EuresJobsFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(EuresJobsApiService);
+  private readonly jobResultsFacade = inject(JobResultsFacade);
   private searchSubscription: Subscription | null = null;
   private detailSubscription: Subscription | null = null;
+  private saveSubscription: Subscription | null = null;
 
   readonly resultsPerPage = 4;
 
@@ -37,6 +40,10 @@ export class EuresJobsFacade {
   readonly selectedJobId = signal<string | null>(null);
   readonly selectedJob = signal<EuresJobDetail | null>(null);
   readonly hasSearched = signal(false);
+  readonly saving = signal(false);
+  readonly saveError = signal<string | null>(null);
+  readonly savedJobId = signal<string | null>(null);
+  readonly saveAlreadyExists = signal(false);
 
   readonly keywordsLabel = computed(() => this.keywords().join(', '));
 
@@ -196,6 +203,7 @@ export class EuresJobsFacade {
       return;
     }
 
+    this.resetSaveState();
     this.selectedJobId.set(id);
     this.detailLoading.set(true);
     this.detailError.set(null);
@@ -209,6 +217,7 @@ export class EuresJobsFacade {
           this.selectedJob.set(detail);
           this.detailLoading.set(false);
           this.detailSubscription = null;
+          this.syncSavedStateFromExistingJobs(detail);
         },
         error: (error: unknown) => {
           this.detailError.set(this.resolveDetailError(error));
@@ -220,6 +229,77 @@ export class EuresJobsFacade {
 
   updateLocationCode(value: string): void {
     this.locationCode.set(value.trim().toLowerCase() || 'dk');
+  }
+
+  saveSelectedJob(): void {
+    const selectedId = this.selectedJobId();
+    const selectedJob = this.selectedJob();
+
+    if (!selectedId || !selectedJob || this.saving() || this.savedJobId()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.saveError.set(null);
+    this.saveSubscription?.unsubscribe();
+
+    this.saveSubscription = this.apiService
+      .saveListing(selectedId, this.requestLanguage().trim() || 'en')
+      .subscribe({
+        next: (response) => {
+          this.savedJobId.set(response.id);
+          this.saveAlreadyExists.set(response.alreadyExists);
+          this.saveError.set(null);
+          this.saving.set(false);
+          this.saveSubscription = null;
+        },
+        error: (error: unknown) => {
+          this.saveError.set(this.resolveSaveError(error));
+          this.saving.set(false);
+          this.saveSubscription = null;
+        }
+      });
+  }
+
+  private syncSavedStateFromExistingJobs(detail: EuresJobDetail): void {
+    const candidateUrls = [detail.applicationUrl, detail.sourceUrl]
+      .map((url) => url?.trim())
+      .filter((url): url is string => Boolean(url));
+
+    if (candidateUrls.length === 0) {
+      return;
+    }
+
+    const existingResult = this.jobResultsFacade
+      .results()
+      .find((result) => candidateUrls.includes(result.url.trim()));
+
+    if (!existingResult) {
+      return;
+    }
+
+    this.savedJobId.set(existingResult.id);
+    this.saveAlreadyExists.set(true);
+  }
+
+  private resolveSaveError(error: unknown): string {
+    return resolveHttpErrorMessage(error, {
+      fallback: 'Could not save this listing to ApplyVault. Please try again.',
+      statusMessages: {
+        401: 'Sign in again to save EURES listings.',
+        404: 'This listing was not found or is no longer available.',
+        502: 'Saving is temporarily unavailable. Try again in a moment.'
+      }
+    });
+  }
+
+  private resetSaveState(): void {
+    this.saveSubscription?.unsubscribe();
+    this.saveSubscription = null;
+    this.saving.set(false);
+    this.saveError.set(null);
+    this.savedJobId.set(null);
+    this.saveAlreadyExists.set(false);
   }
 
   private fetchPage(
@@ -346,6 +426,7 @@ export class EuresJobsFacade {
 
   private resetState(): void {
     this.cancelPendingRequests();
+    this.resetSaveState();
     this.keywords.set(['software']);
     this.locationCode.set('dk');
     this.requestLanguage.set('en');
@@ -370,5 +451,7 @@ export class EuresJobsFacade {
   private cancelPendingRequests(): void {
     this.cancelPendingSearch();
     this.cancelPendingDetail();
+    this.saveSubscription?.unsubscribe();
+    this.saveSubscription = null;
   }
 }

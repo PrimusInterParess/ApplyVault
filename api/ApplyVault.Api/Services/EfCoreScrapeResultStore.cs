@@ -43,6 +43,27 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         return entity is null ? null : MapToSavedResult(entity);
     }
 
+    public async Task<SavedScrapeResult?> GetByUrlAsync(
+        Guid userId,
+        string url,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await dbContext
+            .ScrapeResults
+            .AsNoTracking()
+            .Include((result) => result.HiringManagerContacts)
+            .Include((result) => result.InterviewEvent)
+            .Include((result) => result.CalendarEventLinks)
+            .SingleOrDefaultAsync(
+                (result) =>
+                    result.Url == url &&
+                    !result.IsDeleted &&
+                    (result.UserId == userId || result.UserId == null),
+                cancellationToken);
+
+        return entity is null ? null : MapToSavedResult(entity);
+    }
+
     public async Task<SavedScrapeResult> SaveAsync(
         AssessedScrapeResult result,
         Guid? userId,

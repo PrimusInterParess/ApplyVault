@@ -98,6 +98,7 @@ builder.Services.AddHttpClient<EuresApiClient>((serviceProvider, client) =>
 });
 builder.Services.AddScoped<EuresJobSearchService>();
 builder.Services.AddScoped<IEuresJobClient, EuresJobClient>();
+builder.Services.AddScoped<IEuresJobSaveService, EuresJobSaveService>();
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<GoogleCalendarProvider>());
 builder.Services.AddScoped<ICalendarProvider>((serviceProvider) => serviceProvider.GetRequiredService<MicrosoftCalendarProvider>());
 builder.Services.AddScoped<ICalendarProviderFactory, CalendarProviderFactory>();

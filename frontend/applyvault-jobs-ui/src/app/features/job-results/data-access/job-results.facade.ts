@@ -24,6 +24,7 @@ export class JobResultsFacade {
   readonly searchTerm = signal('');
   readonly selectedSource = signal('all');
   readonly selectedId = signal<string | null>(null);
+  readonly pendingSelectedId = signal<string | null>(null);
   readonly updatingResultId = signal<string | null>(null);
   readonly syncingCalendarAccountId = signal<string | null>(null);
   readonly results = signal<readonly JobResultViewModel[]>([]);
@@ -125,6 +126,24 @@ export class JobResultsFacade {
       { allowSignalWrites: true }
     );
 
+    effect(
+      () => {
+        const pendingId = this.pendingSelectedId();
+
+        if (!pendingId || this.loading()) {
+          return;
+        }
+
+        const hasResult = this.results().some((result) => result.id === pendingId);
+
+        if (hasResult) {
+          this.selectedId.set(pendingId);
+          this.pendingSelectedId.set(null);
+        }
+      },
+      { allowSignalWrites: true }
+    );
+
   }
 
   load(): void {
@@ -167,6 +186,26 @@ export class JobResultsFacade {
 
   select(id: string): void {
     this.selectedId.set(id);
+  }
+
+  selectWhenLoaded(id: string): void {
+    const normalizedId = id.trim();
+
+    if (!normalizedId) {
+      return;
+    }
+
+    if (this.results().some((result) => result.id === normalizedId)) {
+      this.selectedId.set(normalizedId);
+      this.pendingSelectedId.set(null);
+      return;
+    }
+
+    this.pendingSelectedId.set(normalizedId);
+
+    if (!this.loading()) {
+      this.load();
+    }
   }
 
   toggleRejected(id: string): void {
@@ -378,6 +417,7 @@ export class JobResultsFacade {
     this.searchTerm.set('');
     this.selectedSource.set('all');
     this.selectedId.set(null);
+    this.pendingSelectedId.set(null);
     this.updatingResultId.set(null);
     this.syncingCalendarAccountId.set(null);
     this.results.set([]);

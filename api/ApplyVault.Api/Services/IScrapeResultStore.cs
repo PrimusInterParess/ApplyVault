@@ -13,6 +13,11 @@ public interface IScrapeResultStore
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<SavedScrapeResult?> GetByUrlAsync(
+        Guid userId,
+        string url,
+        CancellationToken cancellationToken = default);
+
     Task<SavedScrapeResult> SaveAsync(
         AssessedScrapeResult result,
         Guid? userId,

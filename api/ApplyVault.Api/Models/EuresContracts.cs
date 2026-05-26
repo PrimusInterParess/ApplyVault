@@ -69,3 +69,9 @@ public sealed record EuresJobDetailResponse(
     string? ContractType,
     string? WorkHours
 );
+
+public sealed record SaveEuresJobResponse(
+    Guid Id,
+    DateTimeOffset SavedAt,
+    bool AlreadyExists
+);

@@ -62,10 +62,10 @@
         </div>
       </section>
     </section>
-  } @else if (facade.error(); as errorMessage) {
+  } @else if (facade.error()) {
       <section class="jobs-page__state jobs-page__state--error">
         <h2>Dashboard unavailable</h2>
-        <p>{{ errorMessage }}</p>
+        <p>{{ facade.error() }}</p>
         <button type="button" (click)="facade.load()">Try again</button>
       </section>
     } @else {

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
@@ -17,7 +17,7 @@ import { euresQueryParamsEqual } from '../../utils/eures-url-state.utils';
 @Component({
   selector: 'app-eures-jobs-page',
   standalone: true,
-  imports: [CommonModule, SafeHtmlPipe, RouterLink, SkeletonBlockComponent],
+  imports: [DatePipe, SafeHtmlPipe, RouterLink, SkeletonBlockComponent],
   providers: [EuresJobsFacade],
   templateUrl: './eures-jobs-page.component.html',
   styleUrl: './eures-jobs-page.component.scss'
@@ -29,6 +29,7 @@ export class EuresJobsPageComponent implements OnInit {
   readonly pageSizeOptions = EURES_PAGE_SIZE_OPTIONS;
   readonly draftKeyword = signal('');
   readonly jumpToPageValue = signal('');
+  readonly mobilePanel = signal<'results' | 'detail'>('results');
   protected readonly skeletonListIndexes = computed(() =>
     Array.from({ length: this.facade.resultsPerPage() }, (_, index) => index)
   );
@@ -59,6 +60,7 @@ export class EuresJobsPageComponent implements OnInit {
 
   protected updateLocationCode(event: Event): void {
     this.facade.updateLocationCode(this.asValue(event));
+    this.syncUrlIfNeeded();
   }
 
   protected updatePageSize(event: Event): void {
@@ -90,6 +92,7 @@ export class EuresJobsPageComponent implements OnInit {
       return;
     }
 
+    this.mobilePanel.set('results');
     this.facade.search(this.draftKeyword());
     this.draftKeyword.set('');
     this.syncUrlIfNeeded();
@@ -128,7 +131,12 @@ export class EuresJobsPageComponent implements OnInit {
 
   protected selectJob(id: string): void {
     this.facade.select(id);
+    this.mobilePanel.set('detail');
     this.syncUrlIfNeeded();
+  }
+
+  protected showMobilePanel(panel: 'results' | 'detail'): void {
+    this.mobilePanel.set(panel);
   }
 
   protected goToPreviousPage(): void {
@@ -161,6 +169,21 @@ export class EuresJobsPageComponent implements OnInit {
 
   protected locationLabel(code: string): string {
     return this.locationOptions.find((option) => option.code === code)?.label ?? code;
+  }
+
+  protected formatPublicationDate(value: string | null | undefined): Date | null {
+    if (!value?.trim()) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}T00:00:00.000Z`);
+    }
+
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   protected detailUrl(): string | null {

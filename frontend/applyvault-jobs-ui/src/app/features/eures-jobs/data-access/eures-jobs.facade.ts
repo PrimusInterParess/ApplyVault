@@ -362,8 +362,17 @@ export class EuresJobsFacade {
       return;
     }
 
+    if (this.locationCode() === normalizedLocation) {
+      return;
+    }
+
     this.locationCode.set(normalizedLocation);
     this.locationInitWarning.set(null);
+
+    if (this.hasSearched()) {
+      this.page.set(1);
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
+    }
   }
 
   saveSelectedJob(): void {

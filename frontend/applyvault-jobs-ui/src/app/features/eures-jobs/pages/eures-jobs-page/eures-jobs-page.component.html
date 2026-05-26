@@ -74,6 +74,7 @@
                 class="eures-page__suggestion-chip"
                 [class.eures-page__suggestion-chip--active]="isActiveSuggestion(keyword)"
                 [attr.aria-pressed]="isActiveSuggestion(keyword)"
+                [disabled]="facade.loading()"
                 (click)="toggleSuggestion(keyword)">
                 {{ keyword }}
               </button>
@@ -97,7 +98,31 @@
   }
 
   @if (facade.loading() && facade.results().length === 0 && !facade.error()) {
-    <section class="eures-page__content" aria-busy="true" aria-label="Searching EURES listings">
+    <section
+      class="eures-page__content"
+      [class.eures-page__content--mobile-detail]="mobilePanel() === 'detail'"
+      aria-busy="true"
+      aria-label="Searching EURES listings">
+      <div class="eures-page__mobile-tabs" role="tablist" aria-label="Results and detail">
+        <button
+          type="button"
+          role="tab"
+          class="eures-page__mobile-tab"
+          [class.eures-page__mobile-tab--active]="mobilePanel() === 'results'"
+          [attr.aria-selected]="mobilePanel() === 'results'"
+          (click)="showMobilePanel('results')">
+          Results
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="eures-page__mobile-tab"
+          [class.eures-page__mobile-tab--active]="mobilePanel() === 'detail'"
+          [attr.aria-selected]="mobilePanel() === 'detail'"
+          (click)="showMobilePanel('detail')">
+          Detail
+        </button>
+      </div>
       <aside
         class="eures-page__list-panel"
         [style.--eures-list-visible-count]="facade.resultsPerPage()">
@@ -133,7 +158,29 @@
       }
     </p>
 
-    <section class="eures-page__content">
+    <section
+      class="eures-page__content"
+      [class.eures-page__content--mobile-detail]="mobilePanel() === 'detail'">
+      <div class="eures-page__mobile-tabs" role="tablist" aria-label="Results and detail">
+        <button
+          type="button"
+          role="tab"
+          class="eures-page__mobile-tab"
+          [class.eures-page__mobile-tab--active]="mobilePanel() === 'results'"
+          [attr.aria-selected]="mobilePanel() === 'results'"
+          (click)="showMobilePanel('results')">
+          Results
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="eures-page__mobile-tab"
+          [class.eures-page__mobile-tab--active]="mobilePanel() === 'detail'"
+          [attr.aria-selected]="mobilePanel() === 'detail'"
+          (click)="showMobilePanel('detail')">
+          Detail
+        </button>
+      </div>
       <aside
         class="eures-page__list-panel"
         [style.--eures-list-visible-count]="facade.resultsPerPage()">
@@ -170,8 +217,8 @@
                 <h2>{{ job.title || 'Untitled listing' }}</h2>
                 <p>{{ job.employer || 'Unknown employer' }}</p>
                 <p>{{ job.location || 'Location not specified' }}</p>
-                @if (job.publicationDate) {
-                  <p class="eures-page__meta">Posted {{ job.publicationDate }}</p>
+                @if (formatPublicationDate(job.publicationDate); as postedAt) {
+                  <p class="eures-page__meta">Posted {{ postedAt | date:'MMM d, y':'UTC' }}</p>
                 }
               </button>
             }
@@ -250,8 +297,8 @@
               <h2>{{ selectedJob.title || 'Untitled listing' }}</h2>
               <p><strong>Employer:</strong> {{ selectedJob.employer || 'Unknown employer' }}</p>
               <p><strong>Location:</strong> {{ selectedJob.location || 'Location not specified' }}</p>
-              @if (selectedJob.publicationDate) {
-                <p><strong>Posted:</strong> {{ selectedJob.publicationDate }}</p>
+              @if (formatPublicationDate(selectedJob.publicationDate); as postedAt) {
+                <p><strong>Posted:</strong> {{ postedAt | date:'MMM d, y':'UTC' }}</p>
               }
               @if (selectedJob.contractType) {
                 <p><strong>Contract:</strong> {{ selectedJob.contractType }}</p>

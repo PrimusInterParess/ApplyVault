@@ -435,10 +435,52 @@ h1 {
   border-color: color-mix(in srgb, #b42318 35%, var(--app-border));
 }
 
+.eures-page__mobile-tabs {
+  display: none;
+  grid-column: 1 / -1;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: calc(var(--app-radius) - 4px);
+  background: var(--app-surface);
+}
+
+.eures-page__mobile-tab {
+  flex: 1;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--app-radius) - 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+
+.eures-page__mobile-tab--active {
+  border-color: var(--app-accent-dark);
+  background: linear-gradient(180deg, #fff8f1 0%, var(--app-success-soft) 100%);
+  box-shadow: var(--app-shadow-sm);
+}
+
 @media (max-width: 960px) {
   .eures-page__search-row,
   .eures-page__content {
     grid-template-columns: 1fr;
+  }
+
+  .eures-page__mobile-tabs {
+    display: flex;
+  }
+
+  .eures-page__content:not(.eures-page__content--mobile-detail) .eures-page__detail {
+    display: none;
+  }
+
+  .eures-page__content--mobile-detail .eures-page__list-panel {
+    display: none;
   }
 
   .eures-page__suggestion-group {

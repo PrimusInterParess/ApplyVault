@@ -1,6 +1,7 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ParamMap } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 
 import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -36,14 +37,21 @@ type FetchPageOptions = {
   selectJobId?: string | null;
 };
 
+type SearchIntent = { request: EuresJobSearchRequest; options: FetchPageOptions };
+type DetailIntent = { id: string; language: string };
+type SaveIntent = { id: string; language: string };
+
 @Injectable()
 export class EuresJobsFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(EuresJobsApiService);
   private readonly jobResultsFacade = inject(JobResultsFacade);
-  private searchSubscription: Subscription | null = null;
-  private detailSubscription: Subscription | null = null;
-  private saveSubscription: Subscription | null = null;
+  private readonly searchIntent$ = new Subject<SearchIntent>();
+  private readonly searchCancel$ = new Subject<void>();
+  private readonly detailIntent$ = new Subject<DetailIntent>();
+  private readonly detailCancel$ = new Subject<void>();
+  private readonly saveIntent$ = new Subject<SaveIntent>();
+  private readonly saveCancel$ = new Subject<void>();
 
   readonly resultsPerPage = signal(EURES_DEFAULT_RESULTS_PER_PAGE);
 
@@ -100,6 +108,85 @@ export class EuresJobsFacade {
   readonly hasValidLocation = computed(() => isKnownEuresLocationCode(this.locationCode()));
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    this.searchIntent$
+      .pipe(
+        switchMap(({ request, options }) =>
+          this.apiService.search(request).pipe(
+            takeUntil(this.searchCancel$),
+            map((response) => ({ kind: 'success' as const, response, options })),
+            catchError((error: unknown) => of({ kind: 'error' as const, error, options }))
+          )
+        ),
+        takeUntilDestroyed(destroyRef)
+      )
+      .subscribe((result) => {
+        if (result.kind === 'error') {
+          this.hasSearched.set(true);
+          this.error.set(this.resolveSearchError(result.error));
+          this.resetResults();
+          this.loading.set(false);
+          return;
+        }
+
+        const { response, options } = result;
+        this.hasSearched.set(true);
+        this.page.set(response.page);
+        this.totalResults.set(response.totalResults);
+        this.results.set(response.jobs);
+        this.loading.set(false);
+        this.syncSelectionAfterSearch(response.jobs, options);
+        this.searchGeneration.update((generation) => generation + 1);
+      });
+
+    this.detailIntent$
+      .pipe(
+        switchMap(({ id, language }) =>
+          this.apiService.getById(id, language).pipe(
+            takeUntil(this.detailCancel$),
+            map((detail) => ({ kind: 'success' as const, detail })),
+            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+          )
+        ),
+        takeUntilDestroyed(destroyRef)
+      )
+      .subscribe((result) => {
+        if (result.kind === 'error') {
+          this.detailError.set(this.resolveDetailError(result.error));
+          this.detailLoading.set(false);
+          return;
+        }
+
+        this.selectedJob.set(result.detail);
+        this.detailLoading.set(false);
+        this.syncSavedStateFromExistingJobs(result.detail);
+      });
+
+    this.saveIntent$
+      .pipe(
+        switchMap(({ id, language }) =>
+          this.apiService.saveListing(id, language).pipe(
+            takeUntil(this.saveCancel$),
+            map((response) => ({ kind: 'success' as const, response })),
+            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+          )
+        ),
+        takeUntilDestroyed(destroyRef)
+      )
+      .subscribe((result) => {
+        if (result.kind === 'error') {
+          this.saveError.set(this.resolveSaveError(result.error));
+          this.saving.set(false);
+          return;
+        }
+
+        this.savedJobId.set(result.response.id);
+        this.saveAlreadyExists.set(result.response.alreadyExists);
+        this.saveError.set(null);
+        this.saving.set(false);
+      });
+
     effect(
       () => {
         if (!this.authService.session()) {
@@ -336,23 +423,11 @@ export class EuresJobsFacade {
     this.detailLoading.set(true);
     this.detailError.set(null);
     this.selectedJob.set(null);
-    this.detailSubscription?.unsubscribe();
 
-    this.detailSubscription = this.apiService
-      .getById(id, this.requestLanguage().trim() || 'en')
-      .subscribe({
-        next: (detail) => {
-          this.selectedJob.set(detail);
-          this.detailLoading.set(false);
-          this.detailSubscription = null;
-          this.syncSavedStateFromExistingJobs(detail);
-        },
-        error: (error: unknown) => {
-          this.detailError.set(this.resolveDetailError(error));
-          this.detailLoading.set(false);
-          this.detailSubscription = null;
-        }
-      });
+    this.detailIntent$.next({
+      id,
+      language: this.requestLanguage().trim() || 'en'
+    });
   }
 
   updateLocationCode(value: string): void {
@@ -385,24 +460,11 @@ export class EuresJobsFacade {
 
     this.saving.set(true);
     this.saveError.set(null);
-    this.saveSubscription?.unsubscribe();
 
-    this.saveSubscription = this.apiService
-      .saveListing(selectedId, this.requestLanguage().trim() || 'en')
-      .subscribe({
-        next: (response) => {
-          this.savedJobId.set(response.id);
-          this.saveAlreadyExists.set(response.alreadyExists);
-          this.saveError.set(null);
-          this.saving.set(false);
-          this.saveSubscription = null;
-        },
-        error: (error: unknown) => {
-          this.saveError.set(this.resolveSaveError(error));
-          this.saving.set(false);
-          this.saveSubscription = null;
-        }
-      });
+    this.saveIntent$.next({
+      id: selectedId,
+      language: this.requestLanguage().trim() || 'en'
+    });
   }
 
   private syncSavedStateFromExistingJobs(detail: EuresJobDetail): void {
@@ -438,8 +500,7 @@ export class EuresJobsFacade {
   }
 
   private resetSaveState(): void {
-    this.saveSubscription?.unsubscribe();
-    this.saveSubscription = null;
+    this.saveCancel$.next();
     this.saving.set(false);
     this.saveError.set(null);
     this.savedJobId.set(null);
@@ -462,7 +523,6 @@ export class EuresJobsFacade {
     this.keywords.set(normalizedKeywords);
 
     const targetPage = this.clampPage(page);
-    this.cancelPendingSearch();
     this.loading.set(true);
     this.error.set(null);
     this.detailError.set(null);
@@ -475,25 +535,7 @@ export class EuresJobsFacade {
 
     const request = this.buildSearchRequest(normalizedKeywords, targetPage);
 
-    this.searchSubscription = this.apiService.search(request).subscribe({
-      next: (response) => {
-        this.hasSearched.set(true);
-        this.page.set(response.page);
-        this.totalResults.set(response.totalResults);
-        this.results.set(response.jobs);
-        this.loading.set(false);
-        this.searchSubscription = null;
-        this.syncSelectionAfterSearch(response.jobs, options);
-        this.searchGeneration.update((generation) => generation + 1);
-      },
-      error: (error: unknown) => {
-        this.hasSearched.set(true);
-        this.error.set(this.resolveSearchError(error));
-        this.resetResults();
-        this.loading.set(false);
-        this.searchSubscription = null;
-      }
-    });
+    this.searchIntent$.next({ request, options });
   }
 
   private buildSearchRequest(
@@ -593,19 +635,16 @@ export class EuresJobsFacade {
   }
 
   private cancelPendingSearch(): void {
-    this.searchSubscription?.unsubscribe();
-    this.searchSubscription = null;
+    this.searchCancel$.next();
   }
 
   private cancelPendingDetail(): void {
-    this.detailSubscription?.unsubscribe();
-    this.detailSubscription = null;
+    this.detailCancel$.next();
   }
 
   private cancelPendingRequests(): void {
     this.cancelPendingSearch();
     this.cancelPendingDetail();
-    this.saveSubscription?.unsubscribe();
-    this.saveSubscription = null;
+    this.saveCancel$.next();
   }
 }

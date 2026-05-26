@@ -1,9 +1,11 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
 import {
+  CalendarEventLink,
   SavedJobResult,
   UpdateInterviewEventRequest,
   UpdateJobCaptureReviewRequest
@@ -15,7 +17,8 @@ import { JobResultsApiService } from './job-results-api.service';
 export class JobResultsFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(JobResultsApiService);
-  private loadSubscription: Subscription | null = null;
+  private readonly loadIntent$ = new Subject<void>();
+  private readonly loadCancel$ = new Subject<void>();
   private loadedUserId: string | null = null;
 
   readonly loading = signal(false);
@@ -74,6 +77,40 @@ export class JobResultsFacade {
   });
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    this.loadIntent$
+      .pipe(
+        switchMap(() =>
+          this.apiService.getAll().pipe(
+            takeUntil(this.loadCancel$),
+            map((results) => ({ kind: 'success' as const, results })),
+            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+          )
+        ),
+        takeUntilDestroyed(destroyRef)
+      )
+      .subscribe((result) => {
+        if (result.kind === 'error') {
+          this.error.set(
+            'The dashboard could not reach the API. Make sure ApplyVault.Api is running and your session is valid.'
+          );
+          this.results.set([]);
+          this.loading.set(false);
+          return;
+        }
+
+        const viewModels = [...result.results]
+          .map(mapSavedJobResultToViewModel)
+          .sort(
+            (left, right) =>
+              new Date(right.savedAt).getTime() - new Date(left.savedAt).getTime()
+          );
+
+        this.results.set(viewModels);
+        this.loading.set(false);
+      });
+
     effect(
       () => {
         const session = this.authService.session();
@@ -152,28 +189,7 @@ export class JobResultsFacade {
     this.error.set(null);
     this.updateError.set(null);
 
-    this.loadSubscription = this.apiService.getAll().subscribe({
-      next: (results) => {
-        const viewModels = [...results]
-          .map(mapSavedJobResultToViewModel)
-          .sort(
-            (left, right) =>
-              new Date(right.savedAt).getTime() - new Date(left.savedAt).getTime()
-          );
-
-        this.results.set(viewModels);
-        this.loading.set(false);
-        this.loadSubscription = null;
-      },
-      error: () => {
-        this.error.set(
-          'The dashboard could not reach the API. Make sure ApplyVault.Api is running and your session is valid.'
-        );
-        this.results.set([]);
-        this.loading.set(false);
-        this.loadSubscription = null;
-      }
-    });
+    this.loadIntent$.next();
   }
 
   updateSearchTerm(value: string): void {
@@ -385,8 +401,18 @@ export class JobResultsFacade {
     this.apiService
       .createCalendarEvent(resultId, { connectedAccountId })
       .subscribe({
-        next: () => {
-          this.load();
+        next: (response) => {
+          if (this.isSavedJobResult(response)) {
+            this.results.update((results) => this.replaceResult(results, response));
+          } else if (this.isCalendarEventLink(response)) {
+            this.results.update((results) =>
+              this.mergeCalendarEventLink(results, resultId, response)
+            );
+          } else {
+            this.load();
+          }
+
+          this.updateError.set(null);
           this.syncingCalendarAccountId.set(null);
         },
         error: () => {
@@ -394,6 +420,59 @@ export class JobResultsFacade {
           this.syncingCalendarAccountId.set(null);
         }
       });
+  }
+
+  private mergeCalendarEventLink(
+    results: readonly JobResultViewModel[],
+    resultId: string,
+    link: CalendarEventLink
+  ): readonly JobResultViewModel[] {
+    return results.map((result) => {
+      if (result.id !== resultId) {
+        return result;
+      }
+
+      const existingIndex = result.calendarEvents.findIndex(
+        (event) => event.connectedAccountId === link.connectedAccountId
+      );
+      const calendarEvents =
+        existingIndex >= 0
+          ? result.calendarEvents.map((event, index) =>
+              index === existingIndex ? link : event
+            )
+          : [...result.calendarEvents, link];
+
+      return { ...result, calendarEvents };
+    });
+  }
+
+  private isSavedJobResult(value: unknown): value is SavedJobResult {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const candidate = value as Partial<SavedJobResult>;
+
+    return (
+      typeof candidate.id === 'string' &&
+      typeof candidate.payload === 'object' &&
+      candidate.payload !== null &&
+      Array.isArray(candidate.calendarEvents)
+    );
+  }
+
+  private isCalendarEventLink(value: unknown): value is CalendarEventLink {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const candidate = value as Partial<CalendarEventLink>;
+
+    return (
+      typeof candidate.connectedAccountId === 'string' &&
+      typeof candidate.externalEventId === 'string' &&
+      typeof candidate.provider === 'string'
+    );
   }
 
   private replaceResult(
@@ -406,8 +485,7 @@ export class JobResultsFacade {
   }
 
   private cancelPendingLoad(): void {
-    this.loadSubscription?.unsubscribe();
-    this.loadSubscription = null;
+    this.loadCancel$.next();
   }
 
   private resetState(): void {

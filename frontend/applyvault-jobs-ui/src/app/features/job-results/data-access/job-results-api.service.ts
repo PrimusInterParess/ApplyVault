@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import {
+  CalendarEventLink,
   CreateCalendarEventRequest,
   SavedJobResult,
   UpdateJobCaptureReviewRequest,
@@ -72,8 +73,8 @@ export class JobResultsApiService {
   createCalendarEvent(
     id: string,
     request: CreateCalendarEventRequest
-  ): Observable<unknown> {
-    return this.httpClient.post(
+  ): Observable<CalendarEventLink> {
+    return this.httpClient.post<CalendarEventLink>(
       `${this.apiConfig.baseUrl}/scrape-results/${id}/calendar-events`,
       request
     );

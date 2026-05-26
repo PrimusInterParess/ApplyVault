@@ -21,33 +21,13 @@
           (click)="toggleRejected.emit(selectedJob.id)">
           {{ selectedJob.isRejected ? 'Undo rejection' : 'Mark as rejected' }}
         </button>
-        @if (!confirmingDelete()) {
-          <button
-            type="button"
-            class="job-detail__secondary-action"
-            [disabled]="updating()"
-            (click)="beginDeleteConfirm()">
-            Delete
-          </button>
-        } @else {
-          <div class="job-detail__delete-confirm" role="group" aria-label="Confirm delete">
-            <span>Delete this saved job?</span>
-            <button
-              type="button"
-              class="job-detail__primary-action job-detail__delete-yes"
-              [disabled]="updating()"
-              (click)="confirmDelete()">
-              Yes
-            </button>
-            <button
-              type="button"
-              class="job-detail__secondary-action"
-              [disabled]="updating()"
-              (click)="cancelDeleteConfirm()">
-              Cancel
-            </button>
-          </div>
-        }
+        <button
+          type="button"
+          class="job-detail__secondary-action"
+          [disabled]="updating()"
+          (click)="requestDelete()">
+          Delete
+        </button>
         <a [href]="selectedJob.url" target="_blank" rel="noreferrer">Open source listing</a>
       </div>
     </div>

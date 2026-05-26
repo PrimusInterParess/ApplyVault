@@ -14,6 +14,11 @@ import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CalendarConnectionsFacade } from '../../../settings/data-access/calendar-connections.facade';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 
+interface DeleteConfirmTarget {
+  readonly id: string;
+  readonly title: string;
+}
+
 @Component({
   selector: 'app-job-results-page',
   standalone: true,
@@ -25,6 +30,7 @@ export class JobResultsPageComponent implements OnInit {
   readonly facade = inject(JobResultsFacade);
   readonly skeletonCardCount = [0, 1, 2, 3, 4, 5];
   readonly loadCompletionMessage = signal('');
+  protected readonly deleteConfirm = signal<DeleteConfirmTarget | null>(null);
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
   protected readonly readInputValue = readInputValue;
   private readonly route = inject(ActivatedRoute);
@@ -54,6 +60,44 @@ export class JobResultsPageComponent implements OnInit {
         this.facade.selectWhenLoaded(selectedId);
       }
     });
+  }
+
+  protected beginDeleteConfirm(id: string): void {
+    const job = this.facade.results().find((result) => result.id === id);
+
+    if (!job) {
+      return;
+    }
+
+    this.deleteConfirm.set({
+      id: job.id,
+      title: job.title
+    });
+  }
+
+  protected deleteConfirmMessage(): string {
+    const target = this.deleteConfirm();
+
+    if (!target) {
+      return '';
+    }
+
+    return `Delete "${target.title}"? This removes it from your review workspace and cannot be undone.`;
+  }
+
+  protected confirmDelete(): void {
+    const target = this.deleteConfirm();
+
+    if (!target) {
+      return;
+    }
+
+    this.facade.deleteResult(target.id);
+    this.deleteConfirm.set(null);
+  }
+
+  protected cancelDeleteConfirm(): void {
+    this.deleteConfirm.set(null);
   }
 
   protected handleCaptureReviewSave(event: JobCaptureReviewSaveEvent): void {

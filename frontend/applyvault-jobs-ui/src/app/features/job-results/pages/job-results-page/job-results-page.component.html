@@ -146,7 +146,7 @@
             [connectionError]="calendarConnections.error()"
             [syncingCalendarAccountId]="facade.syncingCalendarAccountId()"
             (toggleRejected)="facade.toggleRejected($event)"
-            (deleteResult)="facade.deleteResult($event)"
+            (deleteResult)="beginDeleteConfirm($event)"
             (saveCaptureReview)="handleCaptureReviewSave($event)"
             (saveDescription)="facade.updateDescription($event.id, $event.description)"
             (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
@@ -155,4 +155,40 @@
         </section>
       </section>
     }
+
+  @if (deleteConfirm(); as confirmTarget) {
+    <div
+      class="jobs-page__dialog-backdrop"
+      role="presentation"
+      (click)="cancelDeleteConfirm()">
+      <div
+        class="jobs-page__dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        (click)="$event.stopPropagation()">
+        <h3 id="delete-dialog-title">Delete saved job?</h3>
+        <p id="delete-dialog-description">{{ deleteConfirmMessage() }}</p>
+        <div class="jobs-page__dialog-actions">
+          <button
+            type="button"
+            class="jobs-page__secondary-action"
+            [disabled]="facade.updatingResultId() === confirmTarget.id"
+            (click)="cancelDeleteConfirm()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="jobs-page__primary-action jobs-page__delete-confirm"
+            [disabled]="facade.updatingResultId() === confirmTarget.id"
+            (click)="confirmDelete()">
+            {{
+              facade.updatingResultId() === confirmTarget.id ? 'Deleting...' : 'Delete'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </main>

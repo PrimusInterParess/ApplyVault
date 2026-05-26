@@ -239,6 +239,93 @@ h1 {
   border-color: var(--app-danger);
 }
 
+.jobs-page__primary-action,
+.jobs-page__secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.82rem 1.05rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--app-transition);
+}
+
+.jobs-page__primary-action {
+  background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-dark) 100%);
+  color: var(--app-surface);
+  box-shadow: var(--app-shadow-md);
+}
+
+.jobs-page__secondary-action {
+  background: linear-gradient(180deg, var(--app-surface-muted) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.jobs-page__primary-action:hover:not(:disabled),
+.jobs-page__secondary-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--app-shadow-hover);
+}
+
+.jobs-page__primary-action:disabled,
+.jobs-page__secondary-action:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.jobs-page__dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(51, 37, 26, 0.45);
+}
+
+.jobs-page__dialog {
+  width: min(100%, 26rem);
+  padding: 1.35rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.jobs-page__dialog h3 {
+  font-size: 1.35rem;
+}
+
+.jobs-page__dialog p {
+  margin-top: 0.75rem;
+  color: var(--app-text-muted);
+  line-height: 1.6;
+}
+
+.jobs-page__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.jobs-page__delete-confirm {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.jobs-page__delete-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--app-danger-soft) 70%, var(--app-danger) 30%);
+}
+
 @media (max-width: 1080px) {
   .jobs-page {
     padding: 1.25rem;

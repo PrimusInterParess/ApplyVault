@@ -22,8 +22,12 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
 - Show whether the latest rejection or interview update came from Gmail sync or a manual dashboard action.
 - Render saved job descriptions as Markdown in the dashboard detail view.
-- Search public EURES job listings from the dashboard with multi-keyword filters, country codes, and paginated results.
-- Inspect EURES listing details in the dashboard and open the original posting in a new tab.
+- Search public EURES job listings from the dashboard with multi-keyword filters, country pickers, shareable URL state, and paginated results.
+- Inspect EURES listing details in the dashboard, save listings into ApplyVault, and open the original posting in a new tab.
+- Filter saved jobs by search term and source hostname, with workspace stats that reflect the full saved dataset.
+- Share one authenticated app shell across Jobs, EURES, and Settings with active nav highlighting and sign-out.
+- Render untrusted HTML safely in job and EURES detail views via centralized sanitization.
+- Confirm before deleting saved jobs and show loading skeletons while lists and detail panels load.
 
 ## Repository Layout
 
@@ -92,6 +96,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `DELETE /api/mail-connections/{id}`
 - `POST /api/eures/jobs/search`
 - `GET /api/eures/jobs/{id}`
+- `POST /api/eures/jobs/{id}/save`
 
 `POST /api/scrape-results` is available for ingestion from the extension. The review, dashboard, mail-connection, and EURES search endpoints require authentication, except for the provider callback that completes OAuth.
 
@@ -128,27 +133,40 @@ npm start
 
 The dashboard runs on `http://localhost:4200/` and reads saved results from `http://localhost:5173/api`.
 
-The saved-job detail view now supports:
+Authenticated dashboard routes (`/jobs`, `/eures`, `/settings`) render inside a shared app shell with primary navigation, the signed-in user, and sign-out. Login and OAuth callback routes stay outside the shell.
 
+The saved jobs page (`/jobs`) supports:
+
+- live search and source filtering across title, company, location, and page type
+- workspace stats for total results, companies, sources, and rejected jobs (stats reflect the full saved dataset, not the filtered subset)
+- distinct empty states for “no saved jobs” vs “no matches for current filters”
+- deep-link selection via `?selected=<job-id>` (used after saving from EURES)
 - capture quality review with field-level confidence and review reasons
-- Markdown description cleanup and rendering
-- interview event editing
-- calendar-event creation for connected providers
+- sanitized Markdown description cleanup and rendering
+- interview event editing and calendar-event creation for connected providers
+- inline delete confirmation before removing a saved job
+- loading skeletons for the list and detail panels
 - status-source messaging that explains whether the latest interview or rejection change was synced from Gmail or saved manually
+- optimistic in-place updates after calendar sync and other mutations (no full list reload)
 
 The settings page also supports:
 
 - connecting and disconnecting Gmail mailboxes through the API
 - showing mailbox sync status, last sync time, and the most recent sync error
 
-The EURES job search page is available at `http://localhost:4200/eures` and supports:
+The EURES job search page (`/eures`) supports:
 
 - multi-keyword search with removable keyword chips and popular IT suggestion groups
-- country/location code filtering such as `dk`
-- paginated result browsing with a detail panel for employer, contract, work hours, and description
-- opening the original EURES listing in a new tab
+- country picker with common ISO codes (Denmark, Sweden, Germany, and others)
+- shareable URL state for keywords, location, page, page size, and selected listing (for example `/eures?keywords=software,angular&location=dk&page=2`)
+- paginated result browsing (10/15/20 per page) with optional jump-to-page on large result sets
+- re-search when keywords or country change after an initial search
+- formatted publication dates, mobile Results/Detail tabs, and focus management after search
+- sanitized HTML rendering for listing descriptions
+- **Save to ApplyVault** on the detail panel, with retry on error and a link to the saved job on `/jobs`
+- loading skeletons during search and detail fetch
 
-Use the `Search EURES` link from the saved jobs page to reach the search view.
+Unknown routes render a 404 page with a link back to `/jobs` when signed in or `/login` when signed out.
 
 ### 5. Run backend tests
 
@@ -183,7 +201,7 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 8. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
 9. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
 10. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
-11. Optionally open the EURES job search page, run a keyword search for a country code, and inspect listing details before opening the source posting.
+11. Optionally open the EURES job search page, run a keyword search for a country, save a listing to ApplyVault, and inspect listing details before opening the source posting.
 
 ## Manual Verification
 
@@ -203,8 +221,14 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 14. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
 15. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
 16. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
-17. Open `/eures`, run a keyword search with a location code, and verify paginated results load with a selectable detail panel.
-18. Select a listing, confirm the detail view shows employer and description content, and verify the external listing link opens the source posting.
+17. On `/jobs`, filter by search term and source; confirm stats stay based on the full saved dataset and clearing filters restores the full list.
+18. Open `/eures`, run a keyword search with a country from the picker, and verify paginated results load with a selectable detail panel.
+19. Refresh `/eures?keywords=software&location=dk&page=1` and confirm the same search state is restored from the URL.
+20. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
+21. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+22. Delete a saved job and confirm the inline confirmation step is required before removal.
+23. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+24. Sign out from any authenticated page and confirm you return to `/login`.
 
 ## Notes
 

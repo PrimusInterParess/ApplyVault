@@ -48,6 +48,7 @@ export class JobResultDetailComponent {
   readonly saveInterviewEvent = output<JobInterviewEventSaveEvent>();
   readonly clearInterviewEvent = output<string>();
   readonly createCalendarEvent = output<{ id: string; connectedAccountId: string }>();
+  readonly confirmingDelete = signal(false);
   readonly editingCaptureReview = signal(false);
   readonly jobTitleDraft = signal('');
   readonly companyNameDraft = signal('');
@@ -118,9 +119,33 @@ export class JobResultDetailComponent {
       this.companyNameDraft.set(job?.captureQuality.companyName.effectiveValue ?? '');
       this.locationDraft.set(job?.captureQuality.location.effectiveValue ?? '');
       this.editingCaptureReview.set(false);
+      this.confirmingDelete.set(false);
       this.descriptionDraft.set(description);
       this.editingDescription.set(false);
     });
+  }
+
+  beginDeleteConfirm(): void {
+    if (this.updating()) {
+      return;
+    }
+
+    this.confirmingDelete.set(true);
+  }
+
+  cancelDeleteConfirm(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  confirmDelete(): void {
+    const job = this.job();
+
+    if (!job || this.updating()) {
+      return;
+    }
+
+    this.deleteResult.emit(job.id);
+    this.confirmingDelete.set(false);
   }
 
   beginCaptureReviewEdit(): void {

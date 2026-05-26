@@ -298,6 +298,34 @@ h1 {
   align-items: start;
 }
 
+.eures-page__skeleton-card,
+.eures-page__skeleton-detail {
+  border: 1px solid var(--app-border);
+  border-radius: calc(var(--app-radius) - 4px);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  box-shadow: var(--app-shadow-md);
+}
+
+.eures-page__skeleton-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.95rem 1rem;
+}
+
+.eures-page__skeleton-detail {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  box-shadow: var(--app-shadow-lg);
+}
+
+.eures-page__skeleton-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
 .eures-page__list-panel {
   --eures-list-visible-count: 15;
   --eures-list-item-height: 6.75rem;

@@ -39,6 +39,24 @@
   justify-content: flex-end;
 }
 
+.job-detail__delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.job-detail__delete-confirm span {
+  color: var(--app-text-muted);
+  font-size: 0.92rem;
+}
+
+.job-detail__delete-yes {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  box-shadow: var(--app-shadow-sm);
+}
+
 :is(
   .job-detail__reject,
   .job-detail__header a,

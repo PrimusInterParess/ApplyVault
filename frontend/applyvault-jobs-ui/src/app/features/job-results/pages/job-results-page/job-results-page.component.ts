@@ -11,16 +11,18 @@ import {
   JobResultDetailComponent
 } from '../../presentation/job-result-detail/job-result-detail.component';
 import { CalendarConnectionsFacade } from '../../../settings/data-access/calendar-connections.facade';
+import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 
 @Component({
   selector: 'app-job-results-page',
   standalone: true,
-  imports: [CommonModule, JobResultCardComponent, JobResultDetailComponent],
+  imports: [CommonModule, JobResultCardComponent, JobResultDetailComponent, SkeletonBlockComponent],
   templateUrl: './job-results-page.component.html',
   styleUrl: './job-results-page.component.scss'
 })
 export class JobResultsPageComponent implements OnInit {
   readonly facade = inject(JobResultsFacade);
+  readonly skeletonCardCount = [0, 1, 2, 3, 4, 5];
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
   private readonly route = inject(ActivatedRoute);
 

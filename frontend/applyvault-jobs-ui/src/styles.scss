@@ -95,6 +95,32 @@ button {
   background: rgba(214, 148, 97, 0.18);
 }
 
+@keyframes app-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-block {
+  border-radius: calc(var(--app-radius) - 2px);
+  background: linear-gradient(
+    90deg,
+    var(--app-surface-muted) 0%,
+    var(--app-bg-soft) 45%,
+    var(--app-surface-muted) 90%
+  );
+  background-size: 200% 100%;
+  animation: app-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-block--rounded {
+  border-radius: 999px;
+}
+
 ::-webkit-scrollbar {
   width: 12px;
 }

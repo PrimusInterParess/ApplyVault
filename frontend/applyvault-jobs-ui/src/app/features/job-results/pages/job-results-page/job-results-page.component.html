@@ -13,12 +13,56 @@
   }
 
   @if (facade.loading()) {
-    <section class="jobs-page__state">
-      <h2>Loading saved results...</h2>
-      <p>Pulling captured job listings from the ApplyVault API.</p>
+    <section class="jobs-page__content" aria-busy="true" aria-label="Loading saved results">
+      <aside class="jobs-page__list">
+        @for (index of skeletonCardCount; track index) {
+          <div class="jobs-page__skeleton-card">
+            <div class="jobs-page__skeleton-row">
+              <app-skeleton-block width="38%" height="0.75rem" />
+              <app-skeleton-block width="28%" height="0.75rem" />
+            </div>
+            <app-skeleton-block width="82%" height="1.1rem" />
+            <app-skeleton-block width="58%" height="0.95rem" />
+            <div class="jobs-page__skeleton-row">
+              <app-skeleton-block width="46%" height="0.85rem" />
+              <app-skeleton-block width="34%" height="0.85rem" />
+            </div>
+            <app-skeleton-block width="100%" height="0.85rem" />
+            <app-skeleton-block width="92%" height="0.85rem" />
+          </div>
+        }
+      </aside>
+
+      <section class="jobs-page__detail">
+        <div class="jobs-page__skeleton-detail">
+          <div class="jobs-page__skeleton-detail-header">
+            <div class="jobs-page__skeleton-detail-copy">
+              <app-skeleton-block width="42%" height="0.75rem" />
+              <app-skeleton-block width="72%" height="2rem" />
+              <app-skeleton-block width="48%" height="1rem" />
+            </div>
+            <div class="jobs-page__skeleton-actions">
+              <app-skeleton-block width="7.5rem" height="2.75rem" />
+              <app-skeleton-block width="7.5rem" height="2.75rem" />
+              <app-skeleton-block width="8.5rem" height="2.75rem" />
+            </div>
+          </div>
+
+          <div class="jobs-page__skeleton-chips">
+            <app-skeleton-block width="5.5rem" height="1.75rem" [rounded]="true" />
+            <app-skeleton-block width="6.5rem" height="1.75rem" [rounded]="true" />
+            <app-skeleton-block width="7rem" height="1.75rem" [rounded]="true" />
+          </div>
+
+          <div class="jobs-page__skeleton-blocks">
+            <app-skeleton-block width="100%" height="5.5rem" />
+            <app-skeleton-block width="100%" height="5.5rem" />
+            <app-skeleton-block width="100%" height="10rem" />
+          </div>
+        </div>
+      </section>
     </section>
-  } @else {
-    @if (facade.error(); as errorMessage) {
+  } @else if (facade.error(); as errorMessage) {
       <section class="jobs-page__state jobs-page__state--error">
         <h2>Dashboard unavailable</h2>
         <p>{{ errorMessage }}</p>
@@ -109,5 +153,4 @@
         </section>
       </section>
     }
-  }
 </main>

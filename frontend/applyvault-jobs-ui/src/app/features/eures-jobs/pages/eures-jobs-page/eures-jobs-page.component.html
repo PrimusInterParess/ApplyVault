@@ -96,10 +96,31 @@
     </section>
   }
 
-  @if (facade.loading() && facade.results().length === 0) {
-    <section class="eures-page__state">
-      <h2>Searching EURES...</h2>
-      <p>Fetching the latest matching listings.</p>
+  @if (facade.loading() && facade.results().length === 0 && !facade.error()) {
+    <section class="eures-page__content" aria-busy="true" aria-label="Searching EURES listings">
+      <aside
+        class="eures-page__list-panel"
+        [style.--eures-list-visible-count]="facade.resultsPerPage()">
+        <div class="eures-page__list">
+          @for (index of skeletonListIndexes(); track index) {
+            <div class="eures-page__skeleton-card">
+              <app-skeleton-block width="78%" height="1.1rem" />
+              <app-skeleton-block width="62%" height="0.95rem" />
+              <app-skeleton-block width="54%" height="0.9rem" />
+              <app-skeleton-block width="38%" height="0.8rem" />
+            </div>
+          }
+        </div>
+      </aside>
+
+      <section class="eures-page__detail">
+        <div class="eures-page__skeleton-detail">
+          <app-skeleton-block width="34%" height="0.75rem" />
+          <app-skeleton-block width="68%" height="1.8rem" />
+          <app-skeleton-block width="52%" height="0.95rem" />
+          <app-skeleton-block width="48%" height="0.95rem" />
+        </div>
+      </section>
     </section>
   } @else if (facade.results().length > 0 || facade.totalResults() > 0) {
     <p class="eures-page__summary">
@@ -130,19 +151,30 @@
         </div>
 
         <div class="eures-page__list">
-          @for (job of facade.results(); track job.id) {
-            <button
-              type="button"
-              class="eures-page__card"
-              [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
-              (click)="selectJob(job.id)">
-              <h2>{{ job.title || 'Untitled listing' }}</h2>
-              <p>{{ job.employer || 'Unknown employer' }}</p>
-              <p>{{ job.location || 'Location not specified' }}</p>
-              @if (job.publicationDate) {
-                <p class="eures-page__meta">Posted {{ job.publicationDate }}</p>
-              }
-            </button>
+          @if (facade.loading()) {
+            @for (index of skeletonListIndexes(); track index) {
+              <div class="eures-page__skeleton-card">
+                <app-skeleton-block width="78%" height="1.1rem" />
+                <app-skeleton-block width="62%" height="0.95rem" />
+                <app-skeleton-block width="54%" height="0.9rem" />
+                <app-skeleton-block width="38%" height="0.8rem" />
+              </div>
+            }
+          } @else {
+            @for (job of facade.results(); track job.id) {
+              <button
+                type="button"
+                class="eures-page__card"
+                [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
+                (click)="selectJob(job.id)">
+                <h2>{{ job.title || 'Untitled listing' }}</h2>
+                <p>{{ job.employer || 'Unknown employer' }}</p>
+                <p>{{ job.location || 'Location not specified' }}</p>
+                @if (job.publicationDate) {
+                  <p class="eures-page__meta">Posted {{ job.publicationDate }}</p>
+                }
+              </button>
+            }
           }
         </div>
 
@@ -189,8 +221,17 @@
 
       <section class="eures-page__detail">
         @if (facade.detailLoading()) {
-          <div class="eures-page__state">
-            <h2>Loading job detail...</h2>
+          <div class="eures-page__skeleton-detail" aria-busy="true" aria-label="Loading job detail">
+            <app-skeleton-block width="34%" height="0.75rem" />
+            <app-skeleton-block width="68%" height="1.8rem" />
+            <app-skeleton-block width="52%" height="0.95rem" />
+            <app-skeleton-block width="48%" height="0.95rem" />
+            <app-skeleton-block width="44%" height="0.95rem" />
+            <div class="eures-page__skeleton-detail-actions">
+              <app-skeleton-block width="7.5rem" height="2.75rem" />
+              <app-skeleton-block width="9.5rem" height="2.75rem" />
+            </div>
+            <app-skeleton-block width="100%" height="12rem" />
           </div>
         } @else if (facade.detailError()) {
           <div class="eures-page__state eures-page__state--error">

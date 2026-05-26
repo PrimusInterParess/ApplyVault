@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { filter, skip } from 'rxjs';
 
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
+import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import {
   EURES_PAGE_SIZE_OPTIONS,
   EuresJobsFacade
@@ -16,7 +17,7 @@ import { euresQueryParamsEqual } from '../../utils/eures-url-state.utils';
 @Component({
   selector: 'app-eures-jobs-page',
   standalone: true,
-  imports: [CommonModule, SafeHtmlPipe, RouterLink],
+  imports: [CommonModule, SafeHtmlPipe, RouterLink, SkeletonBlockComponent],
   providers: [EuresJobsFacade],
   templateUrl: './eures-jobs-page.component.html',
   styleUrl: './eures-jobs-page.component.scss'
@@ -28,6 +29,9 @@ export class EuresJobsPageComponent implements OnInit {
   readonly pageSizeOptions = EURES_PAGE_SIZE_OPTIONS;
   readonly draftKeyword = signal('');
   readonly jumpToPageValue = signal('');
+  protected readonly skeletonListIndexes = computed(() =>
+    Array.from({ length: this.facade.resultsPerPage() }, (_, index) => index)
+  );
 
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

@@ -200,13 +200,22 @@ h1 {
   font-size: 0.92rem;
 }
 
-.eures-page__field input {
+.eures-page__field input,
+.eures-page__field select {
   width: 100%;
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--app-border);
   border-radius: calc(var(--app-radius) - 4px);
   background: var(--app-surface);
   color: inherit;
+}
+
+.eures-page__field--compact {
+  font-size: 0.84rem;
+}
+
+.eures-page__field--compact span {
+  font-size: 0.82rem;
 }
 
 .eures-page__search-button,
@@ -290,13 +299,28 @@ h1 {
 }
 
 .eures-page__list-panel {
-  --eures-list-visible-count: 4;
+  --eures-list-visible-count: 15;
   --eures-list-item-height: 6.75rem;
   --eures-list-gap: 0.85rem;
   display: grid;
   gap: 0.85rem;
   padding: 0.85rem;
   isolation: isolate;
+}
+
+.eures-page__list-controls {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.eures-page__jump-to-page {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.eures-page__jump-to-page .eures-page__field {
+  flex: 1;
 }
 
 .eures-page__list {

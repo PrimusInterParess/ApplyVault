@@ -1,4 +1,5 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { ParamMap } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
@@ -10,11 +11,30 @@ import {
   EuresJobSearchRequest
 } from '../models/eures-job.model';
 import {
+  EURES_DEFAULT_LOCATION_CODE,
+  isKnownEuresLocationCode,
+  normalizeEuresLocationCode
+} from '../models/eures-location-options';
+import {
   canonicalizeEuresKeyword,
   matchesEuresKeyword,
   normalizeEuresKeywords
 } from '../utils/eures-keyword.utils';
+import {
+  buildEuresUrlQueryParams,
+  EuresUrlQueryParams
+} from '../utils/eures-url-state.utils';
 import { EuresJobsApiService } from './eures-jobs-api.service';
+
+export const EURES_DEFAULT_RESULTS_PER_PAGE = 15;
+
+export const EURES_PAGE_SIZE_OPTIONS = [10, 15, 20] as const;
+
+type FetchPageOptions = {
+  resetSelection: boolean;
+  autoSelectFirst: boolean;
+  selectJobId?: string | null;
+};
 
 @Injectable()
 export class EuresJobsFacade {
@@ -25,10 +45,11 @@ export class EuresJobsFacade {
   private detailSubscription: Subscription | null = null;
   private saveSubscription: Subscription | null = null;
 
-  readonly resultsPerPage = 4;
+  readonly resultsPerPage = signal(EURES_DEFAULT_RESULTS_PER_PAGE);
 
   readonly keywords = signal<string[]>(['software']);
-  readonly locationCode = signal('dk');
+  readonly locationCode = signal(EURES_DEFAULT_LOCATION_CODE);
+  readonly locationInitWarning = signal<string | null>(null);
   readonly requestLanguage = signal('en');
   readonly page = signal(1);
   readonly loading = signal(false);
@@ -44,6 +65,7 @@ export class EuresJobsFacade {
   readonly saveError = signal<string | null>(null);
   readonly savedJobId = signal<string | null>(null);
   readonly saveAlreadyExists = signal(false);
+  readonly searchGeneration = signal(0);
 
   readonly keywordsLabel = computed(() => this.keywords().join(', '));
 
@@ -54,7 +76,7 @@ export class EuresJobsFacade {
       return 0;
     }
 
-    return Math.ceil(total / this.resultsPerPage);
+    return Math.ceil(total / this.resultsPerPage());
   });
 
   readonly pageRangeLabel = computed(() => {
@@ -65,8 +87,8 @@ export class EuresJobsFacade {
       return '';
     }
 
-    const start = (currentPage - 1) * this.resultsPerPage + 1;
-    const end = Math.min(currentPage * this.resultsPerPage, total);
+    const start = (currentPage - 1) * this.resultsPerPage() + 1;
+    const end = Math.min(currentPage * this.resultsPerPage(), total);
     return `${start}-${end} of ${total}`;
   });
 
@@ -74,6 +96,8 @@ export class EuresJobsFacade {
   readonly canGoToNextPage = computed(
     () => this.page() < this.totalPages() && !this.loading()
   );
+
+  readonly hasValidLocation = computed(() => isKnownEuresLocationCode(this.locationCode()));
 
   constructor() {
     effect(
@@ -87,12 +111,91 @@ export class EuresJobsFacade {
     );
   }
 
-  initialize(): void {
+  initFromQueryParams(params: ParamMap): void {
+    const keywordsParam = params.get('keywords');
+
+    if (keywordsParam?.trim()) {
+      const parsedKeywords = normalizeEuresKeywords(keywordsParam.split(/[,;]+/));
+
+      if (parsedKeywords.length > 0) {
+        this.keywords.set(parsedKeywords);
+      }
+    }
+
+    const locationParam = params.get('location');
+
+    if (locationParam?.trim()) {
+      const normalizedLocation = normalizeEuresLocationCode(locationParam);
+
+      if (isKnownEuresLocationCode(normalizedLocation)) {
+        this.locationCode.set(normalizedLocation);
+        this.locationInitWarning.set(null);
+      } else {
+        this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
+        this.locationInitWarning.set(
+          `Unknown country code "${locationParam.trim()}". Using Denmark instead.`
+        );
+      }
+    }
+
+    const pageParam = params.get('page');
+
+    if (pageParam) {
+      const parsedPage = Number.parseInt(pageParam, 10);
+
+      if (!Number.isNaN(parsedPage) && parsedPage >= 1) {
+        this.page.set(parsedPage);
+      }
+    }
+
+    const pageSizeParam = params.get('pageSize');
+
+    if (pageSizeParam) {
+      const parsedPageSize = Number.parseInt(pageSizeParam, 10);
+
+      if (EURES_PAGE_SIZE_OPTIONS.includes(parsedPageSize as (typeof EURES_PAGE_SIZE_OPTIONS)[number])) {
+        this.resultsPerPage.set(parsedPageSize);
+      }
+    }
+  }
+
+  loadInitialSearch(selectJobId?: string | null): void {
     if (!this.authService.session() || this.hasSearched()) {
       return;
     }
 
-    this.search();
+    if (!this.hasValidLocation()) {
+      return;
+    }
+
+    this.fetchPage(this.page(), {
+      resetSelection: !selectJobId,
+      autoSelectFirst: !selectJobId,
+      selectJobId: selectJobId ?? null
+    });
+  }
+
+  restoreFromUrlState(selectJobId?: string | null): void {
+    if (!this.authService.session() || !this.hasValidLocation()) {
+      return;
+    }
+
+    this.fetchPage(this.page(), {
+      resetSelection: !selectJobId,
+      autoSelectFirst: !selectJobId,
+      selectJobId: selectJobId ?? null
+    });
+  }
+
+  buildQueryParamState(): EuresUrlQueryParams {
+    return buildEuresUrlQueryParams({
+      keywords: this.keywords(),
+      locationCode: this.locationCode(),
+      page: this.page(),
+      selectedJobId: this.selectedJobId(),
+      resultsPerPage: this.resultsPerPage(),
+      defaultResultsPerPage: EURES_DEFAULT_RESULTS_PER_PAGE
+    });
   }
 
   search(draftKeywords?: string): void {
@@ -198,6 +301,31 @@ export class EuresJobsFacade {
     this.fetchPage(this.page() + 1, { resetSelection: false, autoSelectFirst: true });
   }
 
+  goToPage(page: number): void {
+    if (page < 1 || this.loading()) {
+      return;
+    }
+
+    this.fetchPage(page, { resetSelection: false, autoSelectFirst: true });
+  }
+
+  updateResultsPerPage(value: number): void {
+    if (!EURES_PAGE_SIZE_OPTIONS.includes(value as (typeof EURES_PAGE_SIZE_OPTIONS)[number])) {
+      return;
+    }
+
+    if (this.resultsPerPage() === value) {
+      return;
+    }
+
+    this.resultsPerPage.set(value);
+    this.page.set(1);
+
+    if (this.hasSearched()) {
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
+    }
+  }
+
   select(id: string): void {
     if (!id || this.selectedJobId() === id) {
       return;
@@ -228,7 +356,14 @@ export class EuresJobsFacade {
   }
 
   updateLocationCode(value: string): void {
-    this.locationCode.set(value.trim().toLowerCase() || 'dk');
+    const normalizedLocation = normalizeEuresLocationCode(value);
+
+    if (!isKnownEuresLocationCode(normalizedLocation)) {
+      return;
+    }
+
+    this.locationCode.set(normalizedLocation);
+    this.locationInitWarning.set(null);
   }
 
   saveSelectedJob(): void {
@@ -302,14 +437,16 @@ export class EuresJobsFacade {
     this.saveAlreadyExists.set(false);
   }
 
-  private fetchPage(
-    page: number,
-    options: { resetSelection: boolean; autoSelectFirst: boolean }
-  ): void {
+  private fetchPage(page: number, options: FetchPageOptions): void {
     const normalizedKeywords = normalizeEuresKeywords(this.keywords());
 
     if (normalizedKeywords.length === 0) {
       this.error.set('Select or add at least one keyword to search EURES.');
+      return;
+    }
+
+    if (!this.hasValidLocation()) {
+      this.error.set('Select a valid country before searching EURES.');
       return;
     }
 
@@ -337,7 +474,8 @@ export class EuresJobsFacade {
         this.results.set(response.jobs);
         this.loading.set(false);
         this.searchSubscription = null;
-        this.syncSelectionAfterSearch(response.jobs, options.autoSelectFirst);
+        this.syncSelectionAfterSearch(response.jobs, options);
+        this.searchGeneration.update((generation) => generation + 1);
       },
       error: (error: unknown) => {
         this.hasSearched.set(true);
@@ -355,17 +493,22 @@ export class EuresJobsFacade {
   ): EuresJobSearchRequest {
     return {
       keywords,
-      locationCode: this.locationCode().trim() || 'dk',
+      locationCode: this.locationCode().trim() || EURES_DEFAULT_LOCATION_CODE,
       page,
-      resultsPerPage: this.resultsPerPage,
+      resultsPerPage: this.resultsPerPage(),
       requestLanguage: this.requestLanguage().trim() || 'en'
     };
   }
 
   private syncSelectionAfterSearch(
     jobs: readonly EuresJobListing[],
-    autoSelectFirst: boolean
+    options: FetchPageOptions
   ): void {
+    if (options.selectJobId) {
+      this.select(options.selectJobId);
+      return;
+    }
+
     const selectedId = this.selectedJobId();
 
     if (selectedId && jobs.some((job) => job.id === selectedId)) {
@@ -376,7 +519,7 @@ export class EuresJobsFacade {
       return;
     }
 
-    if (autoSelectFirst && jobs.length > 0) {
+    if (options.autoSelectFirst && jobs.length > 0) {
       this.select(jobs[0].id);
       return;
     }
@@ -428,7 +571,9 @@ export class EuresJobsFacade {
     this.cancelPendingRequests();
     this.resetSaveState();
     this.keywords.set(['software']);
-    this.locationCode.set('dk');
+    this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
+    this.locationInitWarning.set(null);
+    this.resultsPerPage.set(EURES_DEFAULT_RESULTS_PER_PAGE);
     this.requestLanguage.set('en');
     this.loading.set(false);
     this.detailLoading.set(false);

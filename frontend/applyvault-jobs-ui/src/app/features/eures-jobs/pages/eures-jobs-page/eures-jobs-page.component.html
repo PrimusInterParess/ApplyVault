@@ -1,7 +1,7 @@
 <main class="eures-page">
   <section class="eures-page__hero">
     <h1>EURES job search</h1>
-    <p class="eures-page__intro">Combine keywords and a country code to narrow EURES listings, then open the source posting.</p>
+    <p class="eures-page__intro">Combine keywords and a country to narrow EURES listings, then open the source posting.</p>
   </section>
 
   <section class="eures-page__search">
@@ -17,7 +17,7 @@
             <span class="eures-page__selected-keyword-remove" aria-hidden="true">×</span>
           </button>
         }
-        <button type="button" class="eures-page__clear-keywords" (click)="facade.clearKeywords()">
+        <button type="button" class="eures-page__clear-keywords" (click)="clearKeywords()">
           Clear all
         </button>
       </div>
@@ -35,13 +35,14 @@
       </label>
 
       <label class="eures-page__field">
-        <span>Location code</span>
-        <input
-          type="text"
+        <span>Country</span>
+        <select
           [value]="facade.locationCode()"
-          placeholder="dk"
-          (input)="facade.updateLocationCode(asValue($event))"
-          (keydown.enter)="runSearchFromKeyboard($event)" />
+          (change)="updateLocationCode($event)">
+          @for (option of locationOptions; track option.code) {
+            <option [value]="option.code">{{ option.label }}</option>
+          }
+        </select>
       </label>
 
       <button
@@ -52,6 +53,10 @@
         {{ facade.loading() ? 'Searching...' : 'Search EURES' }}
       </button>
     </div>
+
+    @if (facade.locationInitWarning(); as locationWarning) {
+      <p class="eures-page__inline-error" role="status">{{ locationWarning }}</p>
+    }
 
     <div class="eures-page__suggestions" aria-label="Popular IT search terms">
       <div class="eures-page__suggestions-header">
@@ -108,14 +113,29 @@
     </p>
 
     <section class="eures-page__content">
-      <aside class="eures-page__list-panel">
+      <aside
+        class="eures-page__list-panel"
+        [style.--eures-list-visible-count]="facade.resultsPerPage()">
+        <div class="eures-page__list-controls">
+          <label class="eures-page__field eures-page__field--compact">
+            <span>Results per page</span>
+            <select
+              [value]="facade.resultsPerPage()"
+              (change)="updatePageSize($event)">
+              @for (pageSize of pageSizeOptions; track pageSize) {
+                <option [value]="pageSize">{{ pageSize }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
         <div class="eures-page__list">
           @for (job of facade.results(); track job.id) {
             <button
               type="button"
               class="eures-page__card"
               [class.eures-page__card--selected]="facade.selectedJobId() === job.id"
-              (click)="facade.select(job.id)">
+              (click)="selectJob(job.id)">
               <h2>{{ job.title || 'Untitled listing' }}</h2>
               <p>{{ job.employer || 'Unknown employer' }}</p>
               <p>{{ job.location || 'Location not specified' }}</p>
@@ -131,7 +151,7 @@
             <button
               type="button"
               class="eures-page__pagination-button"
-              (click)="facade.goToPreviousPage()"
+              (click)="goToPreviousPage()"
               [disabled]="!facade.canGoToPreviousPage()">
               Previous
             </button>
@@ -141,11 +161,29 @@
             <button
               type="button"
               class="eures-page__pagination-button"
-              (click)="facade.goToNextPage()"
+              (click)="goToNextPage()"
               [disabled]="!facade.canGoToNextPage()">
               Next
             </button>
           </div>
+
+          @if (showJumpToPage()) {
+            <form class="eures-page__jump-to-page" (submit)="jumpToPage($event)">
+              <label class="eures-page__field eures-page__field--compact">
+                <span>Jump to page</span>
+                <input
+                  type="number"
+                  min="1"
+                  [max]="facade.totalPages()"
+                  [value]="jumpToPageValue()"
+                  placeholder="Page number"
+                  (input)="updateJumpToPageValue($event)" />
+              </label>
+              <button type="submit" class="eures-page__pagination-button" [disabled]="facade.loading()">
+                Go
+              </button>
+            </form>
+          }
         }
       </aside>
 
@@ -159,7 +197,7 @@
             <h2>Detail unavailable</h2>
             <p>{{ facade.detailError() }}</p>
             @if (facade.selectedJobId(); as selectedId) {
-              <button type="button" class="eures-page__search-button" (click)="facade.select(selectedId)">
+              <button type="button" class="eures-page__search-button" (click)="selectJob(selectedId)">
                 Retry detail
               </button>
             }
@@ -240,7 +278,7 @@
         @if (facade.keywordsLabel()) {
           <strong>{{ facade.keywordsLabel() }}</strong>
         }
-        in EURES for location <strong>{{ facade.locationCode() }}</strong>. Try fewer or broader keywords.
+        in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>. Try fewer or broader keywords.
       </p>
     </section>
   } @else if (!facade.error()) {

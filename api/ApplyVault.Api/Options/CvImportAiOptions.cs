@@ -43,7 +43,9 @@ public sealed class CvImportAiOptions
         - For Summary sections, use a single entry with prose in summary; title may be empty or "Summary"
         - Do not use markdown, HTML, or bold markers in any field
         - Preserve contact details (email, phone, LinkedIn, GitHub, website, location) in a Custom section with heading "Contact"
+        - Contact section must include every email, phone, LinkedIn, GitHub, website, and location line from the header block
         - Put contact details in bullets when there are multiple items; keep page numbers out
+        - Choose field placement by sectionType context, but never omit source lines; move uncertain lines to Custom
         - If contact lines appear before summary/profile text, split them into a Contact section and keep the prose in Summary
         - If a raw section mixes experience and projects, split into separate sections with correct sectionType
         - Do not invent facts; improve structure only

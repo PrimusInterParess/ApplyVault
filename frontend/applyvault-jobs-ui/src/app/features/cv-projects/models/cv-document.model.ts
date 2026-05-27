@@ -1,3 +1,5 @@
+import { CvStructuredDocument } from './cv-structured.model';
+
 export interface CvDocument {
   readonly id: string;
   readonly originalFileName: string;
@@ -21,5 +23,10 @@ export interface CvStructuredImportSummary {
 
 export interface CvDocumentUploadResult {
   readonly document: CvDocument;
+  readonly import: CvStructuredImportSummary;
+}
+
+export interface CvStructuredReimportResult {
+  readonly structured: CvStructuredDocument | null;
   readonly import: CvStructuredImportSummary;
 }

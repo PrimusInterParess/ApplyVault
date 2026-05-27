@@ -9,6 +9,10 @@ internal static class CvStructuredImportEntrySupport
         @"\+?\d[\d\s().\-]{6,}\d",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex PostalCodePattern = new(
+        @"\b\d{4}\s+[A-Za-zÀ-ÿ]",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static bool EntryHasContent(CvStructuredEntryWriteDto entry) =>
         !string.IsNullOrWhiteSpace(entry.Title)
         || !string.IsNullOrWhiteSpace(entry.Subtitle)
@@ -46,6 +50,12 @@ internal static class CvStructuredImportEntrySupport
             || trimmed.StartsWith("email:", StringComparison.OrdinalIgnoreCase)
             || trimmed.StartsWith("phone:", StringComparison.OrdinalIgnoreCase)
             || trimmed.StartsWith("tel:", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("mob:", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("mobile:", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("tlf:", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("tlf.", StringComparison.OrdinalIgnoreCase)
+            || PostalCodePattern.IsMatch(trimmed)
+            || LooksLikeLocationLine(trimmed)
             || IsContactLabelLine(trimmed);
     }
 
@@ -77,9 +87,9 @@ internal static class CvStructuredImportEntrySupport
 
             if (inContactBlock)
             {
-                if (LooksLikeContactLine(trimmed))
+                if (LooksLikeContactLine(trimmed) || LooksLikeLocationLine(trimmed) && (contactLines.Count > 0 || nameLine is not null))
                 {
-                    contactLines.AddRange(SplitContactTokens(trimmed));
+                    contactLines.AddRange(LooksLikeContactLine(trimmed) ? SplitContactTokens(trimmed) : [trimmed]);
                     continue;
                 }
 
@@ -304,6 +314,26 @@ internal static class CvStructuredImportEntrySupport
     private static bool IsContactLabelLine(string line) =>
         line.StartsWith("contact", StringComparison.OrdinalIgnoreCase)
         && line.Length <= 32;
+
+    private static bool LooksLikeLocationLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.Length > 80)
+        {
+            return false;
+        }
+
+        if (!line.Contains(',', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (CvStructuredImportHeuristic.LooksLikeDateLine(line))
+        {
+            return false;
+        }
+
+        return line.Count(char.IsLetter) >= 4;
+    }
 
     private static bool FieldContains(string needle, string? haystack)
     {

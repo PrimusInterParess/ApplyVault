@@ -72,6 +72,10 @@ export class CvStructuredFacade {
     this.saveError.set(null);
   }
 
+  setStructured(document: CvStructuredDocument): void {
+    this.structured.set(document);
+  }
+
   private cancelLoad(): void {
     this.loadSubscription?.unsubscribe();
     this.loadSubscription = null;

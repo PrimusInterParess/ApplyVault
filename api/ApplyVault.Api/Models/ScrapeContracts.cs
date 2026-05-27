@@ -313,6 +313,11 @@ public sealed record CvStructuredImportPreviewDto(
     string? Notice
 );
 
+public sealed record CvStructuredReimportResultDto(
+    CvStructuredDocumentDto? Structured,
+    CvStructuredImportSummaryDto Import
+);
+
 public sealed record CreateCalendarEventRequest(
     Guid ConnectedAccountId
 );

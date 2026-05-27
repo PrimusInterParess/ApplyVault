@@ -12,6 +12,7 @@ public sealed class CvDocumentsController(
     IAppUserService appUserService,
     ICvDocumentService cvDocumentService,
     ICvStructuredDocumentService cvStructuredDocumentService,
+    ICvStructuredImportService cvStructuredImportService,
     ICvDocumentExportService cvDocumentExportService) : ControllerBase
 {
     [HttpGet("current")]
@@ -144,6 +145,29 @@ public sealed class CvDocumentsController(
             }
 
             return BadRequest(message);
+        }
+    }
+
+    [HttpPost("current/structured/reimport")]
+    public async Task<ActionResult<CvStructuredReimportResultDto>> ReimportStructured(
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            var result = await cvStructuredImportService.ReimportAndPersistAsync(user, cancellationToken);
+
+            if (!result.Import.Succeeded)
+            {
+                return BadRequest(result.Import.Notice ?? "Structured re-import failed.");
+            }
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
         }
     }
 

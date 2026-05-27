@@ -18,7 +18,11 @@ import { renderInlineMarkdown, renderMarkdown } from '../../utils/markdown.util'
   standalone: true,
   imports: [SafeHtmlPipe],
   templateUrl: './cv-structured-section-panel.component.html',
-  styleUrl: './cv-structured-section-panel.component.scss'
+  styleUrl: './cv-structured-section-panel.component.scss',
+  host: {
+    '[class.cv-section-host--contact]': 'isContactSection(activeSection())',
+    '[class.cv-section-host--summary]': 'isSummarySection(activeSection().sectionType)'
+  }
 })
 export class CvStructuredSectionPanelComponent {
   readonly section = input.required<CvStructuredSection>();
@@ -74,6 +78,10 @@ export class CvStructuredSectionPanelComponent {
 
   protected isSkillsSection(sectionType: CvSectionType): boolean {
     return sectionType === 'Skills';
+  }
+
+  protected isContactSection(section: CvStructuredSection): boolean {
+    return section.heading.trim().toLowerCase() === 'contact';
   }
 
   protected entryMeta(entry: CvStructuredEntry): string {

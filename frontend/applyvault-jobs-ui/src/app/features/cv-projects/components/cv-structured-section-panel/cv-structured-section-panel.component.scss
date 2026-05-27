@@ -2,6 +2,16 @@
   display: block;
 }
 
+:host(.cv-section-host--contact) {
+  margin-bottom: -0.1rem;
+}
+
+:host(.cv-section-host--summary) {
+  margin-top: -0.1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
 .cv-section {
   display: grid;
   gap: 0;
@@ -24,51 +34,61 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  padding: 0 0 0.55rem;
+  padding: 0 0 0.3rem;
   border-bottom: 1px solid var(--app-border);
   background: transparent;
 }
 
+.cv-section--contact .cv-section__header {
+  justify-content: flex-end;
+  padding-bottom: 0.15rem;
+  border-bottom: none;
+}
+
 .cv-section--editing .cv-section__header {
   align-items: start;
-  padding: 1rem 1.15rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--app-border);
   background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-bg-soft) 100%);
 }
 
 .cv-section__intro {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.15rem;
   min-width: 0;
   flex: 1 1 14rem;
 }
 
 .cv-section__title {
   margin: 0;
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  line-height: 1.25;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--app-accent);
+  line-height: 1.2;
 }
 
 .cv-section__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .cv-section__edit,
 .cv-section__save,
 .cv-section__cancel {
-  min-height: 2.25rem;
-  padding: 0.45rem 0.85rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
   border-radius: var(--app-radius);
   border: 1px solid var(--app-border-strong);
   background: var(--app-bg-soft);
   color: var(--app-text);
   font: inherit;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: var(--app-transition);
 }
@@ -98,68 +118,93 @@
 
 .cv-section__error {
   margin: 0;
-  padding: 0.75rem 1.15rem;
+  padding: 0.65rem 1rem;
   border-bottom: 1px solid color-mix(in srgb, var(--app-danger) 25%, var(--app-border));
   background: color-mix(in srgb, var(--app-danger) 6%, var(--app-surface));
   color: var(--app-danger);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
 }
 
 .cv-section__empty {
   margin: 0;
-  padding: 0.85rem 0 0;
+  padding: 0.45rem 0 0;
   color: var(--app-text-muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .cv-section__document {
   display: grid;
-  gap: 0.85rem;
-  padding: 0.85rem 0 0;
+  gap: 0.35rem;
+  padding: 0.35rem 0 0;
 }
 
-.cv-section--summary .cv-section__document {
-  padding-top: 0.65rem;
+.cv-section--summary .cv-section__document,
+.cv-section--contact .cv-section__document {
+  gap: 0.15rem;
+  padding-top: 0.15rem;
 }
 
 .cv-section__entry {
   display: grid;
-  gap: 0.5rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
-  background: var(--app-bg-soft);
-}
-
-.cv-section--summary .cv-section__entry {
-  gap: 0;
-  padding: 0;
+  gap: 0.2rem;
+  padding: 0.35rem 0;
   border: none;
+  border-bottom: 1px solid var(--app-border);
   border-radius: 0;
   background: transparent;
 }
 
+.cv-section__entry:last-child {
+  border-bottom: none;
+}
+
+.cv-section--summary .cv-section__entry,
+.cv-section--contact .cv-section__entry {
+  gap: 0.1rem;
+  padding: 0;
+  border: none;
+}
+
 .cv-section--summary .cv-section__entry-body {
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .cv-section__entry-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.cv-section__entry-title--contact {
+  font-size: 1.05rem;
+  color: var(--app-accent);
+}
+
+.cv-section__contact-lines {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.84rem;
   line-height: 1.35;
+}
+
+.cv-section__contact-separator {
+  margin: 0 0.35rem;
+  color: var(--app-border-strong);
 }
 
 .cv-section__entry-meta {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .cv-section__entry-body {
-  line-height: 1.65;
+  line-height: 1.45;
   color: var(--app-text);
+  font-size: 0.92rem;
 }
 
 .cv-section__entry-body :where(p) {
@@ -167,71 +212,72 @@
 }
 
 .cv-section__entry-body :where(p + p) {
-  margin-top: 0.5rem;
+  margin-top: 0.3rem;
 }
 
 .cv-section__bullets {
-  margin: 0.15rem 0 0;
-  padding-left: 1.15rem;
-  line-height: 1.6;
+  margin: 0.05rem 0 0;
+  padding-left: 1rem;
+  line-height: 1.4;
+  font-size: 0.92rem;
 }
 
 .cv-section__bullets li + li {
-  margin-top: 0.2rem;
+  margin-top: 0.1rem;
 }
 
 .cv-section__tech {
-  margin: 0.15rem 0 0;
+  margin: 0.05rem 0 0;
   color: var(--app-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.84rem;
+  line-height: 1.4;
 }
 
 .cv-section__skills {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 0.15rem;
+  gap: 0.3rem;
+  margin-top: 0.05rem;
 }
 
 .cv-section__skills span {
   display: inline-flex;
   align-items: center;
-  min-height: 1.65rem;
-  padding: 0.15rem 0.6rem;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--app-border-strong);
   background: var(--app-surface);
   color: var(--app-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
 .cv-section__editor-wrap {
   display: grid;
-  gap: 0.55rem;
-  padding: 1rem 1.15rem 1.2rem;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem 1rem;
   background: var(--app-bg-soft);
 }
 
 .cv-section__editor-hint {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: 0.84rem;
-  line-height: 1.5;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .cv-section__editor {
   width: 100%;
   min-height: 14rem;
-  padding: 0.85rem 0.95rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius);
   background: var(--app-surface);
   color: var(--app-text);
   font: inherit;
-  font-size: 0.92rem;
-  line-height: 1.65;
+  font-size: 0.9rem;
+  line-height: 1.55;
   resize: vertical;
 }
 
@@ -248,11 +294,11 @@
 
 @media (max-width: 640px) {
   .cv-section__header {
-    padding: 0.95rem;
+    padding: 0.85rem;
   }
 
   .cv-section__document,
   .cv-section__editor-wrap {
-    padding-inline: 0.95rem;
+    padding-inline: 0.85rem;
   }
 }

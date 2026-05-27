@@ -2,10 +2,13 @@
   class="cv-section"
   [class.cv-section--editing]="editing()"
   [class.cv-section--summary]="isSummarySection(activeSection().sectionType)"
-  [class.cv-section--skills]="isSkillsSection(activeSection().sectionType)">
+  [class.cv-section--skills]="isSkillsSection(activeSection().sectionType)"
+  [class.cv-section--contact]="isContactSection(activeSection())">
   <header class="cv-section__header">
     <div class="cv-section__intro">
-      <h3 class="cv-section__title">{{ activeSection().heading || activeSection().sectionType || 'Untitled section' }}</h3>
+      @if (!isContactSection(activeSection()) || editing()) {
+        <h3 class="cv-section__title">{{ activeSection().heading || activeSection().sectionType || 'Untitled section' }}</h3>
+      }
     </div>
 
     <div class="cv-section__actions">
@@ -45,12 +48,25 @@
       @for (entry of sortedEntries(); track entry.id) {
         <article
           class="cv-section__entry"
-          [class.cv-section__entry--summary]="isSummarySection(activeSection().sectionType)">
+          [class.cv-section__entry--summary]="isSummarySection(activeSection().sectionType)"
+          [class.cv-section__entry--contact]="isContactSection(activeSection())">
           @if (entry.title.trim() && !isSummarySection(activeSection().sectionType)) {
-            <h4 class="cv-section__entry-title" [innerHTML]="renderInlineMarkdown(entry.title) | safeHtml"></h4>
+            <h4
+              class="cv-section__entry-title"
+              [class.cv-section__entry-title--contact]="isContactSection(activeSection())"
+              [innerHTML]="renderInlineMarkdown(entry.title) | safeHtml"></h4>
           }
 
-          @if (entryMeta(entry) && !isSummarySection(activeSection().sectionType)) {
+          @if (isContactSection(activeSection()) && entry.bullets.length > 0) {
+            <p class="cv-section__contact-lines">
+              @for (bullet of entry.bullets; track $index) {
+                @if ($index > 0) {
+                  <span class="cv-section__contact-separator" aria-hidden="true">|</span>
+                }
+                <span [innerHTML]="renderInlineMarkdown(bullet) | safeHtml"></span>
+              }
+            </p>
+          } @else if (entryMeta(entry) && !isSummarySection(activeSection().sectionType)) {
             <p class="cv-section__entry-meta" [innerHTML]="renderInlineMarkdown(entryMeta(entry)) | safeHtml"></p>
           }
 
@@ -60,7 +76,7 @@
               [innerHTML]="renderMarkdown(entry.summary) | safeHtml"></div>
           }
 
-          @if (entry.bullets.length > 0) {
+          @if (entry.bullets.length > 0 && !isContactSection(activeSection())) {
             <ul class="cv-section__bullets">
               @for (bullet of entry.bullets; track $index) {
                 <li [innerHTML]="renderInlineMarkdown(bullet) | safeHtml"></li>

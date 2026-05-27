@@ -78,6 +78,7 @@ public sealed class CvDocumentsExportIntegrationTests(ApplyVaultWebApplicationFa
 
         Assert.Contains("Senior", extractedText, StringComparison.Ordinal);
         Assert.Contains("Engineer", extractedText, StringComparison.Ordinal);
+        Assert.Contains("jane@example.com", extractedText, StringComparison.OrdinalIgnoreCase);
         Assert.NotEqual(Guid.Empty, originalEntryId);
     }
 

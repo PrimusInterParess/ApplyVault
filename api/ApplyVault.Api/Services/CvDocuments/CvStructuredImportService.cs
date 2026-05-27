@@ -8,7 +8,15 @@ namespace ApplyVault.Api.Services;
 
 public interface ICvStructuredImportService
 {
+    Task<CvStructuredImportPreviewDto> PreviewImportAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default);
+
     Task<CvStructuredImportSummaryDto> ImportAndPersistAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default);
+
+    Task<CvStructuredReimportResultDto> ReimportAndPersistAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default);
 }
@@ -22,6 +30,14 @@ public sealed class CvStructuredImportService(
     ICvStructuredDocumentService structuredDocumentService,
     IOptions<GoogleAiOptions> googleAiOptions) : ICvStructuredImportService
 {
+    public async Task<CvStructuredImportPreviewDto> PreviewImportAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        var pdfBytes = await ReadCurrentPdfBytesAsync(user, cancellationToken);
+        return await BuildPreviewAsync(pdfBytes, cancellationToken);
+    }
+
     public async Task<CvStructuredImportSummaryDto> ImportAndPersistAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default)
@@ -67,6 +83,57 @@ public sealed class CvStructuredImportService(
         }
     }
 
+    public async Task<CvStructuredReimportResultDto> ReimportAndPersistAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var preview = await PreviewImportAsync(user, cancellationToken);
+
+            if (preview.Sections.Count == 0)
+            {
+                return new CvStructuredReimportResultDto(
+                    null,
+                    new CvStructuredImportSummaryDto(
+                        false,
+                        0,
+                        preview.UsedAi,
+                        false,
+                        "No structured sections could be generated from the uploaded CV PDF."));
+            }
+
+            await structuredDocumentService.SaveStructuredAsync(
+                user,
+                new SaveCvStructuredDocumentRequest(preview.Sections),
+                markImported: true,
+                cancellationToken);
+
+            var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
+                ?? throw new InvalidOperationException("Structured CV content could not be loaded after re-import.");
+
+            return new CvStructuredReimportResultDto(
+                structured,
+                new CvStructuredImportSummaryDto(
+                    true,
+                    preview.Sections.Count,
+                    preview.UsedAi,
+                    false,
+                    preview.Notice));
+        }
+        catch (Exception exception)
+        {
+            return new CvStructuredReimportResultDto(
+                null,
+                new CvStructuredImportSummaryDto(
+                    false,
+                    0,
+                    false,
+                    false,
+                    exception.Message));
+        }
+    }
+
     private async Task<byte[]> ReadCurrentPdfBytesAsync(AppUserEntity user, CancellationToken cancellationToken)
     {
         var document = await dbContext.UserCvDocuments
@@ -94,6 +161,8 @@ public sealed class CvStructuredImportService(
         {
             throw new InvalidOperationException("No readable text was found in the uploaded CV PDF.");
         }
+
+        CvStructuredImportPreviewDto preview;
 
         if (googleAiOptions.Value.Enabled)
         {
@@ -130,7 +199,8 @@ public sealed class CvStructuredImportService(
 
                 if (aiSections.Count > 0)
                 {
-                    return new CvStructuredImportPreviewDto(aiSections, true, null);
+                    preview = new CvStructuredImportPreviewDto(aiSections, true, null);
+                    return FinalizePreview(preview, rawSections);
                 }
             }
             catch (InvalidOperationException)
@@ -147,13 +217,23 @@ public sealed class CvStructuredImportService(
             CvStructuredImportHeuristic.Parse(rawSections),
             rawSections);
 
-        return new CvStructuredImportPreviewDto(
+        preview = new CvStructuredImportPreviewDto(
             heuristicSections,
             false,
             googleAiOptions.Value.Enabled
                 ? "AI parsing failed; a basic structure was generated instead. Review before saving."
                 : "Google AI is disabled; a basic structure was generated. Enable GoogleAi:Enabled for richer import.");
+
+        return FinalizePreview(preview, rawSections);
     }
+
+    private static CvStructuredImportPreviewDto FinalizePreview(
+        CvStructuredImportPreviewDto preview,
+        IReadOnlyList<CvPdfRawSection> rawSections) =>
+        preview with
+        {
+            Notice = CvStructuredImportCoverageAudit.BuildNotice(rawSections, preview.Sections, preview.Notice)
+        };
 
     private async Task<bool> PersistProfilePhotoAsync(
         AppUserEntity user,

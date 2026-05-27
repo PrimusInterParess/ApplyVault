@@ -121,6 +121,65 @@ public sealed class CvPdfExportRendererTests
     }
 
     [Fact]
+    public void Render_includes_contact_in_header()
+    {
+        var renderer = new CvPdfExportRenderer();
+        var request = new CvExportRenderRequest(
+            CvExportLayoutDefaults.Document(),
+            [
+                new CvExportSection(
+                    "Contact",
+                    CvSectionTypes.Custom,
+                    0,
+                    [
+                        new CvExportEntry(
+                            "Jane Doe",
+                            null,
+                            null,
+                            string.Empty,
+                            ["jane@example.com", "+45 12 34 56 78"],
+                            string.Empty)
+                    ]),
+                new CvExportSection(
+                    "Summary",
+                    CvSectionTypes.Summary,
+                    1,
+                    [
+                        new CvExportEntry(
+                            string.Empty,
+                            null,
+                            null,
+                            "Experienced software engineer.",
+                            [],
+                            string.Empty)
+                    ]),
+                new CvExportSection(
+                    "Experience",
+                    CvSectionTypes.Experience,
+                    2,
+                    [
+                        new CvExportEntry(
+                            "Software Engineer",
+                            "Acme Corp",
+                            "2020 – 2024",
+                            string.Empty,
+                            [],
+                            string.Empty)
+                    ])
+            ],
+            null,
+            null);
+
+        var text = ExtractText(renderer.Render(request));
+
+        Assert.Contains("Jane", text);
+        Assert.Contains("jane@example.com", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CONTACT", text);
+        Assert.True(text.IndexOf("jane@example.com", StringComparison.OrdinalIgnoreCase)
+            < text.IndexOf("EXPERIENCE", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Render_empty_sections_throws()
     {
         var renderer = new CvPdfExportRenderer();

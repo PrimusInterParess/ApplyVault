@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
-import { CvDocument, CvDocumentUploadResult } from '../models/cv-document.model';
+import { CvDocument, CvDocumentUploadResult, CvStructuredReimportResult } from '../models/cv-document.model';
 import { CvStructuredDocument, SaveCvStructuredDocumentRequest } from '../models/cv-structured.model';
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +58,13 @@ export class CvDocumentApiService {
     return this.httpClient.put<CvStructuredDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured`,
       request
+    );
+  }
+
+  reimportStructured(): Observable<CvStructuredReimportResult> {
+    return this.httpClient.post<CvStructuredReimportResult>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/reimport`,
+      {}
     );
   }
 }

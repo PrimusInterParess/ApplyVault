@@ -15,6 +15,7 @@ export class CvDocumentFacade {
   private readonly cvStructured = inject(CvStructuredFacade);
   private loadSubscription: Subscription | null = null;
   private uploadSubscription: Subscription | null = null;
+  private reimportSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
   private downloadOriginalSubscription: Subscription | null = null;
   private downloadFormattedSubscription: Subscription | null = null;
@@ -24,6 +25,7 @@ export class CvDocumentFacade {
 
   readonly loading = signal(false);
   readonly uploading = signal(false);
+  readonly reimporting = signal(false);
   readonly deleting = signal(false);
   readonly downloadingOriginal = signal(false);
   readonly downloadingFormatted = signal(false);
@@ -32,6 +34,7 @@ export class CvDocumentFacade {
   readonly importSummary = signal<CvStructuredImportSummary | null>(null);
   readonly error = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
+  readonly reimportError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
   readonly downloadOriginalError = signal<string | null>(null);
   readonly downloadFormattedError = signal<string | null>(null);
@@ -40,7 +43,7 @@ export class CvDocumentFacade {
 
   readonly hasDocument = computed(() => this.document() !== null);
 
-  readonly extracting = computed(() => this.uploading());
+  readonly extracting = computed(() => this.uploading() || this.reimporting());
 
   constructor() {
     effect(() => {
@@ -117,6 +120,38 @@ export class CvDocumentFacade {
         }
 
         this.uploadError.set(this.readErrorMessage(error, 'Could not upload your CV.'));
+      }
+    });
+  }
+
+  reimportStructured(): void {
+    if (!this.document()) {
+      return;
+    }
+
+    this.cancelReimport();
+    this.reimporting.set(true);
+    this.reimportError.set(null);
+
+    this.reimportSubscription = this.apiService.reimportStructured().subscribe({
+      next: (result) => {
+        this.reimporting.set(false);
+        this.importSummary.set(result.import);
+
+        if (result.structured) {
+          this.cvStructured.setStructured(result.structured);
+        } else {
+          this.cvStructured.load();
+        }
+      },
+      error: (error) => {
+        this.reimporting.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.reimportError.set(this.readErrorMessage(error, 'Could not re-import CV sections.'));
       }
     });
   }
@@ -258,12 +293,14 @@ export class CvDocumentFacade {
   private resetState(): void {
     this.cancelLoad();
     this.cancelUpload();
+    this.cancelReimport();
     this.cancelDelete();
     this.cancelDownloadOriginal();
     this.cancelDownloadFormatted();
     this.clearProfilePhoto();
     this.loading.set(false);
     this.uploading.set(false);
+    this.reimporting.set(false);
     this.deleting.set(false);
     this.downloadingOriginal.set(false);
     this.downloadingFormatted.set(false);
@@ -271,6 +308,7 @@ export class CvDocumentFacade {
     this.importSummary.set(null);
     this.error.set(null);
     this.uploadError.set(null);
+    this.reimportError.set(null);
     this.deleteError.set(null);
     this.downloadOriginalError.set(null);
     this.downloadFormattedError.set(null);
@@ -284,6 +322,11 @@ export class CvDocumentFacade {
   private cancelUpload(): void {
     this.uploadSubscription?.unsubscribe();
     this.uploadSubscription = null;
+  }
+
+  private cancelReimport(): void {
+    this.reimportSubscription?.unsubscribe();
+    this.reimportSubscription = null;
   }
 
   private cancelDelete(): void {

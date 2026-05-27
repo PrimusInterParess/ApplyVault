@@ -32,13 +32,22 @@
           (click)="openCvFilePicker()">
           {{
             cvDocument.extracting()
-              ? 'Uploading & extracting...'
+              ? cvDocument.reimporting()
+                ? 'Re-importing sections...'
+                : 'Uploading & extracting...'
               : cvDocument.hasDocument()
                 ? 'Replace CV'
                 : 'Upload CV'
           }}
         </button>
         @if (cvDocument.hasDocument()) {
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
+            [disabled]="cvDocument.extracting()"
+            (click)="cvDocument.reimportStructured()">
+            {{ cvDocument.reimporting() ? 'Re-importing sections...' : 'Re-import sections' }}
+          </button>
           <button
             type="button"
             class="my-cv-page__secondary-action"
@@ -74,6 +83,10 @@
 
     @if (cvDocument.uploadError(); as uploadError) {
       <div class="my-cv-page__alert" role="alert">{{ uploadError }}</div>
+    }
+
+    @if (cvDocument.reimportError(); as reimportError) {
+      <div class="my-cv-page__alert" role="alert">{{ reimportError }}</div>
     }
 
     @if (cvDocument.deleteError(); as deleteError) {
@@ -178,9 +191,6 @@
                 class="my-cv-page__profile-photo"
                 [src]="cvDocument.profilePhotoUrl()"
                 alt="Profile photo from your CV" />
-              <p class="my-cv-page__muted my-cv-page__profile-copy">
-                Review extracted sections below. Click Edit on any section to update its text.
-              </p>
             </div>
           }
 

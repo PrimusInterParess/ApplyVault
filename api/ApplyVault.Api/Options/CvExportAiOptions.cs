@@ -28,6 +28,7 @@ public sealed class CvExportAiOptions
         - Put dates only in dateRange, not in title or subtitle
         - Keep bullets concise and factual
         - For Skills sections, prefer bullets for individual skills; use techStack only for grouped labels when needed
+        - Preserve Contact section entries and bullets; do not remove email, phone, LinkedIn, GitHub, website, or location details
         - Improve wording and consistency but never add new facts
         """;
 

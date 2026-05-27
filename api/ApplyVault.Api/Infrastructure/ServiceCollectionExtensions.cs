@@ -42,9 +42,10 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplyVaultOptions(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        services
+        var corsOptionsBuilder = services
             .AddOptions<CorsOptions>()
             .Bind(configuration.GetSection(CorsOptions.SectionName));
 
@@ -63,9 +64,24 @@ public static class ServiceCollectionExtensions
             .AddOptions<ScrapeResultEnrichmentOptions>()
             .Bind(configuration.GetSection(ScrapeResultEnrichmentOptions.SectionName));
 
-        services
+        var supabaseOptionsBuilder = services
             .AddOptions<SupabaseOptions>()
             .Bind(configuration.GetSection(SupabaseOptions.SectionName));
+
+        if (!environment.IsDevelopment())
+        {
+            corsOptionsBuilder
+                .Validate(
+                    (options) => options.AllowedOrigins.Length > 0,
+                    "Cors:AllowedOrigins must contain at least one origin when ASPNETCORE_ENVIRONMENT is not Development.")
+                .ValidateOnStart();
+
+            supabaseOptionsBuilder
+                .Validate(
+                    (options) => !string.IsNullOrWhiteSpace(options.Url),
+                    "Supabase:Url is required when ASPNETCORE_ENVIRONMENT is not Development.")
+                .ValidateOnStart();
+        }
 
         services
             .AddOptions<CalendarIntegrationOptions>()

@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>ApplyVault.Api</AssemblyName>
     <RootNamespace>ApplyVault.Api</RootNamespace>
+    <UserSecretsId>applyvault-api-dev</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

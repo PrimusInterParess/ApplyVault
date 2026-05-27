@@ -39,15 +39,17 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `src/`
   Chrome extension source, including popup UI, background service worker, content scripts, and shared contracts.
 - `api/ApplyVault.Api/`
-  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `WebApplicationExtensions`) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`.
+  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`.
 - `api/ApplyVault.Api.Tests/`
   Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES job search, and related API services.
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
   Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder.
+- `plans/production-readiness/`
+  Step-by-step plans for production hardening steps 4–17 (config, deploy, security, scale). Steps 1–3 live in `plans/prod-0N-*.md`.
 - `plans/`
-  Product roadmap and production-hardening plans. Start with [`production-readiness-tracker.md`](plans/production-readiness-tracker.md) for the ordered checklist (`prod-01` … `prod-17`).
+  Product roadmap and production-hardening tracker. Start with [`production-readiness-tracker.md`](plans/production-readiness-tracker.md) for the ordered checklist (`prod-01` … `prod-17`).
 - `md/`
   Project notes and reusable prompt or style guidance documents.
 
@@ -89,6 +91,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 
 - `GET /health` — ASP.NET health checks (includes EF Core database readiness)
 - `GET /api/health` — simple liveness response (`{ "status": "ok" }`)
+- `GET /api/auth/session` — resolves the signed-in Supabase user to a local `AppUser` record
 - `GET /api/scrape-results`
 - `GET /api/scrape-results/{id}`
 - `POST /api/scrape-results`
@@ -110,7 +113,26 @@ Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_t
 
 `POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
 
-Extension saves must be signed in; the popup sends the access token from [`aspNetApiClient.ts`](src/infrastructure/api/aspNetApiClient.ts).
+Extension saves must be signed in; the popup sends the access token from [`aspNetApiClient.ts`](src/infrastructure/api/aspNetApiClient.ts). The Angular dashboard attaches the same Supabase access token through [`auth.interceptor.ts`](frontend/applyvault-jobs-ui/src/app/core/auth/auth.interceptor.ts) and loads the local app user from `GET /api/auth/session`.
+
+#### Supabase JWT validation on the API
+
+The API validates Supabase access tokens as Bearer JWTs:
+
+- issuer: `{Supabase:Url}/auth/v1`
+- audience: `authenticated` (override with `Supabase:Audience`)
+- signing keys: fetched from Supabase JWKS (`/auth/v1/.well-known/jwks.json`) because current Supabase tokens use **ES256**
+- user id: read from the JWT `sub` claim and mapped to a local `AppUser` on first request
+
+Relevant files:
+
+- `Infrastructure/ConfigureSupabaseJwtBearerOptions.cs`
+- `Infrastructure/SupabaseJwtSigningKeyProvider.cs`
+- `Infrastructure/SupabaseClaimTypes.cs`
+
+JWT failures are logged under the `ApplyVault.Auth.JwtBearer` category. Restart the API after auth config changes.
+
+**Frontend + API must use the same Supabase project.** The dashboard reads `frontend/applyvault-jobs-ui/src/app/core/config/supabase.config.ts`; the API reads `Supabase:Url` from layered configuration (see §3 below).
 
 Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, capture-quality metadata for reviewable fields, and status-sync metadata that records whether the latest rejection or interview update came from Gmail or a manual edit.
 
@@ -118,14 +140,20 @@ By default, the API uses the `ApplyVault` SQL Server database via the `ApplyVaul
 
 ### 3. Configure API integrations
 
-The API reads several option sections from `api/ApplyVault.Api/appsettings.json` and local environment overrides. Critical sections are validated at startup when enabled (for example Google AI API key when `GoogleAi:Enabled` is true, Gmail OAuth credentials when `MailIntegration:Enabled` is true):
+Configuration is layered: `appsettings.json` (safe defaults) → `appsettings.{Environment}.json` → environment variables → user secrets (Development). Nested keys use the `__` convention in env vars (`Supabase:Url` → `Supabase__Url`). Full key reference: [`plans/production-readiness/ENV.md`](plans/production-readiness/ENV.md).
+
+**Local development:** copy `api/ApplyVault.Api/appsettings.Development.example.json` to `appsettings.Development.json`, set `Supabase:Url`, and store API keys/OAuth secrets with `dotnet user-secrets` from `api/ApplyVault.Api`.
+
+**Production / Staging:** set `ASPNETCORE_ENVIRONMENT` accordingly; startup requires `Supabase:Url` and at least one `Cors:AllowedOrigins` entry (via env vars or host secrets). Templates: `appsettings.example.json`, `appsettings.Production.json`.
+
+Option sections (validated at startup when enabled):
 
 - `GoogleAi`
   Optional AI repair for low-confidence captures. Provide an API key and model when you want enrichment enabled.
 - `ScrapeResultEnrichment`
   Turns the low-confidence enrichment pass on or off and controls whether AI failures should block saving.
 - `Supabase`
-  Configures JWT validation for authenticated dashboard and extension requests.
+  Configures JWT validation for authenticated dashboard and extension requests. Set `Url` to the project root (for example `https://your-project.supabase.co`), not `/auth/v1`. The API derives issuer and JWKS URLs from that value.
 - `CalendarIntegration`
   Configures the OAuth client details and redirect URLs used to connect Google and Microsoft calendar providers.
 - `MailIntegration`
@@ -137,7 +165,7 @@ The API reads several option sections from `api/ApplyVault.Api/appsettings.json`
 - `Testing`
   Test-only switches. Integration tests set `Testing:UseInMemoryDatabase` and `Testing:InMemoryDatabaseName` to run against an isolated in-memory database.
 
-Prefer local overrides, environment variables, or user secrets for development credentials instead of checking secrets into source-controlled config files.
+Do not commit `appsettings.Development.json` or other files containing real secrets; use user secrets or `appsettings.*.local.json` (also gitignored).
 
 ### 4. Run the Angular dashboard
 
@@ -218,6 +246,27 @@ The extension sign-in flow expects a typed numeric email OTP, not a clicked magi
 
 In your Supabase project's `Magic Link` email template, include `{{ .Token }}` in the email body so users receive the code that `verifyOtp({ email, token, type: 'email' })` expects. If the template only uses `{{ .ConfirmationURL }}`, Supabase will send a magic link instead of the code required by the extension.
 
+The dashboard uses email/password sign-in through Supabase Auth. After sign-in, it calls `GET /api/auth/session` to create or load the local app user record.
+
+## Troubleshooting dashboard/API auth
+
+Symptoms in the browser Network tab:
+
+| Status / message | Meaning | What to check |
+|------------------|---------|---------------|
+| `401` + CORS response header present | Auth failed, not CORS | Token missing, expired, or rejected by API JWT validation |
+| Console says `blocked by CORS policy` | CORS misconfiguration | API environment, `Cors:AllowedOrigins`, include `http://localhost:4200` outside Development |
+| `invalid_token` / invalid issuer | Supabase URL mismatch | `Supabase:Url` in API config must match frontend `supabase.config.ts` |
+| `signature key was not found` | JWKS validation issue | API must reach `{Supabase:Url}/auth/v1/.well-known/jwks.json`; restart API after auth code changes |
+| `401` on `/api/auth/session` after sign-in | Token valid but user not resolved | Check API logs for `ApplyVault.Auth.JwtBearer` and `AppUserService` claim warnings |
+
+Useful checks:
+
+1. Confirm the request sends `Authorization: Bearer eyJ...`.
+2. Confirm the API runs with `ASPNETCORE_ENVIRONMENT=Development` for local CORS defaults.
+3. Restart the API after changing JWT/auth code or Supabase settings.
+4. Sign out and sign in again if the Supabase session is stale.
+
 ## Typical Flow
 
 1. Start the API.
@@ -240,29 +289,30 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 3. Use the extension to scrape the current page.
 4. Confirm the popup fills in structured fields such as job title, company, location, description, summary, and contacts.
 5. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.
-6. Open the dashboard and verify the new job appears in the list for the signed-in user only.
-7. Check that the detail view shows capture confidence, review state, and field-level review guidance.
-8. If the result is flagged for review, update the job title, company, or location and verify the reviewed state persists after refresh.
-9. Edit the saved description in the dashboard and verify the rendered Markdown updates.
-10. Save an interview event, refresh, and verify the interview timing persists.
-11. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
-12. Toggle the rejected state and verify the change persists after refresh.
-13. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
-14. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
-15. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
-16. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
-17. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
-18. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
-19. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
-20. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
-21. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
-22. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
-23. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
-24. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
-25. Delete a saved job and confirm the modal confirmation step is required before removal.
-26. On `/settings`, connect or disconnect an integration and confirm the disconnect confirmation modal appears before removal.
-27. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
-28. Sign out from any authenticated page and confirm you return to `/login`.
+6. Open the dashboard, sign in, and confirm `GET /api/auth/session` returns **200** with your user id/email.
+7. Verify the new job appears in the list for the signed-in user only.
+8. Check that the detail view shows capture confidence, review state, and field-level review guidance.
+9. If the result is flagged for review, update the job title, company, or location and verify the reviewed state persists after refresh.
+10. Edit the saved description in the dashboard and verify the rendered Markdown updates.
+11. Save an interview event, refresh, and verify the interview timing persists.
+12. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
+13. Toggle the rejected state and verify the change persists after refresh.
+14. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
+15. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
+16. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
+17. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
+18. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+19. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
+20. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
+21. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
+22. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
+23. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
+24. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
+25. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+26. Delete a saved job and confirm the modal confirmation step is required before removal.
+27. On `/settings`, connect or disconnect an integration and confirm the disconnect confirmation modal appears before removal.
+28. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+29. Sign out from any authenticated page and confirm you return to `/login`.
 
 ## Production readiness
 
@@ -275,8 +325,8 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 1 Scrape ingest authentication | Done | [`prod-01-scrape-ingest-auth.md`](plans/prod-01-scrape-ingest-auth.md) |
 | 2 Multi-tenant data isolation | Done | [`prod-02-tenancy-isolation.md`](plans/prod-02-tenancy-isolation.md) |
 | 3 API integration tests (tenancy) | Done | [`prod-03-api-integration-tests.md`](plans/prod-03-api-integration-tests.md) |
-| 4 API environment configuration | Pending | `prod-04-api-environment-configuration.md` (next) |
-| 5–17 Deploy, CI, scale, tests | Pending | See tracker |
+| 4 API environment configuration | Pending | [`production-readiness/prod-04-api-environment-configuration.md`](plans/production-readiness/prod-04-api-environment-configuration.md) (next) |
+| 5–17 Deploy, CI, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) |
 
 **Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 

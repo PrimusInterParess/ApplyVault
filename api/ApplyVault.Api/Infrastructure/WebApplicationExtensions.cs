@@ -15,6 +15,7 @@ public static class WebApplicationExtensions
 
         // TLS termination and HSTS are handled at the edge (Caddy in deploy/). Do not call
         // UseHttpsRedirection here — the API listens on HTTP behind the reverse proxy.
+        app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseCors();
         app.UseExceptionHandler();
         app.UseAuthentication();

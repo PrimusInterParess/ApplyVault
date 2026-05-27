@@ -123,13 +123,99 @@ Quick checklist:
 3. Store `ClientId` / `ClientSecret` only in `deploy/.env`, never in git.
 4. Smoke-test connect from dashboard Settings after deploy.
 
-## Logs
+## Logs and monitoring
+
+Implements [prod-13-logging-and-monitoring.md](../plans/production-readiness/prod-13-logging-and-monitoring.md).
+
+### Tail logs (default sink)
+
+Production and Staging emit **JSON** console logs (one line per entry). Docker captures stdout:
 
 ```bash
 cd deploy
 docker compose logs -f api
 docker compose logs -f caddy
 ```
+
+Filter API errors:
+
+```bash
+docker compose logs api --since 1h | grep '"LogLevel":"Error"'
+```
+
+Optional overrides via env (double underscore):
+
+| Env var | Example |
+|---------|---------|
+| `Logging__LogLevel__Default` | `Warning` |
+| `Logging__LogLevel__ApplyVault.Auth.JwtBearer` | `Debug` |
+
+### Production log levels
+
+| Category | Level | Purpose |
+|----------|-------|---------|
+| Default | Information | Application events |
+| `Microsoft.AspNetCore` | Warning | Suppress noisy framework logs |
+| `ApplyVault.Auth.JwtBearer` | Information | JWT validation failures and challenges |
+| `ApplyVault.Api.Infrastructure.SupabaseJwtSigningKeyProvider` | Information | JWKS load and key resolution |
+| `ApplyVault.Api.Infrastructure.RequestLoggingMiddleware` | Warning / Error | HTTP 4xx / 5xx with `TraceId` |
+
+Configured in [`appsettings.Production.json`](../api/ApplyVault.Api/appsettings.Production.json).
+
+### Never log
+
+The API must **not** write these to logs at any level:
+
+- Full `Authorization` header or JWT strings
+- OAuth `ClientSecret` values
+- Gmail message bodies at Information (only account ids / scrape result ids in warnings)
+
+### Diagnosing auth failures (401)
+
+| Symptom | Log category | Likely cause |
+|---------|--------------|--------------|
+| `invalid_token` / invalid issuer | `ApplyVault.Auth.JwtBearer` | `Supabase__Url` mismatch vs token issuer |
+| Signing key not found / JWKS | `ApplyVault.Auth.JwtBearer` or `SupabaseJwtSigningKeyProvider` | JWKS fetch blocked or wrong Supabase project |
+| JWT validated but no user id claim | `ApplyVault.Auth.JwtBearer` | Token missing `sub` claim |
+| Authenticated but no Supabase user id | `ApplyVault.Api.Services.AppUserService` | Claim mapping issue after successful JWT |
+| `no Authorization header` | `ApplyVault.Auth.JwtBearer` | Dashboard not sending Bearer token |
+
+Reproduce and confirm in logs:
+
+```bash
+# Unauthenticated — expect JwtBearer Warning, no token in log line
+curl -i "https://${API_DOMAIN}/api/scrape-results"
+
+# Bad token — expect JwtBearer Warning with Reason=...
+curl -i "https://${API_DOMAIN}/api/scrape-results" -H "Authorization: Bearer invalid"
+```
+
+Correlate API errors with dashboard reports using `TraceId` from JSON logs or from 502 JSON responses (`traceId` field).
+
+### Platform log sink (optional)
+
+| Platform | Approach |
+|----------|----------|
+| **Docker VPS (default)** | `docker compose logs` or ship stdout to your host agent (Vector, Fluent Bit, etc.) |
+| **Azure App Service** | Enable Application Insights or Diagnostic Settings → capture container stdout |
+| **Kubernetes** | Cluster logging stack (e.g. Loki, CloudWatch) on pod stdout |
+| **Seq / ELK** | Forward JSON lines from the `api` container |
+
+No extra NuGet sink is required for the baseline; add Application Insights or OpenTelemetry when you adopt a managed APM product.
+
+### Alert baseline
+
+Configure at least these checks on production:
+
+| Alert | Signal | Suggested threshold |
+|-------|--------|---------------------|
+| **API unhealthy** | `GET https://${API_DOMAIN}/health` | Non-200 or `status` ≠ Healthy for **2+ consecutive** checks (1 min interval) |
+| **5xx spike** | JSON logs: `RequestLoggingMiddleware` + `"LogLevel":"Error"` | More than **5** in 5 minutes (tune to traffic) |
+| **Auth misconfiguration** | `ApplyVault.Auth.JwtBearer` Warning burst | More than **20** in 5 minutes after a deploy (often bad `Supabase__Url` or CORS/token issue) |
+
+**Manual health alert test:** break `ConnectionStrings__ApplyVault` temporarily, restart `api`, confirm `GET /health` returns **503** and your monitor fires; restore connection string and redeploy.
+
+**Docker healthcheck:** `deploy/docker-compose.yml` already restarts unhealthy containers when `/health` fails inside the container network.
 
 ## HTTPS and transport security
 
@@ -224,3 +310,4 @@ To confirm failure behavior, stop SQL Server or break the connection string temp
 - **Step 10:** OAuth redirect URIs and secrets — [OAUTH.md](../plans/production-readiness/OAUTH.md).
 - **Step 11:** CORS hardening for production domains — done; see [HTTPS and transport security](#https-and-transport-security).
 - **Step 12:** Health/readiness probes — see [Health and readiness probes](#health-and-readiness-probes).
+- **Step 13:** Logging and monitoring — see [Logs and monitoring](#logs-and-monitoring).

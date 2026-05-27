@@ -4,22 +4,22 @@ overview: Add structured production logging, auth failure observability, and bas
 todos:
   - id: log-levels
     content: Set Production log levels (Information default, Warning for Microsoft.AspNetCore)
-    status: pending
+    status: completed
   - id: structured-logging
     content: Use structured logging templates consistently; avoid logging secrets or JWT bodies
-    status: pending
+    status: completed
   - id: auth-log-review
     content: Document ApplyVault.Auth.JwtBearer and AppUserService log categories for ops
-    status: pending
+    status: completed
   - id: request-logging
     content: Optional HTTP request logging middleware for 4xx/5xx with correlation id
-    status: pending
+    status: completed
   - id: monitoring-sink
     content: Connect logs to platform (App Insights, CloudWatch, seq, etc.) or document manual tail
-    status: pending
+    status: completed
   - id: alert-baseline
     content: Define alerts for health check failures and error rate spikes
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -69,6 +69,8 @@ Production needs aggregated logs and basic alerts without exposing tokens.
 }
 ```
 
+Also: JSON console formatter in Production/Staging; JWKS provider category at Information.
+
 ### 2. Never log
 
 - Full `Authorization` header
@@ -78,21 +80,15 @@ Production needs aggregated logs and basic alerts without exposing tokens.
 ### 3. Correlation
 
 - Rely on ASP.NET `TraceIdentifier` in exception handler ([`EuresJobClientExceptionHandler`](../../api/ApplyVault.Api/Infrastructure/EuresJobClientExceptionHandler.cs) pattern).
-- Optional: `app.UseMiddleware<RequestLogging>()` for 5xx only.
+- [`RequestLoggingMiddleware`](../../api/ApplyVault.Api/Infrastructure/RequestLoggingMiddleware.cs) logs HTTP 4xx/5xx with `TraceId`.
 
 ### 4. Platform sink
 
-Configure host-specific logging provider (Application Insights, etc.) in deploy runbook.
+Documented in [RUNBOOK](../../deploy/RUNBOOK.md): Docker stdout JSON + optional host/APM forwarding.
 
 ### 5. Auth ops guide
 
-Document in README or runbook:
-
-| Symptom | Log category | Likely cause |
-|---------|--------------|--------------|
-| 401 invalid_token issuer | ApplyVault.Auth.JwtBearer | Supabase URL mismatch |
-| 401 signature key | ApplyVault.Auth.JwtBearer | JWKS fetch failure |
-| 401 after 200 JWT | AppUserService | Missing sub claim |
+Documented in [RUNBOOK](../../deploy/RUNBOOK.md) § Diagnosing auth failures.
 
 ## Verification
 

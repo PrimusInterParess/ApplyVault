@@ -71,6 +71,104 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Save_structured_updates_sections_and_preserves_stable_ids()
+    {
+        using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
+        var pdfBytes = CreateStructuredCvPdf(includeHeadshot: false);
+
+        using var form = new MultipartFormDataContent();
+        var pdf = new ByteArrayContent(pdfBytes);
+        pdf.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(pdf, "file", "cv.pdf");
+
+        var uploadResponse = await client.PostAsync("/api/cv-documents/current", form);
+
+        Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
+
+        var getResponse = await client.GetAsync("/api/cv-documents/current/structured");
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var original = await getResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(original);
+        Assert.NotEmpty(original!.Sections);
+
+        var experienceSection = original.Sections.First((section) =>
+            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
+        var originalEntryId = experienceSection.Entries[0].Id;
+        var originalImportedAt = original.StructuredImportedAt;
+
+        var updatedSections = original.Sections
+            .Select((section, sectionIndex) =>
+            {
+                var entries = section.Entries
+                    .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
+                        entry.Id,
+                        section.Id == experienceSection.Id && entryIndex == 0
+                            ? "Senior Software Engineer"
+                            : entry.Title,
+                        entry.Subtitle,
+                        entry.DateRange,
+                        entry.Summary,
+                        entry.Bullets,
+                        entry.TechStack,
+                        entry.Source,
+                        entry.SourceSummaryId,
+                        entryIndex))
+                    .ToList();
+
+                if (section.Id == experienceSection.Id)
+                {
+                    entries.Add(new CvStructuredEntryWriteDto(
+                        null,
+                        "Side Project",
+                        "Personal",
+                        "2024 – Present",
+                        "Built a portfolio tool.",
+                        ["Shipped MVP", "Integrated GitHub"],
+                        "TypeScript, Angular",
+                        "Manual",
+                        null,
+                        entries.Count));
+                }
+
+                return new CvStructuredSectionWriteDto(
+                    section.Id,
+                    section.Id == experienceSection.Id ? "Work History" : section.Heading,
+                    section.SectionType,
+                    sectionIndex,
+                    entries);
+            })
+            .ToArray();
+
+        var saveResponse = await client.PutAsJsonAsync(
+            "/api/cv-documents/current/structured",
+            new SaveCvStructuredDocumentRequest(updatedSections));
+
+        Assert.Equal(HttpStatusCode.OK, saveResponse.StatusCode);
+
+        var saved = await saveResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(saved);
+        Assert.Equal(originalImportedAt, saved!.StructuredImportedAt);
+
+        var updatedExperience = saved.Sections.Single((section) => section.Id == experienceSection.Id);
+
+        Assert.Equal("Work History", updatedExperience.Heading);
+        Assert.Equal(2, updatedExperience.Entries.Count);
+
+        var updatedEntry = updatedExperience.Entries.Single((entry) => entry.Id == originalEntryId);
+
+        Assert.Equal("Senior Software Engineer", updatedEntry.Title);
+
+        var addedEntry = updatedExperience.Entries.Single((entry) => entry.Title == "Side Project");
+
+        Assert.NotEqual(Guid.Empty, addedEntry.Id);
+        Assert.Equal(["Shipped MVP", "Integrated GitHub"], addedEntry.Bullets);
+    }
+
     private static byte[] CreateStructuredCvPdf(bool includeHeadshot)
     {
         using var document = new PdfDocument();

@@ -5,7 +5,7 @@
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
         Upload your CV PDF to store the original file and automatically extract its sections and profile
-        photo. Download the original anytime and review the extracted content below.
+        photo. Download the original anytime and edit each section below when you need to.
       </p>
     </div>
   </section>
@@ -140,8 +140,8 @@
     <section class="my-cv-page__panel my-cv-page__preview-panel" aria-labelledby="cv-preview-heading">
       <div class="my-cv-page__panel-header">
         <div>
-          <p class="my-cv-page__label">Structured preview</p>
-          <h2 id="cv-preview-heading">Your CV content</h2>
+          <p class="my-cv-page__label">Structured content</p>
+          <h2 id="cv-preview-heading">Your CV sections</h2>
         </div>
       </div>
 
@@ -150,21 +150,49 @@
       }
 
       @if (cvDocument.loading() || cvStructured.loading()) {
-        <app-cv-structured-preview [loadingContent]="true" />
-      } @else if (!hasPreviewContent()) {
-        <div class="my-cv-page__preview-empty">
-          <h3>No structured content yet</h3>
-          <p class="my-cv-page__muted">
-            Sections will appear here after extraction completes. If nothing shows up, try uploading your CV
-            again.
-          </p>
+        <div class="my-cv-page__sections-skeleton" aria-busy="true" aria-label="Loading CV sections">
+          <app-skeleton-block width="100%" height="6rem" />
+          <app-skeleton-block width="100%" height="6rem" />
         </div>
       } @else {
-        <app-cv-structured-preview
-          [sections]="previewSections()"
-          [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
-          [loadingPhoto]="cvDocument.loadingProfilePhoto()"
-          [loadingContent]="false" />
+        <div class="my-cv-page__preview-document">
+          @if (cvDocument.profilePhotoUrl()) {
+            <div class="my-cv-page__profile-row">
+              <img
+                class="my-cv-page__profile-photo"
+                [src]="cvDocument.profilePhotoUrl()"
+                alt="Profile photo from your CV" />
+              <p class="my-cv-page__muted my-cv-page__profile-copy">
+                Review extracted sections below. Click Edit on any section to update its text.
+              </p>
+            </div>
+          }
+
+          @if (!hasSections()) {
+            <div class="my-cv-page__preview-empty">
+              <h3>No sections yet</h3>
+              <p class="my-cv-page__muted">
+                Sections will appear here after extraction completes.
+              </p>
+            </div>
+          } @else {
+            <div class="my-cv-page__sections">
+              @for (section of sections(); track section.id) {
+                <app-cv-structured-section-panel
+                  [section]="section"
+                  [editing]="isEditingSection(section.id)"
+                  [saving]="isSavingSection(section.id)"
+                  [saveError]="sectionSaveError(section.id)"
+                  [canSave]="isEditingSection(section.id) && canSaveSection()"
+                  [draft]="sectionDraft()"
+                  (draftChange)="sectionDraft.set($event)"
+                  (edit)="beginSectionEdit(section)"
+                  (cancel)="cancelSectionEdit()"
+                  (save)="saveSectionEdit()" />
+              }
+            </div>
+          }
+        </div>
       }
     </section>
   }

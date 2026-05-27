@@ -69,6 +69,22 @@
   margin-top: 1rem;
 }
 
+.my-cv-page__preview-document {
+  display: grid;
+  gap: 1.35rem;
+  padding: 1.15rem 1.25rem 1.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__preview-document .my-cv-page__profile-row {
+  padding-bottom: 1rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
 .my-cv-page__preview-empty {
   display: grid;
   gap: 0.65rem;
@@ -263,4 +279,39 @@
   background: var(--app-danger-soft);
   color: var(--app-danger);
   box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__sections {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.my-cv-page__sections-skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.my-cv-page__profile-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.35rem;
+}
+
+.my-cv-page__profile-photo {
+  width: 6.5rem;
+  height: 6.5rem;
+  object-fit: cover;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-soft);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__profile-copy {
+  margin: 0;
+  max-width: 36rem;
+  line-height: 1.55;
+  font-size: 0.9rem;
 }

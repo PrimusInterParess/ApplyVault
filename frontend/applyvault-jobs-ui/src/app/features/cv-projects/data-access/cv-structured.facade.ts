@@ -3,17 +3,21 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
-import { CvStructuredDocument } from '../models/cv-structured.model';
+import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
+import { toSaveRequest } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class CvStructuredFacade {
   private readonly apiService = inject(CvDocumentApiService);
   private loadSubscription: Subscription | null = null;
+  private saveSubscription: Subscription | null = null;
 
   readonly loading = signal(false);
+  readonly savingSectionId = signal<string | null>(null);
   readonly structured = signal<CvStructuredDocument | null>(null);
   readonly error = signal<string | null>(null);
+  readonly saveError = signal<string | null>(null);
 
   load(): void {
     this.cancelLoad();
@@ -42,9 +46,40 @@ export class CvStructuredFacade {
     });
   }
 
+  save(sections: readonly CvStructuredSection[], sectionId: string): void {
+    this.cancelSave();
+    this.savingSectionId.set(sectionId);
+    this.saveError.set(null);
+
+    this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
+      next: (document) => {
+        this.savingSectionId.set(null);
+        this.structured.set(document);
+      },
+      error: (error) => {
+        this.savingSectionId.set(null);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.saveError.set(this.readErrorMessage(error, 'Could not save structured CV content.'));
+      }
+    });
+  }
+
+  clearSaveError(): void {
+    this.saveError.set(null);
+  }
+
   private cancelLoad(): void {
     this.loadSubscription?.unsubscribe();
     this.loadSubscription = null;
+  }
+
+  private cancelSave(): void {
+    this.saveSubscription?.unsubscribe();
+    this.saveSubscription = null;
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

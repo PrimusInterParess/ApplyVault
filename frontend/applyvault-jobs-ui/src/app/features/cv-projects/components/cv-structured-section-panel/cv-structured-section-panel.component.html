@@ -1,0 +1,86 @@
+<section
+  class="cv-section"
+  [class.cv-section--editing]="editing()"
+  [class.cv-section--summary]="isSummarySection(activeSection().sectionType)"
+  [class.cv-section--skills]="isSkillsSection(activeSection().sectionType)">
+  <header class="cv-section__header">
+    <div class="cv-section__intro">
+      <h3 class="cv-section__title">{{ activeSection().heading || activeSection().sectionType || 'Untitled section' }}</h3>
+    </div>
+
+    <div class="cv-section__actions">
+      @if (editing()) {
+        <button type="button" class="cv-section__save" [disabled]="!canSave()" (click)="save.emit()">
+          {{ saving() ? 'Saving...' : 'Save' }}
+        </button>
+        <button type="button" class="cv-section__cancel" [disabled]="saving()" (click)="cancel.emit()">
+          Cancel
+        </button>
+      } @else {
+        <button type="button" class="cv-section__edit" [disabled]="saving()" (click)="edit.emit()">
+          Edit
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (saveError(); as errorMessage) {
+    <p class="cv-section__error" role="alert">{{ errorMessage }}</p>
+  }
+
+  @if (editing()) {
+    <div class="cv-section__editor-wrap">
+      <p class="cv-section__editor-hint">Edit this section as plain text. Markdown like **bold** is supported.</p>
+      <textarea
+        class="cv-section__editor"
+        rows="14"
+        [disabled]="saving()"
+        [value]="editorText()"
+        (input)="updateEditorText($event)"></textarea>
+    </div>
+  } @else if (!hasEntries()) {
+    <p class="cv-section__empty">No content in this section yet.</p>
+  } @else {
+    <div class="cv-section__document">
+      @for (entry of sortedEntries(); track entry.id) {
+        <article
+          class="cv-section__entry"
+          [class.cv-section__entry--summary]="isSummarySection(activeSection().sectionType)">
+          @if (entry.title.trim() && !isSummarySection(activeSection().sectionType)) {
+            <h4 class="cv-section__entry-title" [innerHTML]="renderInlineMarkdown(entry.title) | safeHtml"></h4>
+          }
+
+          @if (entryMeta(entry) && !isSummarySection(activeSection().sectionType)) {
+            <p class="cv-section__entry-meta" [innerHTML]="renderInlineMarkdown(entryMeta(entry)) | safeHtml"></p>
+          }
+
+          @if (entry.summary.trim()) {
+            <div
+              class="cv-section__entry-body"
+              [innerHTML]="renderMarkdown(entry.summary) | safeHtml"></div>
+          }
+
+          @if (entry.bullets.length > 0) {
+            <ul class="cv-section__bullets">
+              @for (bullet of entry.bullets; track $index) {
+                <li [innerHTML]="renderInlineMarkdown(bullet) | safeHtml"></li>
+              }
+            </ul>
+          }
+
+          @if (entry.techStack.trim()) {
+            @if (isSkillsSection(activeSection().sectionType)) {
+              <div class="cv-section__skills" aria-label="Skills">
+                @for (item of techStackItems(entry); track item) {
+                  <span>{{ item }}</span>
+                }
+              </div>
+            } @else {
+              <p class="cv-section__tech" [innerHTML]="renderInlineMarkdown(entry.techStack) | safeHtml"></p>
+            }
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

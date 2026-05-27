@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument, CvDocumentUploadResult } from '../models/cv-document.model';
-import { CvStructuredDocument } from '../models/cv-structured.model';
+import { CvStructuredDocument, SaveCvStructuredDocumentRequest } from '../models/cv-structured.model';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentApiService {
@@ -45,6 +45,13 @@ export class CvDocumentApiService {
   getStructured(): Observable<CvStructuredDocument> {
     return this.httpClient.get<CvStructuredDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured`
+    );
+  }
+
+  saveStructured(request: SaveCvStructuredDocumentRequest): Observable<CvStructuredDocument> {
+    return this.httpClient.put<CvStructuredDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured`,
+      request
     );
   }
 }

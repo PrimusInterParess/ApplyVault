@@ -116,4 +116,25 @@ public sealed class CvDocumentsController(
         var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
         return structured is null ? NotFound() : Ok(structured);
     }
+
+    [HttpPut("current/structured")]
+    public async Task<ActionResult<CvStructuredDocumentDto>> SaveStructured(
+        [FromBody] SaveCvStructuredDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvStructuredDocumentService.SaveStructuredAsync(
+                user,
+                request,
+                markImported: false,
+                cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
 }

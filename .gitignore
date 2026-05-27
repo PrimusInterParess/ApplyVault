@@ -52,6 +52,10 @@ obj/
 # Local ASP.NET development settings
 appsettings.Development.json
 
+# Deployment artifacts
+publish/
+deploy/.env
+
 # Local database and machine-specific API overrides
 *.db
 *.db-shm

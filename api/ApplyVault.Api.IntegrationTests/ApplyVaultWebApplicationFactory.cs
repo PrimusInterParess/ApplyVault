@@ -17,12 +17,13 @@ public sealed class ApplyVaultWebApplicationFactory : WebApplicationFactory<Prog
     {
         builder.UseEnvironment("Development");
 
+        builder.UseSetting("Testing:UseInMemoryDatabase", "true");
+        builder.UseSetting("Testing:InMemoryDatabaseName", _databaseName);
+
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:ApplyVault"] =
-                    "Server=(localdb)\\mssqllocaldb;Database=ApplyVaultTests;Trusted_Connection=True",
                 ["Testing:UseInMemoryDatabase"] = "true",
                 ["Testing:InMemoryDatabaseName"] = _databaseName,
                 ["ScrapeResultEnrichment:Enabled"] = "false",

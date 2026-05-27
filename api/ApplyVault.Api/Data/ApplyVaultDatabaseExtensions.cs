@@ -1,5 +1,6 @@
 using ApplyVault.Api.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Data;
 
@@ -18,18 +19,19 @@ public static class ApplyVaultDatabaseExtensions
             .AddOptions<DatabaseOptions>()
             .Bind(configuration.GetSection(DatabaseOptions.SectionName));
 
-        var testingOptions = configuration.GetSection(TestingOptions.SectionName).Get<TestingOptions>()
-            ?? new TestingOptions();
-
-        services.AddDbContext<ApplyVaultDbContext>((options) =>
+        services.AddDbContext<ApplyVaultDbContext>((serviceProvider, options) =>
         {
+            var runtimeConfiguration = serviceProvider.GetRequiredService<IConfiguration>();
+            var testingOptions = runtimeConfiguration.GetSection(TestingOptions.SectionName).Get<TestingOptions>()
+                ?? new TestingOptions();
+
             if (testingOptions.UseInMemoryDatabase)
             {
                 options.UseInMemoryDatabase(testingOptions.InMemoryDatabaseName);
                 return;
             }
 
-            var connectionString = configuration.GetConnectionString("ApplyVault");
+            var connectionString = runtimeConfiguration.GetConnectionString("ApplyVault");
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new InvalidOperationException(
@@ -45,14 +47,17 @@ public static class ApplyVaultDatabaseExtensions
             options.UseSqlServer(connectionString);
         });
 
-        if (testingOptions.UseInMemoryDatabase)
+        services.AddSingleton<IDatabaseInitializer>((serviceProvider) =>
         {
-            services.AddSingleton<IDatabaseInitializer, InMemoryDatabaseInitializer>();
-        }
-        else
-        {
-            services.AddSingleton<IDatabaseInitializer, RelationalDatabaseInitializer>();
-        }
+            var testingOptions = serviceProvider.GetRequiredService<IConfiguration>()
+                .GetSection(TestingOptions.SectionName)
+                .Get<TestingOptions>()
+                ?? new TestingOptions();
+
+            return testingOptions.UseInMemoryDatabase
+                ? new InMemoryDatabaseInitializer()
+                : new RelationalDatabaseInitializer(serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>());
+        });
 
         return services;
     }

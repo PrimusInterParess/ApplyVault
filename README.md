@@ -237,8 +237,9 @@ The My CV page (`/my-cv`) supports:
 
 - uploading a single PDF CV (validated server-side; replaces any previous upload)
 - inline metadata (original filename, size, uploaded time) and an iframe preview loaded from `GET /api/cv-documents/current/content`
+- **Add projects to CV** / **Regenerate CV with projects** (`POST /api/cv-documents/current/merge-projects`) to append all saved project summaries from `/cv-projects` as a **Personal Projects** section (deterministic PDF layout; no AI)
 - **Replace CV** and **Delete CV** actions with a confirmation dialog before removal
-- loading skeletons and separate error banners for metadata load, upload, preview, and delete failures
+- loading skeletons and separate error banners for metadata load, upload, merge, preview, and delete failures
 
 The Projects page (`/cv-projects`) supports:
 
@@ -371,14 +372,15 @@ Useful checks:
 13. Toggle the rejected state and verify the change persists after refresh.
 14. If `GitHubIntegration` is enabled, connect GitHub from settings and verify the OAuth callback returns to `/integrations/github/callback?provider=github&success=true`, then confirm the connected account appears on the settings page.
 15. Open `/my-cv`, upload a PDF, and confirm metadata and an inline preview appear; replace the file and confirm the preview updates.
-16. Delete the CV and confirm the confirmation dialog is required; verify the empty state returns and `GET /api/cv-documents/current` returns **404**.
-17. With GitHub connected and `GoogleAi:Enabled`, open `/cv-projects`, load repositories, generate a summary for one repo, and confirm the saved panel shows title, summary, bullets, and tech stack.
-18. Regenerate the same repository and confirm the saved summary updates; remove it and confirm it disappears from the saved panel.
-19. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal; verify saved CV project summaries are cleared after disconnect.
-20. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
-21. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
-22. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
-23. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
+16. With at least one saved project summary, use **Add projects to CV** on `/my-cv` and confirm the preview updates with appended **Personal Projects** pages; use **Regenerate CV with projects** and confirm the page count does not grow with duplicate sections.
+17. Delete the CV and confirm the confirmation dialog is required; verify the empty state returns and `GET /api/cv-documents/current` returns **404**.
+18. With GitHub connected and `GoogleAi:Enabled`, open `/cv-projects`, load repositories, generate a summary for one repo, and confirm the saved panel shows title, summary, bullets, and tech stack.
+19. Regenerate the same repository and confirm the saved summary updates; remove it and confirm it disappears from the saved panel.
+20. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal; verify saved CV project summaries are cleared after disconnect.
+21. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
+22. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
+23. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
+24. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
 24. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
 25. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
 26. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.

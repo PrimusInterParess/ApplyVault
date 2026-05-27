@@ -39,6 +39,34 @@ public sealed class CvProjectsController(
         return Ok(await gitHubProjectSummaryService.ListSummariesAsync(user, page, perPage, cancellationToken));
     }
 
+    [HttpGet("all")]
+    public async Task<ActionResult<IReadOnlyList<CvProjectSummaryDto>>> ListAll(
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        return Ok(await gitHubProjectSummaryService.ListAllSummariesAsync(user, cancellationToken));
+    }
+
+    [HttpPut("summaries/placements")]
+    public async Task<ActionResult<IReadOnlyList<CvProjectSummaryDto>>> UpdatePlacements(
+        [FromBody] UpdateCvProjectSummaryPlacementsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await gitHubProjectSummaryService.UpdatePlacementsAsync(
+                user,
+                request.Placements,
+                cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CvProjectSummaryDto>> Get(Guid id, CancellationToken cancellationToken = default)
     {

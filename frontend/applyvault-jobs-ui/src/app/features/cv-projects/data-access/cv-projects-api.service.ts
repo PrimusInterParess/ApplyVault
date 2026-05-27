@@ -5,9 +5,11 @@ import { Observable } from 'rxjs';
 import { API_CONFIG } from '../../../core/config/api.config';
 import {
   CvProjectSummary,
+  CvProjectSummaryPlacement,
   GenerateCvProjectRequest,
   GitHubRepositoryListItem,
-  GitHubRepositoryReadme
+  GitHubRepositoryReadme,
+  UpdateCvProjectSummaryPlacementsRequest
 } from '../models/cv-project.model';
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +44,19 @@ export class CvProjectsApiService {
         perPage: String(perPage)
       }
     });
+  }
+
+  listAllSummaries(): Observable<readonly CvProjectSummary[]> {
+    return this.httpClient.get<readonly CvProjectSummary[]>(`${this.apiConfig.baseUrl}/cv-projects/all`);
+  }
+
+  updatePlacements(
+    request: UpdateCvProjectSummaryPlacementsRequest
+  ): Observable<readonly CvProjectSummary[]> {
+    return this.httpClient.put<readonly CvProjectSummary[]>(
+      `${this.apiConfig.baseUrl}/cv-projects/summaries/placements`,
+      request
+    );
   }
 
   generateSummary(request: GenerateCvProjectRequest): Observable<CvProjectSummary> {

@@ -16,6 +16,7 @@ export class CvDocumentFacade {
   private loadSubscription: Subscription | null = null;
   private uploadSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
+  private mergeSubscription: Subscription | null = null;
   private previewSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private objectUrl: string | null = null;
@@ -23,11 +24,13 @@ export class CvDocumentFacade {
   readonly loading = signal(false);
   readonly uploading = signal(false);
   readonly deleting = signal(false);
+  readonly merging = signal(false);
   readonly loadingPreview = signal(false);
   readonly document = signal<CvDocument | null>(null);
   readonly error = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
+  readonly mergeError = signal<string | null>(null);
   readonly previewError = signal<string | null>(null);
   readonly blobUrl = signal<string | null>(null);
 
@@ -137,6 +140,31 @@ export class CvDocumentFacade {
     });
   }
 
+  mergeProjects(): void {
+    this.cancelMerge();
+    this.merging.set(true);
+    this.mergeError.set(null);
+
+    this.mergeSubscription = this.apiService.mergeProjects().subscribe({
+      next: (document) => {
+        this.merging.set(false);
+        this.document.set(document);
+        this.loadPreview();
+      },
+      error: (error) => {
+        this.merging.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.mergeError.set(
+          this.readErrorMessage(error, 'Could not add project summaries to your CV.')
+        );
+      }
+    });
+  }
+
   private loadPreview(): void {
     this.cancelPreview();
     this.loadingPreview.set(true);
@@ -184,14 +212,17 @@ export class CvDocumentFacade {
     this.cancelLoad();
     this.cancelUpload();
     this.cancelDelete();
+    this.cancelMerge();
     this.clearPreview();
     this.loading.set(false);
     this.uploading.set(false);
     this.deleting.set(false);
+    this.merging.set(false);
     this.document.set(null);
     this.error.set(null);
     this.uploadError.set(null);
     this.deleteError.set(null);
+    this.mergeError.set(null);
   }
 
   private cancelLoad(): void {
@@ -207,6 +238,11 @@ export class CvDocumentFacade {
   private cancelDelete(): void {
     this.deleteSubscription?.unsubscribe();
     this.deleteSubscription = null;
+  }
+
+  private cancelMerge(): void {
+    this.mergeSubscription?.unsubscribe();
+    this.mergeSubscription = null;
   }
 
   private cancelPreview(): void {

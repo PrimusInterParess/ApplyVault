@@ -4,7 +4,9 @@
       <p class="my-cv-page__eyebrow">Personal document</p>
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
-        Upload a PDF to store and preview your CV in ApplyVault. A new upload replaces the previous file.
+        Upload a PDF to store and preview your CV. Assign saved project summaries from
+        <a routerLink="/cv-projects">Projects</a> to CV sections, then merge them into the PDF near the
+        matching section.
       </p>
     </div>
   </section>
@@ -39,7 +41,14 @@
         @if (cvDocument.hasDocument()) {
           <button
             type="button"
-            class="my-cv-page__danger-action"
+            class="my-cv-page__secondary-action"
+            [disabled]="!canMergeProjects() || cvDocument.merging() || cvDocument.uploading() || cvProjects.savingPlacements()"
+            (click)="mergeProjects()">
+            {{ cvDocument.merging() ? 'Merging...' : mergeProjectsLabel() }}
+          </button>
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
             [disabled]="cvDocument.deleting()"
             (click)="beginDeleteCv()">
             {{ cvDocument.deleting() ? 'Deleting...' : 'Delete CV' }}
@@ -47,6 +56,20 @@
         }
       </div>
     </div>
+
+    @if (cvDocument.hasDocument()) {
+      <p class="my-cv-page__helper">
+        @if (canMergeProjects()) {
+          {{ includedMergeCount() }} of
+          {{ mergeDraftRows().length }} saved
+          {{ mergeDraftRows().length === 1 ? 'summary' : 'summaries' }} will be merged.
+        } @else if (mergeDraftRows().length === 0) {
+          Save project summaries on <a routerLink="/cv-projects">Projects</a> to enable merging.
+        } @else {
+          Enable at least one summary in configure merge below.
+        }
+      </p>
+    }
 
     @if (cvDocument.error(); as cvError) {
       <div class="my-cv-page__alert" role="alert">{{ cvError }}</div>
@@ -58,6 +81,10 @@
 
     @if (cvDocument.deleteError(); as deleteError) {
       <div class="my-cv-page__alert" role="alert">{{ deleteError }}</div>
+    }
+
+    @if (cvDocument.mergeError(); as mergeError) {
+      <div class="my-cv-page__alert" role="alert">{{ mergeError }}</div>
     }
 
     @if (cvDocument.previewError(); as previewError) {
@@ -96,6 +123,128 @@
       </div>
     }
   </section>
+
+  @if (cvDocument.hasDocument()) {
+    <section class="my-cv-page__panel my-cv-page__merge-panel" aria-labelledby="merge-config-heading">
+      <div class="my-cv-page__panel-header">
+        <div>
+          <p class="my-cv-page__label">Merge setup</p>
+          <h2 id="merge-config-heading">Configure merge</h2>
+        </div>
+
+        <button
+          type="button"
+          class="my-cv-page__secondary-action"
+          (click)="toggleMergeConfig()">
+          {{ mergeConfigOpen() ? 'Hide' : 'Show' }} merge settings
+        </button>
+      </div>
+
+      @if (mergeConfigOpen()) {
+        <p class="my-cv-page__helper">
+          Choose which summaries to include and assign each one to a detected CV section. Summaries are
+          inserted on new page(s) immediately after the page containing that section heading.
+        </p>
+
+        @if (cvProjects.mergeConfigError(); as mergeConfigError) {
+          <div class="my-cv-page__alert" role="alert">{{ mergeConfigError }}</div>
+        }
+
+        @if (cvProjects.placementsError(); as placementsError) {
+          <div class="my-cv-page__alert" role="alert">{{ placementsError }}</div>
+        }
+
+        @if (unmatchedSectionWarnings().length > 0) {
+          <div class="my-cv-page__alert my-cv-page__alert--warning" role="status">
+            These summaries target sections that were not detected and will fall back to the appendix:
+            {{ unmatchedSectionWarnings().join(', ') }}.
+          </div>
+        }
+
+        @if (cvProjects.loadingMergeConfig()) {
+          <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading merge settings">
+            <app-skeleton-block width="100%" height="8rem" />
+          </div>
+        } @else if (mergeDraftRows().length === 0) {
+          <p class="my-cv-page__muted">
+            Save project summaries on <a routerLink="/cv-projects">Projects</a> first.
+          </p>
+        } @else {
+          <div class="my-cv-page__merge-table-wrap">
+            <table class="my-cv-page__merge-table">
+              <thead>
+                <tr>
+                  <th scope="col">Include</th>
+                  <th scope="col">Project</th>
+                  <th scope="col">Target section</th>
+                  <th scope="col">Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of allDraftRowsOrdered(); track row.summary.id) {
+                  <tr>
+                    <td>
+                      <input
+                        type="checkbox"
+                        [checked]="row.includeInMerge"
+                        (change)="setInclude(row, $any($event.target).checked)" />
+                    </td>
+                    <td>
+                      <strong>{{ row.summary.cvTitle }}</strong>
+                      <span class="my-cv-page__merge-repo">{{ row.summary.fullName }}</span>
+                    </td>
+                    <td>
+                      <select
+                        class="my-cv-page__merge-select"
+                        [ngModel]="row.mergeSectionHeading ?? appendixSectionValue"
+                        (ngModelChange)="setSection(row, $event)">
+                        <option [ngValue]="appendixSectionValue">Appendix at end</option>
+                        @for (section of sectionOptions(); track section.headingText) {
+                          <option [ngValue]="section.headingText">
+                            {{ section.headingText }} (page {{ section.pageIndex + 1 }})
+                          </option>
+                        }
+                      </select>
+                    </td>
+                    <td>
+                      <div class="my-cv-page__merge-order-actions">
+                        <button
+                          type="button"
+                          class="my-cv-page__icon-action"
+                          [disabled]="!canMoveRow(row, -1)"
+                          (click)="moveRow(row, -1)"
+                          aria-label="Move up">
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          class="my-cv-page__icon-action"
+                          [disabled]="!canMoveRow(row, 1)"
+                          (click)="moveRow(row, 1)"
+                          aria-label="Move down">
+                          ↓
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="my-cv-page__merge-actions">
+            <button
+              type="button"
+              class="my-cv-page__secondary-action"
+              [disabled]="cvProjects.savingPlacements()"
+              (click)="savePlacements()">
+              {{ cvProjects.savingPlacements() ? 'Saving...' : 'Save placements' }}
+            </button>
+          </div>
+        }
+      }
+    </section>
+  }
 
   @if (deleteConfirmOpen()) {
     <div

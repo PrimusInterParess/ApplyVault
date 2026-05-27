@@ -4,6 +4,7 @@ using ApplyVault.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApplyVault.Api.Migrations
 {
     [DbContext(typeof(ApplyVaultDbContext))]
-    partial class ApplyVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260527140948_AddCvDocumentBaseStorageKey")]
+    partial class AddCvDocumentBaseStorageKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -444,16 +447,6 @@ namespace ApplyVault.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
-
-                    b.Property<bool>("IncludeInMerge")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MergeSectionHeading")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<int>("MergeSortOrder")
-                        .HasColumnType("int");
 
                     b.Property<string>("PrimaryLanguage")
                         .HasMaxLength(128)

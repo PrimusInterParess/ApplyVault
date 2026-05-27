@@ -121,6 +121,9 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((summary) => summary.CvSummary).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((summary) => summary.CvBullets).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((summary) => summary.TechStack).IsRequired().HasMaxLength(512);
+            entity.Property((summary) => summary.IncludeInMerge).HasDefaultValue(true);
+            entity.Property((summary) => summary.MergeSectionHeading).HasMaxLength(256);
+            entity.Property((summary) => summary.MergeSortOrder).HasDefaultValue(0);
             entity.HasIndex((summary) => new { summary.UserId, summary.ExternalRepoId }).IsUnique();
             entity.HasOne((summary) => summary.User)
                 .WithMany((user) => user.CvProjectSummaries)
@@ -134,6 +137,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((document) => document.OriginalFileName).IsRequired().HasMaxLength(260);
             entity.Property((document) => document.ContentType).IsRequired().HasMaxLength(128);
             entity.Property((document) => document.StorageKey).IsRequired().HasMaxLength(512);
+            entity.Property((document) => document.BaseStorageKey).HasMaxLength(512);
             entity.HasIndex((document) => document.UserId).IsUnique();
             entity.HasOne((document) => document.User)
                 .WithOne((user) => user.CvDocument)

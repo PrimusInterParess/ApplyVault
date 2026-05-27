@@ -10,7 +10,9 @@ namespace ApplyVault.Api.Controllers;
 [Authorize]
 public sealed class CvDocumentsController(
     IAppUserService appUserService,
-    ICvDocumentService cvDocumentService) : ControllerBase
+    ICvDocumentService cvDocumentService,
+    ICvPdfProjectsMergeService cvPdfProjectsMergeService,
+    ICvPdfSectionDetectionService cvPdfSectionDetectionService) : ControllerBase
 {
     [HttpGet("current")]
     public async Task<ActionResult<CvDocumentDto>> GetCurrent(CancellationToken cancellationToken = default)
@@ -59,6 +61,37 @@ public sealed class CvDocumentsController(
         {
             EnableRangeProcessing = true
         };
+    }
+
+    [HttpGet("current/sections")]
+    public async Task<ActionResult<IReadOnlyList<CvPdfSectionDto>>> GetCurrentSections(
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvPdfSectionDetectionService.DetectCurrentDocumentSectionsAsync(user, cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("current/merge-projects")]
+    public async Task<ActionResult<CvDocumentDto>> MergeProjects(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvPdfProjectsMergeService.MergeProjectsAsync(user, cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpDelete("current")]

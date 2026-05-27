@@ -4,4 +4,5 @@ export interface CvDocument {
   readonly contentType: string;
   readonly fileSizeBytes: number;
   readonly uploadedAt: string;
+  readonly hasMergedProjects: boolean;
 }

@@ -69,6 +69,7 @@ public sealed class CvDocumentService(
                 OriginalFileName = Path.GetFileName(file.FileName),
                 ContentType = PdfContentType,
                 StorageKey = storageKey,
+                BaseStorageKey = storageKey,
                 FileSizeBytes = file.Length,
                 UploadedAt = now,
                 UpdatedAt = now
@@ -78,17 +79,28 @@ public sealed class CvDocumentService(
         }
         else
         {
-            var previousStorageKey = existingDocument.StorageKey;
+            var keysToDelete = new HashSet<string>(StringComparer.Ordinal)
+            {
+                existingDocument.StorageKey
+            };
+
+            if (!string.IsNullOrWhiteSpace(existingDocument.BaseStorageKey))
+            {
+                keysToDelete.Add(existingDocument.BaseStorageKey);
+            }
 
             existingDocument.OriginalFileName = Path.GetFileName(file.FileName);
             existingDocument.ContentType = PdfContentType;
             existingDocument.StorageKey = storageKey;
+            existingDocument.BaseStorageKey = storageKey;
             existingDocument.FileSizeBytes = file.Length;
             existingDocument.UpdatedAt = now;
 
-            if (!string.Equals(previousStorageKey, storageKey, StringComparison.Ordinal))
+            keysToDelete.Remove(storageKey);
+
+            foreach (var keyToDelete in keysToDelete)
             {
-                await cvDocumentStorage.DeleteAsync(previousStorageKey, cancellationToken);
+                await cvDocumentStorage.DeleteAsync(keyToDelete, cancellationToken);
             }
         }
 
@@ -123,7 +135,21 @@ public sealed class CvDocumentService(
             return false;
         }
 
-        await cvDocumentStorage.DeleteAsync(document.StorageKey, cancellationToken);
+        var keysToDelete = new HashSet<string>(StringComparer.Ordinal)
+        {
+            document.StorageKey
+        };
+
+        if (!string.IsNullOrWhiteSpace(document.BaseStorageKey))
+        {
+            keysToDelete.Add(document.BaseStorageKey);
+        }
+
+        foreach (var keyToDelete in keysToDelete)
+        {
+            await cvDocumentStorage.DeleteAsync(keyToDelete, cancellationToken);
+        }
+
         dbContext.UserCvDocuments.Remove(document);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -173,11 +199,15 @@ public sealed class CvDocumentService(
 
     private static CvDocumentDto MapDocument(UserCvDocumentEntity document)
     {
+        var hasMergedProjects = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
+            && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
+
         return new CvDocumentDto(
             document.Id,
             document.OriginalFileName,
             document.ContentType,
             document.FileSizeBytes,
-            document.UploadedAt);
+            document.UploadedAt,
+            hasMergedProjects);
     }
 }

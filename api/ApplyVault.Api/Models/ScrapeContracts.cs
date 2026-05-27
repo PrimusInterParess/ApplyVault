@@ -226,7 +226,28 @@ public sealed record CvProjectSummaryDto(
     IReadOnlyList<string> CvBullets,
     string TechStack,
     DateTimeOffset GeneratedAt,
-    DateTimeOffset UpdatedAt
+    DateTimeOffset UpdatedAt,
+    bool IncludeInMerge,
+    string? MergeSectionHeading,
+    int MergeSortOrder
+);
+
+public sealed record CvProjectSummaryPlacementDto(
+    Guid SummaryId,
+    bool IncludeInMerge,
+    string? MergeSectionHeading,
+    int MergeSortOrder
+);
+
+public sealed record UpdateCvProjectSummaryPlacementsRequest(
+    IReadOnlyList<CvProjectSummaryPlacementDto> Placements
+);
+
+public sealed record CvPdfSectionDto(
+    string HeadingText,
+    string NormalizedKey,
+    int PageIndex,
+    double YPoints
 );
 
 public sealed record CvDocumentDto(
@@ -234,7 +255,8 @@ public sealed record CvDocumentDto(
     string OriginalFileName,
     string ContentType,
     long FileSizeBytes,
-    DateTimeOffset UploadedAt
+    DateTimeOffset UploadedAt,
+    bool HasMergedProjects
 );
 
 public sealed record CreateCalendarEventRequest(

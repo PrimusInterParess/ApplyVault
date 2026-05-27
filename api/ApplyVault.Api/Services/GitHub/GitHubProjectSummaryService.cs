@@ -31,6 +31,10 @@ public interface IGitHubProjectSummaryService
         int perPage,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<CvProjectSummaryDto>> ListAllSummariesAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default);
+
     Task<CvProjectSummaryDto?> GetSummaryAsync(
         AppUserEntity user,
         Guid summaryId,
@@ -39,6 +43,11 @@ public interface IGitHubProjectSummaryService
     Task<bool> DeleteSummaryAsync(
         AppUserEntity user,
         Guid summaryId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CvProjectSummaryDto>> UpdatePlacementsAsync(
+        AppUserEntity user,
+        IReadOnlyList<CvProjectSummaryPlacementDto> placements,
         CancellationToken cancellationToken = default);
 }
 
@@ -183,6 +192,19 @@ public sealed class GitHubProjectSummaryService(
         return summaries.Select(MapSummary).ToArray();
     }
 
+    public async Task<IReadOnlyList<CvProjectSummaryDto>> ListAllSummariesAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        var summaries = await dbContext.UserCvProjectSummaries
+            .AsNoTracking()
+            .Where((summary) => summary.UserId == user.Id)
+            .OrderByDescending((summary) => summary.UpdatedAt)
+            .ToArrayAsync(cancellationToken);
+
+        return summaries.Select(MapSummary).ToArray();
+    }
+
     public async Task<CvProjectSummaryDto?> GetSummaryAsync(
         AppUserEntity user,
         Guid summaryId,
@@ -214,6 +236,45 @@ public sealed class GitHubProjectSummaryService(
         dbContext.UserCvProjectSummaries.Remove(summary);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<IReadOnlyList<CvProjectSummaryDto>> UpdatePlacementsAsync(
+        AppUserEntity user,
+        IReadOnlyList<CvProjectSummaryPlacementDto> placements,
+        CancellationToken cancellationToken = default)
+    {
+        if (placements.Count == 0)
+        {
+            return await ListAllSummariesAsync(user, cancellationToken);
+        }
+
+        var summaryIds = placements.Select((placement) => placement.SummaryId).ToArray();
+        var entities = await dbContext.UserCvProjectSummaries
+            .Where((summary) => summary.UserId == user.Id && summaryIds.Contains(summary.Id))
+            .ToArrayAsync(cancellationToken);
+
+        if (entities.Length != summaryIds.Length)
+        {
+            throw new InvalidOperationException("One or more project summaries could not be found.");
+        }
+
+        var placementById = placements.ToDictionary((placement) => placement.SummaryId);
+        var utcNow = DateTimeOffset.UtcNow;
+
+        foreach (var entity in entities)
+        {
+            var placement = placementById[entity.Id];
+            entity.IncludeInMerge = placement.IncludeInMerge;
+            entity.MergeSectionHeading = string.IsNullOrWhiteSpace(placement.MergeSectionHeading)
+                ? null
+                : placement.MergeSectionHeading.Trim();
+            entity.MergeSortOrder = placement.MergeSortOrder;
+            entity.UpdatedAt = utcNow;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await ListAllSummariesAsync(user, cancellationToken);
     }
 
     private static (string Owner, string Repo) ParseFullName(string fullName)
@@ -265,7 +326,10 @@ public sealed class GitHubProjectSummaryService(
             bullets,
             entity.TechStack,
             entity.GeneratedAt,
-            entity.UpdatedAt);
+            entity.UpdatedAt,
+            entity.IncludeInMerge,
+            entity.MergeSectionHeading,
+            entity.MergeSortOrder);
     }
 
     private static IReadOnlyList<string> DeserializeStringArray(string? json)

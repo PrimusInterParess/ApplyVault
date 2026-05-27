@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument } from '../models/cv-document.model';
+import { CvPdfSection } from '../models/cv-project.model';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentApiService {
@@ -12,6 +13,10 @@ export class CvDocumentApiService {
 
   getCurrent(): Observable<CvDocument> {
     return this.httpClient.get<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current`);
+  }
+
+  getCvSections(): Observable<readonly CvPdfSection[]> {
+    return this.httpClient.get<readonly CvPdfSection[]>(`${this.apiConfig.baseUrl}/cv-documents/current/sections`);
   }
 
   upload(file: File): Observable<CvDocument> {
@@ -25,6 +30,13 @@ export class CvDocumentApiService {
     return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/content`, {
       responseType: 'blob'
     });
+  }
+
+  mergeProjects(): Observable<CvDocument> {
+    return this.httpClient.post<CvDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/merge-projects`,
+      null
+    );
   }
 
   delete(): Observable<void> {

@@ -14,7 +14,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
 builder.Services
     .AddApplyVaultCors(builder.Configuration, builder.Environment)
-    .AddApplyVaultDatabase(builder.Configuration)
+    .AddApplyVaultDatabase(builder.Configuration, builder.Environment)
     .AddApplyVaultOptions(builder.Configuration, builder.Environment)
     .AddApplyVaultAuthentication()
     .AddApplyVaultApplicationServices(builder.Configuration);

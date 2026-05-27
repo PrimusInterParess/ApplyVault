@@ -7,11 +7,16 @@ public static class ApplyVaultDatabaseExtensions
 {
     public static IServiceCollection AddApplyVaultDatabase(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services
             .AddOptions<TestingOptions>()
             .Bind(configuration.GetSection(TestingOptions.SectionName));
+
+        services
+            .AddOptions<DatabaseOptions>()
+            .Bind(configuration.GetSection(DatabaseOptions.SectionName));
 
         var testingOptions = configuration.GetSection(TestingOptions.SectionName).Get<TestingOptions>()
             ?? new TestingOptions();
@@ -24,8 +29,18 @@ public static class ApplyVaultDatabaseExtensions
                 return;
             }
 
-            var connectionString = configuration.GetConnectionString("ApplyVault")
-                ?? throw new InvalidOperationException("Connection string 'ApplyVault' is not configured.");
+            var connectionString = configuration.GetConnectionString("ApplyVault");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException(
+                    "Connection string 'ApplyVault' is not configured. Set ConnectionStrings__ApplyVault or appsettings.{Environment}.json.");
+            }
+
+            if (!environment.IsDevelopment() && connectionString.Contains("(localdb)", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Connection string 'ApplyVault' must not use LocalDB when ASPNETCORE_ENVIRONMENT is not Development.");
+            }
 
             options.UseSqlServer(connectionString);
         });

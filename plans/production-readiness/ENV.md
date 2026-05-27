@@ -22,7 +22,15 @@ When `ASPNETCORE_ENVIRONMENT` is not `Development`, the API validates at startup
 
 | Key | Env var | Purpose |
 |-----|---------|---------|
-| `ConnectionStrings:ApplyVault` | `ConnectionStrings__ApplyVault` | SQL Server connection for EF Core |
+| `ConnectionStrings:ApplyVault` | `ConnectionStrings__ApplyVault` | SQL Server connection for EF Core (required when not using in-memory DB) |
+
+## Database / migrations
+
+| Key | Env var | Purpose |
+|-----|---------|---------|
+| `Database:MigrateAtStartup` | `Database__MigrateAtStartup` | When `true`, applies EF migrations on API startup. Production template sets `false`; run `dotnet ef database update` in deploy instead. |
+
+Runbook: [DATABASE.md](DATABASE.md).
 
 ## Optional integrations
 

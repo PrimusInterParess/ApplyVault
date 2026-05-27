@@ -136,7 +136,11 @@ JWT failures are logged under the `ApplyVault.Auth.JwtBearer` category. Restart 
 
 Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, capture-quality metadata for reviewable fields, and status-sync metadata that records whether the latest rejection or interview update came from Gmail or a manual edit.
 
-By default, the API uses the `ApplyVault` SQL Server database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`. On startup, a registered `IDatabaseInitializer` applies EF Core migrations for SQL Server (`Database.Migrate()`). Integration tests and other in-memory setups set `Testing:UseInMemoryDatabase` to `true`, which switches to `EnsureCreated()` and does not require a real connection string.
+**Local SQL:** copy `appsettings.Development.example.json` to `appsettings.Development.json` — it sets `ConnectionStrings:ApplyVault` (LocalDB by default). Base `appsettings.json` leaves the connection string empty so production cannot accidentally use dev SQL.
+
+**Migrations:** when `Database:MigrateAtStartup` is `true` (default for local dev), startup runs `Database.Migrate()`. Production/Staging templates set it to `false`; run `dotnet ef database update` in deploy before traffic. See [`plans/production-readiness/DATABASE.md`](plans/production-readiness/DATABASE.md).
+
+Integration tests set `Testing:UseInMemoryDatabase` to `true`, which uses `EnsureCreated()` and does not require a real connection string.
 
 ### 3. Configure API integrations
 
@@ -162,6 +166,8 @@ Option sections (validated at startup when enabled):
   Configures the EURES API base URL, default country/location code, max results per page, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached in memory for five minutes before server-side pagination is applied.
 - `Cors`
   Allowed browser origins for production. Leave `AllowedOrigins` empty in Development to allow any origin; set explicit origins (for example `http://localhost:4200`) before exposing the API publicly.
+- `Database`
+  `MigrateAtStartup` controls whether EF migrations run on API startup. Production defaults to `false`; use `dotnet ef database update` in deploy (see [DATABASE.md](plans/production-readiness/DATABASE.md)).
 - `Testing`
   Test-only switches. Integration tests set `Testing:UseInMemoryDatabase` and `Testing:InMemoryDatabaseName` to run against an isolated in-memory database.
 
@@ -325,14 +331,15 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 1 Scrape ingest authentication | Done | [`prod-01-scrape-ingest-auth.md`](plans/prod-01-scrape-ingest-auth.md) |
 | 2 Multi-tenant data isolation | Done | [`prod-02-tenancy-isolation.md`](plans/prod-02-tenancy-isolation.md) |
 | 3 API integration tests (tenancy) | Done | [`prod-03-api-integration-tests.md`](plans/prod-03-api-integration-tests.md) |
-| 4 API environment configuration | Pending | [`production-readiness/prod-04-api-environment-configuration.md`](plans/production-readiness/prod-04-api-environment-configuration.md) (next) |
-| 5–17 Deploy, CI, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) |
+| 4 API environment configuration | Done | [`production-readiness/prod-04-api-environment-configuration.md`](plans/production-readiness/prod-04-api-environment-configuration.md) |
+| 5 Database and migrations | Done | [`production-readiness/prod-05-database-and-migrations.md`](plans/production-readiness/prod-05-database-and-migrations.md) · [`DATABASE.md`](plans/production-readiness/DATABASE.md) |
+| 6–17 CI, deploy, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 6 CI) |
 
 **Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 
 **Local foundations in place (not full prod steps yet):** Config-driven CORS (`Cors:AllowedOrigins`), startup options validation, and `GET /health` with a database check — align with tracker steps 11–12 but still need production hardening (HTTPS, deploy wiring, readiness probes).
 
-**Not production-ready yet:** Environment-based deploy config (steps 4–10), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+**Not production-ready yet:** CI (step 6), deployment/hosting (steps 7–10), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

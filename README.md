@@ -337,13 +337,15 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 7 Deployment and hosting | Done | [`production-readiness/prod-07-deployment-and-hosting.md`](plans/production-readiness/prod-07-deployment-and-hosting.md) |
 | 8 Frontend environment builds | Done | [`production-readiness/FRONTEND.md`](plans/production-readiness/FRONTEND.md) |
 | 9 Extension production config | Done | [`production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) |
-| 10–17 OAuth, CORS, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 10 OAuth) |
+| 10 OAuth redirects and secrets | Done | [`production-readiness/OAUTH.md`](plans/production-readiness/OAUTH.md) |
+| 11 CORS and transport security | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md) |
+| 12–17 Health, logging, rate limit, tests, scale | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 12) |
 
 **Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 
-**Local foundations in place (not full prod steps yet):** Config-driven CORS (`Cors:AllowedOrigins`), startup options validation, and `GET /health` with a database check — align with tracker steps 11–12 but still need production hardening (HTTPS, deploy wiring, readiness probes).
+**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, and `GET /health` with a database check — step 12 adds extended readiness probes.
 
-**Not production-ready yet:** OAuth redirects and secrets (step 10), CORS/transport hardening (step 11), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+**Not production-ready yet for multi-instance:** EURES cache and Gmail sync horizontal-scale fixes (steps 16–17) when running more than one API replica.
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

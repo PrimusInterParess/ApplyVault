@@ -72,8 +72,8 @@ public static class ServiceCollectionExtensions
         {
             corsOptionsBuilder
                 .Validate(
-                    (options) => options.AllowedOrigins.Length > 0,
-                    "Cors:AllowedOrigins must contain at least one origin when ASPNETCORE_ENVIRONMENT is not Development.")
+                    (options) => CorsOptionsValidation.Validate(options, requireHttps: true),
+                    "Cors:AllowedOrigins must contain at least one valid HTTPS origin (scheme + host, no path) when ASPNETCORE_ENVIRONMENT is not Development.")
                 .ValidateOnStart();
 
             supabaseOptionsBuilder

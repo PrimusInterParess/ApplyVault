@@ -13,6 +13,8 @@ public static class WebApplicationExtensions
             app.MapOpenApi();
         }
 
+        // TLS termination and HSTS are handled at the edge (Caddy in deploy/). Do not call
+        // UseHttpsRedirection here — the API listens on HTTP behind the reverse proxy.
         app.UseCors();
         app.UseExceptionHandler();
         app.UseAuthentication();

@@ -4,22 +4,22 @@ overview: Lock down cross-origin access and enforce HTTPS for production API and
 todos:
   - id: cors-production
     content: Set Cors:AllowedOrigins to production frontend URL(s) only
-    status: pending
+    status: completed
   - id: cors-no-wildcard-prod
     content: Ensure Production never falls back to AllowAnyOrigin
-    status: pending
+    status: completed
   - id: https-redirection
     content: Add UseHttpsRedirection or rely on platform HTTPS termination with documented approach
-    status: pending
+    status: completed
   - id: hsts
     content: Enable HSTS in production (UseHsts)
-    status: pending
+    status: completed
   - id: supabase-https-metadata
     content: Confirm RequireHttpsMetadata=true in Production for JWT (already env-aware)
-    status: pending
+    status: completed
   - id: verify-preflight
     content: Verify browser preflight from prod frontend to prod API succeeds
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -100,3 +100,11 @@ Skip if platform terminates TLS and redirects at edge — document chosen approa
 ## Production-grade notes
 
 - Do not use `AllowAnyOrigin()` with credentialed requests; current API uses Bearer header (non-credential CORS), but explicit origins are still required for security.
+
+## Done (implementation summary)
+
+- [`CorsOptionsValidation`](../../api/ApplyVault.Api/Infrastructure/CorsOptionsValidation.cs) — startup requires at least one valid HTTPS origin outside Development (no path/query/fragment).
+- Non-Development never uses `AllowAnyOrigin()`; empty origins fail validation before the app listens.
+- TLS + HSTS at **Caddy edge** (`deploy/Caddyfile`); API documents why in-app `UseHttpsRedirection` is skipped.
+- `RequireHttpsMetadata=true` for JWT in non-Development ([`ConfigureSupabaseJwtBearerOptions`](../../api/ApplyVault.Api/Infrastructure/ConfigureSupabaseJwtBearerOptions.cs)).
+- Preflight verification commands in [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md).

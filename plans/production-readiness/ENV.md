@@ -16,7 +16,7 @@ When `ASPNETCORE_ENVIRONMENT` is not `Development`, the API validates at startup
 | Key | Env var | Purpose |
 |-----|---------|---------|
 | `Supabase:Url` | `Supabase__Url` | Supabase project root URL (same project as the Angular dashboard) |
-| `Cors:AllowedOrigins` | `Cors__AllowedOrigins__0`, … | Browser origins allowed to call the API |
+| `Cors:AllowedOrigins` | `Cors__AllowedOrigins__0`, … | Browser origins allowed to call the API (HTTPS only outside Development; scheme + host, no path) |
 
 ## Connection string
 

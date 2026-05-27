@@ -107,7 +107,7 @@ Minimum production set:
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `ConnectionStrings__ApplyVault` | SQL Server |
 | `Supabase__Url` | Supabase project URL |
-| `Cors__AllowedOrigins__0` | Frontend origin (HTTPS) |
+| `Cors__AllowedOrigins__0` | Frontend origin (HTTPS, no path — e.g. `https://app.example.com`) |
 | `Database__MigrateAtStartup` | `false` (run `migrate.sh` instead) |
 
 Full reference: [ENV.md](../plans/production-readiness/ENV.md). Template: [`.env.example`](.env.example).
@@ -131,13 +131,34 @@ docker compose logs -f api
 docker compose logs -f caddy
 ```
 
-## HTTPS
+## HTTPS and transport security
 
-Caddy obtains and renews certificates automatically when `API_DOMAIN` resolves to this host and ports 80/443 are reachable.
+**Approach:** Caddy terminates TLS on ports 80/443 and proxies HTTP to the `api` container. The API does **not** call `UseHttpsRedirection` — redirecting inside the app would target the wrong host/port behind the proxy.
+
+- Caddy obtains and renews certificates when `API_DOMAIN` resolves to this host and ports 80/443 are reachable.
+- `deploy/Caddyfile` sends `Strict-Transport-Security` on HTTPS responses.
+- Set `Cors__AllowedOrigins__0` to the dashboard origin (`https://${APP_DOMAIN}`). Startup fails if origins are missing or not HTTPS outside Development.
+- JWT signing keys are fetched with `RequireHttpsMetadata=true` in Staging/Production.
+
+### CORS preflight check
+
+```bash
+# Allowed origin — expect Access-Control-Allow-Origin matching APP_DOMAIN
+curl -i -X OPTIONS "https://${API_DOMAIN}/health" \
+  -H "Origin: https://${APP_DOMAIN}" \
+  -H "Access-Control-Request-Method: GET"
+
+# Untrusted origin — must not echo Access-Control-Allow-Origin for evil.example.com
+curl -i -X OPTIONS "https://${API_DOMAIN}/health" \
+  -H "Origin: https://evil.example.com" \
+  -H "Access-Control-Request-Method: GET"
+```
 
 ## Verification checklist
 
 - [ ] `curl -fsS "https://${API_DOMAIN}/health"` returns HTTP 200 with database healthy.
+- [ ] `curl -I "https://${API_DOMAIN}/health"` includes `Strict-Transport-Security`.
+- [ ] CORS preflight from `https://${APP_DOMAIN}` succeeds; untrusted origin does not get `Access-Control-Allow-Origin`.
 - [ ] Dashboard sign-in against prod API loads jobs.
 - [ ] Rollback procedure exercised once on staging.
 
@@ -145,5 +166,5 @@ Caddy obtains and renews certificates automatically when `API_DOMAIN` resolves t
 
 - **Step 8:** Frontend environment builds — set `apiUrl` to `https://${API_DOMAIN}`.
 - **Step 10:** OAuth redirect URIs and secrets — [OAUTH.md](../plans/production-readiness/OAUTH.md).
-- **Step 11:** CORS hardening for production domains.
+- **Step 11:** CORS hardening for production domains — done; see [HTTPS and transport security](#https-and-transport-security).
 - **Step 12:** Extended health/readiness probes (builds on `GET /health`).

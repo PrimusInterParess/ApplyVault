@@ -3,6 +3,7 @@ import { createClient, type Session } from '@supabase/supabase-js';
 import { API_BASE_URL } from '../api/apiConfig';
 import type { CurrentUser } from '../../shared/models/currentUser';
 import { assertSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabaseConfig';
+import { clearStoredSession, SESSION_STORAGE_KEY } from './sessionStorage';
 
 assertSupabaseConfigured();
 
@@ -12,13 +13,40 @@ export interface ExtensionAuthState {
   readonly apiError: string | null;
 }
 
-const SESSION_STORAGE_KEY = 'applyvault-extension-auth';
+type AuthLock = <R>(name: string, acquireTimeout: number, fn: () => Promise<R>) => Promise<R>;
+
+let authLockTail: Promise<void> = Promise.resolve();
+
+const extensionAuthLock: AuthLock = async (_name, _acquireTimeout, fn) => {
+  const previousLock = authLockTail;
+  let releaseLock!: () => void;
+  authLockTail = new Promise<void>((resolve) => {
+    releaseLock = resolve;
+  });
+
+  await previousLock;
+
+  try {
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+};
 
 const chromeStorageAdapter = {
   async getItem(key: string): Promise<string | null> {
     const stored = await chrome.storage.local.get(key);
     const value = stored[key];
-    return typeof value === 'string' ? value : null;
+
+    if (value == null) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    return JSON.stringify(value);
   },
   async setItem(key: string, value: string): Promise<void> {
     await chrome.storage.local.set({ [key]: value });
@@ -34,7 +62,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     detectSessionInUrl: false,
     storageKey: SESSION_STORAGE_KEY,
-    storage: chromeStorageAdapter
+    storage: chromeStorageAdapter,
+    lock: extensionAuthLock
   }
 });
 
@@ -44,6 +73,19 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function isInvalidRefreshTokenError(error: unknown): boolean {
+  const message = getErrorMessage(error, '');
+  return message.includes('Invalid Refresh Token') || message.includes('Refresh Token Not Found');
+}
+
+async function clearLocalAuthSession(): Promise<void> {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    await clearStoredSession();
+  }
 }
 
 async function buildErrorMessage(response: Response): Promise<string> {
@@ -75,6 +117,11 @@ export async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      await clearLocalAuthSession();
+      return null;
+    }
+
     throw new Error(getErrorMessage(error, 'Loading the Supabase session failed.'));
   }
 

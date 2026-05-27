@@ -1,5 +1,6 @@
 import { build, context } from 'esbuild';
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
@@ -53,25 +54,40 @@ const entryPoints = {
 };
 
 async function validateEnvironmentFile() {
-  const environmentModule = await import(pathToFileURL(resolvedEnvironmentPath).href);
-  const { environment } = environmentModule;
+  const tempDir = await mkdtemp(path.join(tmpdir(), 'applyvault-env-'));
+  const compiledEnvironmentPath = path.join(tempDir, 'environment.mjs');
 
-  if (!environment?.apiBaseUrl?.trim()) {
-    throw new Error(
-      `Extension build (${configuration}): apiBaseUrl is empty in src/environments/${environmentFile}.`
-    );
-  }
+  try {
+    await build({
+      entryPoints: [resolvedEnvironmentPath],
+      outfile: compiledEnvironmentPath,
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      logLevel: 'silent'
+    });
 
-  if (!environment?.supabase?.url?.trim()) {
-    throw new Error(
-      `Extension build (${configuration}): supabase.url is empty in src/environments/${environmentFile}.`
-    );
-  }
+    const { environment } = await import(pathToFileURL(compiledEnvironmentPath).href);
 
-  if (!environment?.supabase?.anonKey?.trim()) {
-    throw new Error(
-      `Extension build (${configuration}): supabase.anonKey is empty in src/environments/${environmentFile}.`
-    );
+    if (!environment?.apiBaseUrl?.trim()) {
+      throw new Error(
+        `Extension build (${configuration}): apiBaseUrl is empty in src/environments/${environmentFile}.`
+      );
+    }
+
+    if (!environment?.supabase?.url?.trim()) {
+      throw new Error(
+        `Extension build (${configuration}): supabase.url is empty in src/environments/${environmentFile}.`
+      );
+    }
+
+    if (!environment?.supabase?.anonKey?.trim()) {
+      throw new Error(
+        `Extension build (${configuration}): supabase.anonKey is empty in src/environments/${environmentFile}.`
+      );
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
   }
 }
 

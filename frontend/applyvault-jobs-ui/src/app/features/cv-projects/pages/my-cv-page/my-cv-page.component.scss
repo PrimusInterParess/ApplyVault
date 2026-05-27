@@ -3,7 +3,7 @@
 }
 
 .my-cv-page {
-  max-width: 960px;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 1.25rem;
   font-size: 0.92rem;
@@ -60,32 +60,26 @@
   color: var(--app-text);
 }
 
-.my-cv-page__content {
-  display: flex;
-  gap: 1.25rem;
-  align-items: start;
-  flex-wrap: wrap;
+.my-cv-page__file-details {
+  display: grid;
+  gap: 1rem;
 }
 
-.my-cv-page__photo,
-.my-cv-page__photo-skeleton {
-  flex: 0 0 auto;
+.my-cv-page__preview-panel {
+  margin-top: 1rem;
 }
 
-.my-cv-page__photo {
-  width: 6rem;
-  height: 6rem;
-  object-fit: cover;
+.my-cv-page__preview-empty {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--app-border-strong);
   border-radius: var(--app-radius);
-  border: 1px solid var(--app-border);
   background: var(--app-bg-soft);
 }
 
-.my-cv-page__details {
-  display: grid;
-  gap: 1rem;
-  flex: 1 1 16rem;
-  min-width: 0;
+.my-cv-page__preview-empty .my-cv-page__link-action {
+  width: fit-content;
 }
 
 .my-cv-page__extraction {

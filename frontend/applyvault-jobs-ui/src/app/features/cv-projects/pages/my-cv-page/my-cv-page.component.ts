@@ -1,23 +1,62 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
+import { CvStructuredPreviewComponent } from '../../components/cv-structured-preview/cv-structured-preview.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
+import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 
 @Component({
   selector: 'app-my-cv-page',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, SkeletonBlockComponent],
+  imports: [
+    CommonModule,
+    DatePipe,
+    RouterLink,
+    SkeletonBlockComponent,
+    CvStructuredPreviewComponent
+  ],
   templateUrl: './my-cv-page.component.html',
   styleUrl: './my-cv-page.component.scss'
 })
 export class MyCvPageComponent {
   protected readonly cvDocument = inject(CvDocumentFacade);
+  protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
+
+  protected readonly previewSections = computed(
+    () => this.cvStructured.structured()?.sections ?? []
+  );
+
+  protected readonly hasPreviewContent = computed(() =>
+    this.previewSections().some((section) => section.entries.length > 0)
+  );
+
+  protected readonly structuredReloadKey = computed(() => {
+    const document = this.cvDocument.document();
+    const importSummary = this.cvDocument.importSummary();
+
+    return [
+      document?.hasStructuredContent ?? false,
+      document?.structuredImportedAt ?? '',
+      importSummary?.sectionCount ?? 0,
+      importSummary?.succeeded ?? false
+    ].join('|');
+  });
+
+  constructor() {
+    effect(() => {
+      this.structuredReloadKey();
+
+      if (!this.cvDocument.loading() && this.cvDocument.hasDocument()) {
+        this.cvStructured.load();
+      }
+    });
+  }
 
   protected formatFileSize(bytes: number): string {
     if (bytes < 1024) {

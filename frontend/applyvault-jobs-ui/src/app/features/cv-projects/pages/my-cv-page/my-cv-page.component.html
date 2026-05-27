@@ -85,68 +85,55 @@
     @if (cvDocument.loading()) {
       <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading CV">
         <app-skeleton-block width="38%" height="1rem" />
-        <app-skeleton-block width="100%" height="6rem" />
+        <app-skeleton-block width="100%" height="4rem" />
       </div>
     } @else if (cvDocument.hasDocument()) {
       @if (cvDocument.document(); as document) {
-        <div class="my-cv-page__content">
-          @if (cvDocument.loadingProfilePhoto()) {
-            <div class="my-cv-page__photo-skeleton" aria-busy="true" aria-label="Loading profile photo">
-              <app-skeleton-block width="6rem" height="6rem" />
-            </div>
-          } @else if (cvDocument.profilePhotoUrl()) {
-            <img
-              class="my-cv-page__photo"
-              [src]="cvDocument.profilePhotoUrl()"
-              alt="Profile photo extracted from your CV" />
-          }
-
-          <div class="my-cv-page__details">
-            <div class="my-cv-page__meta">
-              <strong>{{ document.originalFileName }}</strong>
-              <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
-              <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
-              @if (document.hasMergedProjects) {
-                <span class="my-cv-page__muted">
-                  An edited export is saved separately from this original upload.
-                </span>
-              }
-            </div>
-
-            @if (extractionStatus(); as status) {
-              <div class="my-cv-page__extraction" [class.my-cv-page__extraction--failed]="!status.succeeded">
-                <p class="my-cv-page__label">Extracted content</p>
-                @if (status.succeeded) {
-                  <p>
-                    {{ status.sectionCount }} sections saved
-                    {{ status.usedAi ? 'with AI parsing' : 'with basic parsing' }}.
-                    @if (status.profilePhotoExtracted) {
-                      Profile photo extracted.
-                    }
-                  </p>
-                  @if (status.notice) {
-                    <p class="my-cv-page__muted">{{ status.notice }}</p>
-                  }
-                } @else {
-                  <p>{{ status.notice ?? 'Section extraction did not complete.' }}</p>
-                  <p class="my-cv-page__muted">
-                    Your original PDF was saved. Open the CV Editor to extract sections manually.
-                  </p>
-                }
-              </div>
-            } @else if (document.hasStructuredContent && document.structuredImportedAt) {
-              <div class="my-cv-page__extraction">
-                <p class="my-cv-page__label">Extracted content</p>
-                <p>
-                  Sections imported
-                  {{ document.structuredImportedAt | date: 'MMM d, y, h:mm a' }}.
-                  @if (document.hasProfilePhoto) {
-                    Profile photo available.
-                  }
-                </p>
-              </div>
+        <div class="my-cv-page__file-details">
+          <div class="my-cv-page__meta">
+            <strong>{{ document.originalFileName }}</strong>
+            <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
+            <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
+            @if (document.hasMergedProjects) {
+              <span class="my-cv-page__muted">
+                An edited export is saved separately from this original upload.
+              </span>
             }
           </div>
+
+          @if (extractionStatus(); as status) {
+            <div class="my-cv-page__extraction" [class.my-cv-page__extraction--failed]="!status.succeeded">
+              <p class="my-cv-page__label">Extracted content</p>
+              @if (status.succeeded) {
+                <p>
+                  {{ status.sectionCount }} sections saved
+                  {{ status.usedAi ? 'with AI parsing' : 'with basic parsing' }}.
+                  @if (status.profilePhotoExtracted) {
+                    Profile photo extracted.
+                  }
+                </p>
+                @if (status.notice) {
+                  <p class="my-cv-page__muted">{{ status.notice }}</p>
+                }
+              } @else {
+                <p>{{ status.notice ?? 'Section extraction did not complete.' }}</p>
+                <p class="my-cv-page__muted">
+                  Your original PDF was saved. Open the CV Editor to extract sections manually.
+                </p>
+              }
+            </div>
+          } @else if (document.hasStructuredContent && document.structuredImportedAt) {
+            <div class="my-cv-page__extraction">
+              <p class="my-cv-page__label">Extracted content</p>
+              <p>
+                Sections imported
+                {{ document.structuredImportedAt | date: 'MMM d, y, h:mm a' }}.
+                @if (document.hasProfilePhoto) {
+                  Profile photo available.
+                }
+              </p>
+            </div>
+          }
         </div>
       }
     } @else {
@@ -159,6 +146,48 @@
       </div>
     }
   </section>
+
+  @if (cvDocument.hasDocument() || cvDocument.loading()) {
+    <section class="my-cv-page__panel my-cv-page__preview-panel" aria-labelledby="cv-preview-heading">
+      <div class="my-cv-page__panel-header">
+        <div>
+          <p class="my-cv-page__label">Structured preview</p>
+          <h2 id="cv-preview-heading">Your CV content</h2>
+        </div>
+
+        @if (hasPreviewContent() && !cvStructured.loading()) {
+          <a routerLink="/cv-editor" class="my-cv-page__secondary-action my-cv-page__link-action">
+            Edit in CV Editor
+          </a>
+        }
+      </div>
+
+      @if (cvStructured.error(); as structuredError) {
+        <div class="my-cv-page__alert" role="alert">{{ structuredError }}</div>
+      }
+
+      @if (cvDocument.loading() || cvStructured.loading()) {
+        <app-cv-structured-preview [loadingContent]="true" />
+      } @else if (!hasPreviewContent()) {
+        <div class="my-cv-page__preview-empty">
+          <h3>No structured content yet</h3>
+          <p class="my-cv-page__muted">
+            Extract sections from your uploaded PDF or add them manually in the CV Editor to see your full CV
+            here.
+          </p>
+          <a routerLink="/cv-editor" class="my-cv-page__primary-action my-cv-page__link-action">
+            Open CV Editor
+          </a>
+        </div>
+      } @else {
+        <app-cv-structured-preview
+          [sections]="previewSections()"
+          [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
+          [loadingPhoto]="cvDocument.loadingProfilePhoto()"
+          [loadingContent]="false" />
+      }
+    </section>
+  }
 
   @if (deleteConfirmOpen()) {
     <div

@@ -1,0 +1,90 @@
+@if (loadingContent()) {
+  <div class="cv-structured-preview__skeleton" aria-busy="true" aria-label="Loading CV content">
+    <app-skeleton-block width="8rem" height="8rem" [rounded]="true" />
+    <app-skeleton-block width="42%" height="1.25rem" />
+    <app-skeleton-block width="100%" height="8rem" />
+    <app-skeleton-block width="100%" height="6rem" />
+  </div>
+} @else if (hasContent()) {
+  <article class="cv-structured-preview">
+    <header class="cv-structured-preview__header">
+      @if (loadingPhoto()) {
+        <div class="cv-structured-preview__photo-skeleton" aria-busy="true" aria-label="Loading profile photo">
+          <app-skeleton-block width="8rem" height="8rem" [rounded]="true" />
+        </div>
+      } @else if (profilePhotoUrl()) {
+        <img
+          class="cv-structured-preview__photo"
+          [src]="profilePhotoUrl()"
+          alt="Profile photo from your CV" />
+      }
+
+      <div class="cv-structured-preview__header-copy">
+        <p class="cv-structured-preview__eyebrow">Structured CV</p>
+        <p class="cv-structured-preview__lead">Your saved sections and entries appear below.</p>
+      </div>
+    </header>
+
+    @for (section of sortedSections(); track section.id) {
+      <section
+        class="cv-structured-preview__section"
+        [class.cv-structured-preview__section--summary]="isSummarySection(section.sectionType)"
+        [class.cv-structured-preview__section--skills]="isSkillsSection(section.sectionType)"
+        [attr.aria-labelledby]="'cv-section-' + section.id">
+        <h2 class="cv-structured-preview__section-heading" [id]="'cv-section-' + section.id">
+          {{ section.heading || 'Untitled section' }}
+        </h2>
+
+        <div class="cv-structured-preview__entries">
+          @for (entry of section.entries; track entry.id) {
+            <article
+              class="cv-structured-preview__entry"
+              [class.cv-structured-preview__entry--summary]="isSummarySection(section.sectionType)">
+              @if (entry.title.trim()) {
+                <h3 class="cv-structured-preview__entry-title">{{ entry.title }}</h3>
+              }
+
+              @if (hasEntryMeta(entry) && !isSummarySection(section.sectionType)) {
+                <div class="cv-structured-preview__entry-meta">
+                  @if (entry.subtitle?.trim()) {
+                    <p class="cv-structured-preview__entry-subtitle">{{ entry.subtitle }}</p>
+                  }
+                  @if (entry.dateRange?.trim()) {
+                    <time class="cv-structured-preview__entry-date">{{ entry.dateRange }}</time>
+                  }
+                </div>
+              }
+
+              @if (entry.summary.trim()) {
+                <p class="cv-structured-preview__entry-summary">{{ entry.summary }}</p>
+              }
+
+              @if (entry.bullets.length > 0) {
+                <ul class="cv-structured-preview__entry-bullets">
+                  @for (bullet of entry.bullets; track bullet) {
+                    <li>{{ bullet }}</li>
+                  }
+                </ul>
+              }
+
+              @if (hasTechStack(entry)) {
+                @if (isSkillsSection(section.sectionType)) {
+                  <div class="cv-structured-preview__tech-chips" aria-label="Skills">
+                    @for (item of techStackItems(entry); track item) {
+                      <span class="cv-structured-preview__tech-chip">{{ item }}</span>
+                    }
+                  </div>
+                } @else {
+                  <p class="cv-structured-preview__entry-tech">
+                    <span class="cv-structured-preview__tech-label">Tech stack</span>
+                    {{ entry.techStack }}
+                  </p>
+                }
+              }
+            </article>
+          }
+        </div>
+      </section>
+    }
+  </article>
+}

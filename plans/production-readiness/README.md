@@ -10,7 +10,7 @@ Step-by-step implementation plans for hosting ApplyVault beyond local developmen
 | 6 | [prod-06-ci-pipeline.md](prod-06-ci-pipeline.md) | B Config (done) |
 | 7 | [prod-07-deployment-and-hosting.md](prod-07-deployment-and-hosting.md) | C Staging |
 | 8 | [prod-08-frontend-environment-builds.md](prod-08-frontend-environment-builds.md) · [FRONTEND.md](FRONTEND.md) | C Staging (done) |
-| 9 | [prod-09-extension-production-config.md](prod-09-extension-production-config.md) | C Staging |
+| 9 | [prod-09-extension-production-config.md](prod-09-extension-production-config.md) · [EXTENSION.md](EXTENSION.md) | C Staging (done) |
 | 10 | [prod-10-oauth-redirects-and-secrets.md](prod-10-oauth-redirects-and-secrets.md) | D Hardening |
 | 11 | [prod-11-cors-and-transport-security.md](prod-11-cors-and-transport-security.md) | D Hardening |
 | 12 | [prod-12-health-checks-and-readiness.md](prod-12-health-checks-and-readiness.md) | D Hardening |

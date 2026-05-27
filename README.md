@@ -79,7 +79,7 @@ npm install
 npm run build
 ```
 
-The unpacked extension output is generated in `dist/`.
+The unpacked extension output is generated in `dist/`. For staging or production API targets, see [`plans/production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) (`npm run build:staging`, `npm run build:production`).
 
 ### 2. Run the ASP.NET API
 
@@ -333,13 +333,17 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 3 API integration tests (tenancy) | Done | [`prod-03-api-integration-tests.md`](plans/prod-03-api-integration-tests.md) |
 | 4 API environment configuration | Done | [`production-readiness/prod-04-api-environment-configuration.md`](plans/production-readiness/prod-04-api-environment-configuration.md) |
 | 5 Database and migrations | Done | [`production-readiness/prod-05-database-and-migrations.md`](plans/production-readiness/prod-05-database-and-migrations.md) · [`DATABASE.md`](plans/production-readiness/DATABASE.md) |
-| 6–17 CI, deploy, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 6 CI) |
+| 6 CI pipeline | Done | [`production-readiness/prod-06-ci-pipeline.md`](plans/production-readiness/prod-06-ci-pipeline.md) |
+| 7 Deployment and hosting | Done | [`production-readiness/prod-07-deployment-and-hosting.md`](plans/production-readiness/prod-07-deployment-and-hosting.md) |
+| 8 Frontend environment builds | Done | [`production-readiness/FRONTEND.md`](plans/production-readiness/FRONTEND.md) |
+| 9 Extension production config | Done | [`production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) |
+| 10–17 OAuth, CORS, scale, tests | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 10 OAuth) |
 
 **Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 
 **Local foundations in place (not full prod steps yet):** Config-driven CORS (`Cors:AllowedOrigins`), startup options validation, and `GET /health` with a database check — align with tracker steps 11–12 but still need production hardening (HTTPS, deploy wiring, readiness probes).
 
-**Not production-ready yet:** CI (step 6), deployment/hosting (steps 7–10), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+**Not production-ready yet:** OAuth redirects and secrets (step 10), CORS/transport hardening (step 11), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

@@ -2,7 +2,9 @@ import { createClient, type Session } from '@supabase/supabase-js';
 
 import { API_BASE_URL } from '../api/apiConfig';
 import type { CurrentUser } from '../../shared/models/currentUser';
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabaseConfig';
+import { assertSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabaseConfig';
+
+assertSupabaseConfigured();
 
 export interface ExtensionAuthState {
   readonly session: Session | null;

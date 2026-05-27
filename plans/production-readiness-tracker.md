@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: prod-09
     content: Extension production config
-    status: pending
+    status: completed
   - id: prod-10
     content: OAuth redirects and secrets
     status: pending
@@ -77,7 +77,7 @@ isProject: true
 | 6 | [production-readiness/prod-06-ci-pipeline.md](production-readiness/prod-06-ci-pipeline.md) | B Config | done | — | `.github/workflows/api-ci.yml` |
 | 7 | [production-readiness/prod-07-deployment-and-hosting.md](production-readiness/prod-07-deployment-and-hosting.md) | C Staging | done | — | Docker + Caddy in `deploy/` · [RUNBOOK](../../deploy/RUNBOOK.md) |
 | 8 | [production-readiness/prod-08-frontend-environment-builds.md](production-readiness/prod-08-frontend-environment-builds.md) · [FRONTEND.md](production-readiness/FRONTEND.md) | C Staging | done | 7 | `environment.*.ts`, `angular.json` fileReplacements |
-| 9 | [production-readiness/prod-09-extension-production-config.md](production-readiness/prod-09-extension-production-config.md) | C Staging | pending | 8 | |
+| 9 | [production-readiness/prod-09-extension-production-config.md](production-readiness/prod-09-extension-production-config.md) · [EXTENSION.md](production-readiness/EXTENSION.md) | C Staging | done | 8 | `environment.*.ts`, manifest variants, `npm run build:production` |
 | 10 | [production-readiness/prod-10-oauth-redirects-and-secrets.md](production-readiness/prod-10-oauth-redirects-and-secrets.md) | D Hardening | pending | 9 | |
 | 11 | [production-readiness/prod-11-cors-and-transport-security.md](production-readiness/prod-11-cors-and-transport-security.md) | D Hardening | pending | 10 | |
 | 12 | [production-readiness/prod-12-health-checks-and-readiness.md](production-readiness/prod-12-health-checks-and-readiness.md) | D Hardening | pending | 7 | |

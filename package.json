@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:staging": "node scripts/build.mjs --configuration staging",
+    "build:production": "node scripts/build.mjs --configuration production",
     "typecheck": "tsc --noEmit",
     "watch": "node scripts/build.mjs --watch"
   },

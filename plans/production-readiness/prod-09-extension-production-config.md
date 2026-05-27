@@ -4,22 +4,22 @@ overview: Configure the Chrome extension for production API and Supabase URLs an
 todos:
   - id: extension-env
     content: Add production config for API base URL and Supabase (build-time or manifest config)
-    status: pending
+    status: completed
   - id: aspnet-api-client
     content: Update aspNetApiClient.ts to use production API URL in release builds
-    status: pending
+    status: completed
   - id: supabase-auth
     content: Align extension Supabase project with API and dashboard (same as step 8)
-    status: pending
+    status: completed
   - id: build-release
     content: Document npm run build for store-ready dist/ output
-    status: pending
+    status: completed
   - id: manifest-review
     content: Review manifest permissions and host_permissions for production domains
-    status: pending
+    status: completed
   - id: store-checklist
     content: Chrome Web Store listing checklist (privacy, icons, screenshots) if publishing publicly
-    status: pending
+    status: completed
 isProject: false
 ---
 

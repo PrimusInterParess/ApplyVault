@@ -6,9 +6,11 @@ import {
   DestroyRef,
   effect,
   ElementRef,
+  EnvironmentInjector,
   HostListener,
   inject,
   OnInit,
+  runInInjectionContext,
   signal,
   viewChild
 } from '@angular/core';
@@ -56,6 +58,7 @@ export class EuresJobsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(EnvironmentInjector);
   private suppressUrlSync = false;
   private lastSyncedQueryKey = '';
   private lastFocusedGeneration = 0;
@@ -111,10 +114,12 @@ export class EuresJobsPageComponent implements OnInit {
       this.lastFocusedGeneration = generation;
       this.shouldFocusAfterSearch = false;
 
-      afterNextRender(() => {
-        this.scrollListToTop();
-        this.focusAfterSearch();
-        this.prefetchIfListShort();
+      runInInjectionContext(this.injector, () => {
+        afterNextRender(() => {
+          this.scrollListToTop();
+          this.focusAfterSearch();
+          this.prefetchIfListShort();
+        });
       });
     });
 
@@ -132,7 +137,9 @@ export class EuresJobsPageComponent implements OnInit {
         return;
       }
 
-      afterNextRender(() => this.prefetchIfListShort());
+      runInInjectionContext(this.injector, () => {
+        afterNextRender(() => this.prefetchIfListShort());
+      });
     });
   }
 

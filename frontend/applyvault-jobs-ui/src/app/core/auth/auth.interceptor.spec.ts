@@ -13,26 +13,30 @@ describe('authInterceptor', () => {
   let httpClient: HttpClient;
   let httpMock: HttpTestingController;
 
-  beforeEach(() => {
+  function configureAuthMock(
+    options: Parameters<typeof createAuthServiceMock>[0] = {}
+  ): void {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: createAuthServiceMock(options)
+        }
       ]
     });
 
     httpClient = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
-  });
+  }
 
   afterEach(() => {
     httpMock.verify();
   });
 
   it('does not attach Authorization when there is no access token', () => {
-    TestBed.overrideProvider(AuthService, {
-      useValue: createAuthServiceMock({ authenticated: false })
-    });
+    configureAuthMock({ authenticated: false });
 
     httpClient.get('/api/protected').subscribe();
 
@@ -43,9 +47,7 @@ describe('authInterceptor', () => {
   });
 
   it('attaches Bearer token when session is present', () => {
-    TestBed.overrideProvider(AuthService, {
-      useValue: createAuthServiceMock({ authenticated: true, accessToken: TEST_ACCESS_TOKEN })
-    });
+    configureAuthMock({ authenticated: true, accessToken: TEST_ACCESS_TOKEN });
 
     httpClient.get('/api/protected').subscribe();
 

@@ -1,7 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   HttpTestingController,
-  provideHttpClientTesting
+  provideHttpClientTesting,
+  TestRequest
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -46,9 +47,16 @@ describe('EuresJobsPageComponent', () => {
     httpMock.verify();
   });
 
+  function flushScrapeResults(
+    results: readonly ReturnType<typeof createSavedJobResult>[] = [createSavedJobResult()]
+  ): void {
+    httpMock
+      .match(`${TEST_API_BASE_URL}/scrape-results`)
+      .forEach((request) => request.flush([...results]));
+  }
+
   function flushBootstrapRequests(searchResponse = createEuresSearchResponse()) {
     httpMock.expectOne(`${TEST_API_BASE_URL}/scrape-results`).flush([createSavedJobResult()]);
-    httpMock.expectOne(`${TEST_API_BASE_URL}/calendar-connections`).flush([]);
 
     const searchRequest = httpMock.expectOne(`${TEST_API_BASE_URL}/eures/jobs/search`);
     expect(searchRequest.request.method).toBe('POST');
@@ -57,16 +65,24 @@ describe('EuresJobsPageComponent', () => {
     httpMock
       .expectOne(`${TEST_API_BASE_URL}/eures/jobs/eures-1?requestLanguage=en`)
       .flush(createEuresJobDetail());
+
+    flushScrapeResults();
   }
 
-  function flushFollowUpSearch(searchResponse = createEuresSearchResponse()) {
-    httpMock.expectOne(`${TEST_API_BASE_URL}/eures/jobs/search`).flush(searchResponse);
-    httpMock
-      .match(`${TEST_API_BASE_URL}/scrape-results`)
-      .forEach((request) => request.flush([createSavedJobResult()]));
+  function flushFollowUpSearch(
+    searchResponse = createEuresSearchResponse(),
+    assertSearch?: (request: TestRequest) => void
+  ) {
+    const searchRequest = httpMock.expectOne(`${TEST_API_BASE_URL}/eures/jobs/search`);
+    assertSearch?.(searchRequest);
+    searchRequest.flush(searchResponse);
+    flushScrapeResults();
     httpMock
       .match(`${TEST_API_BASE_URL}/eures/jobs/eures-1?requestLanguage=en`)
       .forEach((request) => request.flush(createEuresJobDetail()));
+    httpMock
+      .match(`${TEST_API_BASE_URL}/eures/jobs/eures-2?requestLanguage=en`)
+      .forEach((request) => request.flush(createEuresJobDetail({ id: 'eures-2', title: 'Frontend Developer' })));
   }
 
   it('submits an EURES search and renders result cards', () => {
@@ -98,9 +114,6 @@ describe('EuresJobsPageComponent', () => {
     ).find((button) => button.textContent?.includes('Search EURES')) as HTMLButtonElement;
     searchButton.click();
 
-    const searchRequest = httpMock.expectOne(`${TEST_API_BASE_URL}/eures/jobs/search`);
-    expect(searchRequest.request.body.keywords).toContain('angular');
-
     flushFollowUpSearch(
       createEuresSearchResponse({
         jobs: [
@@ -108,7 +121,8 @@ describe('EuresJobsPageComponent', () => {
           createEuresListing({ id: 'eures-2', title: 'Frontend Developer' })
         ],
         totalResults: 2
-      })
+      }),
+      (request) => expect(request.request.body.keywords).toContain('angular')
     );
     fixture.detectChanges();
 

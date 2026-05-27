@@ -54,6 +54,7 @@ describe('JobResultsPageComponent', () => {
   it('renders the empty state when there are no saved jobs', () => {
     fixture.detectChanges();
     flushInitialRequests([]);
+    fixture.detectChanges();
 
     const emptyHeading = fixture.nativeElement.querySelector('.jobs-page__empty h2');
 

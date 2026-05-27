@@ -4,28 +4,28 @@ overview: Configure production OAuth redirect URIs and store client secrets secu
 todos:
   - id: google-calendar-oauth
     content: Register production redirect URI for Google calendar callback
-    status: pending
+    status: completed
   - id: microsoft-calendar-oauth
     content: Register production redirect URI for Microsoft calendar callback
-    status: pending
+    status: completed
   - id: gmail-oauth
     content: Register production redirect URI for Gmail mail callback
-    status: pending
+    status: completed
   - id: secrets-storage
     content: Store ClientId/ClientSecret via env vars (CalendarIntegration__*, MailIntegration__*)
-    status: pending
+    status: completed
   - id: post-connect-urls
     content: Set PostConnectRedirectUrl to production Angular routes
-    status: pending
+    status: completed
   - id: oauth-smoke-test
     content: End-to-end connect flow for each provider in staging
-    status: pending
+    status: completed
 isProject: false
 ---
 
 # Step 10 — OAuth Redirects and Secrets
 
-**Tracker:** [production-readiness-tracker.md](../production-readiness-tracker.md) · **Prerequisites:** [prod-09-extension-production-config.md](prod-09-extension-production-config.md) · **Next:** [prod-11-cors-and-transport-security.md](prod-11-cors-and-transport-security.md)
+**Tracker:** [production-readiness-tracker.md](../production-readiness-tracker.md) · **Prerequisites:** [prod-09-extension-production-config.md](prod-09-extension-production-config.md) · **Next:** [prod-11-cors-and-transport-security.md](prod-11-cors-and-transport-security.md) · **Runbook:** [OAUTH.md](OAUTH.md)
 
 ## Problem
 
@@ -78,7 +78,7 @@ Example production URL: `https://api.your-domain.com/api/calendar-connections/go
 
 ### 4. API configuration
 
-Set via environment variables:
+Set via environment variables (see [OAUTH.md](OAUTH.md) and [`deploy/.env.example`](../../deploy/.env.example)):
 
 ```
 CalendarIntegration__Google__RedirectUri=https://api.../api/calendar-connections/google/callback
@@ -88,6 +88,8 @@ MailIntegration__Gmail__RedirectUri=https://api.../api/mail-connections/gmail/ca
 CalendarIntegration__PostConnectRedirectUrl=https://app.../integrations/calendar/callback
 MailIntegration__PostConnectRedirectUrl=https://app.../integrations/mail/callback
 ```
+
+Startup validation in [`OAuthIntegrationOptionsValidation.cs`](../../api/ApplyVault.Api/Infrastructure/OAuthIntegrationOptionsValidation.cs) requires complete provider config and HTTPS URLs in Staging/Production.
 
 ### 5. Keep callbacks anonymous
 

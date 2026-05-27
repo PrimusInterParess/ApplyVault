@@ -83,19 +83,42 @@ public static class ServiceCollectionExtensions
                 .ValidateOnStart();
         }
 
-        services
+        var calendarIntegrationBuilder = services
             .AddOptions<CalendarIntegrationOptions>()
             .Bind(configuration.GetSection(CalendarIntegrationOptions.SectionName));
 
-        services
+        var mailIntegrationBuilder = services
             .AddOptions<MailIntegrationOptions>()
-            .Bind(configuration.GetSection(MailIntegrationOptions.SectionName))
-            .Validate(
-                (options) => !options.Enabled ||
-                    (!string.IsNullOrWhiteSpace(options.Gmail.ClientId) &&
-                     !string.IsNullOrWhiteSpace(options.Gmail.ClientSecret)),
-                "MailIntegration:Gmail credentials are required when MailIntegration:Enabled is true.")
-            .ValidateOnStart();
+            .Bind(configuration.GetSection(MailIntegrationOptions.SectionName));
+
+        if (!environment.IsDevelopment())
+        {
+            calendarIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateCalendarIntegration(options, requireHttps: true),
+                    "CalendarIntegration OAuth is misconfigured: each configured provider needs ClientId, ClientSecret, and an HTTPS RedirectUri; PostConnectRedirectUrl must be a non-empty HTTPS URL.")
+                .ValidateOnStart();
+
+            mailIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateMailIntegration(options, requireHttps: true),
+                    "MailIntegration OAuth is misconfigured when Enabled is true: Gmail ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl must be non-empty HTTPS URLs.")
+                .ValidateOnStart();
+        }
+        else
+        {
+            calendarIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateCalendarIntegration(options, requireHttps: false),
+                    "CalendarIntegration OAuth is misconfigured: each configured provider needs ClientId, ClientSecret, and RedirectUri; PostConnectRedirectUrl is required when any provider is configured.")
+                .ValidateOnStart();
+
+            mailIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateMailIntegration(options, requireHttps: false),
+                    "MailIntegration OAuth is misconfigured when Enabled is true: Gmail ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl are required.")
+                .ValidateOnStart();
+        }
 
         services
             .AddOptions<EuresIntegrationOptions>()

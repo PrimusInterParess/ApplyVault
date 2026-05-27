@@ -1,6 +1,7 @@
 import { ScrapeTextUseCase } from '../application/scrapeTextUseCase';
 import { SaveScrapeResultUseCase } from '../application/saveScrapeResultUseCase';
 import { AspNetApiClient } from '../infrastructure/api/aspNetApiClient';
+import { getAuthState } from '../infrastructure/auth/supabaseAuth';
 import { ChromeTabGateway } from '../infrastructure/chrome/chromeTabGateway';
 import {
   MessageType,
@@ -20,8 +21,17 @@ chrome.runtime.onMessage.addListener(
     sendResponse: (response: ScrapeActiveTabResponse | SaveScrapeResultResponse) => void
   ) => {
     if (message.type === MessageType.ScrapeActiveTab) {
-      void scrapeTextUseCase
-        .execute()
+      void getAuthState()
+        .then(async (authState) => {
+          if (!authState.currentUser || authState.apiError) {
+            return {
+              success: false as const,
+              error: 'Sign in to ApplyVault before extracting job pages from the extension.'
+            };
+          }
+
+          return scrapeTextUseCase.execute();
+        })
         .then(sendResponse)
         .catch((error) => {
           sendResponse({

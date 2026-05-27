@@ -51,6 +51,7 @@ interface PopupResultPanels {
 
 const POPUP_DRAFT_STORAGE_KEY = 'popupDraft';
 const DEFAULT_READY_STATUS = 'Ready to extract the active tab.';
+const UNAUTHENTICATED_STATUS = 'Sign in to extract job pages from the active tab.';
 const DRAFT_SAVE_DELAY_MS = 250;
 const DEFAULT_AUTH_STATUS = 'Request a one-time email code so you never type your password into the extension.';
 const EMAIL_SIGN_IN_CODE_PATTERN = /^\d{6,8}$/;
@@ -179,10 +180,10 @@ function syncActionButtons(
   renewButton: HTMLButtonElement,
   popupMode: PopupMode,
   isPending: boolean,
-  canSave: boolean
+  isAuthenticated: boolean
 ): void {
-  primaryButton.disabled = isPending || (popupMode === 'save' && !canSave);
-  renewButton.disabled = isPending || popupMode === 'scrape';
+  primaryButton.disabled = isPending || !isAuthenticated;
+  renewButton.disabled = isPending || popupMode === 'scrape' || !isAuthenticated;
 }
 
 function setPendingState(
@@ -191,9 +192,9 @@ function setPendingState(
   status: HTMLElement,
   popupMode: PopupMode,
   pendingMessage: string,
-  canSave: boolean
+  isAuthenticated: boolean
 ): void {
-  syncActionButtons(primaryButton, renewButton, popupMode, true, canSave);
+  syncActionButtons(primaryButton, renewButton, popupMode, true, isAuthenticated);
   status.textContent = pendingMessage;
 }
 
@@ -411,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusElementNode = document.getElementById('status');
   const textAreaElement = document.getElementById('scraped-text');
   const descriptionAreaElement = document.getElementById('job-description');
+  const workflowPanelElement = document.getElementById('workflow-panel');
   const resultDetailsPanelElement = document.getElementById('results-details-panel');
   const resultContactsPanelElement = document.getElementById('results-contacts-panel');
   const resultDescriptionPanelElement = document.getElementById('results-description-panel');
@@ -433,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !authFormElement ||
     !authUserElement ||
     !authUserEmailElement ||
+    !workflowPanelElement ||
     !(sendCodeButtonElement instanceof HTMLButtonElement) ||
     !(verifyCodeButtonElement instanceof HTMLButtonElement) ||
     !(signOutButtonElement instanceof HTMLButtonElement) ||
@@ -465,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const authForm = authFormElement;
   const authUser = authUserElement;
   const authUserEmail = authUserEmailElement;
+  const workflowPanel = workflowPanelElement;
   const sendCodeButton = sendCodeButtonElement;
   const verifyCodeButton = verifyCodeButtonElement;
   const signOutButton = signOutButtonElement;
@@ -505,16 +509,36 @@ document.addEventListener('DOMContentLoaded', () => {
   let authFeedbackMessage: string | null = null;
   let authFeedbackTone: AuthStatusTone = 'default';
 
-  function canSaveToApi(): boolean {
+  function isAuthenticated(): boolean {
     return authState.currentUser !== null && authState.apiError === null;
   }
 
   function setWorkflowStatus(message: string): void {
     workflowStatusMessage = message;
-    statusElement.textContent =
-      popupMode === 'save' && !canSaveToApi()
-        ? `${message} Sign in to save the extracted record to ApplyVault.`
-        : message;
+    statusElement.textContent = message;
+  }
+
+  function clearExtractionState(statusMessage = DEFAULT_READY_STATUS): void {
+    popupMode = 'scrape';
+    lastScrapeResult = null;
+    clearDraftSaveTimeout();
+    clearRenderedResult(scrapedTextArea, jobDescriptionArea, details);
+    setResultPanelsVisibility(resultPanels, false);
+    setButtonMode(primaryButton, popupMode);
+    setWorkflowStatus(statusMessage);
+  }
+
+  function renderWorkflowAccess(): void {
+    if (isAuthenticated()) {
+      workflowPanel.removeAttribute('hidden');
+      return;
+    }
+
+    workflowPanel.setAttribute('hidden', '');
+
+    if (lastScrapeResult !== null || popupMode === 'save') {
+      clearExtractionState(UNAUTHENTICATED_STATUS);
+    }
   }
 
   function setAuthStatus(message: string | null, tone: AuthStatusTone = 'default'): void {
@@ -562,8 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderPopupState(isBusy = false): void {
     renderAuthState();
-    syncActionButtons(primaryButton, renewScrapeButton, popupMode, isBusy || authPending, canSaveToApi());
-    setWorkflowStatus(workflowStatusMessage);
+    renderWorkflowAccess();
+    syncActionButtons(primaryButton, renewScrapeButton, popupMode, isBusy || authPending, isAuthenticated());
+    setWorkflowStatus(isAuthenticated() ? workflowStatusMessage : UNAUTHENTICATED_STATUS);
   }
 
   async function refreshAuthState(): Promise<void> {
@@ -579,16 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetPopupState(statusMessage = DEFAULT_READY_STATUS): void {
-    popupMode = 'scrape';
-    lastScrapeResult = null;
-    clearDraftSaveTimeout();
-    scrapedTextArea.value = '';
-    jobDescriptionArea.value = '';
-    resetStructuredDetails(details);
-    setResultPanelsVisibility(resultPanels, false);
-    setButtonMode(primaryButton, popupMode);
+    clearExtractionState(statusMessage);
     renderPopupState();
-    setWorkflowStatus(statusMessage);
   }
 
   function renderResult(result: ScrapeResult, statusMessage: string): void {
@@ -641,6 +658,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function restoreDraftIfAvailable(): Promise<void> {
+    if (!isAuthenticated()) {
+      resetPopupState(UNAUTHENTICATED_STATUS);
+      return;
+    }
+
     const [activeTabUrl, savedDraft] = await Promise.all([getActiveTabUrl(), loadPopupDraft()]);
 
     if (!savedDraft) {
@@ -670,6 +692,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function runScrape(): Promise<void> {
+    if (!isAuthenticated()) {
+      renderPopupState();
+      setWorkflowStatus(UNAUTHENTICATED_STATUS);
+      return;
+    }
+
     clearDraftSaveTimeout();
     const previousDraft = buildCurrentDraft();
 
@@ -680,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
       statusElement,
       popupMode,
       'Extracting visible text from the current page...',
-      canSaveToApi()
+      isAuthenticated()
     );
 
     try {
@@ -823,7 +851,9 @@ document.addEventListener('DOMContentLoaded', () => {
       await refreshAuthState();
 
       if (popupMode === 'save' && lastScrapeResult) {
-        setWorkflowStatus('Signed in. You can now save the extracted record to ApplyVault.');
+        setWorkflowStatus('Signed in. Review the extracted fields, then save them to ApplyVault.');
+      } else {
+        setWorkflowStatus(DEFAULT_READY_STATUS);
       }
     } catch (error) {
       authCode.value = '';
@@ -847,10 +877,8 @@ document.addEventListener('DOMContentLoaded', () => {
       authFeedbackMessage = null;
       authFeedbackTone = 'default';
       await refreshAuthState();
-
-      if (popupMode === 'save' && lastScrapeResult) {
-        setWorkflowStatus('Signed out. Sign in again to save the extracted record to ApplyVault.');
-      }
+      resetPopupState(UNAUTHENTICATED_STATUS);
+      await clearPopupDraft();
     } catch (error) {
       authFeedbackMessage = error instanceof Error ? error.message : 'Sign out failed.';
       authFeedbackTone = 'error';
@@ -911,9 +939,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!canSaveToApi()) {
+    if (!isAuthenticated()) {
       renderPopupState();
-      setWorkflowStatus('Sign in to save the extracted record to ApplyVault.');
+      setWorkflowStatus(UNAUTHENTICATED_STATUS);
       return;
     }
 
@@ -934,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
       statusElement,
       popupMode,
       'Saving extracted data to the ApplyVault API...',
-      canSaveToApi()
+      isAuthenticated()
     );
 
     try {

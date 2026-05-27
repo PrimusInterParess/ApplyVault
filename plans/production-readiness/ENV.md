@@ -42,10 +42,11 @@ Runbook: [DATABASE.md](DATABASE.md).
 | `ScrapeResultEnrichment` | `Enabled` | `ScrapeResultEnrichment__Enabled` | — |
 | `ScrapeResultEnrichment` | `FailOnAiError` | `ScrapeResultEnrichment__FailOnAiError` | — |
 | `Supabase` | `Audience` | `Supabase__Audience` | Defaults to `authenticated` |
-| `CalendarIntegration` | `PostConnectRedirectUrl` | `CalendarIntegration__PostConnectRedirectUrl` | OAuth UI return URL |
-| `CalendarIntegration:Google` | `ClientId`, `ClientSecret`, `RedirectUri` | `CalendarIntegration__Google__*` | When using Google calendar |
-| `CalendarIntegration:Microsoft` | `ClientId`, `ClientSecret`, `TenantId`, `RedirectUri` | `CalendarIntegration__Microsoft__*` | When using Microsoft calendar |
+| `CalendarIntegration` | `PostConnectRedirectUrl` | `CalendarIntegration__PostConnectRedirectUrl` | OAuth UI return URL when any calendar provider is configured |
+| `CalendarIntegration:Google` | `ClientId`, `ClientSecret`, `RedirectUri` | `CalendarIntegration__Google__*` | When Google calendar connect is used |
+| `CalendarIntegration:Microsoft` | `ClientId`, `ClientSecret`, `TenantId`, `RedirectUri` | `CalendarIntegration__Microsoft__*` | When Microsoft calendar connect is used |
 | `MailIntegration` | `Enabled` | `MailIntegration__Enabled` | — |
+| `MailIntegration` | `PostConnectRedirectUrl` | `MailIntegration__PostConnectRedirectUrl` | OAuth UI return URL when `MailIntegration:Enabled` is true |
 | `MailIntegration:Gmail` | `ClientId`, `ClientSecret`, `RedirectUri` | `MailIntegration__Gmail__*` | When `MailIntegration:Enabled` is true |
 | `MailIntegration` | `PollIntervalSeconds`, etc. | `MailIntegration__*` | Gmail sync tuning |
 | `EuresIntegration` | `BaseUrl`, `DefaultLocationCode`, … | `EuresIntegration__*` | EURES job search |
@@ -71,3 +72,5 @@ dotnet user-secrets set "CalendarIntegration:Google:ClientSecret" "<secret>"
 ```
 
 See also `appsettings.example.json` for a full structural template.
+
+OAuth redirect URIs and provider console setup: [OAUTH.md](OAUTH.md). In Staging and Production, configured OAuth URLs must use HTTPS (validated at startup).

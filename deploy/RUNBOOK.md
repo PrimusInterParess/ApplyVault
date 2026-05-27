@@ -112,6 +112,17 @@ Minimum production set:
 
 Full reference: [ENV.md](../plans/production-readiness/ENV.md). Template: [`.env.example`](.env.example).
 
+## OAuth (calendar and Gmail)
+
+When enabling calendar connect or Gmail sync, register HTTPS callback URLs in each provider console and set API env vars. See [OAUTH.md](../plans/production-readiness/OAUTH.md).
+
+Quick checklist:
+
+1. Register redirect URIs: `https://${API_DOMAIN}/api/calendar-connections/{google|microsoft}/callback` and (if mail enabled) `https://${API_DOMAIN}/api/mail-connections/gmail/callback`.
+2. Set `CalendarIntegration__PostConnectRedirectUrl` and `MailIntegration__PostConnectRedirectUrl` to `https://${APP_DOMAIN}/integrations/.../callback`.
+3. Store `ClientId` / `ClientSecret` only in `deploy/.env`, never in git.
+4. Smoke-test connect from dashboard Settings after deploy.
+
 ## Logs
 
 ```bash
@@ -133,5 +144,6 @@ Caddy obtains and renews certificates automatically when `API_DOMAIN` resolves t
 ## Related steps
 
 - **Step 8:** Frontend environment builds — set `apiUrl` to `https://${API_DOMAIN}`.
-- **Step 10–11:** OAuth redirect URIs and CORS hardening for production domains.
+- **Step 10:** OAuth redirect URIs and secrets — [OAUTH.md](../plans/production-readiness/OAUTH.md).
+- **Step 11:** CORS hardening for production domains.
 - **Step 12:** Extended health/readiness probes (builds on `GET /health`).

@@ -234,8 +234,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGitHubProjectSummaryService, GitHubProjectSummaryService>();
         services.AddScoped<ICvDocumentService, CvDocumentService>();
         services.AddScoped<ICvPdfSectionDetector, CvPdfSectionDetector>();
-        services.AddScoped<ICvPdfSectionDetectionService, CvPdfSectionDetectionService>();
-        services.AddScoped<ICvPdfProjectsMergeService, CvPdfProjectsMergeService>();
         services.AddScoped<ICvPdfFullTextExtractor, CvPdfFullTextExtractor>();
         services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();

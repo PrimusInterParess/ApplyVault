@@ -123,9 +123,6 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((summary) => summary.CvSummary).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((summary) => summary.CvBullets).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((summary) => summary.TechStack).IsRequired().HasMaxLength(512);
-            entity.Property((summary) => summary.IncludeInMerge).HasDefaultValue(true);
-            entity.Property((summary) => summary.MergeSectionHeading).HasMaxLength(256);
-            entity.Property((summary) => summary.MergeSortOrder).HasDefaultValue(0);
             entity.HasIndex((summary) => new { summary.UserId, summary.ExternalRepoId }).IsUnique();
             entity.HasOne((summary) => summary.User)
                 .WithMany((user) => user.CvProjectSummaries)

@@ -44,11 +44,6 @@ public interface IGitHubProjectSummaryService
         AppUserEntity user,
         Guid summaryId,
         CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<CvProjectSummaryDto>> UpdatePlacementsAsync(
-        AppUserEntity user,
-        IReadOnlyList<CvProjectSummaryPlacementDto> placements,
-        CancellationToken cancellationToken = default);
 }
 
 public sealed class GitHubProjectSummaryService(
@@ -238,45 +233,6 @@ public sealed class GitHubProjectSummaryService(
         return true;
     }
 
-    public async Task<IReadOnlyList<CvProjectSummaryDto>> UpdatePlacementsAsync(
-        AppUserEntity user,
-        IReadOnlyList<CvProjectSummaryPlacementDto> placements,
-        CancellationToken cancellationToken = default)
-    {
-        if (placements.Count == 0)
-        {
-            return await ListAllSummariesAsync(user, cancellationToken);
-        }
-
-        var summaryIds = placements.Select((placement) => placement.SummaryId).ToArray();
-        var entities = await dbContext.UserCvProjectSummaries
-            .Where((summary) => summary.UserId == user.Id && summaryIds.Contains(summary.Id))
-            .ToArrayAsync(cancellationToken);
-
-        if (entities.Length != summaryIds.Length)
-        {
-            throw new InvalidOperationException("One or more project summaries could not be found.");
-        }
-
-        var placementById = placements.ToDictionary((placement) => placement.SummaryId);
-        var utcNow = DateTimeOffset.UtcNow;
-
-        foreach (var entity in entities)
-        {
-            var placement = placementById[entity.Id];
-            entity.IncludeInMerge = placement.IncludeInMerge;
-            entity.MergeSectionHeading = string.IsNullOrWhiteSpace(placement.MergeSectionHeading)
-                ? null
-                : placement.MergeSectionHeading.Trim();
-            entity.MergeSortOrder = placement.MergeSortOrder;
-            entity.UpdatedAt = utcNow;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return await ListAllSummariesAsync(user, cancellationToken);
-    }
-
     private static (string Owner, string Repo) ParseFullName(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
@@ -326,10 +282,7 @@ public sealed class GitHubProjectSummaryService(
             bullets,
             entity.TechStack,
             entity.GeneratedAt,
-            entity.UpdatedAt,
-            entity.IncludeInMerge,
-            entity.MergeSectionHeading,
-            entity.MergeSortOrder);
+            entity.UpdatedAt);
     }
 
     private static IReadOnlyList<string> DeserializeStringArray(string? json)

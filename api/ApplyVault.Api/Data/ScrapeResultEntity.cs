@@ -190,12 +190,6 @@ public sealed class UserCvProjectSummaryEntity
 
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public bool IncludeInMerge { get; set; } = true;
-
-    public string? MergeSectionHeading { get; set; }
-
-    public int MergeSortOrder { get; set; }
-
     public AppUserEntity? User { get; set; }
 }
 

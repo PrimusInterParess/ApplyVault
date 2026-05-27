@@ -4,9 +4,8 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { GitHubConnectionsFacade } from '../../settings/data-access/github-connections.facade';
-import { CvProjectSummary, GitHubRepositoryListItem, CvProjectSummaryPlacement, CvPdfSection } from '../models/cv-project.model';
+import { CvProjectSummary, GitHubRepositoryListItem } from '../models/cv-project.model';
 import { CvProjectsApiService } from './cv-projects-api.service';
-import { CvDocumentApiService } from './cv-document-api.service';
 
 export const CV_PROJECT_REPOS_PER_PAGE = 5;
 export const CV_PROJECT_SUMMARIES_PER_PAGE = 5;
@@ -16,7 +15,6 @@ export class CvProjectsFacade {
   private readonly authService = inject(AuthService);
   private readonly gitHubConnections = inject(GitHubConnectionsFacade);
   private readonly apiService = inject(CvProjectsApiService);
-  private readonly cvDocumentApiService = inject(CvDocumentApiService);
   private loadReposSubscription: Subscription | null = null;
   private loadMoreReposSubscription: Subscription | null = null;
   private loadSummariesSubscription: Subscription | null = null;
@@ -24,8 +22,6 @@ export class CvProjectsFacade {
   private loadReadmeSubscription: Subscription | null = null;
   private generateSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
-  private loadMergeConfigSubscription: Subscription | null = null;
-  private savePlacementsSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private readonly reposLoadAttempted = signal(false);
 
@@ -49,17 +45,8 @@ export class CvProjectsFacade {
   readonly hasMoreRepos = signal(true);
   readonly summaryPage = signal(1);
   readonly hasMoreSummaries = signal(true);
-  readonly mergeSummaries = signal<readonly CvProjectSummary[]>([]);
-  readonly cvSections = signal<readonly CvPdfSection[]>([]);
-  readonly loadingMergeConfig = signal(false);
-  readonly savingPlacements = signal(false);
-  readonly mergeConfigError = signal<string | null>(null);
-  readonly placementsError = signal<string | null>(null);
 
   readonly isGitHubConnected = computed(() => this.gitHubConnections.connections().length > 0);
-  readonly includedMergeSummaries = computed(() =>
-    this.mergeSummaries().filter((summary) => summary.includeInMerge)
-  );
   readonly savedSummaryByRepoId = computed(() => {
     const summaries = new Map<number, CvProjectSummary>();
 
@@ -362,91 +349,6 @@ export class CvProjectsFacade {
     this.generateError.set(null);
   }
 
-  loadMergeConfig(): void {
-    this.cancelLoadMergeConfig();
-    this.loadingMergeConfig.set(true);
-    this.mergeConfigError.set(null);
-
-    this.loadMergeConfigSubscription = this.apiService.listAllSummaries().subscribe({
-      next: (summaries) => {
-        this.mergeSummaries.set(summaries);
-        this.loadingMergeConfig.set(false);
-        this.loadMergeConfigSubscription = null;
-      },
-      error: (error) => {
-        if (isRequestAborted(error)) {
-          this.loadingMergeConfig.set(false);
-          this.loadMergeConfigSubscription = null;
-          return;
-        }
-
-        this.mergeConfigError.set(
-          this.readErrorMessage(error, 'Saved project summaries could not be loaded for merge.')
-        );
-        this.mergeSummaries.set([]);
-        this.loadingMergeConfig.set(false);
-        this.loadMergeConfigSubscription = null;
-      }
-    });
-  }
-
-  loadCvSections(): void {
-    this.cvDocumentApiService.getCvSections().subscribe({
-      next: (sections) => {
-        this.cvSections.set(sections ?? []);
-      },
-      error: () => {
-        this.cvSections.set([]);
-      }
-    });
-  }
-
-  savePlacements(
-    placements: readonly CvProjectSummaryPlacement[],
-    onSuccess?: () => void
-  ): void {
-    this.cancelSavePlacements();
-    this.savingPlacements.set(true);
-    this.placementsError.set(null);
-
-    this.savePlacementsSubscription = this.apiService.updatePlacements({ placements }).subscribe({
-      next: (summaries) => {
-        this.mergeSummaries.set(summaries);
-        this.savedSummaries.update((current) => {
-          const byId = new Map(summaries.map((summary) => [summary.id, summary]));
-
-          return current.map((summary) => byId.get(summary.id) ?? summary);
-        });
-        this.savingPlacements.set(false);
-        this.savePlacementsSubscription = null;
-        onSuccess?.();
-      },
-      error: (error) => {
-        if (isRequestAborted(error)) {
-          this.savingPlacements.set(false);
-          this.savePlacementsSubscription = null;
-          return;
-        }
-
-        this.placementsError.set(
-          this.readErrorMessage(error, 'Project summary placements could not be saved.')
-        );
-        this.savingPlacements.set(false);
-        this.savePlacementsSubscription = null;
-      }
-    });
-  }
-
-  private cancelLoadMergeConfig(): void {
-    this.loadMergeConfigSubscription?.unsubscribe();
-    this.loadMergeConfigSubscription = null;
-  }
-
-  private cancelSavePlacements(): void {
-    this.savePlacementsSubscription?.unsubscribe();
-    this.savePlacementsSubscription = null;
-  }
-
   private cancelLoadRepos(): void {
     this.loadReposSubscription?.unsubscribe();
     this.loadReposSubscription = null;
@@ -478,8 +380,6 @@ export class CvProjectsFacade {
     this.cancelLoadSummaries();
     this.cancelLoadMoreSummaries();
     this.cancelLoadReadme();
-    this.cancelLoadMergeConfig();
-    this.cancelSavePlacements();
     this.generateSubscription?.unsubscribe();
     this.generateSubscription = null;
     this.deleteSubscription?.unsubscribe();
@@ -504,12 +404,6 @@ export class CvProjectsFacade {
     this.hasMoreRepos.set(true);
     this.summaryPage.set(1);
     this.hasMoreSummaries.set(true);
-    this.mergeSummaries.set([]);
-    this.cvSections.set([]);
-    this.loadingMergeConfig.set(false);
-    this.savingPlacements.set(false);
-    this.mergeConfigError.set(null);
-    this.placementsError.set(null);
     this.reposLoadAttempted.set(false);
   }
 

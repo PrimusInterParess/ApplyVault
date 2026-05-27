@@ -26,27 +26,6 @@ export interface CvProjectSummary {
   readonly techStack: string;
   readonly generatedAt: string;
   readonly updatedAt: string;
-  readonly includeInMerge: boolean;
-  readonly mergeSectionHeading: string | null;
-  readonly mergeSortOrder: number;
-}
-
-export interface CvPdfSection {
-  readonly headingText: string;
-  readonly normalizedKey: string;
-  readonly pageIndex: number;
-  readonly yPoints: number;
-}
-
-export interface CvProjectSummaryPlacement {
-  readonly summaryId: string;
-  readonly includeInMerge: boolean;
-  readonly mergeSectionHeading: string | null;
-  readonly mergeSortOrder: number;
-}
-
-export interface UpdateCvProjectSummaryPlacementsRequest {
-  readonly placements: readonly CvProjectSummaryPlacement[];
 }
 
 export interface GitHubRepositoryReadme {

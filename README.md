@@ -258,12 +258,15 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | Step | Status | Plan |
 |------|--------|------|
 | 1 Scrape ingest authentication | Done | [`prod-01-scrape-ingest-auth.md`](plans/prod-01-scrape-ingest-auth.md) |
-| 2 Multi-tenant data isolation | Pending | `prod-02-tenancy-isolation.md` (next) |
-| 3–17 Config, deploy, CORS, health, scale, tests | Pending | See tracker |
+| 2 Multi-tenant data isolation | Done | [`prod-02-tenancy-isolation.md`](plans/prod-02-tenancy-isolation.md) |
+| 3 API integration tests (tenancy) | Pending | `prod-03-api-integration-tests.md` (next) |
+| 4–17 Config, deploy, CORS, health, scale, tests | Pending | See tracker |
 
-**Completed (step 1):** `POST /api/scrape-results` requires a valid Supabase JWT; saves always pass a non-null `userId` into `IScrapeResultSaveService`. Step 2 will remove legacy `UserId == null` rows from shared queries.
+**Completed (steps 1–2):** Authenticated scrape ingest; all scrape-result queries are scoped to `UserId == caller` only. Legacy rows with `UserId IS NULL` are removed by migration `20260527120000_EnforceScrapeResultUserOwnership`. `ScrapeResultEntity.UserId` is required; user delete is `Restrict` (jobs must be removed first).
 
-**Not production-ready yet:** per-user query isolation (step 2), environment-based deploy config (steps 4–11), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+**Not production-ready yet:** HTTP integration tests (step 3), environment-based deploy config (steps 4–11), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+
+**After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 
 ## Notes
 

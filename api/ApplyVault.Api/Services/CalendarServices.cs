@@ -278,7 +278,7 @@ public sealed class CalendarEventService(
                 (result) =>
                     result.Id == scrapeResultId &&
                     !result.IsDeleted &&
-                    (result.UserId == user.Id || result.UserId == null),
+                    result.UserId == user.Id,
                 cancellationToken)
             ?? throw new InvalidOperationException("The requested scrape result does not exist.");
 

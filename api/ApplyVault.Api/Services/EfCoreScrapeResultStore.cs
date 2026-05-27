@@ -15,7 +15,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         var entities = await dbContext
             .ScrapeResults
             .AsNoTracking()
-            .Where((result) => !result.IsDeleted && (result.UserId == userId || result.UserId == null))
+            .Where((result) => !result.IsDeleted && result.UserId == userId)
             .Include((result) => result.HiringManagerContacts)
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
@@ -37,7 +37,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         return entity is null ? null : MapToSavedResult(entity);
@@ -58,7 +58,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
                 (result) =>
                     result.Url == url &&
                     !result.IsDeleted &&
-                    (result.UserId == userId || result.UserId == null),
+                    result.UserId == userId,
                 cancellationToken);
 
         return entity is null ? null : MapToSavedResult(entity);
@@ -66,7 +66,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
 
     public async Task<SavedScrapeResult> SaveAsync(
         AssessedScrapeResult result,
-        Guid? userId,
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
         var payload = result.Payload;
@@ -129,7 +129,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         if (entity is null)
@@ -164,7 +164,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         if (entity is null)
@@ -196,7 +196,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         if (entity is null)
@@ -223,7 +223,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         if (entity is null)
@@ -264,7 +264,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .Include((result) => result.InterviewEvent)
             .Include((result) => result.CalendarEventLinks)
             .SingleOrDefaultAsync(
-                (result) => result.Id == id && !result.IsDeleted && (result.UserId == userId || result.UserId == null),
+                (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
                 cancellationToken);
 
         if (entity is null)
@@ -298,7 +298,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             .ScrapeResults
             .SingleOrDefaultAsync((result) => result.Id == id && !result.IsDeleted, cancellationToken);
 
-        if (entity is null || (entity.UserId != userId && entity.UserId is not null))
+        if (entity is null || entity.UserId != userId)
         {
             return false;
         }

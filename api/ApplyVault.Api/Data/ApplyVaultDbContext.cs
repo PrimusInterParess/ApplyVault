@@ -46,11 +46,12 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((result) => result.CaptureReviewStatus)
                 .IsRequired()
                 .HasDefaultValue(CaptureReviewStatuses.NotRequired);
+            entity.Property((result) => result.UserId).IsRequired();
             entity.HasIndex((result) => result.UserId);
             entity.HasOne((result) => result.User)
                 .WithMany((user) => user.ScrapeResults)
                 .HasForeignKey((result) => result.UserId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasMany((result) => result.HiringManagerContacts)
                 .WithOne()
                 .HasForeignKey((contact) => contact.ScrapeResultId)

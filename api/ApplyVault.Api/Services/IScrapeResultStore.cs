@@ -20,7 +20,7 @@ public interface IScrapeResultStore
 
     Task<SavedScrapeResult> SaveAsync(
         AssessedScrapeResult result,
-        Guid? userId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 
     Task<SavedScrapeResult?> UpdateCaptureReviewAsync(

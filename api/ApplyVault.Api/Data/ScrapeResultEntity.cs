@@ -4,7 +4,7 @@ public sealed class ScrapeResultEntity
 {
     public Guid Id { get; set; }
 
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 
     public DateTimeOffset SavedAt { get; set; }
 

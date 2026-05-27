@@ -30,7 +30,7 @@ public sealed class EmailDrivenJobUpdateService(
         var candidates = await dbContext.ScrapeResults
             .Include((result) => result.HiringManagerContacts)
             .Include((result) => result.InterviewEvent)
-            .Where((result) => !result.IsDeleted && (result.UserId == user.Id || result.UserId == null))
+            .Where((result) => !result.IsDeleted && result.UserId == user.Id)
             .OrderByDescending((result) => result.SavedAt)
             .ToArrayAsync(cancellationToken);
 

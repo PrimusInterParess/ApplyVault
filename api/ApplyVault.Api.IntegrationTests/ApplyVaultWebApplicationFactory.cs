@@ -29,7 +29,8 @@ public sealed class ApplyVaultWebApplicationFactory : WebApplicationFactory<Prog
                 ["ScrapeResultEnrichment:Enabled"] = "false",
                 ["GoogleAi:Enabled"] = "false",
                 ["MailIntegration:Enabled"] = "false",
-                ["Supabase:Url"] = string.Empty
+                ["Supabase:Url"] = string.Empty,
+                ["RateLimiting:Enabled"] = "false"
             });
         });
 

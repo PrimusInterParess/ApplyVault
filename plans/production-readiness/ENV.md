@@ -58,6 +58,18 @@ Runbook: [DATABASE.md](DATABASE.md).
 | `Testing:UseInMemoryDatabase` | `Testing__UseInMemoryDatabase` | Integration tests; use in-memory EF store |
 | `Testing:InMemoryDatabaseName` | `Testing__InMemoryDatabaseName` | Isolated in-memory database name |
 
+## Rate limiting
+
+| Key | Env var | Default (Production) | Purpose |
+|-----|---------|----------------------|---------|
+| `RateLimiting:Enabled` | `RateLimiting__Enabled` | `true` | Master switch (`false` in base `appsettings.json` for local dev) |
+| `RateLimiting:GlobalApi:PermitLimit` | `RateLimiting__GlobalApi__PermitLimit` | `200` | Per-IP ceiling on all `/api/*` (health paths exempt) |
+| `RateLimiting:ScrapeIngest:PermitLimit` | `RateLimiting__ScrapeIngest__PermitLimit` | `30` | `POST /api/scrape-results` per user |
+| `RateLimiting:EuresSearch:PermitLimit` | `RateLimiting__EuresSearch__PermitLimit` | `20` | `POST /api/eures/jobs/search` per user (sliding window) |
+| `RateLimiting:OAuthCallback:PermitLimit` | `RateLimiting__OAuthCallback__PermitLimit` | `10` | OAuth callback routes per IP |
+
+Window length for each policy: `{Policy}:WindowSeconds` (default `60`). Runbook: [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md#rate-limiting).
+
 ## Local development setup
 
 1. Copy `api/ApplyVault.Api/appsettings.Development.example.json` to `appsettings.Development.json` (gitignored).

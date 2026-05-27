@@ -295,6 +295,44 @@ curl -fsS "https://${API_DOMAIN}/api/health"
 
 To confirm failure behavior, stop SQL Server or break the connection string temporarily; `GET /health` must return **503** while `GET /health/live` still returns **200**.
 
+## Rate limiting
+
+Production and staging enable ASP.NET rate limiting (`RateLimiting:Enabled=true`). Health probe paths (`/health`, `/health/live`, `/api/health`) are exempt from the global `/api/*` per-IP limit.
+
+| Policy | Endpoint(s) | Default limit | Partition |
+|--------|-------------|---------------|-----------|
+| Global | All `/api/*` | 200 / minute | Client IP (`X-Forwarded-For` when behind Caddy) |
+| `scrape-ingest` | `POST /api/scrape-results` | 30 / minute | Authenticated user (`sub`), else IP |
+| `eures-search` | `POST /api/eures/jobs/search` | 20 / minute (sliding) | User or IP |
+| `oauth-callback` | `GET /api/calendar-connections/*/callback`, `GET /api/mail-connections/*/callback` | 10 / minute | Client IP |
+
+Tune without redeploy via environment variables, for example:
+
+```bash
+RateLimiting__ScrapeIngest__PermitLimit=30
+RateLimiting__EuresSearch__PermitLimit=20
+RateLimiting__OAuthCallback__PermitLimit=10
+RateLimiting__GlobalApi__PermitLimit=200
+```
+
+Rejected requests return **429** with a `Retry-After` header (seconds). Logs use category `ApplyVault.RateLimiting` at **Warning**, including `TraceId`.
+
+### Manual verification
+
+Burst authenticated requests against a limited endpoint until **429** appears, then confirm normal traffic stays under limits:
+
+```bash
+# Example: repeated scrape ingest (requires valid Bearer token)
+for i in $(seq 1 40); do
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "https://${API_DOMAIN}/api/scrape-results" \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{"jobUrl":"https://example.com/jobs/1","title":"Test"}'
+done
+```
+
+Expect `429` responses with `Retry-After` once the per-user scrape limit is exceeded. Check API logs for `Rate limit exceeded`.
+
 ## Verification checklist
 
 - [ ] `curl -fsS "https://${API_DOMAIN}/health"` returns HTTP 200 with JSON `status: "Healthy"` and database check healthy.
@@ -311,3 +349,4 @@ To confirm failure behavior, stop SQL Server or break the connection string temp
 - **Step 11:** CORS hardening for production domains — done; see [HTTPS and transport security](#https-and-transport-security).
 - **Step 12:** Health/readiness probes — see [Health and readiness probes](#health-and-readiness-probes).
 - **Step 13:** Logging and monitoring — see [Logs and monitoring](#logs-and-monitoring).
+- **Step 14:** Rate limiting — see [Rate limiting](#rate-limiting).

@@ -17,6 +17,7 @@ builder.Services
     .AddApplyVaultDatabase(builder.Configuration, builder.Environment)
     .AddApplyVaultOptions(builder.Configuration, builder.Environment)
     .AddApplyVaultAuthentication()
+    .AddApplyVaultRateLimiting(builder.Configuration)
     .AddApplyVaultApplicationServices(builder.Configuration);
 
 var app = builder.Build();

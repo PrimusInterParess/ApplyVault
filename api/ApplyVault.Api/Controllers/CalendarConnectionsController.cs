@@ -1,7 +1,9 @@
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ApplyVault.Api.Controllers;
 
@@ -36,6 +38,7 @@ public sealed class CalendarConnectionsController(
 
     [AllowAnonymous]
     [HttpGet("{provider}/callback")]
+    [EnableRateLimiting(RateLimitingOptions.PolicyOAuthCallback)]
     public async Task<IActionResult> CompleteAuthorization(
         string provider,
         [FromQuery] string code,

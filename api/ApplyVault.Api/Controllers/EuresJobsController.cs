@@ -1,8 +1,10 @@
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.Eures;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ApplyVault.Api.Controllers;
 
@@ -16,6 +18,7 @@ public sealed class EuresJobsController(
     IAppUserService appUserService) : ControllerBase
 {
     [HttpPost("search")]
+    [EnableRateLimiting(RateLimitingOptions.PolicyEuresSearch)]
     public async Task<ActionResult<EuresJobSearchResponse>> Search([FromBody] EuresJobSearchRequest request)
     {
         if (!requestNormalizer.TryNormalizeSearchRequest(request, out var normalizedRequest, out var validationMessage))

@@ -43,7 +43,7 @@ todos:
     status: completed
   - id: prod-14
     content: Rate limiting
-    status: pending
+    status: completed
   - id: prod-15
     content: Frontend critical-path tests
     status: pending
@@ -82,7 +82,7 @@ isProject: true
 | 11 | [production-readiness/prod-11-cors-and-transport-security.md](production-readiness/prod-11-cors-and-transport-security.md) | D Hardening | done | 10 | HTTPS origins validation; HSTS at Caddy edge; [RUNBOOK](../../deploy/RUNBOOK.md) |
 | 12 | [production-readiness/prod-12-health-checks-and-readiness.md](production-readiness/prod-12-health-checks-and-readiness.md) | D Hardening | done | 7 | `/health` readiness + DB; `/health/live` liveness; Docker healthcheck |
 | 13 | [production-readiness/prod-13-logging-and-monitoring.md](production-readiness/prod-13-logging-and-monitoring.md) | D Hardening | done | 7 | JSON console; auth ops table; 4xx/5xx request logging; [RUNBOOK](../../deploy/RUNBOOK.md) |
-| 14 | [production-readiness/prod-14-rate-limiting.md](production-readiness/prod-14-rate-limiting.md) | D Hardening | pending | 11 | |
+| 14 | [production-readiness/prod-14-rate-limiting.md](production-readiness/prod-14-rate-limiting.md) | D Hardening | done | 11 | Partition limits; 429 + Retry-After; [RUNBOOK](../../deploy/RUNBOOK.md) |
 | 15 | [production-readiness/prod-15-frontend-critical-path-tests.md](production-readiness/prod-15-frontend-critical-path-tests.md) | E Quality | pending | 8 | |
 | 16 | [production-readiness/prod-16-eures-cache-multi-instance.md](production-readiness/prod-16-eures-cache-multi-instance.md) | E Scale | pending | 7 | Defer if 1 replica |
 | 17 | [production-readiness/prod-17-gmail-sync-multi-instance.md](production-readiness/prod-17-gmail-sync-multi-instance.md) | E Scale | pending | 7 | Defer if 1 replica |

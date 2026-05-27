@@ -4,19 +4,19 @@ overview: Protect public and authenticated API endpoints from abuse using ASP.NE
 todos:
   - id: rate-limit-policy
     content: Add partition-based rate limiting (by IP or user id) for expensive endpoints
-    status: pending
+    status: completed
   - id: scrape-ingest-limit
     content: Stricter limits on POST /api/scrape-results and POST /api/eures/jobs/search
-    status: pending
+    status: completed
   - id: oauth-callback-limit
     content: Moderate limits on OAuth callback routes to reduce abuse
-    status: pending
+    status: completed
   - id: rate-limit-response
     content: Return 429 with Retry-After header
-    status: pending
+    status: completed
   - id: config-tuning
     content: Expose limits via options for prod tuning without redeploy
-    status: pending
+    status: completed
 isProject: false
 ---
 

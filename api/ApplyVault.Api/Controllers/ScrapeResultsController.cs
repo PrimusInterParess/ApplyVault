@@ -1,10 +1,14 @@
 using ApplyVault.Api.Models;
 
+using ApplyVault.Api.Options;
+
 using ApplyVault.Api.Services;
 
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Mvc;
+
+using Microsoft.AspNetCore.RateLimiting;
 
 
 
@@ -75,7 +79,7 @@ public sealed class ScrapeResultsController(
 
 
     [HttpPost]
-
+    [EnableRateLimiting(RateLimitingOptions.PolicyScrapeIngest)]
     public async Task<ActionResult<SaveScrapeResultResponse>> Create([FromBody] ScrapeResultDto request)
 
     {

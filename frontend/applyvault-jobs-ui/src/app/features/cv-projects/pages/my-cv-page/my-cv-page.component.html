@@ -1,0 +1,135 @@
+<main class="my-cv-page">
+  <section class="my-cv-page__hero">
+    <div>
+      <p class="my-cv-page__eyebrow">Personal document</p>
+      <h1>My CV</h1>
+      <p class="my-cv-page__intro">
+        Upload a PDF to store and preview your CV in ApplyVault. A new upload replaces the previous file.
+      </p>
+    </div>
+  </section>
+
+  <section class="my-cv-page__panel" aria-labelledby="my-cv-heading">
+    <div class="my-cv-page__panel-header">
+      <div>
+        <p class="my-cv-page__label">PDF preview</p>
+        <h2 id="my-cv-heading">Your uploaded CV</h2>
+      </div>
+
+      <div class="my-cv-page__actions">
+        <input
+          #cvFileInput
+          type="file"
+          accept="application/pdf,.pdf"
+          class="my-cv-page__file-input"
+          (change)="onCvFileSelected($event)" />
+        <button
+          type="button"
+          class="my-cv-page__primary-action"
+          [disabled]="cvDocument.uploading()"
+          (click)="openCvFilePicker()">
+          {{
+            cvDocument.uploading()
+              ? 'Uploading...'
+              : cvDocument.hasDocument()
+                ? 'Replace CV'
+                : 'Upload CV'
+          }}
+        </button>
+        @if (cvDocument.hasDocument()) {
+          <button
+            type="button"
+            class="my-cv-page__danger-action"
+            [disabled]="cvDocument.deleting()"
+            (click)="beginDeleteCv()">
+            {{ cvDocument.deleting() ? 'Deleting...' : 'Delete CV' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (cvDocument.error(); as cvError) {
+      <div class="my-cv-page__alert" role="alert">{{ cvError }}</div>
+    }
+
+    @if (cvDocument.uploadError(); as uploadError) {
+      <div class="my-cv-page__alert" role="alert">{{ uploadError }}</div>
+    }
+
+    @if (cvDocument.deleteError(); as deleteError) {
+      <div class="my-cv-page__alert" role="alert">{{ deleteError }}</div>
+    }
+
+    @if (cvDocument.previewError(); as previewError) {
+      <div class="my-cv-page__alert" role="alert">{{ previewError }}</div>
+    }
+
+    @if (cvDocument.loading()) {
+      <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading CV">
+        <app-skeleton-block width="38%" height="1rem" />
+        <app-skeleton-block width="100%" height="18rem" />
+      </div>
+    } @else if (cvDocument.hasDocument()) {
+      @if (cvDocument.document(); as document) {
+        <div class="my-cv-page__meta">
+          <strong>{{ document.originalFileName }}</strong>
+          <span>{{ formatFileSize(document.fileSizeBytes) }}</span>
+          <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
+        </div>
+      }
+
+      @if (cvDocument.loadingPreview()) {
+        <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading CV preview">
+          <app-skeleton-block width="100%" height="18rem" />
+        </div>
+      } @else {
+        @if (cvDocument.previewUrl(); as previewUrl) {
+          <div class="my-cv-page__preview">
+            <iframe [src]="previewUrl" title="CV preview"></iframe>
+          </div>
+        }
+      }
+    } @else {
+      <div class="my-cv-page__empty">
+        <h3>No CV uploaded yet</h3>
+        <p class="my-cv-page__muted">Upload your CV PDF to preview it here.</p>
+      </div>
+    }
+  </section>
+
+  @if (deleteConfirmOpen()) {
+    <div
+      class="my-cv-page__dialog-backdrop"
+      role="presentation"
+      (click)="cancelDeleteCv()">
+      <div
+        class="my-cv-page__dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-cv-dialog-title"
+        aria-describedby="delete-cv-dialog-description"
+        (click)="$event.stopPropagation()">
+        <h3 id="delete-cv-dialog-title">Delete CV?</h3>
+        <p id="delete-cv-dialog-description">
+          This removes your uploaded CV file from ApplyVault. You can upload a new one at any time.
+        </p>
+        <div class="my-cv-page__dialog-actions">
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
+            [disabled]="cvDocument.deleting()"
+            (click)="cancelDeleteCv()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="my-cv-page__primary-action my-cv-page__danger-confirm"
+            [disabled]="cvDocument.deleting()"
+            (click)="confirmDeleteCv()">
+            {{ cvDocument.deleting() ? 'Deleting...' : 'Delete CV' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</main>

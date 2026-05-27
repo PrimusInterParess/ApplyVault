@@ -2,9 +2,9 @@
   <section class="cv-projects-page__hero">
     <div>
       <p class="cv-projects-page__eyebrow">Portfolio builder</p>
-      <h1>CV projects</h1>
+      <h1>Projects</h1>
       <p class="cv-projects-page__intro">
-        Pick GitHub repositories and generate concise personal-project copy for your CV.
+        Turn GitHub repositories into concise personal-project copy for your CV.
       </p>
     </div>
   </section>
@@ -21,7 +21,7 @@
     </section>
   } @else {
     @if (facade.isGitHubConnected()) {
-      <section class="cv-projects-page__stats" aria-label="CV projects overview">
+      <section class="cv-projects-page__stats" aria-label="Projects overview">
         <article>
           <span>Repositories shown</span>
           <strong>{{ filteredRepos().length }}</strong>
@@ -531,4 +531,5 @@
       </section>
     </section>
   }
+
 </main>

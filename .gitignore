@@ -64,5 +64,6 @@ deploy/.env
 *.sqlite3
 *.mdf
 *.ldf
+App_Data/
 appsettings.Local.json
 appsettings.*.local.json

@@ -229,6 +229,14 @@ public sealed record CvProjectSummaryDto(
     DateTimeOffset UpdatedAt
 );
 
+public sealed record CvDocumentDto(
+    Guid Id,
+    string OriginalFileName,
+    string ContentType,
+    long FileSizeBytes,
+    DateTimeOffset UploadedAt
+);
+
 public sealed record CreateCalendarEventRequest(
     Guid ConnectedAccountId
 );

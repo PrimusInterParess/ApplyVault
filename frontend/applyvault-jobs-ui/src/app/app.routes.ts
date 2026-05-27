@@ -46,10 +46,21 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'cv-projects',
-        title: 'CV Projects',
+        path: 'my-cv',
+        title: 'My CV',
         data: {
-          shellSubtitle: 'Turn GitHub repos into CV-ready project summaries.'
+          shellSubtitle: 'Upload and preview your CV PDF.'
+        },
+        loadComponent: () =>
+          import('./features/cv-projects/pages/my-cv-page/my-cv-page.component').then(
+            (module) => module.MyCvPageComponent
+          )
+      },
+      {
+        path: 'cv-projects',
+        title: 'Projects',
+        data: {
+          shellSubtitle: 'Browse GitHub repositories and generate project summaries.'
         },
         loadComponent: () =>
           import('./features/cv-projects/pages/cv-projects-page/cv-projects-page.component').then(

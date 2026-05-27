@@ -121,6 +121,8 @@ public sealed class AppUserEntity
     public List<ConnectedAccountEntity> ConnectedAccounts { get; set; } = [];
 
     public List<UserCvProjectSummaryEntity> CvProjectSummaries { get; set; } = [];
+
+    public UserCvDocumentEntity? CvDocument { get; set; }
 }
 
 public sealed class ConnectedAccountEntity
@@ -185,6 +187,27 @@ public sealed class UserCvProjectSummaryEntity
     public required string TechStack { get; set; }
 
     public DateTimeOffset GeneratedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    public AppUserEntity? User { get; set; }
+}
+
+public sealed class UserCvDocumentEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public required string OriginalFileName { get; set; }
+
+    public required string ContentType { get; set; }
+
+    public required string StorageKey { get; set; }
+
+    public long FileSizeBytes { get; set; }
+
+    public DateTimeOffset UploadedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
 

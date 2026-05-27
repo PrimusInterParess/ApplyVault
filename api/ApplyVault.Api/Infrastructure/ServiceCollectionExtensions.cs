@@ -148,6 +148,22 @@ public static class ServiceCollectionExtensions
                 "EuresIntegration:TimeoutSeconds must be between 5 and 120.")
             .ValidateOnStart();
 
+        var cvDocumentStorageBuilder = services
+            .AddOptions<CvDocumentStorageOptions>()
+            .Bind(configuration.GetSection(CvDocumentStorageOptions.SectionName))
+            .Validate(
+                (options) => options.MaxFileSizeBytes is > 0 and <= (20 * 1024 * 1024),
+                "CvDocumentStorage:MaxFileSizeBytes must be between 1 and 20971520.");
+
+        if (!environment.IsDevelopment())
+        {
+            cvDocumentStorageBuilder
+                .Validate(
+                    CvDocumentStorageOptionsValidation.Validate,
+                    "CvDocumentStorage is misconfigured: Local requires RootPath; AzureBlob requires ConnectionString and ContainerName.")
+                .ValidateOnStart();
+        }
+
         return services;
     }
 
@@ -211,6 +227,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGitHubConnectionService, GitHubConnectionService>();
         services.AddScoped<IGitHubAccountResolver, GitHubAccountResolver>();
         services.AddScoped<IGitHubProjectSummaryService, GitHubProjectSummaryService>();
+        services.AddScoped<ICvDocumentService, CvDocumentService>();
+        services.AddScoped<LocalFilesystemCvDocumentStorage>();
+        services.AddScoped<AzureBlobCvDocumentStorage>();
+        services.AddScoped<ICvDocumentStorage>((serviceProvider) =>
+        {
+            var storageOptions = serviceProvider.GetRequiredService<IOptions<CvDocumentStorageOptions>>().Value;
+
+            return string.Equals(storageOptions.Provider, CvDocumentStorageOptions.ProviderAzureBlob, StringComparison.OrdinalIgnoreCase)
+                ? serviceProvider.GetRequiredService<AzureBlobCvDocumentStorage>()
+                : serviceProvider.GetRequiredService<LocalFilesystemCvDocumentStorage>();
+        });
         services.AddScoped<IMailSyncProcessor, MailSyncProcessor>();
         services.AddScoped<IEmailDrivenInterviewCalendarSyncService, EmailDrivenInterviewCalendarSyncService>();
         services.AddScoped<IEmailDrivenJobUpdateService, EmailDrivenJobUpdateService>();

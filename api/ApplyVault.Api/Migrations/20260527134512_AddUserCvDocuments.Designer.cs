@@ -4,6 +4,7 @@ using ApplyVault.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApplyVault.Api.Migrations
 {
     [DbContext(typeof(ApplyVaultDbContext))]
-    partial class ApplyVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260527134512_AddUserCvDocuments")]
+    partial class AddUserCvDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -426,47 +429,6 @@ namespace ApplyVault.Api.Migrations
                     b.ToTable("UserCvProjectSummaries");
                 });
 
-            modelBuilder.Entity("ApplyVault.Api.Data.UserCvDocumentEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<long>("FileSizeBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasMaxLength(260)
-                        .HasColumnType("nvarchar(260)");
-
-                    b.Property<string>("StorageKey")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset>("UploadedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("UserCvDocuments");
-                });
-
             modelBuilder.Entity("ApplyVault.Api.Data.CalendarEventLinkEntity", b =>
                 {
                     b.HasOne("ApplyVault.Api.Data.ConnectedAccountEntity", "ConnectedAccount")
@@ -539,22 +501,9 @@ namespace ApplyVault.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ApplyVault.Api.Data.UserCvDocumentEntity", b =>
-                {
-                    b.HasOne("ApplyVault.Api.Data.AppUserEntity", "User")
-                        .WithOne("CvDocument")
-                        .HasForeignKey("ApplyVault.Api.Data.UserCvDocumentEntity", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ApplyVault.Api.Data.AppUserEntity", b =>
                 {
                     b.Navigation("ConnectedAccounts");
-
-                    b.Navigation("CvDocument");
 
                     b.Navigation("CvProjectSummaries");
 

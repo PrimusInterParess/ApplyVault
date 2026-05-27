@@ -51,6 +51,10 @@ Runbook: [DATABASE.md](DATABASE.md).
 | `MailIntegration:Gmail` | `ClientId`, `ClientSecret`, `RedirectUri` | `MailIntegration__Gmail__*` | When `MailIntegration:Enabled` is true |
 | `MailIntegration` | `PollIntervalSeconds`, etc. | `MailIntegration__*` | Gmail sync tuning |
 | `EuresIntegration` | `BaseUrl`, `DefaultLocationCode`, … | `EuresIntegration__*` | EURES job search |
+| `CvDocumentStorage` | `Provider` | `CvDocumentStorage__Provider` | `Local` (dev) or `AzureBlob` (production) |
+| `CvDocumentStorage` | `MaxFileSizeBytes` | `CvDocumentStorage__MaxFileSizeBytes` | Upload size limit (default 5242880) |
+| `CvDocumentStorage:Local` | `RootPath` | `CvDocumentStorage__Local__RootPath` | Required when `Provider` is `Local` |
+| `CvDocumentStorage:AzureBlob` | `ConnectionString`, `ContainerName` | `CvDocumentStorage__AzureBlob__*` | Required when `Provider` is `AzureBlob` |
 
 ## Test-only
 

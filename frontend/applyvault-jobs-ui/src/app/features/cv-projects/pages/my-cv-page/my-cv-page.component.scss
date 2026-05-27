@@ -1,0 +1,225 @@
+:host {
+  display: block;
+}
+
+.my-cv-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  font-size: 0.92rem;
+}
+
+.my-cv-page__hero,
+.my-cv-page__panel {
+  border: 1px solid var(--app-border);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.my-cv-page__hero {
+  padding: 1.5rem;
+}
+
+.my-cv-page__panel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1.5rem;
+}
+
+.my-cv-page__panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.my-cv-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.my-cv-page__file-input {
+  display: none;
+}
+
+.my-cv-page__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  color: var(--app-text-muted);
+  font-size: 0.88rem;
+}
+
+.my-cv-page__meta strong {
+  color: var(--app-text);
+}
+
+.my-cv-page__preview {
+  min-height: 18rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  overflow: hidden;
+  background: var(--app-bg-soft);
+}
+
+.my-cv-page__preview iframe {
+  display: block;
+  width: 100%;
+  min-height: 28rem;
+  border: 0;
+  background: #fff;
+}
+
+.my-cv-page__empty {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+}
+
+.my-cv-page__skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.my-cv-page__eyebrow,
+.my-cv-page__label {
+  margin: 0 0 0.75rem;
+  color: var(--app-text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.my-cv-page h1,
+.my-cv-page h2,
+.my-cv-page h3,
+.my-cv-page p {
+  margin: 0;
+}
+
+.my-cv-page h1 {
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  line-height: 1.15;
+}
+
+.my-cv-page h2 {
+  font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+}
+
+.my-cv-page h3 {
+  font-size: 1rem;
+}
+
+.my-cv-page__intro,
+.my-cv-page__muted {
+  color: var(--app-text-muted);
+  line-height: 1.65;
+}
+
+.my-cv-page__intro {
+  margin-top: 0.65rem;
+  max-width: 52ch;
+  font-size: 0.88rem;
+}
+
+.my-cv-page__primary-action,
+.my-cv-page__secondary-action,
+.my-cv-page__danger-action {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--app-radius);
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+
+.my-cv-page__primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 40%, var(--app-border-strong));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-accent) 18%, var(--app-surface)) 0%, var(--app-bg-soft) 100%);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__secondary-action {
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-bg-soft);
+  color: var(--app-text);
+}
+
+.my-cv-page__danger-action {
+  border: 1px solid color-mix(in srgb, var(--app-danger) 35%, var(--app-border-strong));
+  background: color-mix(in srgb, var(--app-danger) 10%, var(--app-bg-soft));
+  color: var(--app-text);
+}
+
+.my-cv-page__primary-action:disabled,
+.my-cv-page__secondary-action:disabled,
+.my-cv-page__danger-action:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.my-cv-page__alert {
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-danger) 8%, var(--app-surface));
+  color: var(--app-text);
+}
+
+.my-cv-page__dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(51, 37, 26, 0.45);
+}
+
+.my-cv-page__dialog {
+  width: min(100%, 26rem);
+  padding: 1.35rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.my-cv-page__dialog h3 {
+  font-size: 1.35rem;
+}
+
+.my-cv-page__dialog p {
+  margin-top: 0.75rem;
+  color: var(--app-text-muted);
+  line-height: 1.6;
+}
+
+.my-cv-page__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.my-cv-page__danger-confirm {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  box-shadow: var(--app-shadow-sm);
+}

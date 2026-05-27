@@ -12,6 +12,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<InterviewEventEntity> InterviewEvents => Set<InterviewEventEntity>();
     public DbSet<CalendarEventLinkEntity> CalendarEventLinks => Set<CalendarEventLinkEntity>();
     public DbSet<UserCvProjectSummaryEntity> UserCvProjectSummaries => Set<UserCvProjectSummaryEntity>();
+    public DbSet<UserCvDocumentEntity> UserCvDocuments => Set<UserCvDocumentEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,6 +125,19 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.HasOne((summary) => summary.User)
                 .WithMany((user) => user.CvProjectSummaries)
                 .HasForeignKey((summary) => summary.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserCvDocumentEntity>((entity) =>
+        {
+            entity.HasKey((document) => document.Id);
+            entity.Property((document) => document.OriginalFileName).IsRequired().HasMaxLength(260);
+            entity.Property((document) => document.ContentType).IsRequired().HasMaxLength(128);
+            entity.Property((document) => document.StorageKey).IsRequired().HasMaxLength(512);
+            entity.HasIndex((document) => document.UserId).IsUnique();
+            entity.HasOne((document) => document.User)
+                .WithOne((user) => user.CvDocument)
+                .HasForeignKey<UserCvDocumentEntity>((document) => document.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

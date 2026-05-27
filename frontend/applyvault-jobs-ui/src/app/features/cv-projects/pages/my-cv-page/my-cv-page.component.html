@@ -4,9 +4,9 @@
       <p class="my-cv-page__eyebrow">Personal document</p>
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
-        Upload a PDF to store and preview your CV. Assign saved project summaries from
-        <a routerLink="/cv-projects">Projects</a> to CV sections, then merge them into the PDF near the
-        matching section.
+        Upload a PDF to store and preview your CV. Build and edit a structured CV in the
+        <a routerLink="/cv-editor">CV Editor</a> — import content, reorder sections, insert saved project
+        summaries from <a routerLink="/cv-projects">Projects</a>, and export a new PDF.
       </p>
     </div>
   </section>
@@ -25,6 +25,11 @@
           accept="application/pdf,.pdf"
           class="my-cv-page__file-input"
           (change)="onCvFileSelected($event)" />
+        @if (cvDocument.hasDocument()) {
+          <a routerLink="/cv-editor" class="my-cv-page__secondary-action my-cv-page__link-action">
+            Open CV Editor
+          </a>
+        }
         <button
           type="button"
           class="my-cv-page__primary-action"

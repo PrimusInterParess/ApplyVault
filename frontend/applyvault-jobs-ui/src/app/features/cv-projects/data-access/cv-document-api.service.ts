@@ -4,6 +4,14 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument } from '../models/cv-document.model';
+import {
+  CvStructuredDocument,
+  CvStructuredEntry,
+  CvStructuredImportPreview,
+  CvStructuredSectionWrite,
+  InsertCvEntryFromSummaryRequest,
+  SaveCvStructuredDocumentRequest
+} from '../models/cv-structured.model';
 import { CvPdfSection } from '../models/cv-project.model';
 
 @Injectable({ providedIn: 'root' })
@@ -41,5 +49,49 @@ export class CvDocumentApiService {
 
   delete(): Observable<void> {
     return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/cv-documents/current`);
+  }
+
+  getStructured(): Observable<CvStructuredDocument> {
+    return this.httpClient.get<CvStructuredDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured`
+    );
+  }
+
+  saveStructured(request: SaveCvStructuredDocumentRequest): Observable<CvStructuredDocument> {
+    return this.httpClient.put<CvStructuredDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured`,
+      request
+    );
+  }
+
+  previewImport(): Observable<CvStructuredImportPreview> {
+    return this.httpClient.post<CvStructuredImportPreview>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/import`,
+      null
+    );
+  }
+
+  confirmImport(request: SaveCvStructuredDocumentRequest): Observable<CvStructuredDocument> {
+    return this.httpClient.post<CvStructuredDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/import/confirm`,
+      request
+    );
+  }
+
+  insertEntryFromSummary(
+    sectionId: string,
+    request: InsertCvEntryFromSummaryRequest
+  ): Observable<CvStructuredEntry> {
+    return this.httpClient.post<CvStructuredEntry>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/sections/${sectionId}/entries/from-summary`,
+      request
+    );
+  }
+
+  exportStructured(): Observable<CvDocument> {
+    return this.httpClient.post<CvDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/export`,
+      null
+    );
   }
 }

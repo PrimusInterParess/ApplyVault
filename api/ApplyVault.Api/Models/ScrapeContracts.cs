@@ -256,7 +256,72 @@ public sealed record CvDocumentDto(
     string ContentType,
     long FileSizeBytes,
     DateTimeOffset UploadedAt,
-    bool HasMergedProjects
+    bool HasMergedProjects,
+    bool HasStructuredContent,
+    DateTimeOffset? StructuredImportedAt
+);
+
+public sealed record CvStructuredDocumentDto(
+    Guid DocumentId,
+    DateTimeOffset? StructuredImportedAt,
+    IReadOnlyList<CvStructuredSectionDto> Sections
+);
+
+public sealed record CvStructuredSectionDto(
+    Guid Id,
+    string Heading,
+    string SectionType,
+    int SortOrder,
+    IReadOnlyList<CvStructuredEntryDto> Entries
+);
+
+public sealed record CvStructuredEntryDto(
+    Guid Id,
+    string Title,
+    string? Subtitle,
+    string? DateRange,
+    string Summary,
+    IReadOnlyList<string> Bullets,
+    string TechStack,
+    string Source,
+    Guid? SourceSummaryId,
+    int SortOrder
+);
+
+public sealed record SaveCvStructuredDocumentRequest(
+    IReadOnlyList<CvStructuredSectionWriteDto> Sections
+);
+
+public sealed record CvStructuredSectionWriteDto(
+    Guid? Id,
+    string Heading,
+    string SectionType,
+    int SortOrder,
+    IReadOnlyList<CvStructuredEntryWriteDto> Entries
+);
+
+public sealed record CvStructuredEntryWriteDto(
+    Guid? Id,
+    string Title,
+    string? Subtitle,
+    string? DateRange,
+    string Summary,
+    IReadOnlyList<string> Bullets,
+    string TechStack,
+    string Source,
+    Guid? SourceSummaryId,
+    int SortOrder
+);
+
+public sealed record InsertCvEntryFromSummaryRequest(
+    Guid SummaryId,
+    string? TargetSectionType
+);
+
+public sealed record CvStructuredImportPreviewDto(
+    IReadOnlyList<CvStructuredSectionWriteDto> Sections,
+    bool UsedAi,
+    string? Notice
 );
 
 public sealed record CreateCalendarEventRequest(

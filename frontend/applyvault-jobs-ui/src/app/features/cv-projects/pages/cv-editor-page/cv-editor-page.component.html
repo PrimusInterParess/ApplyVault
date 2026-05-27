@@ -1,0 +1,234 @@
+<main class="cv-editor-page">
+  <section class="cv-editor-page__hero">
+    <div>
+      <p class="cv-editor-page__eyebrow">Structured CV</p>
+      <h1>CV Editor</h1>
+      <p class="cv-editor-page__intro">
+        Import content from your uploaded PDF, edit sections and entries, insert saved GitHub project
+        summaries, then export a new PDF. Upload a CV on <a routerLink="/my-cv">My CV</a> first.
+      </p>
+    </div>
+  </section>
+
+  @if (!cvDocument.hasDocument() && !cvDocument.loading()) {
+    <section class="cv-editor-page__panel">
+      <p class="cv-editor-page__muted">
+        No CV uploaded yet. <a routerLink="/my-cv">Upload your CV PDF</a> to start.
+      </p>
+    </section>
+  } @else {
+    <section class="cv-editor-page__panel">
+      <div class="cv-editor-page__toolbar">
+        <button
+          type="button"
+          class="cv-editor-page__secondary-action"
+          [disabled]="cvStructured.importing()"
+          (click)="startImport()">
+          {{ cvStructured.importing() ? 'Extracting...' : 'Extract from PDF' }}
+        </button>
+        <button
+          type="button"
+          class="cv-editor-page__secondary-action"
+          (click)="addSection()">
+          Add section
+        </button>
+        <button
+          type="button"
+          class="cv-editor-page__primary-action"
+          [disabled]="!canSave()"
+          (click)="saveDraft()">
+          {{ cvStructured.saving() ? 'Saving...' : 'Save' }}
+        </button>
+        <button
+          type="button"
+          class="cv-editor-page__primary-action"
+          [disabled]="!canSave() || cvDocument.exporting()"
+          (click)="exportPdf()">
+          {{ cvDocument.exporting() ? 'Exporting...' : 'Export PDF' }}
+        </button>
+      </div>
+
+      @if (cvStructured.error(); as loadError) {
+        <div class="cv-editor-page__alert" role="alert">{{ loadError }}</div>
+      }
+      @if (cvStructured.saveError(); as saveError) {
+        <div class="cv-editor-page__alert" role="alert">{{ saveError }}</div>
+      }
+      @if (cvStructured.importError(); as importError) {
+        <div class="cv-editor-page__alert" role="alert">{{ importError }}</div>
+      }
+      @if (cvStructured.insertError(); as insertError) {
+        <div class="cv-editor-page__alert" role="alert">{{ insertError }}</div>
+      }
+      @if (cvDocument.exportError(); as exportError) {
+        <div class="cv-editor-page__alert" role="alert">{{ exportError }}</div>
+      }
+
+      @if (cvStructured.loading()) {
+        <app-skeleton-block width="100%" height="12rem" />
+      } @else if (!hasDraft()) {
+        <p class="cv-editor-page__muted">
+          Click <strong>Extract from PDF</strong> to import your CV content, or add sections manually.
+        </p>
+      } @else {
+        @for (section of draftSections(); track section.id) {
+          <article class="cv-editor-page__section-card">
+            <div class="cv-editor-page__section-header">
+              <div class="cv-editor-page__section-fields">
+                <input
+                  class="cv-editor-page__input"
+                  [ngModel]="section.heading"
+                  (ngModelChange)="updateSectionHeading(section.id, $event)"
+                  placeholder="Section heading" />
+                <select
+                  class="cv-editor-page__select"
+                  [ngModel]="section.sectionType"
+                  (ngModelChange)="updateSectionType(section.id, $event)">
+                  @for (type of sectionTypes; track type) {
+                    <option [ngValue]="type">{{ type }}</option>
+                  }
+                </select>
+              </div>
+              <div class="cv-editor-page__section-actions">
+                <button type="button" class="cv-editor-page__icon-action" (click)="moveSection(section.id, -1)">↑</button>
+                <button type="button" class="cv-editor-page__icon-action" (click)="moveSection(section.id, 1)">↓</button>
+                <button
+                  type="button"
+                  class="cv-editor-page__secondary-action"
+                  (click)="openInsertDialog(section.id)">
+                  Insert project
+                </button>
+                <button type="button" class="cv-editor-page__secondary-action" (click)="addEntry(section.id)">
+                  Add entry
+                </button>
+                <button type="button" class="cv-editor-page__danger-action" (click)="removeSection(section.id)">
+                  Remove section
+                </button>
+              </div>
+            </div>
+
+            @for (entry of section.entries; track entry.id) {
+              <div class="cv-editor-page__entry-card">
+                <div class="cv-editor-page__entry-header">
+                  <strong>Entry</strong>
+                  <div class="cv-editor-page__entry-actions">
+                    <button type="button" class="cv-editor-page__icon-action" (click)="moveEntry(section.id, entry.id, -1)">↑</button>
+                    <button type="button" class="cv-editor-page__icon-action" (click)="moveEntry(section.id, entry.id, 1)">↓</button>
+                    <button
+                      type="button"
+                      class="cv-editor-page__danger-action"
+                      (click)="removeEntry(section.id, entry.id)">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <label class="cv-editor-page__field">
+                  <span>Title</span>
+                  <input
+                    class="cv-editor-page__input"
+                    [ngModel]="entry.title"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'title', $event)" />
+                </label>
+                <label class="cv-editor-page__field">
+                  <span>Subtitle</span>
+                  <input
+                    class="cv-editor-page__input"
+                    [ngModel]="entry.subtitle ?? ''"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'subtitle', $event)" />
+                </label>
+                <label class="cv-editor-page__field">
+                  <span>Date range</span>
+                  <input
+                    class="cv-editor-page__input"
+                    [ngModel]="entry.dateRange ?? ''"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'dateRange', $event)" />
+                </label>
+                <label class="cv-editor-page__field">
+                  <span>Summary</span>
+                  <textarea
+                    class="cv-editor-page__textarea"
+                    rows="3"
+                    [ngModel]="entry.summary"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'summary', $event)"></textarea>
+                </label>
+                <label class="cv-editor-page__field">
+                  <span>Bullets (one per line)</span>
+                  <textarea
+                    class="cv-editor-page__textarea"
+                    rows="4"
+                    [ngModel]="bulletsText(entry)"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'bullets', $event)"></textarea>
+                </label>
+                <label class="cv-editor-page__field">
+                  <span>Tech stack</span>
+                  <input
+                    class="cv-editor-page__input"
+                    [ngModel]="entry.techStack"
+                    (ngModelChange)="updateEntryField(section.id, entry.id, 'techStack', $event)" />
+                </label>
+              </div>
+            }
+          </article>
+        }
+      }
+    </section>
+  }
+
+  @if (importReviewOpen() && cvStructured.importPreview(); as preview) {
+    <div class="cv-editor-page__dialog-backdrop" role="presentation" (click)="cancelImportReview()"></div>
+    <section class="cv-editor-page__dialog" role="dialog" aria-labelledby="import-review-heading">
+      <h2 id="import-review-heading">Review imported content</h2>
+      @if (preview.notice) {
+        <p class="cv-editor-page__muted">{{ preview.notice }}</p>
+      }
+      <p class="cv-editor-page__muted">
+        {{ preview.usedAi ? 'Extracted with AI.' : 'Extracted with basic parsing.' }}
+        Found {{ preview.sections.length }} sections.
+      </p>
+      <div class="cv-editor-page__dialog-actions">
+        <button type="button" class="cv-editor-page__secondary-action" (click)="cancelImportReview()">Cancel</button>
+        <button type="button" class="cv-editor-page__secondary-action" (click)="applyImportPreview()">
+          Edit in editor
+        </button>
+        <button
+          type="button"
+          class="cv-editor-page__primary-action"
+          [disabled]="cvStructured.confirmingImport()"
+          (click)="confirmImportAndSave()">
+          {{ cvStructured.confirmingImport() ? 'Saving...' : 'Save import' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (insertDialogOpen()) {
+    <div class="cv-editor-page__dialog-backdrop" role="presentation" (click)="closeInsertDialog()"></div>
+    <section class="cv-editor-page__dialog" role="dialog" aria-labelledby="insert-summary-heading">
+      <h2 id="insert-summary-heading">Insert saved project</h2>
+      <p class="cv-editor-page__muted">Your CV will be saved before inserting.</p>
+      @if (loadingSummaries()) {
+        <app-skeleton-block width="100%" height="6rem" />
+      } @else if (projectSummaries().length === 0) {
+        <p class="cv-editor-page__muted">
+          No saved summaries. Generate projects on <a routerLink="/cv-projects">Projects</a>.
+        </p>
+      } @else {
+        <ul class="cv-editor-page__summary-list">
+          @for (summary of projectSummaries(); track summary.id) {
+            <li>
+              <button
+                type="button"
+                class="cv-editor-page__summary-button"
+                [disabled]="cvStructured.inserting()"
+                (click)="insertSummary(summary.id)">
+                <strong>{{ summary.cvTitle }}</strong>
+                <span>{{ summary.fullName }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      <button type="button" class="cv-editor-page__secondary-action" (click)="closeInsertDialog()">Close</button>
+    </section>
+  }
+</main>

@@ -219,7 +219,61 @@ public sealed class UserCvDocumentEntity
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    public DateTimeOffset? StructuredImportedAt { get; set; }
+
     public AppUserEntity? User { get; set; }
+
+    public List<UserCvSectionEntity> Sections { get; set; } = [];
+}
+
+public sealed class UserCvSectionEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public Guid UserCvDocumentId { get; set; }
+
+    public required string Heading { get; set; }
+
+    public required string SectionType { get; set; }
+
+    public int SortOrder { get; set; }
+
+    public UserCvDocumentEntity? Document { get; set; }
+
+    public List<UserCvEntryEntity> Entries { get; set; } = [];
+}
+
+public sealed class UserCvEntryEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public Guid SectionId { get; set; }
+
+    public required string Title { get; set; }
+
+    public string? Subtitle { get; set; }
+
+    public string? DateRange { get; set; }
+
+    public required string Summary { get; set; }
+
+    public required string BulletsJson { get; set; }
+
+    public required string TechStack { get; set; }
+
+    public required string Source { get; set; }
+
+    public Guid? SourceSummaryId { get; set; }
+
+    public int SortOrder { get; set; }
+
+    public UserCvSectionEntity? Section { get; set; }
+
+    public UserCvProjectSummaryEntity? SourceSummary { get; set; }
 }
 
 public sealed class InterviewEventEntity

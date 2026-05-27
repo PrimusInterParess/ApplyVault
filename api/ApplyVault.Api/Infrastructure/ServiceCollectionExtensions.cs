@@ -99,6 +99,10 @@ public static class ServiceCollectionExtensions
             .AddOptions<GitHubProjectAiOptions>()
             .Bind(configuration.GetSection(GitHubProjectAiOptions.SectionName));
 
+        services
+            .AddOptions<CvImportAiOptions>()
+            .Bind(configuration.GetSection(CvImportAiOptions.SectionName));
+
         if (!environment.IsDevelopment())
         {
             calendarIntegrationBuilder
@@ -202,6 +206,7 @@ public static class ServiceCollectionExtensions
             client.DefaultRequestHeaders.UserAgent.ParseAdd("ApplyVault/1.0");
         });
         services.AddHttpClient<IGitHubProjectAiClient, GoogleAiGitHubProjectClient>();
+        services.AddHttpClient<ICvStructuredImportAiClient, GoogleAiCvStructuredImportClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddProblemDetails();
@@ -231,6 +236,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvPdfSectionDetector, CvPdfSectionDetector>();
         services.AddScoped<ICvPdfSectionDetectionService, CvPdfSectionDetectionService>();
         services.AddScoped<ICvPdfProjectsMergeService, CvPdfProjectsMergeService>();
+        services.AddScoped<ICvPdfFullTextExtractor, CvPdfFullTextExtractor>();
+        services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
+        services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
+        services.AddScoped<ICvStructuredExportService, CvStructuredExportService>();
         services.AddScoped<LocalFilesystemCvDocumentStorage>();
         services.AddScoped<AzureBlobCvDocumentStorage>();
         services.AddScoped<ICvDocumentStorage>((serviceProvider) =>

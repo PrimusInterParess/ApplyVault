@@ -13,6 +13,8 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<CalendarEventLinkEntity> CalendarEventLinks => Set<CalendarEventLinkEntity>();
     public DbSet<UserCvProjectSummaryEntity> UserCvProjectSummaries => Set<UserCvProjectSummaryEntity>();
     public DbSet<UserCvDocumentEntity> UserCvDocuments => Set<UserCvDocumentEntity>();
+    public DbSet<UserCvSectionEntity> UserCvSections => Set<UserCvSectionEntity>();
+    public DbSet<UserCvEntryEntity> UserCvEntries => Set<UserCvEntryEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +145,43 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
                 .WithOne((user) => user.CvDocument)
                 .HasForeignKey<UserCvDocumentEntity>((document) => document.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((document) => document.Sections)
+                .WithOne((section) => section.Document)
+                .HasForeignKey((section) => section.UserCvDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserCvSectionEntity>((entity) =>
+        {
+            entity.HasKey((section) => section.Id);
+            entity.Property((section) => section.Heading).IsRequired().HasMaxLength(256);
+            entity.Property((section) => section.SectionType).IsRequired().HasMaxLength(32);
+            entity.HasIndex((section) => new { section.UserCvDocumentId, section.SortOrder });
+            entity.HasOne((section) => section.Document)
+                .WithMany((document) => document.Sections)
+                .HasForeignKey((section) => section.UserCvDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((section) => section.Entries)
+                .WithOne((entry) => entry.Section)
+                .HasForeignKey((entry) => entry.SectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserCvEntryEntity>((entity) =>
+        {
+            entity.HasKey((entry) => entry.Id);
+            entity.Property((entry) => entry.Title).IsRequired().HasMaxLength(256);
+            entity.Property((entry) => entry.Subtitle).HasMaxLength(512);
+            entity.Property((entry) => entry.DateRange).HasMaxLength(128);
+            entity.Property((entry) => entry.Summary).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((entry) => entry.BulletsJson).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((entry) => entry.TechStack).IsRequired().HasMaxLength(512);
+            entity.Property((entry) => entry.Source).IsRequired().HasMaxLength(32);
+            entity.HasIndex((entry) => new { entry.SectionId, entry.SortOrder });
+            entity.HasOne((entry) => entry.SourceSummary)
+                .WithMany()
+                .HasForeignKey((entry) => entry.SourceSummaryId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

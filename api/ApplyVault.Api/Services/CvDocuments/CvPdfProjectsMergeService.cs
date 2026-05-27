@@ -129,7 +129,9 @@ public sealed class CvPdfProjectsMergeService(
             document.ContentType,
             document.FileSizeBytes,
             document.UploadedAt,
-            hasMergedProjects);
+            hasMergedProjects,
+            document.StructuredImportedAt is not null,
+            document.StructuredImportedAt);
     }
 
     private static IReadOnlyList<string> DeserializeStringArray(string? json)

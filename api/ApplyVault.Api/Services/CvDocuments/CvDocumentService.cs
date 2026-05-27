@@ -89,6 +89,13 @@ public sealed class CvDocumentService(
                 keysToDelete.Add(existingDocument.BaseStorageKey);
             }
 
+            var existingSections = await dbContext.UserCvSections
+                .Where((section) => section.UserCvDocumentId == existingDocument.Id)
+                .ToArrayAsync(cancellationToken);
+
+            dbContext.UserCvSections.RemoveRange(existingSections);
+            existingDocument.StructuredImportedAt = null;
+
             existingDocument.OriginalFileName = Path.GetFileName(file.FileName);
             existingDocument.ContentType = PdfContentType;
             existingDocument.StorageKey = storageKey;
@@ -199,7 +206,7 @@ public sealed class CvDocumentService(
 
     private static CvDocumentDto MapDocument(UserCvDocumentEntity document)
     {
-        var hasMergedProjects = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
+        var hasExportedPdf = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
             && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
 
         return new CvDocumentDto(
@@ -208,6 +215,8 @@ public sealed class CvDocumentService(
             document.ContentType,
             document.FileSizeBytes,
             document.UploadedAt,
-            hasMergedProjects);
+            hasExportedPdf,
+            document.StructuredImportedAt is not null,
+            document.StructuredImportedAt);
     }
 }

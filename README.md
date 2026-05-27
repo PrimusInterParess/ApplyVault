@@ -13,7 +13,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Score capture quality for key fields and flag low-confidence results for follow-up review.
 - Run optional Google AI enrichment to repair low-confidence fields before the result is stored.
 - Persist original values, effective values, user overrides, overall confidence, and review status for each saved result.
-- Sign in to the extension and dashboard with Supabase-backed authentication.
+- Sign in to the extension and dashboard with Supabase-backed authentication; scrape ingest and dashboard API calls use the same Bearer JWT.
 - Store saved results in LocalDB through EF Core migrations applied automatically at API startup.
 - Browse saved jobs in the Angular dashboard and inspect a dedicated detail panel.
 - Mark saved results as rejected, review key capture fields, and clean up Markdown descriptions from the dashboard.
@@ -45,7 +45,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `frontend/applyvault-jobs-ui/`
   Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder.
 - `plans/`
-  Product and implementation planning documents for upcoming roadmap work.
+  Product roadmap and production-hardening plans. Start with [`production-readiness-tracker.md`](plans/production-readiness-tracker.md) for the ordered checklist (`prod-01` … `prod-17`).
 - `md/`
   Project notes and reusable prompt or style guidance documents.
 
@@ -103,7 +103,11 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `GET /api/eures/jobs/{id}`
 - `POST /api/eures/jobs/{id}/save`
 
-`POST /api/scrape-results` is available for ingestion from the extension. The review, dashboard, mail-connection, and EURES search endpoints require authentication, except for the provider callback that completes OAuth.
+Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES search/save, and mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
+
+`POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
+
+Extension saves must be signed in; the popup sends the access token from [`aspNetApiClient.ts`](src/infrastructure/api/aspNetApiClient.ts).
 
 Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, capture-quality metadata for reviewable fields, and status-sync metadata that records whether the latest rejection or interview update came from Gmail or a manual edit.
 
@@ -203,45 +207,63 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 
 1. Start the API.
 2. Build and load the extension in Chrome.
-3. Open a supported job listing and click `Scrape current page`.
-4. Review the scraped text and structured fields in the popup, make any needed edits, and click `Save`.
-5. Let the API score capture quality and optionally enrich weak fields before persisting the result.
-6. Start the Angular dashboard and review saved results in the browser.
-7. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
-8. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
-9. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
-10. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
-11. Optionally open the EURES job search page, run a keyword search for a country, load additional pages of results, save a listing to ApplyVault, and inspect listing details before opening the source posting.
+3. Sign in to ApplyVault from the extension (Supabase email OTP).
+4. Open a supported job listing and click `Scrape current page`.
+5. Review the scraped text and structured fields in the popup, make any needed edits, and click `Save`.
+6. Let the API score capture quality and optionally enrich weak fields before persisting the result.
+7. Start the Angular dashboard, sign in with the same Supabase account, and review saved results in the browser.
+8. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
+9. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
+10. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
+11. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
+12. Optionally open the EURES job search page, run a keyword search for a country, load additional pages of results, save a listing to ApplyVault, and inspect listing details before opening the source posting.
 
 ## Manual Verification
 
 1. Open a supported job page in Chrome such as LinkedIn, Workday, Greenhouse, or Lever.
-2. Use the extension to scrape the current page.
-3. Confirm the popup fills in structured fields such as job title, company, location, description, summary, and contacts.
-4. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.
-5. Open the dashboard and verify the new job appears in the list.
-6. Check that the detail view shows capture confidence, review state, and field-level review guidance.
-7. If the result is flagged for review, update the job title, company, or location and verify the reviewed state persists after refresh.
-8. Edit the saved description in the dashboard and verify the rendered Markdown updates.
-9. Save an interview event, refresh, and verify the interview timing persists.
-10. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
-11. Toggle the rejected state and verify the change persists after refresh.
-12. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
-13. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
-14. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
-15. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
-16. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
-17. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
-18. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
-19. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
-20. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
-21. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
-22. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
-23. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
-24. Delete a saved job and confirm the modal confirmation step is required before removal.
-25. On `/settings`, connect or disconnect an integration and confirm the disconnect confirmation modal appears before removal.
-26. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
-27. Sign out from any authenticated page and confirm you return to `/login`.
+2. Sign in from the extension and confirm save is blocked with a clear message when signed out.
+3. Use the extension to scrape the current page.
+4. Confirm the popup fills in structured fields such as job title, company, location, description, summary, and contacts.
+5. Edit one or more popup fields, save the result to the API, and confirm the request succeeds.
+6. Open the dashboard and verify the new job appears in the list for the signed-in user only.
+7. Check that the detail view shows capture confidence, review state, and field-level review guidance.
+8. If the result is flagged for review, update the job title, company, or location and verify the reviewed state persists after refresh.
+9. Edit the saved description in the dashboard and verify the rendered Markdown updates.
+10. Save an interview event, refresh, and verify the interview timing persists.
+11. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
+12. Toggle the rejected state and verify the change persists after refresh.
+13. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
+14. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
+15. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
+16. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
+17. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+18. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
+19. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
+20. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
+21. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
+22. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
+23. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
+24. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+25. Delete a saved job and confirm the modal confirmation step is required before removal.
+26. On `/settings`, connect or disconnect an integration and confirm the disconnect confirmation modal appears before removal.
+27. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+28. Sign out from any authenticated page and confirm you return to `/login`.
+
+## Production readiness
+
+ApplyVault is developed for local use first; production hardening is tracked explicitly so staging and multi-user hosting can be done in order.
+
+**Tracker:** [`plans/production-readiness-tracker.md`](plans/production-readiness-tracker.md) — 17 steps in implementation order. Do not skip steps 1–2 before exposing the API to multiple users.
+
+| Step | Status | Plan |
+|------|--------|------|
+| 1 Scrape ingest authentication | Done | [`prod-01-scrape-ingest-auth.md`](plans/prod-01-scrape-ingest-auth.md) |
+| 2 Multi-tenant data isolation | Pending | `prod-02-tenancy-isolation.md` (next) |
+| 3–17 Config, deploy, CORS, health, scale, tests | Pending | See tracker |
+
+**Completed (step 1):** `POST /api/scrape-results` requires a valid Supabase JWT; saves always pass a non-null `userId` into `IScrapeResultSaveService`. Step 2 will remove legacy `UserId == null` rows from shared queries.
+
+**Not production-ready yet:** per-user query isolation (step 2), environment-based deploy config (steps 4–11), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
 
 ## Notes
 

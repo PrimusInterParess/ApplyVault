@@ -9,7 +9,7 @@ public sealed class ScrapeResultSaveService(
 {
     public async Task<SavedScrapeResult> SaveAsync(
         ScrapeResultDto request,
-        Guid? userId,
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
         var initialAssessment = captureQualityService.Assess(request);

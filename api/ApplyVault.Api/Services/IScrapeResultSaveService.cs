@@ -6,6 +6,6 @@ public interface IScrapeResultSaveService
 {
     Task<SavedScrapeResult> SaveAsync(
         ScrapeResultDto request,
-        Guid? userId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 }

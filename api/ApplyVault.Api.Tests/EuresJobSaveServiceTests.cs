@@ -156,7 +156,7 @@ public sealed class EuresJobSaveServiceTests
         EuresJobDetailResponse? detail,
         ApplyVaultDbContext dbContext,
         out SaveServiceSpy saveServiceSpy,
-        Func<ScrapeResultDto, Guid?, SavedScrapeResult>? onSave = null)
+        Func<ScrapeResultDto, Guid, SavedScrapeResult>? onSave = null)
     {
         saveServiceSpy = new SaveServiceSpy(onSave);
         var store = new EfCoreScrapeResultStore(dbContext);
@@ -203,14 +203,14 @@ public sealed class EuresJobSaveServiceTests
             Task.FromResult(detail);
     }
 
-    private sealed class SaveServiceSpy(Func<ScrapeResultDto, Guid?, SavedScrapeResult>? onSave = null)
+    private sealed class SaveServiceSpy(Func<ScrapeResultDto, Guid, SavedScrapeResult>? onSave = null)
         : IScrapeResultSaveService
     {
-        public List<(ScrapeResultDto Request, Guid? UserId)> Calls { get; } = [];
+        public List<(ScrapeResultDto Request, Guid UserId)> Calls { get; } = [];
 
         public Task<SavedScrapeResult> SaveAsync(
             ScrapeResultDto request,
-            Guid? userId,
+            Guid userId,
             CancellationToken cancellationToken = default)
         {
             Calls.Add((request, userId));

@@ -37,7 +37,6 @@ public sealed class ScrapeResultsController(
         return Ok(result);
     }
 
-    [AllowAnonymous]
     [HttpPost]
     public async Task<ActionResult<SaveScrapeResultResponse>> Create(
         [FromBody] ScrapeResultDto request,
@@ -50,11 +49,11 @@ public sealed class ScrapeResultsController(
             return ValidationProblem(ModelState);
         }
 
-        var currentUser = await appUserService.TryGetCurrentUserAsync(cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
         // Let long-running enrichment/save work finish even if the extension closes the HTTP request.
         var savedResult = await saveService.SaveAsync(
             request,
-            currentUser?.Id,
+            user.Id,
             applicationLifetime.ApplicationStopping);
         var response = new SaveScrapeResultResponse(savedResult.Id, savedResult.SavedAt);
 

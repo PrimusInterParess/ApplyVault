@@ -1,30 +1,15 @@
-# ApplyvaultJobsUi
+# ApplyVault Jobs UI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.23.
+Angular dashboard for reviewing saved job captures, searching EURES listings, and managing calendar/mail integrations.
 
 ## Development server
 
-To start a local development server, run:
-
 ```bash
-ng serve
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
+Open `http://localhost:4200/`. The app calls the API at `http://localhost:5173/api` (see `src/environments/environment.ts`).
 
 ## Building
 
@@ -38,24 +23,34 @@ ng build --configuration development
 
 Before a production or staging build, set `apiBaseUrl` and `supabase` in `environment.production.ts` or `environment.staging.ts` to match your deployed API and Supabase project.
 
-## Running unit tests
+## Tests
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Critical-path component tests use [Karma](https://karma-runner.github.io) + Jasmine with `HttpClientTestingModule` and mocked auth — no live Supabase or API required.
 
 ```bash
-ng e2e
+npm test          # watch mode (ng test)
+npm run test:ci   # single run, headless Chrome (CI)
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+| Spec | What it covers |
+|------|----------------|
+| `auth.guard.spec.ts` | Guest redirect to `/login`; authenticated access |
+| `auth.interceptor.spec.ts` | `Authorization: Bearer` attached when session present |
+| `app-shell.component.spec.ts` | Signed-in user email in the shell |
+| `job-results-page.component.spec.ts` | Empty state and saved job cards |
+| `eures-jobs-page.component.spec.ts` | EURES search request and result rendering |
 
-## Additional Resources
+Shared fixtures and auth mocks: `src/testing/`.
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Code scaffolding
+
+```bash
+ng generate component component-name
+ng generate --help
+```
+
+## Additional resources
+
+- Root project README: [`../../README.md`](../../README.md)
+- Production frontend config: [`../../plans/production-readiness/FRONTEND.md`](../../plans/production-readiness/FRONTEND.md)
+- [Angular CLI overview](https://angular.dev/tools/cli)

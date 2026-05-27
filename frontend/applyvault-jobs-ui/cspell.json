@@ -1,0 +1,22 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "ApplyVault",
+    "appsettings",
+    "aspnet",
+    "eures",
+    "EURES",
+    "Greenhouse",
+    "Lever",
+    "LocalDB",
+    "runbook",
+    "Supabase",
+    "Workday"
+  ],
+  "ignorePaths": [
+    "dist/**",
+    "node_modules/**",
+    "coverage/**"
+  ]
+}

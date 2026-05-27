@@ -4,22 +4,22 @@ overview: Add automated tests for dashboard login, session load, jobs list, and 
 todos:
   - id: choose-test-tool
     content: Select Playwright or Cypress for Angular E2E (or Jest component tests for narrower scope)
-    status: pending
+    status: completed
   - id: mock-api
     content: Mock HTTP layer or use test API fixture for auth/session and jobs list
-    status: pending
+    status: completed
   - id: auth-flow-test
     content: Test login guard redirects and auth interceptor attaches token
-    status: pending
+    status: completed
   - id: jobs-list-test
     content: Test /jobs loads list and handles empty state
-    status: pending
+    status: completed
   - id: eures-search-test
     content: Test /eures search submits keywords and renders results
-    status: pending
+    status: completed
   - id: ci-frontend
     content: Add frontend test job to CI workflow (step 6 extension)
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -1,4 +1,4 @@
-name: API CI
+name: CI
 
 on:
   push:
@@ -54,3 +54,22 @@ jobs:
           name: test-results
           path: ${{ runner.temp }}/test-results/**/*.trx
           if-no-files-found: ignore
+
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/applyvault-jobs-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend/applyvault-jobs-ui
+        run: npm ci
+
+      - name: Frontend critical-path tests
+        working-directory: frontend/applyvault-jobs-ui
+        run: npm run test:ci

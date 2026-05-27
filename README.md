@@ -45,7 +45,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
-  Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder.
+  Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder. Critical-path specs live alongside features and in `src/testing/` (auth mocks, API fixtures).
 - `plans/production-readiness/`
   Step-by-step plans for production hardening steps 4–17 (config, deploy, security, scale). Steps 1–3 live in `plans/prod-0N-*.md`.
 - `plans/`
@@ -240,6 +240,27 @@ dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.
 
 Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, and the EURES job search client, keyword expander, ranked-result caching, mapper, relevance scoring, and request normalization. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
 
+### 6. Run frontend critical-path tests
+
+Component tests use Karma + Jasmine with a mocked HTTP layer (no real Supabase or API required):
+
+```bash
+cd frontend/applyvault-jobs-ui
+npm install
+npm run test:ci
+```
+
+Use `npm test` (or `ng test`) for watch mode during development.
+
+Coverage includes auth guards, the auth interceptor, app shell session display, saved jobs list/empty state, and EURES search flows. Shared test helpers live in `frontend/applyvault-jobs-ui/src/testing/`.
+
+### 7. CI
+
+GitHub Actions workflow [`.github/workflows/api-ci.yml`](.github/workflows/api-ci.yml) runs on push/PR to `main`:
+
+- **api-ci** — `dotnet build` + unit and integration tests
+- **frontend-ci** — `npm ci` + `npm run test:ci` in `frontend/applyvault-jobs-ui`
+
 ## Load The Extension In Chrome
 
 1. Open `chrome://extensions`.
@@ -341,13 +362,16 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 10 OAuth redirects and secrets | Done | [`production-readiness/OAUTH.md`](plans/production-readiness/OAUTH.md) |
 | 11 CORS and transport security | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md) |
 | 12 Health checks and readiness | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md#health-and-readiness-probes) |
-| 13–17 Logging, rate limit, tests, scale | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 13) |
+| 13 Logging and monitoring | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md) |
+| 14 Rate limiting | Done | [`production-readiness/prod-14-rate-limiting.md`](plans/production-readiness/prod-14-rate-limiting.md) |
+| 15 Frontend critical-path tests | Done | [`production-readiness/prod-15-frontend-critical-path-tests.md`](plans/production-readiness/prod-15-frontend-critical-path-tests.md) |
+| 16–17 EURES cache, Gmail sync (multi-instance) | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) — defer if single API replica |
 
-**Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
+**Completed (steps 1–15):** Authenticated scrape ingest; per-user data isolation; HTTP integration tests; environment config and migrations; CI; Docker/Caddy deploy; frontend/extension production builds; OAuth, CORS/HSTS, health probes, structured logging, rate limiting; and Karma specs for dashboard auth, jobs, and EURES critical paths.
 
-**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, tagged readiness/liveness probes at `/health` and `/health/live`.
+**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, tagged readiness/liveness probes at `/health` and `/health/live`, JSON request logging, and partition-based rate limits with `429` + `Retry-After`.
 
-**Not production-ready yet for multi-instance:** EURES cache and Gmail sync horizontal-scale fixes (steps 16–17) when running more than one API replica.
+**Not required for single-replica hosting:** EURES cache and Gmail sync horizontal-scale fixes (steps 16–17) when running more than one API replica. Document single-replica mode in [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md).
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

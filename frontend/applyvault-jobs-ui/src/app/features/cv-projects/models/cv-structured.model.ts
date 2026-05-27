@@ -58,6 +58,10 @@ export interface SaveCvStructuredDocumentRequest {
   sections: CvStructuredSectionWrite[];
 }
 
+export interface UpdateCvStructuredWithAiRequest {
+  instructions: string;
+}
+
 export const CV_SECTION_TYPES: readonly CvSectionType[] = [
   'Experience',
   'Projects',

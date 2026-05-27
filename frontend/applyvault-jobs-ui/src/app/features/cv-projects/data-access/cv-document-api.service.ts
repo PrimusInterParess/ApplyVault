@@ -4,7 +4,11 @@ import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument, CvDocumentUploadResult, CvStructuredReimportResult } from '../models/cv-document.model';
-import { CvStructuredDocument, SaveCvStructuredDocumentRequest } from '../models/cv-structured.model';
+import {
+  CvStructuredDocument,
+  SaveCvStructuredDocumentRequest,
+  UpdateCvStructuredWithAiRequest
+} from '../models/cv-structured.model';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentApiService {
@@ -65,6 +69,15 @@ export class CvDocumentApiService {
     return this.httpClient.post<CvStructuredReimportResult>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/reimport`,
       {}
+    );
+  }
+
+  updateStructuredWithAi(instructions: string): Observable<CvStructuredDocument> {
+    const request: UpdateCvStructuredWithAiRequest = { instructions };
+
+    return this.httpClient.post<CvStructuredDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-update`,
+      request
     );
   }
 }

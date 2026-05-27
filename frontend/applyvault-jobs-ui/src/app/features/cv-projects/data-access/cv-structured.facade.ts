@@ -12,12 +12,15 @@ export class CvStructuredFacade {
   private readonly apiService = inject(CvDocumentApiService);
   private loadSubscription: Subscription | null = null;
   private saveSubscription: Subscription | null = null;
+  private aiUpdateSubscription: Subscription | null = null;
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
+  readonly updatingWithAi = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
   readonly error = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
+  readonly aiUpdateError = signal<string | null>(null);
 
   load(): void {
     this.cancelLoad();
@@ -68,8 +71,42 @@ export class CvStructuredFacade {
     });
   }
 
+  updateWithAi(instructions: string): void {
+    const trimmedInstructions = instructions.trim();
+
+    if (!trimmedInstructions || this.updatingWithAi()) {
+      return;
+    }
+
+    this.cancelAiUpdate();
+    this.updatingWithAi.set(true);
+    this.aiUpdateError.set(null);
+
+    this.aiUpdateSubscription = this.apiService.updateStructuredWithAi(trimmedInstructions).subscribe({
+      next: (document) => {
+        this.updatingWithAi.set(false);
+        this.structured.set(document);
+      },
+      error: (error) => {
+        this.updatingWithAi.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.aiUpdateError.set(
+          this.readErrorMessage(error, 'Could not update structured CV content with AI.')
+        );
+      }
+    });
+  }
+
   clearSaveError(): void {
     this.saveError.set(null);
+  }
+
+  clearAiUpdateError(): void {
+    this.aiUpdateError.set(null);
   }
 
   setStructured(document: CvStructuredDocument): void {
@@ -84,6 +121,11 @@ export class CvStructuredFacade {
   private cancelSave(): void {
     this.saveSubscription?.unsubscribe();
     this.saveSubscription = null;
+  }
+
+  private cancelAiUpdate(): void {
+    this.aiUpdateSubscription?.unsubscribe();
+    this.aiUpdateSubscription = null;
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

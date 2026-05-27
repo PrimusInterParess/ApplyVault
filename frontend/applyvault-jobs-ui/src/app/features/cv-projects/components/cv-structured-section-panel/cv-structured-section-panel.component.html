@@ -13,14 +13,14 @@
 
     <div class="cv-section__actions">
       @if (editing()) {
-        <button type="button" class="cv-section__save" [disabled]="!canSave()" (click)="save.emit()">
+        <button type="button" class="cv-section__save" [disabled]="!canSave() || disabled()" (click)="save.emit()">
           {{ saving() ? 'Saving...' : 'Save' }}
         </button>
         <button type="button" class="cv-section__cancel" [disabled]="saving()" (click)="cancel.emit()">
           Cancel
         </button>
       } @else {
-        <button type="button" class="cv-section__edit" [disabled]="saving()" (click)="edit.emit()">
+        <button type="button" class="cv-section__edit" [disabled]="saving() || disabled()" (click)="edit.emit()">
           Edit
         </button>
       }
@@ -37,7 +37,7 @@
       <textarea
         class="cv-section__editor"
         rows="14"
-        [disabled]="saving()"
+        [disabled]="saving() || disabled()"
         [value]="editorText()"
         (input)="updateEditorText($event)"></textarea>
     </div>

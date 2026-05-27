@@ -30,6 +30,7 @@ export class MyCvPageComponent {
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly editingSectionId = signal<string | null>(null);
   protected readonly sectionDraft = signal<CvStructuredSection | null>(null);
+  protected readonly aiUpdateInstructions = signal('');
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
@@ -53,6 +54,17 @@ export class MyCvPageComponent {
       !this.cvDocument.downloadingFormatted()
     );
   });
+
+  protected readonly canUpdateWithAi = computed(() =>
+    this.cvDocument.hasDocument() &&
+    this.hasSections() &&
+    this.aiUpdateInstructions().trim().length > 0 &&
+    !this.cvDocument.loading() &&
+    !this.cvStructured.loading() &&
+    !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.updatingWithAi() &&
+    !this.editingSectionId()
+  );
 
   protected readonly canSaveSection = computed(() => {
     const sectionId = this.editingSectionId();
@@ -84,6 +96,7 @@ export class MyCvPageComponent {
   });
 
   private lastSavingSectionId: string | null = null;
+  private wasUpdatingWithAi = false;
 
   constructor() {
     effect(() => {
@@ -108,6 +121,18 @@ export class MyCvPageComponent {
       }
 
       this.lastSavingSectionId = savingSectionId;
+    });
+
+    effect(() => {
+      const updatingWithAi = this.cvStructured.updatingWithAi();
+      const aiUpdateError = this.cvStructured.aiUpdateError();
+
+      if (this.wasUpdatingWithAi && !updatingWithAi && !aiUpdateError) {
+        this.cancelSectionEdit();
+        this.aiUpdateInstructions.set('');
+      }
+
+      this.wasUpdatingWithAi = updatingWithAi;
     });
   }
 
@@ -140,6 +165,12 @@ export class MyCvPageComponent {
     this.cvDocument.upload(file);
   }
 
+  protected updateAiInstructions(event: Event): void {
+    const target = event.target as HTMLTextAreaElement | null;
+    this.aiUpdateInstructions.set(target?.value ?? '');
+    this.cvStructured.clearAiUpdateError();
+  }
+
   protected isEditingSection(sectionId: string): boolean {
     return this.editingSectionId() === sectionId;
   }
@@ -153,7 +184,7 @@ export class MyCvPageComponent {
   }
 
   protected beginSectionEdit(section: CvStructuredSection): void {
-    if (this.cvStructured.savingSectionId() || this.editingSectionId()) {
+    if (this.cvStructured.savingSectionId() || this.cvStructured.updatingWithAi() || this.editingSectionId()) {
       return;
     }
 
@@ -181,6 +212,14 @@ export class MyCvPageComponent {
     }
 
     this.cvStructured.save(mergeSection(this.sections(), draft), sectionId);
+  }
+
+  protected updateStructuredWithAi(): void {
+    if (!this.canUpdateWithAi()) {
+      return;
+    }
+
+    this.cvStructured.updateWithAi(this.aiUpdateInstructions());
   }
 
   protected beginDeleteCv(): void {

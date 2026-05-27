@@ -286,6 +286,10 @@ public sealed record SaveCvStructuredDocumentRequest(
     IReadOnlyList<CvStructuredSectionWriteDto> Sections
 );
 
+public sealed record UpdateCvStructuredWithAiRequest(
+    string Instructions
+);
+
 public sealed record CvStructuredSectionWriteDto(
     Guid? Id,
     string Heading,

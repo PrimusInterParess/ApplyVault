@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
@@ -210,6 +212,66 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
     }
 
     [Fact]
+    public async Task Ai_update_updates_structured_sections_with_fake_ai_client()
+    {
+        using var customFactory = factory.WithWebHostBuilder((builder) =>
+        {
+            builder.ConfigureTestServices((services) =>
+            {
+                var descriptors = services
+                    .Where((descriptor) => descriptor.ServiceType == typeof(ICvStructuredUpdateAiClient))
+                    .ToList();
+
+                foreach (var descriptor in descriptors)
+                {
+                    services.Remove(descriptor);
+                }
+
+                services.AddSingleton<ICvStructuredUpdateAiClient, FakeCvStructuredUpdateAiClient>();
+            });
+        });
+        using var client = customFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TestUserTokens.UserA);
+
+        var pdfBytes = CreateStructuredCvPdf(includeHeadshot: false);
+
+        using var form = new MultipartFormDataContent();
+        var pdf = new ByteArrayContent(pdfBytes);
+        pdf.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(pdf, "file", "cv.pdf");
+
+        var uploadResponse = await client.PostAsync("/api/cv-documents/current", form);
+
+        Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
+
+        var originalResponse = await client.GetAsync("/api/cv-documents/current/structured");
+        var original = await originalResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(original);
+
+        var experienceSection = original!.Sections.First((section) =>
+            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
+        var originalEntryId = experienceSection.Entries[0].Id;
+
+        var updateResponse = await client.PostAsJsonAsync(
+            "/api/cv-documents/current/structured/ai-update",
+            new UpdateCvStructuredWithAiRequest("Make the main role senior."));
+
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updated = await updateResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(updated);
+
+        var updatedExperience = updated!.Sections.Single((section) => section.Id == experienceSection.Id);
+        var updatedEntry = updatedExperience.Entries.Single((entry) => entry.Id == originalEntryId);
+
+        Assert.Equal("Senior Software Engineer", updatedEntry.Title);
+        Assert.Equal(CvEntrySources.Manual, updatedEntry.Source);
+    }
+
+    [Fact]
     public async Task Reimport_replaces_edited_sections_and_preserves_contact()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
@@ -352,5 +414,41 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
     {
         var imageStream = new MemoryStream(TinyPngBytes);
         return XImage.FromStream(imageStream);
+    }
+
+    private sealed class FakeCvStructuredUpdateAiClient : ICvStructuredUpdateAiClient
+    {
+        public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+            CvStructuredDocumentDto current,
+            string instructions,
+            CancellationToken cancellationToken = default)
+        {
+            var sections = current.Sections
+                .Select((section, sectionIndex) => new CvStructuredSectionWriteDto(
+                    section.Id,
+                    section.Heading,
+                    section.SectionType,
+                    sectionIndex,
+                    section.Entries
+                        .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
+                            entry.Id,
+                            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase) && entryIndex == 0
+                                ? "Senior Software Engineer"
+                                : entry.Title,
+                            entry.Subtitle,
+                            entry.DateRange,
+                            entry.Summary,
+                            entry.Bullets,
+                            entry.TechStack,
+                            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase) && entryIndex == 0
+                                ? CvEntrySources.Manual
+                                : entry.Source,
+                            entry.SourceSummaryId,
+                            entryIndex))
+                        .ToArray()))
+                .ToArray();
+
+            return Task.FromResult(new SaveCvStructuredDocumentRequest(sections));
+        }
     }
 }

@@ -13,6 +13,7 @@ public sealed class CvDocumentsController(
     ICvDocumentService cvDocumentService,
     ICvStructuredDocumentService cvStructuredDocumentService,
     ICvStructuredImportService cvStructuredImportService,
+    ICvStructuredUpdateService cvStructuredUpdateService,
     ICvDocumentExportService cvDocumentExportService) : ControllerBase
 {
     [HttpGet("current")]
@@ -185,6 +186,27 @@ public sealed class CvDocumentsController(
                 request,
                 markImported: false,
                 cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("current/structured/ai-update")]
+    public async Task<ActionResult<CvStructuredDocumentDto>> UpdateStructuredWithAi(
+        [FromBody] UpdateCvStructuredWithAiRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvStructuredUpdateService.UpdateWithAiAsync(user, request, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
         catch (InvalidOperationException exception)
         {

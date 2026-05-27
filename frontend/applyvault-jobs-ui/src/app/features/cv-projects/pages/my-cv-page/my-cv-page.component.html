@@ -184,6 +184,44 @@
           <app-skeleton-block width="100%" height="6rem" />
         </div>
       } @else {
+        @if (hasSections()) {
+          <form class="my-cv-page__ai-update" (submit)="$event.preventDefault(); updateStructuredWithAi()">
+            <div>
+              <p class="my-cv-page__label">AI update</p>
+              <h3>Update sections with instructions</h3>
+              <p class="my-cv-page__muted">
+                Describe what to change. The full structured CV will be sent so AI can update the saved sections.
+              </p>
+            </div>
+
+            <label class="my-cv-page__ai-field">
+              <span>Instructions</span>
+              <textarea
+                rows="4"
+                [disabled]="cvStructured.updatingWithAi() || !!editingSectionId()"
+                [value]="aiUpdateInstructions()"
+                placeholder="Example: Make the summary more backend-focused and tighten each experience entry to two achievement bullets."
+                (input)="updateAiInstructions($event)"></textarea>
+            </label>
+
+            @if (cvStructured.aiUpdateError(); as aiUpdateError) {
+              <div class="my-cv-page__alert" role="alert">{{ aiUpdateError }}</div>
+            }
+
+            <div class="my-cv-page__ai-actions">
+              <button
+                type="submit"
+                class="my-cv-page__primary-action"
+                [disabled]="!canUpdateWithAi()">
+                {{ cvStructured.updatingWithAi() ? 'Updating CV with AI...' : 'Update CV with AI' }}
+              </button>
+              @if (editingSectionId()) {
+                <p class="my-cv-page__muted">Finish or cancel the current section edit before using AI update.</p>
+              }
+            </div>
+          </form>
+        }
+
         <div class="my-cv-page__preview-document">
           @if (cvDocument.profilePhotoUrl()) {
             <div class="my-cv-page__profile-row">
@@ -208,6 +246,7 @@
                   [section]="section"
                   [editing]="isEditingSection(section.id)"
                   [saving]="isSavingSection(section.id)"
+                  [disabled]="cvStructured.updatingWithAi()"
                   [saveError]="sectionSaveError(section.id)"
                   [canSave]="isEditingSection(section.id) && canSaveSection()"
                   [draft]="sectionDraft()"

@@ -98,6 +98,46 @@
   width: fit-content;
 }
 
+.my-cv-page__ai-update {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+}
+
+.my-cv-page__ai-field {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
+.my-cv-page__ai-field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.my-cv-page__ai-field textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.my-cv-page__ai-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .my-cv-page__extraction {
   display: grid;
   gap: 0.35rem;

@@ -28,6 +28,7 @@ export class CvStructuredSectionPanelComponent {
   readonly section = input.required<CvStructuredSection>();
   readonly editing = input(false);
   readonly saving = input(false);
+  readonly disabled = input(false);
   readonly saveError = input<string | null>(null);
   readonly canSave = input(false);
   readonly draft = model<CvStructuredSection | null>(null);

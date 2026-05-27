@@ -5,24 +5,26 @@ import { Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
-import { CvDocument } from '../models/cv-document.model';
+import { CvDocument, CvStructuredImportSummary } from '../models/cv-document.model';
 import { SaveCvStructuredDocumentRequest } from '../models/cv-structured.model';
 import { CvDocumentApiService } from './cv-document-api.service';
+import { CvStructuredFacade } from './cv-structured.facade';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(CvDocumentApiService);
+  private readonly cvStructured = inject(CvStructuredFacade);
   private readonly sanitizer = inject(DomSanitizer);
   private loadSubscription: Subscription | null = null;
   private uploadSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
   private exportSubscription: Subscription | null = null;
   private downloadOriginalSubscription: Subscription | null = null;
-  private previewSubscription: Subscription | null = null;
+  private profilePhotoSubscription: Subscription | null = null;
   private draftPreviewSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
-  private objectUrl: string | null = null;
+  private profilePhotoObjectUrl: string | null = null;
   private draftObjectUrl: string | null = null;
   private draftPreviewRequestKey: string | null = null;
   private draftPreviewInFlightKey: string | null = null;
@@ -32,25 +34,20 @@ export class CvDocumentFacade {
   readonly deleting = signal(false);
   readonly exporting = signal(false);
   readonly downloadingOriginal = signal(false);
-  readonly loadingPreview = signal(false);
+  readonly loadingProfilePhoto = signal(false);
   readonly document = signal<CvDocument | null>(null);
+  readonly importSummary = signal<CvStructuredImportSummary | null>(null);
   readonly error = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
   readonly exportError = signal<string | null>(null);
   readonly downloadOriginalError = signal<string | null>(null);
-  readonly previewError = signal<string | null>(null);
-  readonly blobUrl = signal<string | null>(null);
+  readonly profilePhotoError = signal<string | null>(null);
+  readonly profilePhotoUrl = signal<string | null>(null);
   readonly loadingDraftPreview = signal(false);
   readonly refreshingDraftPreview = signal(false);
   readonly draftPreviewError = signal<string | null>(null);
   readonly draftBlobUrl = signal<string | null>(null);
-
-  readonly previewUrl = computed<SafeResourceUrl | null>(() => {
-    const url = this.blobUrl();
-
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
-  });
 
   readonly draftPreviewUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.draftBlobUrl();
@@ -59,6 +56,8 @@ export class CvDocumentFacade {
   });
 
   readonly hasDocument = computed(() => this.document() !== null);
+
+  readonly extracting = computed(() => this.uploading());
 
   constructor() {
     effect(() => {
@@ -92,14 +91,14 @@ export class CvDocumentFacade {
       next: (document) => {
         this.loading.set(false);
         this.document.set(document);
-        this.loadPreview();
+        this.loadProfilePhoto(document);
       },
       error: (error) => {
         this.loading.set(false);
 
         if (error instanceof HttpErrorResponse && error.status === 404) {
           this.document.set(null);
-          this.clearPreview();
+          this.clearProfilePhoto();
           return;
         }
 
@@ -116,12 +115,16 @@ export class CvDocumentFacade {
     this.cancelUpload();
     this.uploading.set(true);
     this.uploadError.set(null);
+    this.importSummary.set(null);
+    this.clearProfilePhoto();
 
     this.uploadSubscription = this.apiService.upload(file).subscribe({
-      next: (document) => {
+      next: (result) => {
         this.uploading.set(false);
-        this.document.set(document);
-        this.loadPreview();
+        this.document.set(result.document);
+        this.importSummary.set(result.import);
+        this.loadProfilePhoto(result.document);
+        this.cvStructured.load();
       },
       error: (error) => {
         this.uploading.set(false);
@@ -144,7 +147,8 @@ export class CvDocumentFacade {
       next: () => {
         this.deleting.set(false);
         this.document.set(null);
-        this.clearPreview();
+        this.importSummary.set(null);
+        this.clearProfilePhoto();
       },
       error: (error) => {
         this.deleting.set(false);
@@ -269,32 +273,53 @@ export class CvDocumentFacade {
     });
   }
 
-  private loadPreview(): void {
-    this.cancelPreview();
-    this.loadingPreview.set(true);
-    this.previewError.set(null);
+  private loadProfilePhoto(document: CvDocument): void {
+    this.cancelProfilePhoto();
 
-    this.previewSubscription = this.apiService.downloadContent().subscribe({
+    if (!document.hasProfilePhoto) {
+      this.clearProfilePhoto();
+      return;
+    }
+
+    this.loadingProfilePhoto.set(true);
+    this.profilePhotoError.set(null);
+
+    this.profilePhotoSubscription = this.apiService.downloadProfilePhoto().subscribe({
       next: (blob) => {
-        this.loadingPreview.set(false);
-        this.setPreviewBlob(blob);
+        this.loadingProfilePhoto.set(false);
+        this.setProfilePhotoBlob(blob);
       },
       error: (error) => {
-        this.loadingPreview.set(false);
+        this.loadingProfilePhoto.set(false);
 
         if (isRequestAborted(error)) {
           return;
         }
 
-        this.previewError.set(this.readErrorMessage(error, 'Could not load the CV preview.'));
+        this.profilePhotoError.set(this.readErrorMessage(error, 'Could not load your profile photo.'));
       }
     });
   }
 
-  private setPreviewBlob(blob: Blob): void {
-    this.clearObjectUrl();
-    this.objectUrl = URL.createObjectURL(blob);
-    this.blobUrl.set(this.objectUrl);
+  private setProfilePhotoBlob(blob: Blob): void {
+    this.clearProfilePhotoObjectUrl();
+    this.profilePhotoObjectUrl = URL.createObjectURL(blob);
+    this.profilePhotoUrl.set(this.profilePhotoObjectUrl);
+  }
+
+  private clearProfilePhoto(): void {
+    this.cancelProfilePhoto();
+    this.clearProfilePhotoObjectUrl();
+    this.profilePhotoUrl.set(null);
+    this.profilePhotoError.set(null);
+    this.loadingProfilePhoto.set(false);
+  }
+
+  private clearProfilePhotoObjectUrl(): void {
+    if (this.profilePhotoObjectUrl) {
+      URL.revokeObjectURL(this.profilePhotoObjectUrl);
+      this.profilePhotoObjectUrl = null;
+    }
   }
 
   private setDraftPreviewBlob(blob: Blob): void {
@@ -304,21 +329,6 @@ export class CvDocumentFacade {
 
     if (previousUrl) {
       queueMicrotask(() => URL.revokeObjectURL(previousUrl));
-    }
-  }
-
-  private clearPreview(): void {
-    this.cancelPreview();
-    this.clearObjectUrl();
-    this.blobUrl.set(null);
-    this.previewError.set(null);
-    this.loadingPreview.set(false);
-  }
-
-  private clearObjectUrl(): void {
-    if (this.objectUrl) {
-      URL.revokeObjectURL(this.objectUrl);
-      this.objectUrl = null;
     }
   }
 
@@ -335,7 +345,7 @@ export class CvDocumentFacade {
     this.cancelDelete();
     this.cancelExport();
     this.cancelDownloadOriginal();
-    this.clearPreview();
+    this.clearProfilePhoto();
     this.clearDraftPreview();
     this.loading.set(false);
     this.uploading.set(false);
@@ -343,6 +353,7 @@ export class CvDocumentFacade {
     this.exporting.set(false);
     this.downloadingOriginal.set(false);
     this.document.set(null);
+    this.importSummary.set(null);
     this.error.set(null);
     this.uploadError.set(null);
     this.deleteError.set(null);
@@ -375,6 +386,11 @@ export class CvDocumentFacade {
     this.downloadOriginalSubscription = null;
   }
 
+  private cancelProfilePhoto(): void {
+    this.profilePhotoSubscription?.unsubscribe();
+    this.profilePhotoSubscription = null;
+  }
+
   private triggerDownload(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -382,11 +398,6 @@ export class CvDocumentFacade {
     anchor.download = fileName;
     anchor.click();
     URL.revokeObjectURL(url);
-  }
-
-  private cancelPreview(): void {
-    this.previewSubscription?.unsubscribe();
-    this.previewSubscription = null;
   }
 
   private cancelDraftPreview(): void {

@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using PdfSharp.Drawing;
+using PdfSharp.Fonts;
+using PdfSharp.Pdf;
 
 namespace ApplyVault.Api.IntegrationTests;
 
@@ -92,12 +95,37 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
     private static async Task UploadMinimalCvAsync(HttpClient client)
     {
         using var form = new MultipartFormDataContent();
-        var pdf = new ByteArrayContent("%PDF-1.4\n%%EOF"u8.ToArray());
+        var pdf = new ByteArrayContent(CreateTextOnlyPdfBytes());
         pdf.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(pdf, "file", "cv.pdf");
 
         var uploadResponse = await client.PostAsync("/api/cv-documents/current", form);
 
         Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
+    }
+
+    private static byte[] CreateTextOnlyPdfBytes()
+    {
+        if (GlobalFontSettings.FontResolver is null)
+        {
+            GlobalFontSettings.FontResolver = ApplyVaultPdfFontResolver.Instance;
+        }
+
+        using var document = new PdfSharp.Pdf.PdfDocument();
+        var page = document.AddPage();
+        page.Size = PdfSharp.PageSize.A4;
+
+        using (var graphics = PdfSharp.Drawing.XGraphics.FromPdfPage(page))
+        {
+            graphics.DrawString(
+                "Experience\nSoftware Engineer at Acme",
+                new PdfSharp.Drawing.XFont("Arial", 12),
+                PdfSharp.Drawing.XBrushes.Black,
+                new PdfSharp.Drawing.XPoint(50, 80));
+        }
+
+        using var output = new MemoryStream();
+        document.Save(output, false);
+        return output.ToArray();
     }
 }

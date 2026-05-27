@@ -4,9 +4,9 @@
       <p class="my-cv-page__eyebrow">Personal document</p>
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
-        Upload a PDF to store and preview your CV. Build and edit a structured CV in the
-        <a routerLink="/cv-editor">CV Editor</a> — import content, reorder sections, insert saved project
-        summaries from <a routerLink="/cv-projects">Projects</a>, and export a new PDF.
+        Upload your CV PDF to store the original file and automatically extract its sections and profile
+        photo. Download the original anytime, then refine the structured content in the
+        <a routerLink="/cv-editor">CV Editor</a>.
       </p>
     </div>
   </section>
@@ -14,7 +14,7 @@
   <section class="my-cv-page__panel" aria-labelledby="my-cv-heading">
     <div class="my-cv-page__panel-header">
       <div>
-        <p class="my-cv-page__label">PDF preview</p>
+        <p class="my-cv-page__label">Stored CV</p>
         <h2 id="my-cv-heading">Your uploaded CV</h2>
       </div>
 
@@ -33,11 +33,11 @@
         <button
           type="button"
           class="my-cv-page__primary-action"
-          [disabled]="cvDocument.uploading()"
+          [disabled]="cvDocument.extracting()"
           (click)="openCvFilePicker()">
           {{
-            cvDocument.uploading()
-              ? 'Uploading...'
+            cvDocument.extracting()
+              ? 'Uploading & extracting...'
               : cvDocument.hasDocument()
                 ? 'Replace CV'
                 : 'Upload CV'
@@ -78,42 +78,84 @@
       <div class="my-cv-page__alert" role="alert">{{ downloadOriginalError }}</div>
     }
 
-    @if (cvDocument.previewError(); as previewError) {
-      <div class="my-cv-page__alert" role="alert">{{ previewError }}</div>
+    @if (cvDocument.profilePhotoError(); as profilePhotoError) {
+      <div class="my-cv-page__alert" role="alert">{{ profilePhotoError }}</div>
     }
 
     @if (cvDocument.loading()) {
       <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading CV">
         <app-skeleton-block width="38%" height="1rem" />
-        <app-skeleton-block width="100%" height="18rem" />
+        <app-skeleton-block width="100%" height="6rem" />
       </div>
     } @else if (cvDocument.hasDocument()) {
       @if (cvDocument.document(); as document) {
-        <div class="my-cv-page__meta">
-          <strong>{{ document.originalFileName }}</strong>
-          <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
-          <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
-          @if (document.hasMergedProjects) {
-            <span class="my-cv-page__muted">An edited export is saved separately from this original upload.</span>
+        <div class="my-cv-page__content">
+          @if (cvDocument.loadingProfilePhoto()) {
+            <div class="my-cv-page__photo-skeleton" aria-busy="true" aria-label="Loading profile photo">
+              <app-skeleton-block width="6rem" height="6rem" />
+            </div>
+          } @else if (cvDocument.profilePhotoUrl()) {
+            <img
+              class="my-cv-page__photo"
+              [src]="cvDocument.profilePhotoUrl()"
+              alt="Profile photo extracted from your CV" />
           }
-        </div>
-      }
 
-      @if (cvDocument.loadingPreview()) {
-        <div class="my-cv-page__skeleton" aria-busy="true" aria-label="Loading CV preview">
-          <app-skeleton-block width="100%" height="18rem" />
-        </div>
-      } @else {
-        @if (cvDocument.previewUrl(); as previewUrl) {
-          <div class="my-cv-page__preview">
-            <iframe [src]="previewUrl" title="CV preview"></iframe>
+          <div class="my-cv-page__details">
+            <div class="my-cv-page__meta">
+              <strong>{{ document.originalFileName }}</strong>
+              <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
+              <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
+              @if (document.hasMergedProjects) {
+                <span class="my-cv-page__muted">
+                  An edited export is saved separately from this original upload.
+                </span>
+              }
+            </div>
+
+            @if (extractionStatus(); as status) {
+              <div class="my-cv-page__extraction" [class.my-cv-page__extraction--failed]="!status.succeeded">
+                <p class="my-cv-page__label">Extracted content</p>
+                @if (status.succeeded) {
+                  <p>
+                    {{ status.sectionCount }} sections saved
+                    {{ status.usedAi ? 'with AI parsing' : 'with basic parsing' }}.
+                    @if (status.profilePhotoExtracted) {
+                      Profile photo extracted.
+                    }
+                  </p>
+                  @if (status.notice) {
+                    <p class="my-cv-page__muted">{{ status.notice }}</p>
+                  }
+                } @else {
+                  <p>{{ status.notice ?? 'Section extraction did not complete.' }}</p>
+                  <p class="my-cv-page__muted">
+                    Your original PDF was saved. Open the CV Editor to extract sections manually.
+                  </p>
+                }
+              </div>
+            } @else if (document.hasStructuredContent && document.structuredImportedAt) {
+              <div class="my-cv-page__extraction">
+                <p class="my-cv-page__label">Extracted content</p>
+                <p>
+                  Sections imported
+                  {{ document.structuredImportedAt | date: 'MMM d, y, h:mm a' }}.
+                  @if (document.hasProfilePhoto) {
+                    Profile photo available.
+                  }
+                </p>
+              </div>
+            }
           </div>
-        }
+        </div>
       }
     } @else {
       <div class="my-cv-page__empty">
         <h3>No CV uploaded yet</h3>
-        <p class="my-cv-page__muted">Upload your CV PDF to preview it here.</p>
+        <p class="my-cv-page__muted">
+          Upload your CV PDF to store it, extract sections automatically, and keep the original available for
+          download.
+        </p>
       </div>
     }
   </section>

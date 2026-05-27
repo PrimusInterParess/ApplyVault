@@ -60,20 +60,50 @@
   color: var(--app-text);
 }
 
-.my-cv-page__preview {
-  min-height: 18rem;
-  border: 1px solid var(--app-border);
+.my-cv-page__content {
+  display: flex;
+  gap: 1.25rem;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.my-cv-page__photo,
+.my-cv-page__photo-skeleton {
+  flex: 0 0 auto;
+}
+
+.my-cv-page__photo {
+  width: 6rem;
+  height: 6rem;
+  object-fit: cover;
   border-radius: var(--app-radius);
-  overflow: hidden;
+  border: 1px solid var(--app-border);
   background: var(--app-bg-soft);
 }
 
-.my-cv-page__preview iframe {
-  display: block;
-  width: 100%;
-  min-height: 28rem;
-  border: 0;
-  background: #fff;
+.my-cv-page__details {
+  display: grid;
+  gap: 1rem;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.my-cv-page__extraction {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+}
+
+.my-cv-page__extraction--failed {
+  border-color: color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
+  background: color-mix(in srgb, var(--app-danger) 6%, var(--app-bg-soft));
+}
+
+.my-cv-page__extraction .my-cv-page__label {
+  margin-bottom: 0.25rem;
 }
 
 .my-cv-page__empty {

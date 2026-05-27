@@ -217,6 +217,10 @@ public sealed class UserCvDocumentEntity
 
     public DateTimeOffset? StructuredImportedAt { get; set; }
 
+    public string? ProfilePhotoStorageKey { get; set; }
+
+    public string? ProfilePhotoContentType { get; set; }
+
     public AppUserEntity? User { get; set; }
 
     public List<UserCvSectionEntity> Sections { get; set; } = [];

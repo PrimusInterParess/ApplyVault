@@ -9,6 +9,7 @@ internal static class CvPdfStructuredExportBuilder
 {
     private const double Margin = 50;
     private const double LineHeightFactor = 1.35;
+    private const double ProfilePhotoSize = 72;
 
     static CvPdfStructuredExportBuilder()
     {
@@ -18,7 +19,7 @@ internal static class CvPdfStructuredExportBuilder
         }
     }
 
-    public static byte[] Build(CvStructuredDocumentDto document)
+    public static byte[] Build(CvStructuredDocumentDto document, byte[]? profilePhotoBytes = null)
     {
         using var pdfDocument = new PdfDocument();
         var titleFont = new XFont("Arial", 18, XFontStyleEx.Bold);
@@ -30,6 +31,12 @@ internal static class CvPdfStructuredExportBuilder
 
         var context = new PageLayoutContext(pdfDocument);
         context.Y = Margin;
+
+        if (profilePhotoBytes is { Length: > 0 })
+        {
+            context.DrawProfilePhoto(profilePhotoBytes, ProfilePhotoSize);
+            context.Y = Margin + ProfilePhotoSize + 12;
+        }
 
         foreach (var section in document.Sections.OrderBy((section) => section.SortOrder))
         {
@@ -119,6 +126,7 @@ internal static class CvPdfStructuredExportBuilder
         private readonly PdfDocument _document;
         private readonly double _pageWidth = XUnit.FromMillimeter(210).Point;
         private readonly double _pageHeight = XUnit.FromMillimeter(297).Point;
+        private bool _profilePhotoDrawn;
 
         public double ContentWidth => _pageWidth - (Margin * 2);
         public PdfPage Page { get; private set; }
@@ -131,6 +139,20 @@ internal static class CvPdfStructuredExportBuilder
             Page = document.AddPage();
             Page.Size = PdfSharp.PageSize.A4;
             Graphics = XGraphics.FromPdfPage(Page);
+        }
+
+        public void DrawProfilePhoto(byte[] profilePhotoBytes, double size)
+        {
+            if (_profilePhotoDrawn)
+            {
+                return;
+            }
+
+            using var imageStream = new MemoryStream(profilePhotoBytes);
+            using var image = XImage.FromStream(imageStream);
+            var x = _pageWidth - Margin - size;
+            Graphics.DrawImage(image, x, Margin, size, size);
+            _profilePhotoDrawn = true;
         }
 
         public void EnsureSpace(double requiredHeight)

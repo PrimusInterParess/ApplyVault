@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ApplyVault.Api.Tests" />
+    <InternalsVisibleTo Include="ApplyVault.Api.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>

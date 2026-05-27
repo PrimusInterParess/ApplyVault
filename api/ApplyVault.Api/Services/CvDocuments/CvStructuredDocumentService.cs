@@ -48,17 +48,16 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
             .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken)
             ?? throw new InvalidOperationException("Upload a CV PDF before saving structured content.");
 
-        await dbContext.UserCvEntries
-            .Where((entry) =>
-                dbContext.UserCvSections
-                    .Where((section) => section.UserCvDocumentId == document.Id)
-                    .Select((section) => section.Id)
-                    .Contains(entry.SectionId))
-            .ExecuteDeleteAsync(cancellationToken);
-
-        await dbContext.UserCvSections
+        var existingSections = await dbContext.UserCvSections
             .Where((section) => section.UserCvDocumentId == document.Id)
-            .ExecuteDeleteAsync(cancellationToken);
+            .Include((section) => section.Entries)
+            .ToArrayAsync(cancellationToken);
+
+        if (existingSections.Length > 0)
+        {
+            dbContext.UserCvEntries.RemoveRange(existingSections.SelectMany((section) => section.Entries));
+            dbContext.UserCvSections.RemoveRange(existingSections);
+        }
 
         var utcNow = DateTimeOffset.UtcNow;
 

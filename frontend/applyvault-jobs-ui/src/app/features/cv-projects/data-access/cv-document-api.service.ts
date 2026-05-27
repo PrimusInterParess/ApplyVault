@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
-import { CvDocument } from '../models/cv-document.model';
+import { CvDocument, CvDocumentUploadResult } from '../models/cv-document.model';
 import {
   CvStructuredDocument,
   CvStructuredEntry,
@@ -22,11 +22,20 @@ export class CvDocumentApiService {
     return this.httpClient.get<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current`);
   }
 
-  upload(file: File): Observable<CvDocument> {
+  upload(file: File): Observable<CvDocumentUploadResult> {
     const formData = new FormData();
     formData.append('file', file, file.name);
 
-    return this.httpClient.post<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current`, formData);
+    return this.httpClient.post<CvDocumentUploadResult>(
+      `${this.apiConfig.baseUrl}/cv-documents/current`,
+      formData
+    );
+  }
+
+  downloadProfilePhoto(): Observable<Blob> {
+    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/profile-photo`, {
+      responseType: 'blob'
+    });
   }
 
   downloadContent(): Observable<Blob> {

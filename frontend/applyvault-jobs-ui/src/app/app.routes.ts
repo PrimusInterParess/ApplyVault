@@ -49,7 +49,7 @@ export const routes: Routes = [
         path: 'my-cv',
         title: 'My CV',
         data: {
-          shellSubtitle: 'Upload your CV PDF, preview exports, and open the structured editor.'
+          shellSubtitle: 'Upload your CV PDF, extract sections automatically, and download the original file.'
         },
         loadComponent: () =>
           import('./features/cv-projects/pages/my-cv-page/my-cv-page.component').then(

@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
@@ -16,6 +16,8 @@ export class MyCvPageComponent {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
+
+  protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
 
   protected formatFileSize(bytes: number): string {
     if (bytes < 1024) {

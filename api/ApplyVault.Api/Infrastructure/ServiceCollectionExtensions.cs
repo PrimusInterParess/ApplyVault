@@ -235,6 +235,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvDocumentService, CvDocumentService>();
         services.AddScoped<ICvPdfSectionDetector, CvPdfSectionDetector>();
         services.AddScoped<ICvPdfFullTextExtractor, CvPdfFullTextExtractor>();
+        services.AddScoped<ICvPdfProfilePhotoExtractor, CvPdfProfilePhotoExtractor>();
         services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
         services.AddScoped<ICvStructuredExportService, CvStructuredExportService>();

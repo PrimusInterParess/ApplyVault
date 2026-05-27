@@ -137,6 +137,8 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((document) => document.ContentType).IsRequired().HasMaxLength(128);
             entity.Property((document) => document.StorageKey).IsRequired().HasMaxLength(512);
             entity.Property((document) => document.BaseStorageKey).HasMaxLength(512);
+            entity.Property((document) => document.ProfilePhotoStorageKey).HasMaxLength(512);
+            entity.Property((document) => document.ProfilePhotoContentType).HasMaxLength(128);
             entity.HasIndex((document) => document.UserId).IsUnique();
             entity.HasOne((document) => document.User)
                 .WithOne((user) => user.CvDocument)

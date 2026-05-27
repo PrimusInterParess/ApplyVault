@@ -40,7 +40,8 @@ public sealed class CvStructuredExportService(
             .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken)
             ?? throw new InvalidOperationException("Upload a CV PDF before exporting.");
 
-        var pdfBytes = CvPdfStructuredExportBuilder.Build(structured);
+        var profilePhotoBytes = await ReadProfilePhotoBytesAsync(document, cancellationToken);
+        var pdfBytes = CvPdfStructuredExportBuilder.Build(structured, profilePhotoBytes);
         var maxFileSizeBytes = storageOptions.Value.MaxFileSizeBytes;
 
         if (pdfBytes.Length > maxFileSizeBytes)
@@ -79,7 +80,7 @@ public sealed class CvStructuredExportService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return MapDocument(document);
+        return CvDocumentService.MapDocument(document);
     }
 
     public async Task<byte[]> PreviewAsync(
@@ -98,7 +99,8 @@ public sealed class CvStructuredExportService(
             ?? throw new InvalidOperationException("Upload a CV PDF before previewing.");
 
         var structured = CvStructuredDocumentService.MapPreviewRequest(document.Id, request);
-        var pdfBytes = CvPdfStructuredExportBuilder.Build(structured);
+        var profilePhotoBytes = await ReadProfilePhotoBytesAsync(document, cancellationToken);
+        var pdfBytes = CvPdfStructuredExportBuilder.Build(structured, profilePhotoBytes);
         var maxFileSizeBytes = storageOptions.Value.MaxFileSizeBytes;
 
         if (pdfBytes.Length > maxFileSizeBytes)
@@ -110,30 +112,21 @@ public sealed class CvStructuredExportService(
         return pdfBytes;
     }
 
+    private async Task<byte[]?> ReadProfilePhotoBytesAsync(
+        UserCvDocumentEntity document,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey))
+        {
+            return null;
+        }
+
+        await using var photoStream = await cvDocumentStorage.OpenReadAsync(document.ProfilePhotoStorageKey, cancellationToken);
+        using var memoryStream = new MemoryStream();
+        await photoStream.CopyToAsync(memoryStream, cancellationToken);
+        return memoryStream.ToArray();
+    }
+
     private static string BuildExportStorageKey(Guid userId, Guid documentId) =>
         $"{userId:D}/{documentId:D}-structured.pdf";
-
-    private static CvDocumentDto MapDocument(UserCvDocumentEntity document)
-    {
-        var hasExportedPdf = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
-            && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
-
-        var hasStructuredContent = document.StructuredImportedAt is not null
-            || document.Sections.Count > 0;
-
-        var originalFileSizeBytes = document.OriginalFileSizeBytes > 0
-            ? document.OriginalFileSizeBytes
-            : document.FileSizeBytes;
-
-        return new CvDocumentDto(
-            document.Id,
-            document.OriginalFileName,
-            document.ContentType,
-            document.FileSizeBytes,
-            originalFileSizeBytes,
-            document.UploadedAt,
-            hasExportedPdf,
-            hasStructuredContent,
-            document.StructuredImportedAt);
-    }
 }

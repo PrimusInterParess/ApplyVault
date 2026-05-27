@@ -26,7 +26,7 @@ public sealed class CvDocumentsController(
 
     [HttpPost("current")]
     [RequestSizeLimit(6 * 1024 * 1024)]
-    public async Task<ActionResult<CvDocumentDto>> UploadCurrent(
+    public async Task<ActionResult<CvDocumentUploadResultDto>> UploadCurrent(
         IFormFile? file,
         CancellationToken cancellationToken = default)
     {
@@ -101,6 +101,23 @@ public sealed class CvDocumentsController(
         {
             EnableRangeProcessing = true,
             FileDownloadName = content.FileName
+        };
+    }
+
+    [HttpGet("current/profile-photo")]
+    public async Task<IActionResult> GetProfilePhoto(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var content = await cvDocumentService.OpenProfilePhotoAsync(user, cancellationToken);
+
+        if (content is null)
+        {
+            return NotFound();
+        }
+
+        return new FileStreamResult(content.Content, content.ContentType)
+        {
+            EnableRangeProcessing = true
         };
     }
 

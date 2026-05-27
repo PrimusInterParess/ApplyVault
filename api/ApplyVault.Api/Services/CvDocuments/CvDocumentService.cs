@@ -10,7 +10,7 @@ public interface ICvDocumentService
 {
     Task<CvDocumentDto?> GetCurrentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
-    Task<CvDocumentDto> UploadAsync(
+    Task<CvDocumentUploadResultDto> UploadAsync(
         AppUserEntity user,
         IFormFile file,
         CancellationToken cancellationToken = default);
@@ -20,6 +20,8 @@ public interface ICvDocumentService
     Task<CvDocumentContent?> OpenOriginalContentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
     Task<CvDocumentContent?> OpenExportedContentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
+    Task<CvDocumentContent?> OpenProfilePhotoAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 }
@@ -32,6 +34,7 @@ public sealed record CvDocumentContent(
 public sealed class CvDocumentService(
     ApplyVaultDbContext dbContext,
     ICvDocumentStorage cvDocumentStorage,
+    ICvStructuredImportService cvStructuredImportService,
     IOptions<CvDocumentStorageOptions> storageOptions) : ICvDocumentService
 {
     private const string PdfContentType = "application/pdf";
@@ -45,7 +48,7 @@ public sealed class CvDocumentService(
         return document is null ? null : MapDocument(document);
     }
 
-    public async Task<CvDocumentDto> UploadAsync(
+    public async Task<CvDocumentUploadResultDto> UploadAsync(
         AppUserEntity user,
         IFormFile file,
         CancellationToken cancellationToken = default)
@@ -58,6 +61,7 @@ public sealed class CvDocumentService(
         var documentId = existingDocument?.Id ?? Guid.NewGuid();
         var storageKey = BuildStorageKey(user.Id, documentId);
         var now = DateTimeOffset.UtcNow;
+        string? previousPhotoKey = existingDocument?.ProfilePhotoStorageKey;
 
         await using (var uploadStream = file.OpenReadStream())
         {
@@ -100,6 +104,8 @@ public sealed class CvDocumentService(
 
             dbContext.UserCvSections.RemoveRange(existingSections);
             existingDocument.StructuredImportedAt = null;
+            existingDocument.ProfilePhotoStorageKey = null;
+            existingDocument.ProfilePhotoContentType = null;
 
             existingDocument.OriginalFileName = Path.GetFileName(file.FileName);
             existingDocument.ContentType = PdfContentType;
@@ -115,11 +121,20 @@ public sealed class CvDocumentService(
             {
                 await cvDocumentStorage.DeleteAsync(keyToDelete, cancellationToken);
             }
+
+            if (!string.IsNullOrWhiteSpace(previousPhotoKey))
+            {
+                await cvDocumentStorage.DeleteAsync(previousPhotoKey, cancellationToken);
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return MapDocument(existingDocument);
+        var importSummary = await cvStructuredImportService.ImportAndPersistAsync(user, cancellationToken);
+
+        await dbContext.Entry(existingDocument).ReloadAsync(cancellationToken);
+
+        return new CvDocumentUploadResultDto(MapDocument(existingDocument), importSummary);
     }
 
     public Task<CvDocumentContent?> OpenContentAsync(
@@ -173,6 +188,28 @@ public sealed class CvDocumentService(
         return new CvDocumentContent(content, document.ContentType, exportFileName);
     }
 
+    public async Task<CvDocumentContent?> OpenProfilePhotoAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await dbContext.UserCvDocuments
+            .AsNoTracking()
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null || string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey))
+        {
+            return null;
+        }
+
+        var content = await cvDocumentStorage.OpenReadAsync(document.ProfilePhotoStorageKey, cancellationToken);
+        var contentType = string.IsNullOrWhiteSpace(document.ProfilePhotoContentType)
+            ? "image/jpeg"
+            : document.ProfilePhotoContentType;
+        var extension = string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+
+        return new CvDocumentContent(content, contentType, $"profile-photo{extension}");
+    }
+
     public async Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default)
     {
         var document = await dbContext.UserCvDocuments
@@ -191,6 +228,11 @@ public sealed class CvDocumentService(
         if (!string.IsNullOrWhiteSpace(document.BaseStorageKey))
         {
             keysToDelete.Add(document.BaseStorageKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey))
+        {
+            keysToDelete.Add(document.ProfilePhotoStorageKey);
         }
 
         foreach (var keyToDelete in keysToDelete)
@@ -245,10 +287,12 @@ public sealed class CvDocumentService(
         return $"{userId:D}/{documentId:D}.pdf";
     }
 
-    private static CvDocumentDto MapDocument(UserCvDocumentEntity document)
+    internal static CvDocumentDto MapDocument(UserCvDocumentEntity document)
     {
         var hasExportedPdf = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
             && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
+
+        var hasStructuredContent = document.StructuredImportedAt is not null;
 
         var originalFileSizeBytes = document.OriginalFileSizeBytes > 0
             ? document.OriginalFileSizeBytes
@@ -262,8 +306,9 @@ public sealed class CvDocumentService(
             originalFileSizeBytes,
             document.UploadedAt,
             hasExportedPdf,
-            document.StructuredImportedAt is not null,
-            document.StructuredImportedAt);
+            hasStructuredContent,
+            document.StructuredImportedAt,
+            !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey));
     }
 
     private static string BuildExportedFileName(string originalFileName)

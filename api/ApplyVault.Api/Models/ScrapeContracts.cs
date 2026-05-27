@@ -173,6 +173,24 @@ public sealed record MailAuthorizationStartResponse(
     string AuthorizationUrl
 );
 
+public sealed record ConnectedGitHubAccountDto(
+    Guid Id,
+    string Provider,
+    string ProviderUserId,
+    string? Email,
+    string? DisplayName,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt
+);
+
+public sealed record GitHubAuthorizationStartRequest(
+    string? ReturnUrl
+);
+
+public sealed record GitHubAuthorizationStartResponse(
+    string AuthorizationUrl
+);
+
 public sealed record CreateCalendarEventRequest(
     Guid ConnectedAccountId
 );

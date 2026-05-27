@@ -49,7 +49,7 @@ export const routes: Routes = [
         path: 'settings',
         title: 'ApplyVault Settings',
         data: {
-          shellSubtitle: 'Manage calendar and mailbox integrations.'
+          shellSubtitle: 'Manage calendar, GitHub, and mailbox integrations.'
         },
         loadComponent: () =>
           import('./features/settings/pages/user-settings-page/user-settings-page.component').then(
@@ -74,6 +74,15 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/settings/pages/mail-connect-callback/mail-connect-callback.component').then(
         (module) => module.MailConnectCallbackComponent
+      )
+  },
+  {
+    path: 'integrations/github/callback',
+    title: 'GitHub Connection',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/pages/github-connect-callback/github-connect-callback.component').then(
+        (module) => module.GitHubConnectCallbackComponent
       )
   },
   {

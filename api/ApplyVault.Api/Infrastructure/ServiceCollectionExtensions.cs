@@ -91,6 +91,10 @@ public static class ServiceCollectionExtensions
             .AddOptions<MailIntegrationOptions>()
             .Bind(configuration.GetSection(MailIntegrationOptions.SectionName));
 
+        var gitHubIntegrationBuilder = services
+            .AddOptions<GitHubIntegrationOptions>()
+            .Bind(configuration.GetSection(GitHubIntegrationOptions.SectionName));
+
         if (!environment.IsDevelopment())
         {
             calendarIntegrationBuilder
@@ -103,6 +107,12 @@ public static class ServiceCollectionExtensions
                 .Validate(
                     (options) => OAuthIntegrationOptionsValidation.ValidateMailIntegration(options, requireHttps: true),
                     "MailIntegration OAuth is misconfigured when Enabled is true: Gmail ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl must be non-empty HTTPS URLs.")
+                .ValidateOnStart();
+
+            gitHubIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateGitHubIntegration(options, requireHttps: true),
+                    "GitHubIntegration OAuth is misconfigured when Enabled is true: ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl must be non-empty HTTPS URLs.")
                 .ValidateOnStart();
         }
         else
@@ -117,6 +127,12 @@ public static class ServiceCollectionExtensions
                 .Validate(
                     (options) => OAuthIntegrationOptionsValidation.ValidateMailIntegration(options, requireHttps: false),
                     "MailIntegration OAuth is misconfigured when Enabled is true: Gmail ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl are required.")
+                .ValidateOnStart();
+
+            gitHubIntegrationBuilder
+                .Validate(
+                    (options) => OAuthIntegrationOptionsValidation.ValidateGitHubIntegration(options, requireHttps: false),
+                    "GitHubIntegration OAuth is misconfigured when Enabled is true: ClientId, ClientSecret, RedirectUri, and PostConnectRedirectUrl are required.")
                 .ValidateOnStart();
         }
 
@@ -157,6 +173,10 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<GoogleCalendarProvider>();
         services.AddHttpClient<MicrosoftCalendarProvider>();
         services.AddHttpClient<IGmailMailClient, GmailMailClient>();
+        services.AddHttpClient<IGitHubOAuthClient, GitHubOAuthClient>((client) =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("ApplyVault/1.0");
+        });
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddProblemDetails();
@@ -179,6 +199,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailJobStatusClassifier, EmailJobStatusClassifier>();
         services.AddScoped<IScrapeResultEmailMatcher, ScrapeResultEmailMatcher>();
         services.AddScoped<IMailConnectionService, MailConnectionService>();
+        services.AddScoped<IGitHubConnectionService, GitHubConnectionService>();
         services.AddScoped<IMailSyncProcessor, MailSyncProcessor>();
         services.AddScoped<IEmailDrivenInterviewCalendarSyncService, EmailDrivenInterviewCalendarSyncService>();
         services.AddScoped<IEmailDrivenJobUpdateService, EmailDrivenJobUpdateService>();

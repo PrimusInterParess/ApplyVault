@@ -3,8 +3,10 @@ import { Component, inject, signal } from '@angular/core';
 
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { CalendarConnectionsFacade } from '../../data-access/calendar-connections.facade';
+import { GitHubConnectionsFacade } from '../../data-access/github-connections.facade';
 import { MailConnectionsFacade } from '../../data-access/mail-connections.facade';
 import { ConnectedCalendarAccount } from '../../models/calendar-connection.model';
+import { ConnectedGitHubAccount } from '../../models/github-connection.model';
 import { ConnectedMailAccount } from '../../models/mail-connection.model';
 
 type StatusVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -20,7 +22,7 @@ interface ExpiryPresentation {
 }
 
 interface DisconnectConfirmTarget {
-  readonly kind: 'calendar' | 'mail';
+  readonly kind: 'calendar' | 'mail' | 'github';
   readonly connectionId: string;
   readonly provider?: string;
 }
@@ -34,6 +36,7 @@ interface DisconnectConfirmTarget {
 })
 export class UserSettingsPageComponent {
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
+  protected readonly gitHubConnections = inject(GitHubConnectionsFacade);
   protected readonly mailConnections = inject(MailConnectionsFacade);
   protected readonly skeletonRowIndexes = [0, 1, 2] as const;
   protected readonly disconnectConfirm = signal<DisconnectConfirmTarget | null>(null);
@@ -70,6 +73,20 @@ export class UserSettingsPageComponent {
     }
 
     return { label: `${count} connected`, variant: 'success' };
+  }
+
+  protected gitHubSectionStatus(): StatusPresentation {
+    const connections = this.gitHubConnections.connections();
+
+    if (this.gitHubConnections.loading()) {
+      return { label: 'Loading', variant: 'neutral' };
+    }
+
+    if (connections.length === 0) {
+      return { label: 'Not connected', variant: 'neutral' };
+    }
+
+    return { label: 'Connected', variant: 'success' };
   }
 
   protected mailSectionStatus(): StatusPresentation {
@@ -152,6 +169,8 @@ export class UserSettingsPageComponent {
         return 'Microsoft';
       case 'gmail':
         return 'Gmail';
+      case 'github':
+        return 'GitHub';
       default:
         return provider
           .replace(/[_-]+/g, ' ')
@@ -169,6 +188,8 @@ export class UserSettingsPageComponent {
         return 'M';
       case 'gmail':
         return '@';
+      case 'github':
+        return 'GH';
       default:
         return provider.trim().charAt(0).toUpperCase() || '?';
     }
@@ -180,7 +201,9 @@ export class UserSettingsPageComponent {
     return `settings-page__provider-badge settings-page__provider-badge--${normalized || 'unknown'}`;
   }
 
-  protected connectionDisplayName(connection: ConnectedCalendarAccount | ConnectedMailAccount): string {
+  protected connectionDisplayName(
+    connection: ConnectedCalendarAccount | ConnectedMailAccount | ConnectedGitHubAccount
+  ): string {
     return connection.displayName || connection.email || connection.providerUserId;
   }
 
@@ -211,6 +234,13 @@ export class UserSettingsPageComponent {
     });
   }
 
+  protected beginDisconnectGitHub(connectionId: string): void {
+    this.disconnectConfirm.set({
+      kind: 'github',
+      connectionId
+    });
+  }
+
   protected disconnectConfirmMessage(): string {
     const target = this.disconnectConfirm();
 
@@ -220,6 +250,10 @@ export class UserSettingsPageComponent {
 
     if (target.kind === 'calendar') {
       return `Disconnect ${this.providerLabel(target.provider ?? '')}? Interview event sync will stop using this account.`;
+    }
+
+    if (target.kind === 'github') {
+      return 'Disconnect GitHub? Synced projects will be removed from ApplyVault.';
     }
 
     return 'Disconnect Gmail? Interview and rejection email sync will stop for your saved jobs.';
@@ -234,6 +268,8 @@ export class UserSettingsPageComponent {
 
     if (target.kind === 'calendar') {
       this.calendarConnections.disconnect(target.connectionId);
+    } else if (target.kind === 'github') {
+      this.gitHubConnections.disconnect(target.connectionId);
     } else {
       this.mailConnections.disconnect(target.connectionId);
     }

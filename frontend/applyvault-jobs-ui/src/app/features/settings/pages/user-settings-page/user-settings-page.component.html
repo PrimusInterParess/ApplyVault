@@ -4,7 +4,7 @@
       <p class="settings-page__eyebrow">User settings</p>
       <h1>Integrations</h1>
       <p class="settings-page__subtitle">
-        Connect calendar and Gmail for interview scheduling and status sync.
+        Connect calendar, GitHub, and Gmail for interview scheduling, portfolio sync, and status updates.
       </p>
     </div>
   </section>
@@ -196,6 +196,120 @@
     }
   </section>
 
+  <section class="settings-page__panel" aria-labelledby="github-settings-heading">
+    <div class="settings-page__section-header">
+      <div class="settings-page__section-intro">
+        <div class="settings-page__section-title-row">
+          <div>
+            <p class="settings-page__label">Portfolio sync</p>
+            <h2 id="github-settings-heading">GitHub</h2>
+          </div>
+          <span
+            class="settings-page__status-chip"
+            [class.settings-page__status-chip--success]="gitHubSectionStatus().variant === 'success'"
+            [class.settings-page__status-chip--warning]="gitHubSectionStatus().variant === 'warning'"
+            [class.settings-page__status-chip--danger]="gitHubSectionStatus().variant === 'danger'">
+            {{ gitHubSectionStatus().label }}
+          </span>
+        </div>
+        <p class="settings-page__muted">
+          Connect GitHub to import repositories for your portfolio and future CV sections.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="settings-page__secondary-action"
+        [disabled]="gitHubConnections.loading()"
+        [attr.aria-busy]="gitHubConnections.loading()"
+        (click)="gitHubConnections.load()">
+        {{ gitHubConnections.loading() ? 'Refreshing...' : 'Refresh' }}
+      </button>
+    </div>
+
+    @if (gitHubConnections.error(); as errorMessage) {
+      <div class="settings-page__alert" role="alert" aria-live="polite">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (gitHubConnections.loading()) {
+      <div class="settings-page__skeleton-list" aria-busy="true" aria-label="Loading GitHub connections">
+        @for (index of skeletonRowIndexes; track index) {
+          <div class="settings-page__skeleton-row">
+            <app-skeleton-block width="2.5rem" height="2.5rem" [rounded]="true" />
+            <div class="settings-page__skeleton-copy">
+              <app-skeleton-block width="42%" height="1rem" />
+              <app-skeleton-block width="58%" height="0.9rem" />
+            </div>
+            <app-skeleton-block width="6.5rem" height="2.75rem" />
+          </div>
+        }
+      </div>
+    } @else if (gitHubConnections.connections().length === 0) {
+      <div class="settings-page__empty">
+        <h3>No GitHub account connected</h3>
+        <p class="settings-page__muted">
+          Link GitHub so ApplyVault can read your repositories and help build your project portfolio.
+        </p>
+        <div class="settings-page__provider-actions">
+          <button
+            type="button"
+            class="settings-page__provider-action"
+            [disabled]="gitHubConnections.connecting()"
+            (click)="gitHubConnections.connect()">
+            <span class="settings-page__provider-badge settings-page__provider-badge--github" aria-hidden="true">
+              {{ providerInitial('github') }}
+            </span>
+            <span class="settings-page__provider-action-copy">
+              <strong>{{ providerLabel('github') }}</strong>
+              <span class="settings-page__muted">Repository and profile access</span>
+            </span>
+            <span class="settings-page__provider-action-label">
+              {{ gitHubConnections.connecting() ? 'Connecting...' : 'Connect' }}
+            </span>
+          </button>
+        </div>
+      </div>
+    } @else {
+      <ul class="settings-page__connection-list">
+        @for (connection of gitHubConnections.connections(); track connection.id) {
+          <li class="settings-page__connection-row">
+            <div class="settings-page__connection-main">
+              <span [class]="providerBadgeClass(connection.provider)" aria-hidden="true">
+                {{ providerInitial(connection.provider) }}
+              </span>
+              <div class="settings-page__connection-copy">
+                <div class="settings-page__connection-title-row">
+                  <strong>{{ connectionDisplayName(connection) }}</strong>
+                  <span class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
+                    Connected
+                  </span>
+                </div>
+                <p>{{ providerLabel(connection.provider) }} account</p>
+                <p class="settings-page__meta">
+                  Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="settings-page__secondary-action settings-page__connection-action"
+              [disabled]="gitHubConnections.disconnectingConnectionId() === connection.id"
+              (click)="beginDisconnectGitHub(connection.id)">
+              {{
+                gitHubConnections.disconnectingConnectionId() === connection.id
+                  ? 'Disconnecting...'
+                  : 'Disconnect'
+              }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
   <section class="settings-page__panel" aria-labelledby="mail-settings-heading">
     <div class="settings-page__section-header">
       <div class="settings-page__section-intro">
@@ -365,7 +479,9 @@
             [disabled]="
               confirmTarget.kind === 'calendar'
                 ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
-                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                : confirmTarget.kind === 'github'
+                  ? gitHubConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                  : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
             "
             (click)="cancelDisconnectConfirm()">
             Cancel
@@ -376,7 +492,9 @@
             [disabled]="
               confirmTarget.kind === 'calendar'
                 ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
-                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                : confirmTarget.kind === 'github'
+                  ? gitHubConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                  : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
             "
             (click)="confirmDisconnect()">
             {{
@@ -384,9 +502,13 @@
                 ? calendarConnections.disconnectingConnectionId() === confirmTarget.connectionId
                   ? 'Disconnecting...'
                   : 'Disconnect'
-                : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
-                  ? 'Disconnecting...'
-                  : 'Disconnect'
+                : confirmTarget.kind === 'github'
+                  ? gitHubConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                    ? 'Disconnecting...'
+                    : 'Disconnect'
+                  : mailConnections.disconnectingConnectionId() === confirmTarget.connectionId
+                    ? 'Disconnecting...'
+                    : 'Disconnect'
             }}
           </button>
         </div>

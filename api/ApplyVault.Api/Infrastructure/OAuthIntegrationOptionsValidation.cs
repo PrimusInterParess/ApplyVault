@@ -50,6 +50,21 @@ internal static class OAuthIntegrationOptionsValidation
                && IsPostConnectRedirectComplete(options.PostConnectRedirectUrl, requireHttps);
     }
 
+    internal static bool ValidateGitHubIntegration(GitHubIntegrationOptions options, bool requireHttps)
+    {
+        if (!options.Enabled)
+        {
+            return true;
+        }
+
+        return IsProviderComplete(
+                   options.ClientId,
+                   options.ClientSecret,
+                   options.RedirectUri,
+                   requireHttps)
+               && IsPostConnectRedirectComplete(options.PostConnectRedirectUrl, requireHttps);
+    }
+
     private static bool IsProviderConfigured(string? clientId) =>
         !string.IsNullOrWhiteSpace(clientId);
 

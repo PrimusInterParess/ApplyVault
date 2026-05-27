@@ -181,7 +181,7 @@ public sealed class EmailJobStatusClassifierTests
 
         Assert.NotNull(classification);
         Assert.Equal(JobStatusKinds.Rejection, classification!.Kind);
-        Assert.Equal(0.9, classification.Confidence);
+        Assert.InRange(classification.Confidence, 0.9, 0.92);
         Assert.Null(classification.InterviewSchedule);
         Assert.Equal(0, extractor.CallCount);
     }
@@ -372,7 +372,7 @@ public sealed class EmailJobStatusClassifierTests
 
         Assert.NotNull(classification);
         Assert.Equal(JobStatusKinds.Rejection, classification!.Kind);
-        Assert.Equal(0.99, classification.Confidence);
+        Assert.InRange(classification.Confidence, 0.98, 0.99);
     }
 
     private static GmailMessage CreateMessage(

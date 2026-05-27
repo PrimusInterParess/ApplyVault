@@ -39,9 +39,11 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `src/`
   Chrome extension source, including popup UI, background service worker, content scripts, and shared contracts.
 - `api/ApplyVault.Api/`
-  ASP.NET Core API that stores and serves captured job results.
+  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `WebApplicationExtensions`) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`.
 - `api/ApplyVault.Api.Tests/`
-  xUnit coverage for mail sync, Gmail client behavior, job-status classification, EURES job search, and related API services.
+  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES job search, and related API services.
+- `api/ApplyVault.Api.IntegrationTests/`
+  HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
   Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder.
 - `plans/`
@@ -85,7 +87,8 @@ dotnet run --project api/ApplyVault.Api --launch-profile http
 
 The API listens on `http://localhost:5173/api` and exposes:
 
-- `GET /api/health`
+- `GET /health` — ASP.NET health checks (includes EF Core database readiness)
+- `GET /api/health` — simple liveness response (`{ "status": "ok" }`)
 - `GET /api/scrape-results`
 - `GET /api/scrape-results/{id}`
 - `POST /api/scrape-results`
@@ -111,11 +114,11 @@ Extension saves must be signed in; the popup sends the access token from [`aspNe
 
 Saved results include the raw scrape payload, structured job details, persisted `isRejected` state, optional interview metadata, linked calendar events, capture-quality metadata for reviewable fields, and status-sync metadata that records whether the latest rejection or interview update came from Gmail or a manual edit.
 
-By default, the API uses the `ApplyVault` SQL Server LocalDB database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`. Startup applies EF Core migrations automatically with `Database.Migrate()`.
+By default, the API uses the `ApplyVault` SQL Server database via the `ApplyVault` connection string in `api/ApplyVault.Api/appsettings.json`. On startup, a registered `IDatabaseInitializer` applies EF Core migrations for SQL Server (`Database.Migrate()`). Integration tests and other in-memory setups set `Testing:UseInMemoryDatabase` to `true`, which switches to `EnsureCreated()` and does not require a real connection string.
 
 ### 3. Configure API integrations
 
-The API reads several option sections from `api/ApplyVault.Api/appsettings.json` and local environment overrides:
+The API reads several option sections from `api/ApplyVault.Api/appsettings.json` and local environment overrides. Critical sections are validated at startup when enabled (for example Google AI API key when `GoogleAi:Enabled` is true, Gmail OAuth credentials when `MailIntegration:Enabled` is true):
 
 - `GoogleAi`
   Optional AI repair for low-confidence captures. Provide an API key and model when you want enrichment enabled.
@@ -126,9 +129,13 @@ The API reads several option sections from `api/ApplyVault.Api/appsettings.json`
 - `CalendarIntegration`
   Configures the OAuth client details and redirect URLs used to connect Google and Microsoft calendar providers.
 - `MailIntegration`
-  Enables Gmail sync, configures the Gmail OAuth client and callback URL, sets the Angular post-connect redirect, and controls poll cadence plus the initial mailbox lookback window used by the background sync worker.
+  Enables Gmail sync, configures the Gmail OAuth client and callback URL, sets the Angular post-connect redirect, and controls poll cadence plus the initial mailbox lookback window. The Gmail background sync worker is registered only when `MailIntegration:Enabled` is `true`.
 - `EuresIntegration`
   Configures the EURES API base URL, default country/location code, max results per page, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached in memory for five minutes before server-side pagination is applied.
+- `Cors`
+  Allowed browser origins for production. Leave `AllowedOrigins` empty in Development to allow any origin; set explicit origins (for example `http://localhost:4200`) before exposing the API publicly.
+- `Testing`
+  Test-only switches. Integration tests set `Testing:UseInMemoryDatabase` and `Testing:InMemoryDatabaseName` to run against an isolated in-memory database.
 
 Prefer local overrides, environment variables, or user secrets for development credentials instead of checking secrets into source-controlled config files.
 
@@ -184,11 +191,19 @@ Unknown routes render a 404 page with a link back to `/jobs` when signed in or `
 
 ### 5. Run backend tests
 
+Unit tests (fast, no web host):
+
 ```bash
 dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
 ```
 
-This test project covers the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, and the EURES job search client, keyword expander, ranked-result caching, mapper, relevance scoring, and request normalization.
+Integration tests (HTTP + auth pipeline):
+
+```bash
+dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+```
+
+Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, and the EURES job search client, keyword expander, ranked-result caching, mapper, relevance scoring, and request normalization. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
 
 ## Load The Extension In Chrome
 
@@ -259,12 +274,15 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 |------|--------|------|
 | 1 Scrape ingest authentication | Done | [`prod-01-scrape-ingest-auth.md`](plans/prod-01-scrape-ingest-auth.md) |
 | 2 Multi-tenant data isolation | Done | [`prod-02-tenancy-isolation.md`](plans/prod-02-tenancy-isolation.md) |
-| 3 API integration tests (tenancy) | Pending | `prod-03-api-integration-tests.md` (next) |
-| 4–17 Config, deploy, CORS, health, scale, tests | Pending | See tracker |
+| 3 API integration tests (tenancy) | Done | [`prod-03-api-integration-tests.md`](plans/prod-03-api-integration-tests.md) |
+| 4 API environment configuration | Pending | `prod-04-api-environment-configuration.md` (next) |
+| 5–17 Deploy, CI, scale, tests | Pending | See tracker |
 
-**Completed (steps 1–2):** Authenticated scrape ingest; all scrape-result queries are scoped to `UserId == caller` only. Legacy rows with `UserId IS NULL` are removed by migration `20260527120000_EnforceScrapeResultUserOwnership`. `ScrapeResultEntity.UserId` is required; user delete is `Restrict` (jobs must be removed first).
+**Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 
-**Not production-ready yet:** HTTP integration tests (step 3), environment-based deploy config (steps 4–11), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
+**Local foundations in place (not full prod steps yet):** Config-driven CORS (`Cors:AllowedOrigins`), startup options validation, and `GET /health` with a database check — align with tracker steps 11–12 but still need production hardening (HTTPS, deploy wiring, readiness probes).
+
+**Not production-ready yet:** Environment-based deploy config (steps 4–10), CI (step 6), and horizontal-scale fixes for EURES cache and Gmail sync (steps 16–17) when running more than one API instance.
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

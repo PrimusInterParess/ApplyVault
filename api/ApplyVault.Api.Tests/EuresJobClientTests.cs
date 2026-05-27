@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.Eures;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests;
@@ -51,7 +52,7 @@ public sealed class EuresJobClientTests
             MaxResultsPerPage = 50
         });
         var apiClient = new EuresApiClient(httpClient, options);
-        var searchService = new EuresJobSearchService(apiClient, options);
+        var searchService = new EuresJobSearchService(apiClient, options, new MemoryCache(new MemoryCacheOptions()));
 
         return new EuresJobClient(searchService, apiClient);
     }

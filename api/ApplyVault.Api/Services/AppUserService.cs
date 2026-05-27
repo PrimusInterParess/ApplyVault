@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +7,8 @@ namespace ApplyVault.Api.Services;
 
 public sealed class AppUserService(
     ApplyVaultDbContext dbContext,
-    IHttpContextAccessor httpContextAccessor) : IAppUserService
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<AppUserService> logger) : IAppUserService
 {
     public async Task<AppUserEntity> GetRequiredUserAsync(CancellationToken cancellationToken = default)
     {
@@ -20,13 +22,19 @@ public sealed class AppUserService(
 
         if (principal?.Identity?.IsAuthenticated != true)
         {
+            logger.LogDebug(
+                "Skipping user resolution because the request principal is not authenticated. AuthenticationType={AuthenticationType}",
+                principal?.Identity?.AuthenticationType ?? "(none)");
             return null;
         }
 
-        var supabaseUserId = principal.FindFirstValue("sub");
+        var supabaseUserId = SupabaseClaimTypes.GetSupabaseUserId(principal);
 
         if (string.IsNullOrWhiteSpace(supabaseUserId))
         {
+            logger.LogWarning(
+                "Authenticated request is missing a Supabase user id claim. Claims={Claims}",
+                string.Join(", ", principal.Claims.Select((claim) => claim.Type)));
             return null;
         }
 

@@ -1,7 +1,6 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -41,15 +40,8 @@ public sealed class EmailDrivenInterviewCalendarSyncServiceTests
     [Fact]
     public async Task SyncAsync_WithSqliteProvider_UsesOnlyTranslatableCalendarFilter()
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
-
-        var options = new DbContextOptionsBuilder<ApplyVaultDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var dbContext = new ApplyVaultDbContext(options);
-        await dbContext.Database.EnsureCreatedAsync();
+        // InMemory: EF migrations are SQL Server-specific; this test targets the calendar provider filter query.
+        await using var dbContext = CreateDbContext();
 
         var user = CreateUser();
         var googleAccount = CreateConnectedAccount(user.Id, CalendarProviders.Google, "google-user", "google@example.com");

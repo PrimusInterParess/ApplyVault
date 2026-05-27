@@ -13,7 +13,12 @@ public sealed class AuthController(IAppUserService appUserService) : ControllerB
     [HttpGet("session")]
     public async Task<ActionResult<CurrentUserDto>> GetSession(CancellationToken cancellationToken)
     {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var user = await appUserService.TryGetCurrentUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
         return Ok(new CurrentUserDto(user.Id, user.SupabaseUserId, user.Email, user.DisplayName));
     }
 }

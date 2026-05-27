@@ -83,7 +83,7 @@ public static class RateLimitingExtensions
         return services;
     }
 
-    private static RateLimitPartition<string, RateLimiter> CreateFixedWindowPolicy(HttpContext httpContext)
+    private static RateLimitPartition<string> CreateFixedWindowPolicy(HttpContext httpContext)
     {
         var options = httpContext.RequestServices
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()
@@ -107,7 +107,7 @@ public static class RateLimitingExtensions
             });
     }
 
-    private static RateLimitPartition<string, RateLimiter> CreateSlidingWindowPolicy(HttpContext httpContext)
+    private static RateLimitPartition<string> CreateSlidingWindowPolicy(HttpContext httpContext)
     {
         var options = httpContext.RequestServices
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()
@@ -132,7 +132,7 @@ public static class RateLimitingExtensions
             });
     }
 
-    private static RateLimitPartition<string, RateLimiter> CreateOAuthCallbackPolicy(HttpContext httpContext)
+    private static RateLimitPartition<string> CreateOAuthCallbackPolicy(HttpContext httpContext)
     {
         var options = httpContext.RequestServices
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()

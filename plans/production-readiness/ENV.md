@@ -23,6 +23,7 @@ When `ASPNETCORE_ENVIRONMENT` is not `Development`, the API validates at startup
 | Key | Env var | Purpose |
 |-----|---------|---------|
 | `ConnectionStrings:ApplyVault` | `ConnectionStrings__ApplyVault` | SQL Server connection for EF Core (required when not using in-memory DB) |
+| `ConnectionStrings:Redis` | `ConnectionStrings__Redis` | Shared Redis for EURES ranked-result cache and Gmail sync lock when running **more than one** API replica; omit for single replica (in-memory fallback) |
 
 ## Database / migrations
 

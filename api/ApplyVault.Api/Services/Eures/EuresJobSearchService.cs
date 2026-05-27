@@ -1,6 +1,5 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services.Eures;
@@ -8,10 +7,8 @@ namespace ApplyVault.Api.Services.Eures;
 internal sealed class EuresJobSearchService(
     EuresApiClient apiClient,
     IOptions<EuresIntegrationOptions> options,
-    IMemoryCache cache)
+    EuresRankedResultsCache rankedResultsCache)
 {
-    private static readonly TimeSpan RankedResultsCacheLifetime = TimeSpan.FromMinutes(5);
-
     public async Task<EuresJobSearchResponse> SearchAsync(
         EuresJobSearchRequest request,
         CancellationToken cancellationToken = default)
@@ -31,12 +28,10 @@ internal sealed class EuresJobSearchService(
             request.RequestLanguage);
         var sessionId = BuildSessionId(cacheKey);
 
-        var rankedJobs = await cache.GetOrCreateAsync(
+        var rankedJobs = await rankedResultsCache.GetOrCreateAsync(
             cacheKey,
-            async entry =>
+            async (ct) =>
             {
-                entry.AbsoluteExpirationRelativeToNow = RankedResultsCacheLifetime;
-
                 if (euresSearchTerms.Length == 1 && keywords.Count == 1)
                 {
                     return await FetchSingleKeywordRankedJobsAsync(
@@ -47,7 +42,7 @@ internal sealed class EuresJobSearchService(
                         sortSearch,
                         sessionId,
                         integrationOptions,
-                        cancellationToken);
+                        ct);
                 }
 
                 return await FetchKeywordUnionRankedJobsAsync(
@@ -58,8 +53,9 @@ internal sealed class EuresJobSearchService(
                     sortSearch,
                     sessionId,
                     integrationOptions,
-                    cancellationToken);
-            }) ?? [];
+                    ct);
+            },
+            cancellationToken);
 
         return PaginateResults(rankedJobs, request.Page, request.ResultsPerPage);
     }

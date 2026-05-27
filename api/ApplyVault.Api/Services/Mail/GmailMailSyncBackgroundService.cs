@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace ApplyVault.Api.Services;
 
 public sealed class GmailMailSyncBackgroundService(
-    IServiceScopeFactory serviceScopeFactory,
+    GmailMailSyncWorker syncWorker,
     IOptions<MailIntegrationOptions> options,
     ILogger<GmailMailSyncBackgroundService> logger) : BackgroundService
 {
@@ -20,9 +20,7 @@ public sealed class GmailMailSyncBackgroundService(
         {
             try
             {
-                using var scope = serviceScopeFactory.CreateScope();
-                var processor = scope.ServiceProvider.GetRequiredService<IMailSyncProcessor>();
-                await processor.SyncAsync(stoppingToken);
+                await syncWorker.TryRunOnceAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -34,7 +32,7 @@ public sealed class GmailMailSyncBackgroundService(
             }
 
             var delaySeconds = Math.Max(30, options.Value.PollIntervalSeconds);
-            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken).ConfigureAwait(false);
         }
     }
 }

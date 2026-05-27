@@ -17,8 +17,8 @@ Step-by-step implementation plans for hosting ApplyVault beyond local developmen
 | 13 | [prod-13-logging-and-monitoring.md](prod-13-logging-and-monitoring.md) | D Hardening (done) |
 | 14 | [prod-14-rate-limiting.md](prod-14-rate-limiting.md) | D Hardening (done) |
 | 15 | [prod-15-frontend-critical-path-tests.md](prod-15-frontend-critical-path-tests.md) | E Quality (done) |
-| 16 | [prod-16-eures-cache-multi-instance.md](prod-16-eures-cache-multi-instance.md) | E Scale (pending) |
-| 17 | [prod-17-gmail-sync-multi-instance.md](prod-17-gmail-sync-multi-instance.md) | E Scale (pending) |
+| 16 | [prod-16-eures-cache-multi-instance.md](prod-16-eures-cache-multi-instance.md) | E Scale (done) |
+| 17 | [prod-17-gmail-sync-multi-instance.md](prod-17-gmail-sync-multi-instance.md) | E Scale (done) |
 
 Master tracker: [../production-readiness-tracker.md](../production-readiness-tracker.md)
 

@@ -3,6 +3,7 @@ using System.Text;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.Eures;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
@@ -123,7 +124,8 @@ public sealed class EuresJobSearchServiceTests
         return new EuresJobSearchService(
             new EuresApiClient(httpClient, options),
             options,
-            new MemoryCache(new MemoryCacheOptions()));
+            new EuresRankedResultsCache(
+                new MemoryDistributedCache(Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions()))));
     }
 
     private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)

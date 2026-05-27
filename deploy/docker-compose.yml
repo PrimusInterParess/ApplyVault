@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    profiles:
+      - multi-instance
+
   api:
     build:
       context: ../api/ApplyVault.Api
@@ -33,3 +42,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  redis_data:

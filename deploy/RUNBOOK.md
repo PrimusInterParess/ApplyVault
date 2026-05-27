@@ -14,7 +14,9 @@ Implements [prod-07-deployment-and-hosting.md](../plans/production-readiness/pro
 
 **Alternatives:** Azure App Service (container or `dotnet publish` zip deploy), Railway, Fly.io. Use the same env vars from [ENV.md](../plans/production-readiness/ENV.md).
 
-**Single replica:** Run one API instance until steps 16–17 (EURES cache, Gmail sync) are implemented.
+**Single replica:** Omit `ConnectionStrings__Redis`; the API uses in-process distributed cache and locks (one replica only).
+
+**Multiple replicas:** Set `ConnectionStrings__Redis` to a shared Redis instance so EURES ranked-result paging and Gmail sync stay consistent across API pods (steps 16–17).
 
 ## Prerequisites
 
@@ -342,6 +344,23 @@ Expect `429` responses with `Retry-After` once the per-user scrape limit is exce
 - [ ] Dashboard sign-in against prod API loads jobs.
 - [ ] Rollback procedure exercised once on staging.
 
+## Multi-instance (Redis)
+
+When running **more than one** API replica, set `ConnectionStrings__Redis` in `deploy/.env` so all instances share:
+
+- **EURES ranked-result cache** (5-minute TTL) — consistent pagination / load-more across replicas
+- **Gmail sync lock** — only one instance polls per interval when `MailIntegration__Enabled=true`
+
+Single replica: omit Redis; the API uses in-process cache and locks automatically.
+
+Optional Compose profile (includes a local Redis container):
+
+```bash
+cd deploy
+# Set ConnectionStrings__Redis=redis:6379 in .env, then:
+docker compose --profile multi-instance up -d
+```
+
 ## Related steps
 
 - **Step 8:** Frontend environment builds — set `apiUrl` to `https://${API_DOMAIN}`.
@@ -350,3 +369,4 @@ Expect `429` responses with `Retry-After` once the per-user scrape limit is exce
 - **Step 12:** Health/readiness probes — see [Health and readiness probes](#health-and-readiness-probes).
 - **Step 13:** Logging and monitoring — see [Logs and monitoring](#logs-and-monitoring).
 - **Step 14:** Rate limiting — see [Rate limiting](#rate-limiting).
+- **Steps 16–17:** Multi-instance Redis — see [Multi-instance (Redis)](#multi-instance-redis).

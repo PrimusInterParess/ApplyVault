@@ -49,10 +49,10 @@ todos:
     status: completed
   - id: prod-16
     content: EURES cache (multi-instance)
-    status: pending
+    status: completed
   - id: prod-17
     content: Gmail sync (multi-instance)
-    status: pending
+    status: completed
 isProject: true
 ---
 
@@ -62,7 +62,7 @@ isProject: true
 
 1. **Do steps in numeric order** unless a plan explicitly marks a step as deferrable.
 2. **Step 1 before step 2:** stop new orphan rows before migrating or tightening queries.
-3. **Steps 16–17** are required only when running **more than one API replica**; until then, document single-replica in the deploy runbook.
+3. **Steps 16–17:** omit `ConnectionStrings:Redis` for a single API replica; set Redis when scaling horizontally (see [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md#multi-instance-redis)).
 4. **Parallel allowed:** step 6 (CI) after 3–5; step 15 (FE tests) after 8.
 
 ## Status
@@ -84,8 +84,8 @@ isProject: true
 | 13 | [production-readiness/prod-13-logging-and-monitoring.md](production-readiness/prod-13-logging-and-monitoring.md) | D Hardening | done | 7 | JSON console; auth ops table; 4xx/5xx request logging; [RUNBOOK](../../deploy/RUNBOOK.md) |
 | 14 | [production-readiness/prod-14-rate-limiting.md](production-readiness/prod-14-rate-limiting.md) | D Hardening | done | 11 | Partition limits; 429 + Retry-After; [RUNBOOK](../../deploy/RUNBOOK.md) |
 | 15 | [production-readiness/prod-15-frontend-critical-path-tests.md](production-readiness/prod-15-frontend-critical-path-tests.md) | E Quality | done | 8 | Karma specs; `npm run test:ci`; CI `frontend-ci` job |
-| 16 | [production-readiness/prod-16-eures-cache-multi-instance.md](production-readiness/prod-16-eures-cache-multi-instance.md) | E Scale | pending | 7 | Defer if 1 replica |
-| 17 | [production-readiness/prod-17-gmail-sync-multi-instance.md](production-readiness/prod-17-gmail-sync-multi-instance.md) | E Scale | pending | 7 | Defer if 1 replica |
+| 16 | [production-readiness/prod-16-eures-cache-multi-instance.md](production-readiness/prod-16-eures-cache-multi-instance.md) | E Scale | done | 7 | `IDistributedCache`; Redis when `ConnectionStrings:Redis` set; in-memory fallback for single replica |
+| 17 | [production-readiness/prod-17-gmail-sync-multi-instance.md](production-readiness/prod-17-gmail-sync-multi-instance.md) | E Scale | done | 7 | `GmailMailSyncWorker` + distributed lock per poll cycle; shares Redis with step 16 |
 
 ## Related plans
 

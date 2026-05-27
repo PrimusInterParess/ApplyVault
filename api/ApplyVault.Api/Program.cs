@@ -15,6 +15,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services
     .AddApplyVaultCors(builder.Configuration, builder.Environment)
     .AddApplyVaultDatabase(builder.Configuration, builder.Environment)
+    .AddApplyVaultDistributedInfrastructure(builder.Configuration)
     .AddApplyVaultOptions(builder.Configuration, builder.Environment)
     .AddApplyVaultAuthentication()
     .AddApplyVaultRateLimiting(builder.Configuration)

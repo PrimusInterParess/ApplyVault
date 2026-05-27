@@ -1,3 +1,4 @@
+using ApplyVault.Api.Data;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace ApplyVault.Api.Infrastructure;

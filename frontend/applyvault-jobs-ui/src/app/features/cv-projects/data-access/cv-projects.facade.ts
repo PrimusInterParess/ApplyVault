@@ -203,7 +203,13 @@ export class CvProjectsFacade {
           this.loadingSummaries.set(false);
           this.loadSummariesSubscription = null;
         },
-        error: () => {
+        error: (error) => {
+          if (isRequestAborted(error)) {
+            this.loadingSummaries.set(false);
+            this.loadSummariesSubscription = null;
+            return;
+          }
+
           this.summariesError.set('Saved project summaries could not be loaded.');
           this.savedSummaries.set([]);
           this.loadingSummaries.set(false);

@@ -32,10 +32,17 @@ export class CvEditorPageComponent implements OnInit {
   protected readonly importReviewOpen = signal(false);
   protected readonly insertDialogOpen = signal(false);
   protected readonly insertSectionId = signal<string | null>(null);
+  protected readonly selectedSectionId = signal<string | null>(null);
   protected readonly projectSummaries = signal<readonly CvProjectSummary[]>([]);
   protected readonly loadingSummaries = signal(false);
 
   protected readonly hasDraft = computed(() => this.draftSections().length > 0);
+  protected readonly selectedSection = computed(() => {
+    const sections = this.draftSections();
+    const selectedId = this.selectedSectionId();
+
+    return sections.find((section) => section.id === selectedId) ?? sections[0] ?? null;
+  });
   protected readonly canSave = computed(
     () => this.cvDocument.hasDocument() && this.draftSections().length > 0 && !this.cvStructured.saving()
   );
@@ -64,11 +71,11 @@ export class CvEditorPageComponent implements OnInit {
 
       this.structuredSnapshot.set(snapshot);
       this.draftSections.set(this.cloneSections(document.sections));
+      this.ensureSelectedSection();
     });
   }
 
   ngOnInit(): void {
-    this.cvDocument.load();
     this.loadProjectSummaries();
   }
 
@@ -90,6 +97,7 @@ export class CvEditorPageComponent implements OnInit {
     }
 
     this.draftSections.set(CvStructuredFacade.previewToSections(preview));
+    this.ensureSelectedSection();
     this.importReviewOpen.set(false);
     this.cvStructured.clearImportPreview();
   }
@@ -115,18 +123,27 @@ export class CvEditorPageComponent implements OnInit {
 
   protected addSection(): void {
     const sections = [...this.draftSections()];
-    sections.push({
+    const section: CvStructuredSection = {
       id: crypto.randomUUID(),
       heading: 'New section',
       sectionType: 'Custom',
       sortOrder: sections.length,
       entries: []
-    });
+    };
+
+    sections.push(section);
     this.draftSections.set(this.normalizeSortOrders(sections));
+    this.selectedSectionId.set(section.id);
   }
 
   protected removeSection(sectionId: string): void {
-    this.draftSections.set(this.normalizeSortOrders(this.draftSections().filter((s) => s.id !== sectionId)));
+    const sections = this.normalizeSortOrders(this.draftSections().filter((s) => s.id !== sectionId));
+
+    this.draftSections.set(sections);
+
+    if (this.selectedSectionId() === sectionId) {
+      this.selectedSectionId.set(sections[0]?.id ?? null);
+    }
   }
 
   protected moveSection(sectionId: string, delta: number): void {
@@ -153,6 +170,10 @@ export class CvEditorPageComponent implements OnInit {
 
   protected updateSectionType(sectionId: string, sectionType: CvSectionType): void {
     this.patchSection(sectionId, (section) => ({ ...section, sectionType }));
+  }
+
+  protected selectSection(sectionId: string): void {
+    this.selectedSectionId.set(sectionId);
   }
 
   protected addEntry(sectionId: string): void {
@@ -304,6 +325,19 @@ export class CvEditorPageComponent implements OnInit {
     this.draftSections.set(
       this.draftSections().map((section) => (section.id === sectionId ? updater(section) : section))
     );
+  }
+
+  private ensureSelectedSection(): void {
+    const sections = this.draftSections();
+
+    if (sections.length === 0) {
+      this.selectedSectionId.set(null);
+      return;
+    }
+
+    if (!sections.some((section) => section.id === this.selectedSectionId())) {
+      this.selectedSectionId.set(sections[0].id);
+    }
   }
 
   private normalizeSortOrders(sections: CvStructuredSection[]): CvStructuredSection[] {

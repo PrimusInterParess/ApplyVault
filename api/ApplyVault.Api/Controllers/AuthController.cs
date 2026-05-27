@@ -11,9 +11,9 @@ namespace ApplyVault.Api.Controllers;
 public sealed class AuthController(IAppUserService appUserService) : ControllerBase
 {
     [HttpGet("session")]
-    public async Task<ActionResult<CurrentUserDto>> GetSession(CancellationToken cancellationToken)
+    public async Task<ActionResult<CurrentUserDto>> GetSession()
     {
-        var user = await appUserService.TryGetCurrentUserAsync(cancellationToken);
+        var user = await appUserService.TryGetCurrentUserAsync();
         if (user is null)
         {
             return Unauthorized();

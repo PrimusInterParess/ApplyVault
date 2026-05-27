@@ -32,8 +32,6 @@ export class CalendarConnectionsFacade {
         }
 
         if (!currentUserId) {
-          this.cancelPendingLoad();
-          this.resetState();
           this.loading.set(true);
           return;
         }

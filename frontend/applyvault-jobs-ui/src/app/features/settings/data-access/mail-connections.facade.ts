@@ -32,8 +32,6 @@ export class MailConnectionsFacade {
         }
 
         if (!currentUserId) {
-          this.cancelPendingLoad();
-          this.resetState();
           this.loading.set(true);
           return;
         }

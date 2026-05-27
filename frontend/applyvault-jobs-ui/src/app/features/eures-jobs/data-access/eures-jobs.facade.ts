@@ -1,9 +1,10 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ParamMap } from '@angular/router';
-import { catchError, exhaustMap, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, EMPTY, exhaustMap, map, of, Subject, switchMap, takeUntil } from 'rxjs';
 
 import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
+import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultsFacade } from '../../job-results/data-access/job-results.facade';
 import {
@@ -156,7 +157,11 @@ export class EuresJobsFacade {
           this.apiService.search(request).pipe(
             takeUntil(this.searchCancel$),
             map((response) => ({ kind: 'success' as const, response, options })),
-            catchError((error: unknown) => of({ kind: 'error' as const, error, options }))
+            catchError((error: unknown) =>
+              isRequestAborted(error)
+                ? EMPTY
+                : of({ kind: 'error' as const, error, options })
+            )
           )
         ),
         takeUntilDestroyed(destroyRef)
@@ -217,7 +222,9 @@ export class EuresJobsFacade {
           this.apiService.getById(id, language).pipe(
             takeUntil(this.detailCancel$),
             map((detail) => ({ kind: 'success' as const, detail })),
-            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+            catchError((error: unknown) =>
+              isRequestAborted(error) ? EMPTY : of({ kind: 'error' as const, error })
+            )
           )
         ),
         takeUntilDestroyed(destroyRef)
@@ -240,7 +247,9 @@ export class EuresJobsFacade {
           this.apiService.saveListing(id, language).pipe(
             takeUntil(this.saveCancel$),
             map((response) => ({ kind: 'success' as const, response })),
-            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+            catchError((error: unknown) =>
+              isRequestAborted(error) ? EMPTY : of({ kind: 'error' as const, error })
+            )
           )
         ),
         takeUntilDestroyed(destroyRef)

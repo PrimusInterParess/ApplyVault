@@ -46,7 +46,7 @@ public sealed class AppUserService(
 
         var user = await dbContext.Users.SingleOrDefaultAsync(
             (candidate) => candidate.SupabaseUserId == supabaseUserId,
-            cancellationToken);
+            CancellationToken.None);
 
         var utcNow = DateTimeOffset.UtcNow;
 
@@ -62,8 +62,8 @@ public sealed class AppUserService(
                 LastSeenAt = utcNow
             };
 
-            await dbContext.Users.AddAsync(user, cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.Users.AddAsync(user, CancellationToken.None);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
             return user;
         }
 
@@ -86,7 +86,7 @@ public sealed class AppUserService(
 
         if (hasChanges)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(CancellationToken.None);
         }
 
         return user;

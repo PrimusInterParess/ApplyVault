@@ -16,9 +16,7 @@ public sealed class EuresJobsController(
     IAppUserService appUserService) : ControllerBase
 {
     [HttpPost("search")]
-    public async Task<ActionResult<EuresJobSearchResponse>> Search(
-        [FromBody] EuresJobSearchRequest request,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<EuresJobSearchResponse>> Search([FromBody] EuresJobSearchRequest request)
     {
         if (!requestNormalizer.TryNormalizeSearchRequest(request, out var normalizedRequest, out var validationMessage))
         {
@@ -26,14 +24,11 @@ public sealed class EuresJobsController(
             return ValidationProblem(ModelState);
         }
 
-        return Ok(await euresJobClient.SearchJobsAsync(normalizedRequest, cancellationToken));
+        return Ok(await euresJobClient.SearchJobsAsync(normalizedRequest));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<EuresJobDetailResponse>> GetById(
-        string id,
-        [FromQuery] string? requestLanguage,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<EuresJobDetailResponse>> GetById(string id, [FromQuery] string? requestLanguage)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -41,25 +36,22 @@ public sealed class EuresJobsController(
         }
 
         var language = requestNormalizer.NormalizeRequestLanguage(requestLanguage);
-        var detail = await euresJobClient.GetJobByIdAsync(id, language, cancellationToken);
+        var detail = await euresJobClient.GetJobByIdAsync(id, language);
 
         return detail is null ? NotFound() : Ok(detail);
     }
 
     [HttpPost("{id}/save")]
-    public async Task<ActionResult<SaveEuresJobResponse>> Save(
-        string id,
-        [FromQuery] string? requestLanguage,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SaveEuresJobResponse>> Save(string id, [FromQuery] string? requestLanguage)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
             return BadRequest(new { message = "Job id is required." });
         }
 
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync();
         var language = requestNormalizer.NormalizeRequestLanguage(requestLanguage);
-        var response = await euresJobSaveService.SaveAsync(id, language, user.Id, cancellationToken);
+        var response = await euresJobSaveService.SaveAsync(id, language, user.Id);
 
         if (response is null)
         {

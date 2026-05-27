@@ -1,6 +1,8 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { catchError, EMPTY, exhaustMap, map, of, Subject } from 'rxjs';
+
+import { isRequestAborted } from '../../../core/http/is-request-aborted';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
@@ -26,7 +28,6 @@ export class JobResultsFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(JobResultsApiService);
   private readonly loadIntent$ = new Subject<void>();
-  private readonly loadCancel$ = new Subject<void>();
   private loadedUserId: string | null = null;
 
   readonly loading = signal(false);
@@ -121,11 +122,12 @@ export class JobResultsFacade {
 
     this.loadIntent$
       .pipe(
-        switchMap(() =>
+        exhaustMap(() =>
           this.apiService.getAll().pipe(
-            takeUntil(this.loadCancel$),
             map((results) => ({ kind: 'success' as const, results })),
-            catchError((error: unknown) => of({ kind: 'error' as const, error }))
+            catchError((error: unknown) =>
+              isRequestAborted(error) ? EMPTY : of({ kind: 'error' as const, error })
+            )
           )
         ),
         takeUntilDestroyed(destroyRef)
@@ -159,14 +161,11 @@ export class JobResultsFacade {
 
         if (!session) {
           this.loadedUserId = null;
-          this.cancelPendingLoad();
           this.resetState();
           return;
         }
 
         if (!currentUserId) {
-          this.cancelPendingLoad();
-          this.resetState();
           this.loading.set(true);
           return;
         }
@@ -234,7 +233,6 @@ export class JobResultsFacade {
   }
 
   load(): void {
-    this.cancelPendingLoad();
     this.loading.set(true);
     this.error.set(null);
     this.updateError.set(null);
@@ -577,10 +575,6 @@ export class JobResultsFacade {
     const updatedViewModel = mapSavedJobResultToViewModel(updatedResult);
 
     return results.map((result) => (result.id === updatedViewModel.id ? updatedViewModel : result));
-  }
-
-  private cancelPendingLoad(): void {
-    this.loadCancel$.next();
   }
 
   private resetState(): void {

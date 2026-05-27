@@ -13,25 +13,23 @@ public sealed class CalendarConnectionsController(
     ICalendarConnectionService calendarConnectionService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ConnectedCalendarAccountDto>>> GetAll(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ConnectedCalendarAccountDto>>> GetAll()
     {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        return Ok(await calendarConnectionService.GetConnectionsAsync(user, cancellationToken));
+        var user = await appUserService.GetRequiredUserAsync();
+        return Ok(await calendarConnectionService.GetConnectionsAsync(user));
     }
 
     [HttpPost("{provider}/start")]
     public async Task<ActionResult<CalendarAuthorizationStartResponse>> StartAuthorization(
         string provider,
-        [FromBody] CalendarAuthorizationStartRequest? request,
-        CancellationToken cancellationToken)
+        [FromBody] CalendarAuthorizationStartRequest? request)
     {
         if (!CalendarProviders.IsSupported(provider))
         {
             return NotFound();
         }
 
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync();
         var authorizationUrl = calendarConnectionService.BuildAuthorizationUrl(user, provider, request?.ReturnUrl);
         return Ok(new CalendarAuthorizationStartResponse(authorizationUrl));
     }
@@ -41,8 +39,7 @@ public sealed class CalendarConnectionsController(
     public async Task<IActionResult> CompleteAuthorization(
         string provider,
         [FromQuery] string code,
-        [FromQuery] string state,
-        CancellationToken cancellationToken)
+        [FromQuery] string state)
     {
         if (!CalendarProviders.IsSupported(provider))
         {
@@ -54,8 +51,7 @@ public sealed class CalendarConnectionsController(
             var redirectUrl = await calendarConnectionService.CompleteAuthorizationAsync(
                 provider,
                 code,
-                state,
-                cancellationToken);
+                state);
 
             return Redirect(redirectUrl);
         }
@@ -66,10 +62,10 @@ public sealed class CalendarConnectionsController(
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var deleted = await calendarConnectionService.DeleteConnectionAsync(user, id, cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync();
+        var deleted = await calendarConnectionService.DeleteConnectionAsync(user, id);
         return deleted ? NoContent() : NotFound();
     }
 }

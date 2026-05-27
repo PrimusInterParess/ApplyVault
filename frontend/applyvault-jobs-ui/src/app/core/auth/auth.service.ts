@@ -4,6 +4,7 @@ import { createClient, type Session, type SupabaseClient } from '@supabase/supab
 import { firstValueFrom } from 'rxjs';
 
 import { API_CONFIG } from '../config/api.config';
+import { isRequestAborted } from '../http/is-request-aborted';
 import { SUPABASE_CONFIG } from '../config/supabase.config';
 
 export interface CurrentUser {
@@ -250,7 +251,7 @@ export class AuthService {
       this.currentUser.set(user);
       this.loadedAccessToken = accessToken;
     } catch (error) {
-      if (this.session()?.access_token !== accessToken) {
+      if (isRequestAborted(error) || this.session()?.access_token !== accessToken) {
         return;
       }
 

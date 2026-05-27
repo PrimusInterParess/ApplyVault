@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<GoogleCalendarProvider>();
         services.AddHttpClient<MicrosoftCalendarProvider>();
         services.AddHttpClient<IGmailMailClient, GmailMailClient>();
+        services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddProblemDetails();
         services.AddMemoryCache();

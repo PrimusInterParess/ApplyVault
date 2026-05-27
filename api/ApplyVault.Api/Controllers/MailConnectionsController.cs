@@ -13,25 +13,23 @@ public sealed class MailConnectionsController(
     IMailConnectionService mailConnectionService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ConnectedMailAccountDto>>> GetAll(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ConnectedMailAccountDto>>> GetAll()
     {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        return Ok(await mailConnectionService.GetConnectionsAsync(user, cancellationToken));
+        var user = await appUserService.GetRequiredUserAsync();
+        return Ok(await mailConnectionService.GetConnectionsAsync(user));
     }
 
     [HttpPost("{provider}/start")]
     public async Task<ActionResult<MailAuthorizationStartResponse>> StartAuthorization(
         string provider,
-        [FromBody] MailAuthorizationStartRequest? request,
-        CancellationToken cancellationToken)
+        [FromBody] MailAuthorizationStartRequest? request)
     {
         if (!MailProviders.IsSupported(provider))
         {
             return NotFound();
         }
 
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync();
         var authorizationUrl = mailConnectionService.BuildAuthorizationUrl(user, provider, request?.ReturnUrl);
         return Ok(new MailAuthorizationStartResponse(authorizationUrl));
     }
@@ -41,8 +39,7 @@ public sealed class MailConnectionsController(
     public async Task<IActionResult> CompleteAuthorization(
         string provider,
         [FromQuery] string code,
-        [FromQuery] string state,
-        CancellationToken cancellationToken)
+        [FromQuery] string state)
     {
         if (!MailProviders.IsSupported(provider))
         {
@@ -54,8 +51,7 @@ public sealed class MailConnectionsController(
             var redirectUrl = await mailConnectionService.CompleteAuthorizationAsync(
                 provider,
                 code,
-                state,
-                cancellationToken);
+                state);
 
             return Redirect(redirectUrl);
         }
@@ -66,10 +62,10 @@ public sealed class MailConnectionsController(
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var deleted = await mailConnectionService.DeleteConnectionAsync(user, id, cancellationToken);
+        var user = await appUserService.GetRequiredUserAsync();
+        var deleted = await mailConnectionService.DeleteConnectionAsync(user, id);
         return deleted ? NoContent() : NotFound();
     }
 }

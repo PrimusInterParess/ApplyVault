@@ -4,19 +4,19 @@ overview: Complete health and readiness endpoints for production orchestrators a
 todos:
   - id: liveness-vs-readiness
     content: Document /health (readiness with DB) vs /api/health (simple liveness)
-    status: pending
+    status: completed
   - id: health-json
     content: Optional HealthChecks UI response format for platform probes
-    status: pending
+    status: completed
   - id: platform-probes
     content: Configure host probes (Azure, k8s) to hit GET /health
-    status: pending
+    status: completed
   - id: unhealthy-db
     content: Verify unhealthy DB marks instance not ready (stop traffic)
-    status: pending
+    status: completed
   - id: startup-probe
     content: Account for migration time at startup in probe initialDelay
-    status: pending
+    status: completed
 isProject: false
 ---
 

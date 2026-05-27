@@ -6,6 +6,9 @@ namespace ApplyVault.Api.Controllers;
 [Route("api/health")]
 public sealed class HealthController : ControllerBase
 {
+    /// <summary>
+    /// Legacy liveness alias. Prefer GET /health/live for platform probes.
+    /// </summary>
     [HttpGet]
     public IActionResult Get()
     {

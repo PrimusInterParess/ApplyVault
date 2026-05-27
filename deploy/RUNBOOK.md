@@ -154,9 +154,65 @@ curl -i -X OPTIONS "https://${API_DOMAIN}/health" \
   -H "Access-Control-Request-Method: GET"
 ```
 
+## Health and readiness probes
+
+Orchestrators and load balancers should use different endpoints for liveness vs readiness.
+
+| Probe | URL | Pass | Fail |
+|-------|-----|------|------|
+| **Readiness** | `GET /health` | HTTP **200**, JSON `status: "Healthy"`, `database` entry healthy | HTTP **503** — remove instance from rotation |
+| **Liveness** | `GET /health/live` or `GET /api/health` | HTTP **200** | HTTP non-200 — restart container (if platform uses liveness) |
+
+Readiness includes an EF Core database check. Liveness only confirms the process responds (no database dependency).
+
+**Response format:** `/health` and `/health/live` return JSON with `status`, `totalDuration`, and per-check `entries`.
+
+**Startup timing:** Production uses Option B migrations (`Database__MigrateAtStartup=false`). Run `deploy/scripts/migrate.sh` before starting the API so readiness probes are not blocked by long migrations. If you enable `Database__MigrateAtStartup=true`, increase probe `initialDelaySeconds` / Docker `start_period` beyond worst-case migration time.
+
+### Docker Compose
+
+The `api` service defines a readiness healthcheck hitting `http://localhost:8080/health` with `start_period: 30s`. Rebuild the image after pulling changes (`docker compose build api`).
+
+### Platform examples
+
+**Kubernetes:**
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 30
+```
+
+**Azure App Service:** Configure **Health check path** to `/health` (readiness). Use platform restart policies for failed instances.
+
+### Manual verification
+
+```bash
+# Readiness — expect 200 and database healthy
+curl -fsS "https://${API_DOMAIN}/health" | jq .
+
+# Liveness — expect 200 even when only checking process
+curl -fsS "https://${API_DOMAIN}/health/live" | jq .
+
+# Legacy alias — simple { "status": "ok" }
+curl -fsS "https://${API_DOMAIN}/api/health"
+```
+
+To confirm failure behavior, stop SQL Server or break the connection string temporarily; `GET /health` must return **503** while `GET /health/live` still returns **200**.
+
 ## Verification checklist
 
-- [ ] `curl -fsS "https://${API_DOMAIN}/health"` returns HTTP 200 with database healthy.
+- [ ] `curl -fsS "https://${API_DOMAIN}/health"` returns HTTP 200 with JSON `status: "Healthy"` and database check healthy.
+- [ ] `curl -fsS "https://${API_DOMAIN}/health/live"` returns HTTP 200.
 - [ ] `curl -I "https://${API_DOMAIN}/health"` includes `Strict-Transport-Security`.
 - [ ] CORS preflight from `https://${APP_DOMAIN}` succeeds; untrusted origin does not get `Access-Control-Allow-Origin`.
 - [ ] Dashboard sign-in against prod API loads jobs.
@@ -167,4 +223,4 @@ curl -i -X OPTIONS "https://${API_DOMAIN}/health" \
 - **Step 8:** Frontend environment builds — set `apiUrl` to `https://${API_DOMAIN}`.
 - **Step 10:** OAuth redirect URIs and secrets — [OAUTH.md](../plans/production-readiness/OAUTH.md).
 - **Step 11:** CORS hardening for production domains — done; see [HTTPS and transport security](#https-and-transport-security).
-- **Step 12:** Extended health/readiness probes (builds on `GET /health`).
+- **Step 12:** Health/readiness probes — see [Health and readiness probes](#health-and-readiness-probes).

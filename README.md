@@ -89,8 +89,9 @@ dotnet run --project api/ApplyVault.Api --launch-profile http
 
 The API listens on `http://localhost:5173/api` and exposes:
 
-- `GET /health` — ASP.NET health checks (includes EF Core database readiness)
-- `GET /api/health` — simple liveness response (`{ "status": "ok" }`)
+- `GET /health` — readiness probe (JSON; includes EF Core database check; returns 503 when unhealthy)
+- `GET /health/live` — liveness probe (JSON; process-only, no database check)
+- `GET /api/health` — legacy liveness alias (`{ "status": "ok" }`)
 - `GET /api/auth/session` — resolves the signed-in Supabase user to a local `AppUser` record
 - `GET /api/scrape-results`
 - `GET /api/scrape-results/{id}`
@@ -339,11 +340,12 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 9 Extension production config | Done | [`production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) |
 | 10 OAuth redirects and secrets | Done | [`production-readiness/OAUTH.md`](plans/production-readiness/OAUTH.md) |
 | 11 CORS and transport security | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md) |
-| 12–17 Health, logging, rate limit, tests, scale | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 12) |
+| 12 Health checks and readiness | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md#health-and-readiness-probes) |
+| 13–17 Logging, rate limit, tests, scale | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) (next: step 13) |
 
 **Completed (steps 1–3):** Authenticated scrape ingest; per-user data isolation in store and DB; HTTP integration tests (`ScrapeResultsTenancyIntegrationTests`) prove 401/201/404 tenancy via `WebApplicationFactory` with test JWT auth and in-memory DB.
 
-**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, and `GET /health` with a database check — step 12 adds extended readiness probes.
+**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, tagged readiness/liveness probes at `/health` and `/health/live`.
 
 **Not production-ready yet for multi-instance:** EURES cache and Gmail sync horizontal-scale fixes (steps 16–17) when running more than one API replica.
 

@@ -37,7 +37,7 @@ todos:
     status: completed
   - id: prod-12
     content: Health checks and readiness
-    status: pending
+    status: completed
   - id: prod-13
     content: Logging and monitoring
     status: pending
@@ -80,7 +80,7 @@ isProject: true
 | 9 | [production-readiness/prod-09-extension-production-config.md](production-readiness/prod-09-extension-production-config.md) · [EXTENSION.md](production-readiness/EXTENSION.md) | C Staging | done | 8 | `environment.*.ts`, manifest variants, `npm run build:production` |
 | 10 | [production-readiness/prod-10-oauth-redirects-and-secrets.md](production-readiness/prod-10-oauth-redirects-and-secrets.md) · [OAUTH.md](production-readiness/OAUTH.md) | D Hardening | done | 9 | Startup HTTPS validation; [OAUTH.md](production-readiness/OAUTH.md) + `deploy/.env.example` |
 | 11 | [production-readiness/prod-11-cors-and-transport-security.md](production-readiness/prod-11-cors-and-transport-security.md) | D Hardening | done | 10 | HTTPS origins validation; HSTS at Caddy edge; [RUNBOOK](../../deploy/RUNBOOK.md) |
-| 12 | [production-readiness/prod-12-health-checks-and-readiness.md](production-readiness/prod-12-health-checks-and-readiness.md) | D Hardening | pending | 7 | |
+| 12 | [production-readiness/prod-12-health-checks-and-readiness.md](production-readiness/prod-12-health-checks-and-readiness.md) | D Hardening | done | 7 | `/health` readiness + DB; `/health/live` liveness; Docker healthcheck |
 | 13 | [production-readiness/prod-13-logging-and-monitoring.md](production-readiness/prod-13-logging-and-monitoring.md) | D Hardening | pending | 7 | |
 | 14 | [production-readiness/prod-14-rate-limiting.md](production-readiness/prod-14-rate-limiting.md) | D Hardening | pending | 11 | |
 | 15 | [production-readiness/prod-15-frontend-critical-path-tests.md](production-readiness/prod-15-frontend-critical-path-tests.md) | E Quality | pending | 8 | |

@@ -194,9 +194,14 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddHealthChecks()
+            .AddCheck(
+                "self",
+                () => HealthCheckResult.Healthy(),
+                tags: [HealthCheckTags.Live])
             .AddDbContextCheck<ApplyVaultDbContext>(
                 name: "database",
-                failureStatus: HealthStatus.Unhealthy);
+                failureStatus: HealthStatus.Unhealthy,
+                tags: [HealthCheckTags.Ready]);
 
         return services;
     }

@@ -1,4 +1,4 @@
-using ApplyVault.Api.Data;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace ApplyVault.Api.Infrastructure;
 
@@ -20,7 +20,16 @@ public static class WebApplicationExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
-        app.MapHealthChecks("/health");
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = (check) => check.Tags.Contains(HealthCheckTags.Ready),
+            ResponseWriter = HealthCheckResponseWriter.WriteReadinessResponse
+        });
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
+        {
+            Predicate = (check) => check.Tags.Contains(HealthCheckTags.Live),
+            ResponseWriter = HealthCheckResponseWriter.WriteLivenessResponse
+        });
 
         return app;
     }

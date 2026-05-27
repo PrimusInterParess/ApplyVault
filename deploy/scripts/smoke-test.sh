@@ -12,16 +12,28 @@ fi
 
 API_URL="${API_URL%/}"
 
-echo "Checking GET ${API_URL}/health ..."
+echo "Checking GET ${API_URL}/health (readiness) ..."
 health_status="$(curl -fsS -o /tmp/applyvault-health.json -w '%{http_code}' "${API_URL}/health")"
 if [[ "${health_status}" != "200" ]]; then
-  echo "Health check failed with HTTP ${health_status}" >&2
+  echo "Readiness check failed with HTTP ${health_status}" >&2
   cat /tmp/applyvault-health.json >&2 || true
   exit 1
 fi
 
-echo "Health check OK:"
+echo "Readiness check OK:"
 cat /tmp/applyvault-health.json
+echo
+
+echo "Checking GET ${API_URL}/health/live (liveness) ..."
+live_status="$(curl -fsS -o /tmp/applyvault-health-live.json -w '%{http_code}' "${API_URL}/health/live")"
+if [[ "${live_status}" != "200" ]]; then
+  echo "Liveness check failed with HTTP ${live_status}" >&2
+  cat /tmp/applyvault-health-live.json >&2 || true
+  exit 1
+fi
+
+echo "Liveness check OK:"
+cat /tmp/applyvault-health-live.json
 echo
 
 if [[ -n "${SUPABASE_JWT}" ]]; then

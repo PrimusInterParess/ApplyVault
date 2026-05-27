@@ -119,6 +119,8 @@ public sealed class AppUserEntity
     public List<ScrapeResultEntity> ScrapeResults { get; set; } = [];
 
     public List<ConnectedAccountEntity> ConnectedAccounts { get; set; } = [];
+
+    public List<UserCvProjectSummaryEntity> CvProjectSummaries { get; set; } = [];
 }
 
 public sealed class ConnectedAccountEntity
@@ -156,6 +158,37 @@ public sealed class ConnectedAccountEntity
     public AppUserEntity? User { get; set; }
 
     public List<CalendarEventLinkEntity> CalendarEventLinks { get; set; } = [];
+}
+
+public sealed class UserCvProjectSummaryEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public long ExternalRepoId { get; set; }
+
+    public required string FullName { get; set; }
+
+    public required string HtmlUrl { get; set; }
+
+    public string? PrimaryLanguage { get; set; }
+
+    public string? Topics { get; set; }
+
+    public required string CvTitle { get; set; }
+
+    public required string CvSummary { get; set; }
+
+    public required string CvBullets { get; set; }
+
+    public required string TechStack { get; set; }
+
+    public DateTimeOffset GeneratedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    public AppUserEntity? User { get; set; }
 }
 
 public sealed class InterviewEventEntity

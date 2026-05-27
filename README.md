@@ -18,7 +18,9 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Browse saved jobs in the Angular dashboard and inspect a dedicated detail panel.
 - Mark saved results as rejected, review key capture fields, and clean up Markdown descriptions from the dashboard.
 - Save interview timing on a job and create linked calendar events for connected Google or Microsoft accounts.
-- Connect a GitHub account from settings via OAuth (stored server-side; repo sync and portfolio curation are planned follow-ups).
+- Connect a GitHub account from settings via OAuth (stored server-side; tokens are never exposed to the browser).
+- Browse connected GitHub repositories from the dashboard and generate CV-ready personal-project summaries with Google AI from repo metadata and README content.
+- Persist generated CV project summaries per user (title, summary, bullets, tech stack) with regenerate and delete; summaries are removed when GitHub is disconnected.
 - Connect a Gmail mailbox from settings and poll for job-related emails with a hosted background sync worker.
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
 - Show whether the latest rejection or interview update came from Gmail sync or a manual dashboard action.
@@ -29,7 +31,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Inspect EURES listing details in the dashboard, save listings into ApplyVault, and open the original posting in a new tab.
 - Filter saved jobs by debounced search term, source hostname, and workflow state (needs review, interview, rejected, hide rejected), with sort options for saved date, title, company, and interview date.
 - Show a live filter summary and workspace stats that reflect the full saved dataset, not just the filtered subset.
-- Share one authenticated app shell across Jobs, EURES, and Settings with active nav highlighting and sign-out.
+- Share one authenticated app shell across Jobs, EURES, CV Projects, and Settings with active nav highlighting and sign-out.
 - Render untrusted HTML safely in job and EURES detail views via centralized sanitization.
 - Confirm destructive actions in modal dialogs before deleting saved jobs or disconnecting calendar, GitHub, and mail providers.
 - Schedule and edit interview events in a modal dialog from the job detail panel.
@@ -46,11 +48,11 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
-  Angular application for reviewing saved results, searching EURES listings, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `settings`) with presentation components in each feature’s `presentation/` folder. Critical-path specs live alongside features and in `src/testing/` (auth mocks, API fixtures).
+  Angular application for reviewing saved results, searching EURES listings, generating CV project summaries from GitHub, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `cv-projects`, `settings`) with presentation components in each feature’s `presentation/` folder. Critical-path specs live alongside features and in `src/testing/` (auth mocks, API fixtures).
 - `plans/production-readiness/`
   Step-by-step plans for production hardening steps 4–17 (config, deploy, security, scale). Steps 1–3 live in `plans/prod-0N-*.md`.
 - `plans/`
-  Product roadmap and production-hardening tracker. Start with [`production-readiness-tracker.md`](plans/production-readiness-tracker.md) for the ordered checklist (`prod-01` … `prod-17`). GitHub portfolio integration is tracked in [`github_integration_plan.md`](plans/github_integration_plan.md) (Phase 1 OAuth is done; repo sync and CV curation are pending).
+  Product roadmap and production-hardening tracker. Start with [`production-readiness-tracker.md`](plans/production-readiness-tracker.md) for the ordered checklist (`prod-01` … `prod-17`). GitHub portfolio integration is tracked in [`github_integration_plan.md`](plans/github_integration_plan.md) (Phase 1 OAuth and live repo browsing with AI CV summaries are done; background repo sync and deeper curation are pending).
 - `md/`
   Project notes and reusable prompt or style guidance documents.
 
@@ -107,6 +109,11 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/github-connections/github/start`
 - `GET /api/github-connections/github/callback`
 - `DELETE /api/github-connections/{id}`
+- `GET /api/github/repos` — list repositories for the connected GitHub account (`page`, `perPage`)
+- `GET /api/cv-projects` — list saved CV project summaries for the signed-in user
+- `GET /api/cv-projects/{id}`
+- `POST /api/cv-projects/generate` — generate or regenerate a summary from a repo `fullName` (for example `owner/repo`)
+- `DELETE /api/cv-projects/{id}`
 - `GET /api/mail-connections`
 - `POST /api/mail-connections/gmail/start`
 - `GET /api/mail-connections/gmail/callback`
@@ -115,7 +122,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `GET /api/eures/jobs/{id}`
 - `POST /api/eures/jobs/{id}/save`
 
-Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES search/save, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
+Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES search/save, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
 
 `POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../github/callback`, `GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
 
@@ -159,7 +166,9 @@ Configuration is layered: `appsettings.json` (safe defaults) → `appsettings.{E
 Option sections (validated at startup when enabled):
 
 - `GoogleAi`
-  Optional AI repair for low-confidence captures. Provide an API key and model when you want enrichment enabled.
+  Optional AI repair for low-confidence captures and CV project summary generation. Provide an API key and model when you want enrichment enabled. CV project generation requires `GoogleAi:Enabled` to be `true`.
+- `GitHubProjectAi`
+  Prompt templates for CV project summary generation (`SystemPrompt`, `UserPromptTemplate`). Defaults are suitable for most setups; override only when you want different tone or structure.
 - `ScrapeResultEnrichment`
   Turns the low-confidence enrichment pass on or off and controls whether AI failures should block saving.
 - `Supabase`
@@ -167,7 +176,7 @@ Option sections (validated at startup when enabled):
 - `CalendarIntegration`
   Configures the OAuth client details and redirect URLs used to connect Google and Microsoft calendar providers.
 - `GitHubIntegration`
-  Enables GitHub OAuth connect/disconnect from settings. Set `Enabled` to `true`, register a GitHub OAuth App with callback `http://localhost:5173/api/github-connections/github/callback` (local), and provide `ClientId`, `ClientSecret`, `RedirectUri`, `PostConnectRedirectUrl` (`http://localhost:4200/integrations/github/callback`), and `Scopes` (default `read:user repo`). GitHub is a connected account, not app login; tokens are stored server-side only. Repo sync is not implemented yet.
+  Enables GitHub OAuth connect/disconnect from settings and live repo listing for CV project generation. Set `Enabled` to `true`, register a GitHub OAuth App with callback `http://localhost:5173/api/github-connections/github/callback` (local), and provide `ClientId`, `ClientSecret`, `RedirectUri`, `PostConnectRedirectUrl` (`http://localhost:4200/integrations/github/callback`), and `Scopes` (default `read:user repo`). GitHub is a connected account, not app login; tokens are stored server-side only. Background repo sync into a local mirror is not implemented yet.
 - `MailIntegration`
   Enables Gmail sync, configures the Gmail OAuth client and callback URL, sets the Angular post-connect redirect, and controls poll cadence plus the initial mailbox lookback window. The Gmail background sync worker is registered only when `MailIntegration:Enabled` is `true`.
 - `EuresIntegration`
@@ -191,7 +200,7 @@ npm start
 
 The dashboard runs on `http://localhost:4200/` and reads saved results from `http://localhost:5173/api`.
 
-Authenticated dashboard routes (`/jobs`, `/eures`, `/settings`) render inside a shared app shell with primary navigation, the signed-in user, and sign-out. Login and OAuth callback routes stay outside the shell.
+Authenticated dashboard routes (`/jobs`, `/eures`, `/cv-projects`, `/settings`) render inside a shared app shell with primary navigation, the signed-in user, and sign-out. Login and OAuth callback routes stay outside the shell.
 
 The saved jobs page (`/jobs`) supports:
 
@@ -216,6 +225,17 @@ The settings page also supports:
 - section status chips (loading, connected count, sync health) and loading skeletons while connection data loads
 - mailbox sync status, last sync time, and the most recent sync error for connected Gmail accounts
 - modal confirmation before disconnecting a calendar, GitHub, or mail provider
+
+The CV projects page (`/cv-projects`) supports:
+
+- a connect-GitHub prompt when no GitHub account is linked, with a shortcut to settings
+- live repository listing from the connected GitHub account with refresh and paginated **Load more**
+- client-side search across loaded repo name, description, and primary language
+- optional inclusion of forks and archived repositories
+- one-at-a-time **Generate summary** / **Regenerate** actions backed by Google AI (`POST /api/cv-projects/generate`)
+- a saved-summaries panel showing CV title, summary, bullets, tech stack, and GitHub link
+- per-summary remove actions and automatic cleanup when GitHub is disconnected
+- loading skeletons and inline error banners for repo load, generation, and summary fetch failures
 
 The EURES job search page (`/eures`) supports:
 
@@ -313,7 +333,7 @@ Useful checks:
 6. Let the API score capture quality and optionally enrich weak fields before persisting the result.
 7. Start the Angular dashboard, sign in with the same Supabase account, and review saved results in the browser.
 8. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
-9. Optionally connect GitHub from dashboard settings after enabling `GitHubIntegration` and configuring a GitHub OAuth App (portfolio repo sync is planned; Phase 1 stores the connection only).
+9. Optionally connect GitHub from dashboard settings after enabling `GitHubIntegration` and configuring a GitHub OAuth App, then open **CV Projects** to browse repositories and generate AI-written personal-project entries (requires `GoogleAi:Enabled`).
 10. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
 11. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
 12. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
@@ -335,23 +355,25 @@ Useful checks:
 12. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
 13. Toggle the rejected state and verify the change persists after refresh.
 14. If `GitHubIntegration` is enabled, connect GitHub from settings and verify the OAuth callback returns to `/integrations/github/callback?provider=github&success=true`, then confirm the connected account appears on the settings page.
-15. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal.
-16. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
-17. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
-18. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
-19. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
-20. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
-21. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
-22. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
-23. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
-24. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
-25. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
-26. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
-27. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
-28. Delete a saved job and confirm the modal confirmation step is required before removal.
-29. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
-30. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
-31. Sign out from any authenticated page and confirm you return to `/login`.
+15. With GitHub connected and `GoogleAi:Enabled`, open `/cv-projects`, load repositories, generate a summary for one repo, and confirm the saved panel shows title, summary, bullets, and tech stack.
+16. Regenerate the same repository and confirm the saved summary updates; remove it and confirm it disappears from the saved panel.
+17. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal; verify saved CV project summaries are cleared after disconnect.
+18. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
+19. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
+20. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
+21. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
+22. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+23. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
+24. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
+25. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
+26. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
+27. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
+28. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
+29. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+30. Delete a saved job and confirm the modal confirmation step is required before removal.
+31. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
+32. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+33. Sign out from any authenticated page and confirm you return to `/login`.
 
 ## Production readiness
 

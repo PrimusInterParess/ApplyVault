@@ -131,6 +131,15 @@ public sealed class GitHubConnectionService(
             return false;
         }
 
+        var summaries = await dbContext.UserCvProjectSummaries
+            .Where((summary) => summary.UserId == user.Id)
+            .ToArrayAsync(cancellationToken);
+
+        if (summaries.Length > 0)
+        {
+            dbContext.UserCvProjectSummaries.RemoveRange(summaries);
+        }
+
         dbContext.ConnectedAccounts.Remove(account);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;

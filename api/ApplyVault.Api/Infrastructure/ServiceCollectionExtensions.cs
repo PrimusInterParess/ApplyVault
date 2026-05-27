@@ -95,6 +95,10 @@ public static class ServiceCollectionExtensions
             .AddOptions<GitHubIntegrationOptions>()
             .Bind(configuration.GetSection(GitHubIntegrationOptions.SectionName));
 
+        services
+            .AddOptions<GitHubProjectAiOptions>()
+            .Bind(configuration.GetSection(GitHubProjectAiOptions.SectionName));
+
         if (!environment.IsDevelopment())
         {
             calendarIntegrationBuilder
@@ -177,6 +181,11 @@ public static class ServiceCollectionExtensions
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("ApplyVault/1.0");
         });
+        services.AddHttpClient<IGitHubApiClient, GitHubApiClient>((client) =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("ApplyVault/1.0");
+        });
+        services.AddHttpClient<IGitHubProjectAiClient, GoogleAiGitHubProjectClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddProblemDetails();
@@ -200,6 +209,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScrapeResultEmailMatcher, ScrapeResultEmailMatcher>();
         services.AddScoped<IMailConnectionService, MailConnectionService>();
         services.AddScoped<IGitHubConnectionService, GitHubConnectionService>();
+        services.AddScoped<IGitHubAccountResolver, GitHubAccountResolver>();
+        services.AddScoped<IGitHubProjectSummaryService, GitHubProjectSummaryService>();
         services.AddScoped<IMailSyncProcessor, MailSyncProcessor>();
         services.AddScoped<IEmailDrivenInterviewCalendarSyncService, EmailDrivenInterviewCalendarSyncService>();
         services.AddScoped<IEmailDrivenJobUpdateService, EmailDrivenJobUpdateService>();

@@ -11,13 +11,16 @@
 
     <p>
       @if (success) {
-        Your GitHub account is now linked. Project sync will be available here once enabled.
+        Your GitHub account is now linked. Open CV Projects to browse repositories and generate summaries.
       } @else {
         The GitHub redirect did not complete successfully. Try connecting again from settings.
       }
     </p>
 
     <div class="github-callback__actions">
+      @if (success) {
+        <a routerLink="/cv-projects">Go to CV Projects</a>
+      }
       <a routerLink="/settings">Open settings</a>
       <a routerLink="/jobs">Return to jobs</a>
     </div>

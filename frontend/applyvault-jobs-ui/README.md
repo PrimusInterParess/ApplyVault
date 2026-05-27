@@ -1,6 +1,6 @@
 # ApplyVault Jobs UI
 
-Angular dashboard for reviewing saved job captures, searching EURES listings, and managing calendar/mail integrations.
+Angular dashboard for reviewing saved job captures, searching EURES listings, generating CV project summaries from GitHub, and managing calendar/mail integrations.
 
 ## Development server
 

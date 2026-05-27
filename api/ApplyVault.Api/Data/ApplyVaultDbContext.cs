@@ -11,6 +11,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<ScrapeResultContactEntity> ScrapeResultContacts => Set<ScrapeResultContactEntity>();
     public DbSet<InterviewEventEntity> InterviewEvents => Set<InterviewEventEntity>();
     public DbSet<CalendarEventLinkEntity> CalendarEventLinks => Set<CalendarEventLinkEntity>();
+    public DbSet<UserCvProjectSummaryEntity> UserCvProjectSummaries => Set<UserCvProjectSummaryEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -106,6 +107,24 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((link) => link.ExternalEventId).IsRequired();
             entity.HasIndex((link) => new { link.ConnectedAccountId, link.ExternalEventId }).IsUnique();
             entity.HasIndex((link) => new { link.ScrapeResultId, link.ConnectedAccountId }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserCvProjectSummaryEntity>((entity) =>
+        {
+            entity.HasKey((summary) => summary.Id);
+            entity.Property((summary) => summary.FullName).IsRequired().HasMaxLength(512);
+            entity.Property((summary) => summary.HtmlUrl).IsRequired().HasMaxLength(512);
+            entity.Property((summary) => summary.PrimaryLanguage).HasMaxLength(128);
+            entity.Property((summary) => summary.Topics).HasColumnType("nvarchar(max)");
+            entity.Property((summary) => summary.CvTitle).IsRequired().HasMaxLength(256);
+            entity.Property((summary) => summary.CvSummary).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((summary) => summary.CvBullets).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((summary) => summary.TechStack).IsRequired().HasMaxLength(512);
+            entity.HasIndex((summary) => new { summary.UserId, summary.ExternalRepoId }).IsUnique();
+            entity.HasOne((summary) => summary.User)
+                .WithMany((user) => user.CvProjectSummaries)
+                .HasForeignKey((summary) => summary.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

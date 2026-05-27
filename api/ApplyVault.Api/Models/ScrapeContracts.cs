@@ -191,6 +191,40 @@ public sealed record GitHubAuthorizationStartResponse(
     string AuthorizationUrl
 );
 
+public sealed record GitHubRepositoryListItemDto(
+    long ExternalRepoId,
+    string FullName,
+    string Name,
+    string? Description,
+    string HtmlUrl,
+    string? PrimaryLanguage,
+    IReadOnlyList<string> Topics,
+    bool IsFork,
+    bool IsArchived,
+    bool IsPrivate,
+    int StarCount,
+    DateTimeOffset? PushedAt
+);
+
+public sealed record GenerateCvProjectRequest(
+    string FullName
+);
+
+public sealed record CvProjectSummaryDto(
+    Guid Id,
+    long ExternalRepoId,
+    string FullName,
+    string HtmlUrl,
+    string? PrimaryLanguage,
+    IReadOnlyList<string> Topics,
+    string CvTitle,
+    string CvSummary,
+    IReadOnlyList<string> CvBullets,
+    string TechStack,
+    DateTimeOffset GeneratedAt,
+    DateTimeOffset UpdatedAt
+);
+
 public sealed record CreateCalendarEventRequest(
     Guid ConnectedAccountId
 );

@@ -46,6 +46,17 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'cv-projects',
+        title: 'CV Projects',
+        data: {
+          shellSubtitle: 'Turn GitHub repos into CV-ready project summaries.'
+        },
+        loadComponent: () =>
+          import('./features/cv-projects/pages/cv-projects-page/cv-projects-page.component').then(
+            (module) => module.CvProjectsPageComponent
+          )
+      },
+      {
         path: 'settings',
         title: 'ApplyVault Settings',
         data: {

@@ -17,6 +17,10 @@ public interface ICvDocumentService
 
     Task<CvDocumentContent?> OpenContentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
+    Task<CvDocumentContent?> OpenOriginalContentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
+    Task<CvDocumentContent?> OpenExportedContentAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
     Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 }
 
@@ -71,6 +75,7 @@ public sealed class CvDocumentService(
                 StorageKey = storageKey,
                 BaseStorageKey = storageKey,
                 FileSizeBytes = file.Length,
+                OriginalFileSizeBytes = file.Length,
                 UploadedAt = now,
                 UpdatedAt = now
             };
@@ -101,6 +106,7 @@ public sealed class CvDocumentService(
             existingDocument.StorageKey = storageKey;
             existingDocument.BaseStorageKey = storageKey;
             existingDocument.FileSizeBytes = file.Length;
+            existingDocument.OriginalFileSizeBytes = file.Length;
             existingDocument.UpdatedAt = now;
 
             keysToDelete.Remove(storageKey);
@@ -116,7 +122,14 @@ public sealed class CvDocumentService(
         return MapDocument(existingDocument);
     }
 
-    public async Task<CvDocumentContent?> OpenContentAsync(AppUserEntity user, CancellationToken cancellationToken = default)
+    public Task<CvDocumentContent?> OpenContentAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default) =>
+        OpenOriginalContentAsync(user, cancellationToken);
+
+    public async Task<CvDocumentContent?> OpenOriginalContentAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
     {
         var document = await dbContext.UserCvDocuments
             .AsNoTracking()
@@ -127,9 +140,37 @@ public sealed class CvDocumentService(
             return null;
         }
 
-        var content = await cvDocumentStorage.OpenReadAsync(document.StorageKey, cancellationToken);
+        var storageKey = document.BaseStorageKey ?? document.StorageKey;
+        var content = await cvDocumentStorage.OpenReadAsync(storageKey, cancellationToken);
 
         return new CvDocumentContent(content, document.ContentType, document.OriginalFileName);
+    }
+
+    public async Task<CvDocumentContent?> OpenExportedContentAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await dbContext.UserCvDocuments
+            .AsNoTracking()
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null)
+        {
+            return null;
+        }
+
+        var hasExportedPdf = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
+            && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
+
+        if (!hasExportedPdf)
+        {
+            return null;
+        }
+
+        var content = await cvDocumentStorage.OpenReadAsync(document.StorageKey, cancellationToken);
+        var exportFileName = BuildExportedFileName(document.OriginalFileName);
+
+        return new CvDocumentContent(content, document.ContentType, exportFileName);
     }
 
     public async Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default)
@@ -209,14 +250,31 @@ public sealed class CvDocumentService(
         var hasExportedPdf = !string.IsNullOrWhiteSpace(document.BaseStorageKey)
             && !string.Equals(document.StorageKey, document.BaseStorageKey, StringComparison.Ordinal);
 
+        var originalFileSizeBytes = document.OriginalFileSizeBytes > 0
+            ? document.OriginalFileSizeBytes
+            : document.FileSizeBytes;
+
         return new CvDocumentDto(
             document.Id,
             document.OriginalFileName,
             document.ContentType,
             document.FileSizeBytes,
+            originalFileSizeBytes,
             document.UploadedAt,
             hasExportedPdf,
             document.StructuredImportedAt is not null,
             document.StructuredImportedAt);
+    }
+
+    private static string BuildExportedFileName(string originalFileName)
+    {
+        var baseName = Path.GetFileNameWithoutExtension(originalFileName);
+
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = "cv";
+        }
+
+        return $"{baseName}-exported.pdf";
     }
 }

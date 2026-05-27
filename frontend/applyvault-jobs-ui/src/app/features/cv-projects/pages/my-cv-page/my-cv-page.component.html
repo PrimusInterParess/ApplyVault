@@ -47,6 +47,13 @@
           <button
             type="button"
             class="my-cv-page__secondary-action"
+            [disabled]="cvDocument.downloadingOriginal()"
+            (click)="cvDocument.downloadOriginal()">
+            {{ cvDocument.downloadingOriginal() ? 'Downloading...' : 'Download original PDF' }}
+          </button>
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
             [disabled]="cvDocument.deleting()"
             (click)="beginDeleteCv()">
             {{ cvDocument.deleting() ? 'Deleting...' : 'Delete CV' }}
@@ -67,6 +74,10 @@
       <div class="my-cv-page__alert" role="alert">{{ deleteError }}</div>
     }
 
+    @if (cvDocument.downloadOriginalError(); as downloadOriginalError) {
+      <div class="my-cv-page__alert" role="alert">{{ downloadOriginalError }}</div>
+    }
+
     @if (cvDocument.previewError(); as previewError) {
       <div class="my-cv-page__alert" role="alert">{{ previewError }}</div>
     }
@@ -80,8 +91,11 @@
       @if (cvDocument.document(); as document) {
         <div class="my-cv-page__meta">
           <strong>{{ document.originalFileName }}</strong>
-          <span>{{ formatFileSize(document.fileSizeBytes) }}</span>
+          <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
           <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
+          @if (document.hasMergedProjects) {
+            <span class="my-cv-page__muted">An edited export is saved separately from this original upload.</span>
+          }
         </div>
       }
 

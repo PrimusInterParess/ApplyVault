@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -22,7 +22,7 @@ import { CvProjectSummary } from '../../models/cv-project.model';
   templateUrl: './cv-editor-page.component.html',
   styleUrl: './cv-editor-page.component.scss'
 })
-export class CvEditorPageComponent implements OnInit {
+export class CvEditorPageComponent implements OnInit, OnDestroy {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
   private readonly cvProjectsApi = inject(CvProjectsApiService);
@@ -46,8 +46,21 @@ export class CvEditorPageComponent implements OnInit {
   protected readonly canSave = computed(
     () => this.cvDocument.hasDocument() && this.draftSections().length > 0 && !this.cvStructured.saving()
   );
+  protected readonly hasUnsavedDraft = computed(() => {
+    const saved = this.cvStructured.structured();
+
+    if (!saved) {
+      return this.draftSections().length > 0;
+    }
+
+    return (
+      JSON.stringify(CvStructuredFacade.toWriteRequest(this.draftSections())) !==
+      JSON.stringify(CvStructuredFacade.toWriteRequest(saved.sections))
+    );
+  });
 
   private readonly structuredSnapshot = signal<string | null>(null);
+  private readonly draftPreviewDebounceMs = 1200;
 
   constructor() {
     effect(() => {
@@ -73,10 +86,41 @@ export class CvEditorPageComponent implements OnInit {
       this.draftSections.set(this.cloneSections(document.sections));
       this.ensureSelectedSection();
     });
+
+    effect((onCleanup) => {
+      const sections = this.draftSections();
+
+      if (sections.length === 0 || !this.cvDocument.hasDocument()) {
+        this.cvDocument.clearDraftPreview();
+        return;
+      }
+
+      const request = CvStructuredFacade.toWriteRequest(sections);
+      const handle = window.setTimeout(() => {
+        this.cvDocument.refreshDraftPreview(request);
+      }, this.draftPreviewDebounceMs);
+
+      onCleanup(() => window.clearTimeout(handle));
+    });
   }
 
   ngOnInit(): void {
     this.loadProjectSummaries();
+  }
+
+  ngOnDestroy(): void {
+    this.cvDocument.clearDraftPreview();
+  }
+
+  protected refreshPreviewNow(): void {
+    const sections = this.draftSections();
+
+    if (sections.length === 0) {
+      this.cvDocument.clearDraftPreview();
+      return;
+    }
+
+    this.cvDocument.refreshDraftPreview(CvStructuredFacade.toWriteRequest(sections), true);
   }
 
   protected startImport(): void {

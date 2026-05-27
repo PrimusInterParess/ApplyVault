@@ -11,6 +11,11 @@ public interface ICvStructuredExportService
     Task<CvDocumentDto> ExportAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default);
+
+    Task<byte[]> PreviewAsync(
+        AppUserEntity user,
+        SaveCvStructuredDocumentRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class CvStructuredExportService(
@@ -47,6 +52,11 @@ public sealed class CvStructuredExportService(
         if (string.IsNullOrWhiteSpace(document.BaseStorageKey))
         {
             document.BaseStorageKey = document.StorageKey;
+
+            if (document.OriginalFileSizeBytes <= 0)
+            {
+                document.OriginalFileSizeBytes = document.FileSizeBytes;
+            }
         }
 
         var previousStorageKey = document.StorageKey;
@@ -72,6 +82,34 @@ public sealed class CvStructuredExportService(
         return MapDocument(document);
     }
 
+    public async Task<byte[]> PreviewAsync(
+        AppUserEntity user,
+        SaveCvStructuredDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.Sections.Count == 0)
+        {
+            throw new InvalidOperationException("Add at least one CV section before previewing.");
+        }
+
+        var document = await dbContext.UserCvDocuments
+            .AsNoTracking()
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Upload a CV PDF before previewing.");
+
+        var structured = CvStructuredDocumentService.MapPreviewRequest(document.Id, request);
+        var pdfBytes = CvPdfStructuredExportBuilder.Build(structured);
+        var maxFileSizeBytes = storageOptions.Value.MaxFileSizeBytes;
+
+        if (pdfBytes.Length > maxFileSizeBytes)
+        {
+            throw new InvalidOperationException(
+                $"The exported CV exceeds the {maxFileSizeBytes / (1024 * 1024)} MB limit. Shorten content and try again.");
+        }
+
+        return pdfBytes;
+    }
+
     private static string BuildExportStorageKey(Guid userId, Guid documentId) =>
         $"{userId:D}/{documentId:D}-structured.pdf";
 
@@ -83,11 +121,16 @@ public sealed class CvStructuredExportService(
         var hasStructuredContent = document.StructuredImportedAt is not null
             || document.Sections.Count > 0;
 
+        var originalFileSizeBytes = document.OriginalFileSizeBytes > 0
+            ? document.OriginalFileSizeBytes
+            : document.FileSizeBytes;
+
         return new CvDocumentDto(
             document.Id,
             document.OriginalFileName,
             document.ContentType,
             document.FileSizeBytes,
+            originalFileSizeBytes,
             document.UploadedAt,
             hasExportedPdf,
             hasStructuredContent,

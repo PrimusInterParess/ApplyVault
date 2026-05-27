@@ -234,6 +234,7 @@ public sealed record CvDocumentDto(
     string OriginalFileName,
     string ContentType,
     long FileSizeBytes,
+    long OriginalFileSizeBytes,
     DateTimeOffset UploadedAt,
     bool HasMergedProjects,
     bool HasStructuredContent,

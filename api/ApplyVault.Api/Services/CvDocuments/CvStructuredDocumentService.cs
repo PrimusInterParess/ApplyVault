@@ -163,6 +163,41 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
                 .Select(MapSection)
                 .ToArray());
 
+    internal static CvStructuredDocumentDto MapPreviewRequest(
+        Guid documentId,
+        SaveCvStructuredDocumentRequest request) =>
+        new(
+            documentId,
+            null,
+            request.Sections
+                .OrderBy((section) => section.SortOrder)
+                .Select(MapPreviewSection)
+                .ToArray());
+
+    private static CvStructuredSectionDto MapPreviewSection(CvStructuredSectionWriteDto section) =>
+        new(
+            section.Id ?? Guid.NewGuid(),
+            section.Heading.Trim(),
+            CvSectionTypes.Normalize(section.SectionType),
+            section.SortOrder,
+            section.Entries
+                .OrderBy((entry) => entry.SortOrder)
+                .Select(MapPreviewEntry)
+                .ToArray());
+
+    private static CvStructuredEntryDto MapPreviewEntry(CvStructuredEntryWriteDto entry) =>
+        new(
+            entry.Id ?? Guid.NewGuid(),
+            entry.Title.Trim(),
+            string.IsNullOrWhiteSpace(entry.Subtitle) ? null : entry.Subtitle.Trim(),
+            string.IsNullOrWhiteSpace(entry.DateRange) ? null : entry.DateRange.Trim(),
+            entry.Summary?.Trim() ?? string.Empty,
+            entry.Bullets ?? Array.Empty<string>(),
+            entry.TechStack?.Trim() ?? string.Empty,
+            string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source,
+            entry.SourceSummaryId,
+            entry.SortOrder);
+
     private static CvStructuredSectionDto MapSection(UserCvSectionEntity section) =>
         new(
             section.Id,

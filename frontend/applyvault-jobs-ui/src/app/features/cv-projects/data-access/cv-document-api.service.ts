@@ -30,7 +30,20 @@ export class CvDocumentApiService {
   }
 
   downloadContent(): Observable<Blob> {
-    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/content`, {
+    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/content/original`, {
+      responseType: 'blob'
+    });
+  }
+
+  downloadOriginalContent(): Observable<Blob> {
+    return this.httpClient.get(
+      `${this.apiConfig.baseUrl}/cv-documents/current/content/original/download`,
+      { responseType: 'blob' }
+    );
+  }
+
+  downloadExportedContent(): Observable<Blob> {
+    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/content/exported`, {
       responseType: 'blob'
     });
   }
@@ -80,6 +93,14 @@ export class CvDocumentApiService {
     return this.httpClient.post<CvDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/export`,
       null
+    );
+  }
+
+  previewStructured(request: SaveCvStructuredDocumentRequest): Observable<Blob> {
+    return this.httpClient.post(
+      `${this.apiConfig.baseUrl}/cv-documents/current/export/preview`,
+      request,
+      { responseType: 'blob' }
     );
   }
 }

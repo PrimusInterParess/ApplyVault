@@ -23,6 +23,9 @@
         <div>
           <h2>Edit sections</h2>
           <p class="cv-editor-page__muted">Import from PDF, adjust the content, then save and export.</p>
+          @if (hasUnsavedDraft()) {
+            <p class="cv-editor-page__hint">You have unsaved changes. Export uses the last saved version until you save.</p>
+          }
         </div>
         <div class="cv-editor-page__toolbar">
           <button
@@ -70,6 +73,9 @@
       @if (cvDocument.exportError(); as exportError) {
         <div class="cv-editor-page__alert" role="alert">{{ exportError }}</div>
       }
+      @if (cvDocument.draftPreviewError(); as draftPreviewError) {
+        <div class="cv-editor-page__alert" role="alert">{{ draftPreviewError }}</div>
+      }
 
       @if (cvStructured.loading()) {
         <app-skeleton-block width="100%" height="12rem" />
@@ -94,22 +100,24 @@
           </div>
         </div>
       } @else {
-        <nav class="cv-editor-page__section-menu" aria-label="CV sections">
-          @for (section of draftSections(); track section.id) {
-            <button
-              type="button"
-              class="cv-editor-page__section-tab"
-              [class.cv-editor-page__section-tab--active]="selectedSectionId() === section.id"
-              [attr.aria-current]="selectedSectionId() === section.id ? 'page' : null"
-              (click)="selectSection(section.id)">
-              <span>{{ section.heading || 'Untitled section' }}</span>
-              <small>{{ section.entries.length }} {{ section.entries.length === 1 ? 'entry' : 'entries' }}</small>
-            </button>
-          }
-        </nav>
+        <div class="cv-editor-page__workspace">
+          <div class="cv-editor-page__editor-column">
+            <nav class="cv-editor-page__section-menu" aria-label="CV sections">
+              @for (section of draftSections(); track section.id) {
+                <button
+                  type="button"
+                  class="cv-editor-page__section-tab"
+                  [class.cv-editor-page__section-tab--active]="selectedSectionId() === section.id"
+                  [attr.aria-current]="selectedSectionId() === section.id ? 'page' : null"
+                  (click)="selectSection(section.id)">
+                  <span>{{ section.heading || 'Untitled section' }}</span>
+                  <small>{{ section.entries.length }} {{ section.entries.length === 1 ? 'entry' : 'entries' }}</small>
+                </button>
+              }
+            </nav>
 
-        @if (selectedSection(); as section) {
-          <article class="cv-editor-page__section-card">
+            @if (selectedSection(); as section) {
+              <article class="cv-editor-page__section-card">
             <div class="cv-editor-page__section-header">
               <div>
                 <p class="cv-editor-page__section-kicker">{{ section.entries.length }} {{ section.entries.length === 1 ? 'entry' : 'entries' }}</p>
@@ -235,8 +243,46 @@
                 }
               </div>
             }
-          </article>
-        }
+              </article>
+            }
+          </div>
+
+          <aside class="cv-editor-page__preview-column" aria-label="Draft PDF preview">
+            <div class="cv-editor-page__preview-header">
+              <div>
+                <p class="cv-editor-page__label">PDF preview (draft)</p>
+                <p class="cv-editor-page__muted">
+                  Reflects your current editor content. My CV shows the stored PDF until you export.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="cv-editor-page__secondary-action"
+                [disabled]="cvDocument.loadingDraftPreview() || cvDocument.refreshingDraftPreview()"
+                (click)="refreshPreviewNow()">
+                {{
+                  cvDocument.loadingDraftPreview() || cvDocument.refreshingDraftPreview()
+                    ? 'Refreshing...'
+                    : 'Refresh preview'
+                }}
+              </button>
+            </div>
+
+            @if (!cvDocument.draftPreviewUrl() && cvDocument.loadingDraftPreview()) {
+              <app-skeleton-block width="100%" height="18rem" />
+            } @else if (cvDocument.draftPreviewUrl()) {
+              <div
+                class="cv-editor-page__preview"
+                [class.cv-editor-page__preview--refreshing]="cvDocument.refreshingDraftPreview()">
+                <iframe [src]="cvDocument.draftPreviewUrl()!" title="Draft CV preview"></iframe>
+              </div>
+            } @else {
+              <div class="cv-editor-page__preview-empty">
+                <p class="cv-editor-page__muted">Preview will appear after you add content.</p>
+              </div>
+            }
+          </aside>
+        </div>
       }
     </section>
   }

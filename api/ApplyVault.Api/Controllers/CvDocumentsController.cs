@@ -48,10 +48,14 @@ public sealed class CvDocumentsController(
     }
 
     [HttpGet("current/content")]
-    public async Task<IActionResult> GetCurrentContent(CancellationToken cancellationToken = default)
+    public Task<IActionResult> GetCurrentContent(CancellationToken cancellationToken = default) =>
+        GetOriginalContent(cancellationToken);
+
+    [HttpGet("current/content/original")]
+    public async Task<IActionResult> GetOriginalContent(CancellationToken cancellationToken = default)
     {
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var content = await cvDocumentService.OpenContentAsync(user, cancellationToken);
+        var content = await cvDocumentService.OpenOriginalContentAsync(user, cancellationToken);
 
         if (content is null)
         {
@@ -61,6 +65,42 @@ public sealed class CvDocumentsController(
         return new FileStreamResult(content.Content, content.ContentType)
         {
             EnableRangeProcessing = true
+        };
+    }
+
+    [HttpGet("current/content/original/download")]
+    public async Task<IActionResult> DownloadOriginalContent(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var content = await cvDocumentService.OpenOriginalContentAsync(user, cancellationToken);
+
+        if (content is null)
+        {
+            return NotFound();
+        }
+
+        return new FileStreamResult(content.Content, content.ContentType)
+        {
+            EnableRangeProcessing = true,
+            FileDownloadName = content.FileName
+        };
+    }
+
+    [HttpGet("current/content/exported")]
+    public async Task<IActionResult> GetExportedContent(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var content = await cvDocumentService.OpenExportedContentAsync(user, cancellationToken);
+
+        if (content is null)
+        {
+            return NotFound();
+        }
+
+        return new FileStreamResult(content.Content, content.ContentType)
+        {
+            EnableRangeProcessing = true,
+            FileDownloadName = content.FileName
         };
     }
 
@@ -149,6 +189,24 @@ public sealed class CvDocumentsController(
                 sectionId,
                 request,
                 cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("current/export/preview")]
+    public async Task<IActionResult> PreviewExportStructured(
+        [FromBody] SaveCvStructuredDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            var pdfBytes = await cvStructuredExportService.PreviewAsync(user, request, cancellationToken);
+            return File(pdfBytes, "application/pdf");
         }
         catch (InvalidOperationException exception)
         {

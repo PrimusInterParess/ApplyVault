@@ -209,6 +209,8 @@ public sealed class UserCvDocumentEntity
 
     public long FileSizeBytes { get; set; }
 
+    public long OriginalFileSizeBytes { get; set; }
+
     public DateTimeOffset UploadedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

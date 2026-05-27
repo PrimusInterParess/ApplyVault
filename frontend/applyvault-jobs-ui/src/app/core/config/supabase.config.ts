@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
 
+import { environment } from '../../../environments/environment';
+
 export interface SupabaseConfig {
   readonly url: string;
   readonly anonKey: string;
@@ -8,6 +10,6 @@ export interface SupabaseConfig {
 export const SUPABASE_CONFIG = new InjectionToken<SupabaseConfig>('SUPABASE_CONFIG');
 
 export const defaultSupabaseConfig: SupabaseConfig = {
-  url: 'https://riglrazbjbucpyhaofvb.supabase.co',
-  anonKey: 'sb_publishable_4X6_4OnkdMo2K2uBTWi0sg_mP4AJDBU'
+  url: environment.supabase.url,
+  anonKey: environment.supabase.anonKey
 };

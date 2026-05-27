@@ -73,7 +73,16 @@ Run `./publish/ApplyVault.Api.dll` on the host with production env vars set. Use
    bash deploy/scripts/smoke-test.sh "https://${API_DOMAIN}" "<jwt>"
    ```
 
-5. **Dashboard** — point the frontend at `https://${API_DOMAIN}` (step 8) and sign in.
+5. **Dashboard** — build and host the Angular app ([FRONTEND.md](../plans/production-readiness/FRONTEND.md)):
+
+   ```bash
+   cd frontend/applyvault-jobs-ui
+   # Edit src/environments/environment.production.ts: apiBaseUrl, supabase.url, supabase.anonKey
+   npm ci && npm run build:production
+   # Serve dist/applyvault-jobs-ui/browser/ at https://app.example.com (must match Cors__AllowedOrigins__0)
+   ```
+
+   Sign in and confirm API calls target `https://${API_DOMAIN}/api`.
 
 ## Rollback
 

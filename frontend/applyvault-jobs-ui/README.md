@@ -28,13 +28,15 @@ ng generate --help
 
 ## Building
 
-To build the project run:
+Configuration is baked in at build time via `src/environments/`. See [plans/production-readiness/FRONTEND.md](../../plans/production-readiness/FRONTEND.md).
 
 ```bash
-ng build
+npm run build:production   # dist/applyvault-jobs-ui/browser/
+npm run build:staging
+ng build --configuration development
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Before a production or staging build, set `apiBaseUrl` and `supabase` in `environment.production.ts` or `environment.staging.ts` to match your deployed API and Supabase project.
 
 ## Running unit tests
 

@@ -33,7 +33,13 @@ public sealed class CvStructuredUpdateService(
             throw new InvalidOperationException("Import or create structured CV sections before asking AI to update them.");
         }
 
-        var updated = await updateAiClient.UpdateAsync(current, request.Instructions.Trim(), cancellationToken);
+        var focusSectionIds = ResolveFocusSectionIds(current, request.SectionIds);
+
+        var updated = await updateAiClient.UpdateAsync(
+            current,
+            request.Instructions.Trim(),
+            focusSectionIds,
+            cancellationToken);
 
         if (updated.Sections.Count == 0)
         {
@@ -45,5 +51,35 @@ public sealed class CvStructuredUpdateService(
             updated,
             markImported: false,
             cancellationToken);
+    }
+
+    private static IReadOnlyList<Guid>? ResolveFocusSectionIds(
+        CvStructuredDocumentDto current,
+        IReadOnlyList<Guid>? sectionIds)
+    {
+        if (sectionIds is null || sectionIds.Count == 0)
+        {
+            return null;
+        }
+
+        var knownSectionIds = current.Sections.Select((section) => section.Id).ToHashSet();
+        var resolved = new List<Guid>();
+
+        foreach (var sectionId in sectionIds)
+        {
+            if (!knownSectionIds.Contains(sectionId))
+            {
+                throw new InvalidOperationException("One or more selected CV sections were not found.");
+            }
+
+            if (resolved.Contains(sectionId))
+            {
+                continue;
+            }
+
+            resolved.Add(sectionId);
+        }
+
+        return resolved;
     }
 }

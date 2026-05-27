@@ -79,7 +79,8 @@
 
 .cv-section__edit,
 .cv-section__save,
-.cv-section__cancel {
+.cv-section__cancel,
+.cv-section__ai-update {
   min-height: 2rem;
   padding: 0.35rem 0.7rem;
   border-radius: var(--app-radius);
@@ -93,6 +94,12 @@
   transition: var(--app-transition);
 }
 
+.cv-section__ai-update--active {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-bg-soft));
+  color: var(--app-text);
+}
+
 .cv-section__save {
   border-color: color-mix(in srgb, var(--app-accent) 40%, var(--app-border-strong));
   background: linear-gradient(
@@ -104,14 +111,16 @@
 
 .cv-section__edit:hover:not(:disabled),
 .cv-section__save:hover:not(:disabled),
-.cv-section__cancel:hover:not(:disabled) {
+.cv-section__cancel:hover:not(:disabled),
+.cv-section__ai-update:hover:not(:disabled) {
   border-color: var(--app-border-strong);
   background: var(--app-surface);
 }
 
 .cv-section__edit:disabled,
 .cv-section__save:disabled,
-.cv-section__cancel:disabled {
+.cv-section__cancel:disabled,
+.cv-section__ai-update:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

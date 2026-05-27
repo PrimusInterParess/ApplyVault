@@ -31,6 +31,7 @@ export class MyCvPageComponent {
   protected readonly editingSectionId = signal<string | null>(null);
   protected readonly sectionDraft = signal<CvStructuredSection | null>(null);
   protected readonly aiUpdateInstructions = signal('');
+  protected readonly aiUpdateSectionIds = signal<string[]>([]);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
@@ -130,6 +131,7 @@ export class MyCvPageComponent {
       if (this.wasUpdatingWithAi && !updatingWithAi && !aiUpdateError) {
         this.cancelSectionEdit();
         this.aiUpdateInstructions.set('');
+        this.aiUpdateSectionIds.set([]);
       }
 
       this.wasUpdatingWithAi = updatingWithAi;
@@ -169,6 +171,27 @@ export class MyCvPageComponent {
     const target = event.target as HTMLTextAreaElement | null;
     this.aiUpdateInstructions.set(target?.value ?? '');
     this.cvStructured.clearAiUpdateError();
+  }
+
+  protected isAiUpdateSectionSelected(sectionId: string): boolean {
+    return this.aiUpdateSectionIds().includes(sectionId);
+  }
+
+  protected toggleAiUpdateSection(sectionId: string): void {
+    if (this.cvStructured.updatingWithAi() || this.editingSectionId()) {
+      return;
+    }
+
+    this.aiUpdateSectionIds.update((selected) =>
+      selected.includes(sectionId)
+        ? selected.filter((id) => id !== sectionId)
+        : [...selected, sectionId]
+    );
+    this.cvStructured.clearAiUpdateError();
+  }
+
+  protected aiUpdateSectionLabel(section: CvStructuredSection): string {
+    return section.heading?.trim() || section.sectionType || 'Untitled section';
   }
 
   protected isEditingSection(sectionId: string): boolean {
@@ -219,7 +242,7 @@ export class MyCvPageComponent {
       return;
     }
 
-    this.cvStructured.updateWithAi(this.aiUpdateInstructions());
+    this.cvStructured.updateWithAi(this.aiUpdateInstructions(), this.aiUpdateSectionIds());
   }
 
   protected beginDeleteCv(): void {

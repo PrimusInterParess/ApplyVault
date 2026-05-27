@@ -21,6 +21,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
     public async Task<SaveCvStructuredDocumentRequest> UpdateAsync(
         CvStructuredDocumentDto current,
         string instructions,
+        IReadOnlyList<Guid>? focusSectionIds = null,
         CancellationToken cancellationToken = default)
     {
         var options = googleAiOptions.Value;
@@ -43,7 +44,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(current, instructions),
+            BuildRequest(current, instructions, focusSectionIds),
             SerializerOptions,
             timeoutCts.Token);
 
@@ -57,10 +58,14 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         return CvStructuredUpdateNormalizer.Normalize(result);
     }
 
-    private object BuildRequest(CvStructuredDocumentDto current, string instructions)
+    private object BuildRequest(
+        CvStructuredDocumentDto current,
+        string instructions,
+        IReadOnlyList<Guid>? focusSectionIds)
     {
         var prompts = updateAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(current, SerializerOptions);
+        var focusSections = BuildFocusSectionsText(current, focusSectionIds);
 
         return new
         {
@@ -78,6 +83,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
                         {
                             text = prompts.UserPromptTemplate
                                 .Replace("{{instructions}}", instructions, StringComparison.Ordinal)
+                                .Replace("{{focusSections}}", focusSections, StringComparison.Ordinal)
                                 .Replace("{{payloadJson}}", payloadJson, StringComparison.Ordinal)
                         }
                     }
@@ -85,6 +91,34 @@ public sealed class GoogleAiCvStructuredUpdateClient(
             },
             generationConfig = GoogleAiCvStructuredUpdateResponseSchema.Create()
         };
+    }
+
+    private static string BuildFocusSectionsText(
+        CvStructuredDocumentDto current,
+        IReadOnlyList<Guid>? focusSectionIds)
+    {
+        if (focusSectionIds is null || focusSectionIds.Count == 0)
+        {
+            return "Apply the instructions across the full CV as appropriate.";
+        }
+
+        var sectionsById = current.Sections.ToDictionary((section) => section.Id);
+        var lines = new List<string>
+        {
+            "Focus sections (apply instructions primarily to these; keep all other sections unchanged unless the instruction explicitly requires broader edits):"
+        };
+
+        foreach (var sectionId in focusSectionIds)
+        {
+            if (!sectionsById.TryGetValue(sectionId, out var section))
+            {
+                continue;
+            }
+
+            lines.Add($"- {section.Heading} (id: {section.Id})");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string ExtractGeneratedJson(string responsePayload)

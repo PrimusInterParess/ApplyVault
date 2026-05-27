@@ -72,8 +72,15 @@ export class CvDocumentApiService {
     );
   }
 
-  updateStructuredWithAi(instructions: string): Observable<CvStructuredDocument> {
+  updateStructuredWithAi(
+    instructions: string,
+    sectionIds?: readonly string[]
+  ): Observable<CvStructuredDocument> {
     const request: UpdateCvStructuredWithAiRequest = { instructions };
+
+    if (sectionIds && sectionIds.length > 0) {
+      request.sectionIds = [...sectionIds];
+    }
 
     return this.httpClient.post<CvStructuredDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-update`,

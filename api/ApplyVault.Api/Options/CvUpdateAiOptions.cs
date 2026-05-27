@@ -25,7 +25,8 @@ public sealed class CvUpdateAiOptions
         Each entry must include title, subtitle, dateRange, summary, bullets, techStack, source, sourceSummaryId, and sortOrder.
 
         Decisive rules:
-        - Apply the user's instructions to the whole CV, not just one section.
+        - When focus sections are listed in the user prompt, apply the instructions primarily to those sections.
+        - When no focus sections are listed, apply the instructions across the full CV as appropriate.
         - Keep unchanged content unchanged unless needed to satisfy the instruction.
         - Put dates only in dateRange, never in title or subtitle.
         - Put bullet-like achievements in bullets, not in summary.
@@ -41,6 +42,8 @@ public sealed class CvUpdateAiOptions
 
         Instructions:
         {{instructions}}
+
+        {{focusSections}}
 
         Structured CV payload:
         {{payloadJson}}

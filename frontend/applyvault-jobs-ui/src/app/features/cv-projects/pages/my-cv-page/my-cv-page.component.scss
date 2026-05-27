@@ -113,6 +113,57 @@
   font-weight: 700;
 }
 
+.my-cv-page__ai-focus {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.my-cv-page__ai-focus-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.my-cv-page__ai-focus-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-muted);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+
+.my-cv-page__ai-focus-chip-type {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--app-text-muted) 85%, transparent);
+}
+
+.my-cv-page__ai-focus-chip--active {
+  color: var(--app-text);
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-bg-soft));
+}
+
+.my-cv-page__ai-focus-chip--active .my-cv-page__ai-focus-chip-type {
+  color: var(--app-accent);
+}
+
+.my-cv-page__ai-focus-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .my-cv-page__ai-field textarea {
   width: 100%;
   resize: vertical;

@@ -51,6 +51,10 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
         {
             dbContext.UserCvEntries.RemoveRange(existingSections.SelectMany((section) => section.Entries));
             dbContext.UserCvSections.RemoveRange(existingSections);
+
+            // Commit deletes before re-adding rows with the same primary keys. EF Core otherwise
+            // merges Remove+Add into a single UPDATE that can affect zero rows.
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         var utcNow = DateTimeOffset.UtcNow;

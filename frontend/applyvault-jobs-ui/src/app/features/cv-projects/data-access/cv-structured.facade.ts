@@ -71,7 +71,7 @@ export class CvStructuredFacade {
     });
   }
 
-  updateWithAi(instructions: string): void {
+  updateWithAi(instructions: string, sectionIds?: readonly string[]): void {
     const trimmedInstructions = instructions.trim();
 
     if (!trimmedInstructions || this.updatingWithAi()) {
@@ -82,7 +82,9 @@ export class CvStructuredFacade {
     this.updatingWithAi.set(true);
     this.aiUpdateError.set(null);
 
-    this.aiUpdateSubscription = this.apiService.updateStructuredWithAi(trimmedInstructions).subscribe({
+    this.aiUpdateSubscription = this.apiService
+      .updateStructuredWithAi(trimmedInstructions, sectionIds)
+      .subscribe({
       next: (document) => {
         this.updatingWithAi.set(false);
         this.structured.set(document);

@@ -20,6 +20,16 @@
           Cancel
         </button>
       } @else {
+        @if (showAiUpdateAction()) {
+          <button
+            type="button"
+            class="cv-section__ai-update"
+            [class.cv-section__ai-update--active]="aiUpdateSelected()"
+            [disabled]="saving() || disabled()"
+            (click)="includeInAiUpdate.emit()">
+            {{ aiUpdateSelected() ? 'Included in AI update' : 'Include in AI update' }}
+          </button>
+        }
         <button type="button" class="cv-section__edit" [disabled]="saving() || disabled()" (click)="edit.emit()">
           Edit
         </button>

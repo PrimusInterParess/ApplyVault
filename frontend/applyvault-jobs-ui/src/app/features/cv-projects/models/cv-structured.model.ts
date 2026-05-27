@@ -60,6 +60,7 @@ export interface SaveCvStructuredDocumentRequest {
 
 export interface UpdateCvStructuredWithAiRequest {
   instructions: string;
+  sectionIds?: string[];
 }
 
 export const CV_SECTION_TYPES: readonly CvSectionType[] = [

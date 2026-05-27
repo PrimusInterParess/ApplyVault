@@ -31,11 +31,14 @@ export class CvStructuredSectionPanelComponent {
   readonly disabled = input(false);
   readonly saveError = input<string | null>(null);
   readonly canSave = input(false);
+  public readonly aiUpdateSelected = input(false);
+  public readonly showAiUpdateAction = input(false);
   readonly draft = model<CvStructuredSection | null>(null);
 
   readonly edit = output<void>();
   readonly cancel = output<void>();
   readonly save = output<void>();
+  public readonly includeInAiUpdate = output<void>();
 
   protected readonly renderMarkdown = renderMarkdown;
   protected readonly renderInlineMarkdown = renderInlineMarkdown;

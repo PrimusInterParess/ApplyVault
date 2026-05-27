@@ -256,7 +256,9 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
 
         var updateResponse = await client.PostAsJsonAsync(
             "/api/cv-documents/current/structured/ai-update",
-            new UpdateCvStructuredWithAiRequest("Make the main role senior."));
+            new UpdateCvStructuredWithAiRequest(
+                "Make the main role senior.",
+                [experienceSection.Id]));
 
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
 
@@ -421,6 +423,7 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
             CvStructuredDocumentDto current,
             string instructions,
+            IReadOnlyList<Guid>? focusSectionIds = null,
             CancellationToken cancellationToken = default)
         {
             var sections = current.Sections

@@ -287,7 +287,8 @@ public sealed record SaveCvStructuredDocumentRequest(
 );
 
 public sealed record UpdateCvStructuredWithAiRequest(
-    string Instructions
+    string Instructions,
+    IReadOnlyList<Guid>? SectionIds = null
 );
 
 public sealed record CvStructuredSectionWriteDto(

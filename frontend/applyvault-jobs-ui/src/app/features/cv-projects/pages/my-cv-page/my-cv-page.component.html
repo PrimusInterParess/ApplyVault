@@ -190,8 +190,30 @@
               <p class="my-cv-page__label">AI update</p>
               <h3>Update sections with instructions</h3>
               <p class="my-cv-page__muted">
-                Describe what to change. The full structured CV will be sent so AI can update the saved sections.
+                Describe what to change. Optionally pick focus sections below so you do not need to paste their
+                content into the instructions.
               </p>
+            </div>
+
+            <div class="my-cv-page__ai-focus">
+              <p class="my-cv-page__label">Focus sections</p>
+              <p class="my-cv-page__muted">
+                Optional. Target specific sections; leave none selected to allow changes anywhere.
+              </p>
+              <div class="my-cv-page__ai-focus-chips" role="group" aria-label="Focus sections for AI update">
+                @for (section of sections(); track section.id) {
+                  <button
+                    type="button"
+                    class="my-cv-page__ai-focus-chip"
+                    [class.my-cv-page__ai-focus-chip--active]="isAiUpdateSectionSelected(section.id)"
+                    [disabled]="cvStructured.updatingWithAi() || !!editingSectionId()"
+                    [attr.aria-pressed]="isAiUpdateSectionSelected(section.id)"
+                    (click)="toggleAiUpdateSection(section.id)">
+                    <span>{{ aiUpdateSectionLabel(section) }}</span>
+                    <span class="my-cv-page__ai-focus-chip-type">{{ section.sectionType }}</span>
+                  </button>
+                }
+              </div>
             </div>
 
             <label class="my-cv-page__ai-field">
@@ -250,10 +272,13 @@
                   [saveError]="sectionSaveError(section.id)"
                   [canSave]="isEditingSection(section.id) && canSaveSection()"
                   [draft]="sectionDraft()"
+                  [aiUpdateSelected]="isAiUpdateSectionSelected(section.id)"
+                  [showAiUpdateAction]="!editingSectionId()"
                   (draftChange)="sectionDraft.set($event)"
                   (edit)="beginSectionEdit(section)"
                   (cancel)="cancelSectionEdit()"
-                  (save)="saveSectionEdit()" />
+                  (save)="saveSectionEdit()"
+                  (includeInAiUpdate)="toggleAiUpdateSection(section.id)" />
               }
             </div>
           }

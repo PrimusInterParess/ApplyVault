@@ -7,6 +7,7 @@ public interface ICvStructuredUpdateAiClient
     Task<SaveCvStructuredDocumentRequest> UpdateAsync(
         CvStructuredDocumentDto current,
         string instructions,
+        IReadOnlyList<Guid>? focusSectionIds = null,
         CancellationToken cancellationToken = default);
 }
 

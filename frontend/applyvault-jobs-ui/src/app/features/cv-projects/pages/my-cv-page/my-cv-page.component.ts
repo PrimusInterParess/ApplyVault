@@ -1,6 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { CvStructuredPreviewComponent } from '../../components/cv-structured-preview/cv-structured-preview.component';
@@ -13,7 +12,6 @@ import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
   imports: [
     CommonModule,
     DatePipe,
-    RouterLink,
     SkeletonBlockComponent,
     CvStructuredPreviewComponent
   ],

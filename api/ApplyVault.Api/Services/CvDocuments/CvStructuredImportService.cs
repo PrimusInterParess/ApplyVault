@@ -8,15 +8,6 @@ namespace ApplyVault.Api.Services;
 
 public interface ICvStructuredImportService
 {
-    Task<CvStructuredImportPreviewDto> PreviewImportAsync(
-        AppUserEntity user,
-        CancellationToken cancellationToken = default);
-
-    Task<CvStructuredDocumentDto> ConfirmImportAsync(
-        AppUserEntity user,
-        SaveCvStructuredDocumentRequest request,
-        CancellationToken cancellationToken = default);
-
     Task<CvStructuredImportSummaryDto> ImportAndPersistAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default);
@@ -31,25 +22,6 @@ public sealed class CvStructuredImportService(
     ICvStructuredDocumentService structuredDocumentService,
     IOptions<GoogleAiOptions> googleAiOptions) : ICvStructuredImportService
 {
-    public async Task<CvStructuredImportPreviewDto> PreviewImportAsync(
-        AppUserEntity user,
-        CancellationToken cancellationToken = default)
-    {
-        var pdfBytes = await ReadCurrentPdfBytesAsync(user, cancellationToken);
-        return await BuildPreviewAsync(pdfBytes, cancellationToken);
-    }
-
-    public async Task<CvStructuredDocumentDto> ConfirmImportAsync(
-        AppUserEntity user,
-        SaveCvStructuredDocumentRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await structuredDocumentService.SaveStructuredAsync(user, request, markImported: true, cancellationToken);
-        var pdfBytes = await ReadCurrentPdfBytesAsync(user, cancellationToken);
-        await PersistProfilePhotoAsync(user, pdfBytes, cancellationToken);
-        return result;
-    }
-
     public async Task<CvStructuredImportSummaryDto> ImportAndPersistAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default)

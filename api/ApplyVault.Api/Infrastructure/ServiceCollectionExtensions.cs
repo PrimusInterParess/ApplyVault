@@ -238,7 +238,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvPdfProfilePhotoExtractor, CvPdfProfilePhotoExtractor>();
         services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
-        services.AddScoped<ICvStructuredExportService, CvStructuredExportService>();
         services.AddScoped<LocalFilesystemCvDocumentStorage>();
         services.AddScoped<AzureBlobCvDocumentStorage>();
         services.AddScoped<ICvDocumentStorage>((serviceProvider) =>

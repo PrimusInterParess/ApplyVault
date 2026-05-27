@@ -1,12 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { CvDocument, CvStructuredImportSummary } from '../models/cv-document.model';
-import { SaveCvStructuredDocumentRequest } from '../models/cv-structured.model';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
 
@@ -15,24 +13,17 @@ export class CvDocumentFacade {
   private readonly authService = inject(AuthService);
   private readonly apiService = inject(CvDocumentApiService);
   private readonly cvStructured = inject(CvStructuredFacade);
-  private readonly sanitizer = inject(DomSanitizer);
   private loadSubscription: Subscription | null = null;
   private uploadSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
-  private exportSubscription: Subscription | null = null;
   private downloadOriginalSubscription: Subscription | null = null;
   private profilePhotoSubscription: Subscription | null = null;
-  private draftPreviewSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private profilePhotoObjectUrl: string | null = null;
-  private draftObjectUrl: string | null = null;
-  private draftPreviewRequestKey: string | null = null;
-  private draftPreviewInFlightKey: string | null = null;
 
   readonly loading = signal(false);
   readonly uploading = signal(false);
   readonly deleting = signal(false);
-  readonly exporting = signal(false);
   readonly downloadingOriginal = signal(false);
   readonly loadingProfilePhoto = signal(false);
   readonly document = signal<CvDocument | null>(null);
@@ -40,20 +31,9 @@ export class CvDocumentFacade {
   readonly error = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
-  readonly exportError = signal<string | null>(null);
   readonly downloadOriginalError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
-  readonly loadingDraftPreview = signal(false);
-  readonly refreshingDraftPreview = signal(false);
-  readonly draftPreviewError = signal<string | null>(null);
-  readonly draftBlobUrl = signal<string | null>(null);
-
-  readonly draftPreviewUrl = computed<SafeResourceUrl | null>(() => {
-    const url = this.draftBlobUrl();
-
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
-  });
 
   readonly hasDocument = computed(() => this.document() !== null);
 
@@ -162,87 +142,6 @@ export class CvDocumentFacade {
     });
   }
 
-  refreshDraftPreview(request: SaveCvStructuredDocumentRequest, force = false): void {
-    if (request.sections.length === 0) {
-      this.clearDraftPreview();
-      return;
-    }
-
-    const requestKey = JSON.stringify(request);
-
-    if (!force && requestKey === this.draftPreviewRequestKey && this.draftBlobUrl()) {
-      return;
-    }
-
-    if (!force && requestKey === this.draftPreviewInFlightKey) {
-      return;
-    }
-
-    this.cancelDraftPreview();
-
-    const hasPreview = this.draftBlobUrl() !== null;
-    this.loadingDraftPreview.set(!hasPreview);
-    this.refreshingDraftPreview.set(hasPreview);
-    this.draftPreviewError.set(null);
-    this.draftPreviewInFlightKey = requestKey;
-
-    this.draftPreviewSubscription = this.apiService.previewStructured(request).subscribe({
-      next: (blob) => {
-        this.draftPreviewRequestKey = requestKey;
-        this.draftPreviewInFlightKey = null;
-        this.loadingDraftPreview.set(false);
-        this.refreshingDraftPreview.set(false);
-        this.setDraftPreviewBlob(blob);
-      },
-      error: (error) => {
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.draftPreviewInFlightKey = null;
-        this.loadingDraftPreview.set(false);
-        this.refreshingDraftPreview.set(false);
-
-        void this.resolveErrorMessage(error, 'Could not load the draft CV preview.').then((message) => {
-          this.draftPreviewError.set(message);
-        });
-      }
-    });
-  }
-
-  clearDraftPreview(): void {
-    this.cancelDraftPreview();
-    this.clearDraftObjectUrl();
-    this.draftBlobUrl.set(null);
-    this.draftPreviewError.set(null);
-    this.draftPreviewRequestKey = null;
-    this.draftPreviewInFlightKey = null;
-    this.loadingDraftPreview.set(false);
-    this.refreshingDraftPreview.set(false);
-  }
-
-  exportStructured(): void {
-    this.cancelExport();
-    this.exporting.set(true);
-    this.exportError.set(null);
-
-    this.exportSubscription = this.apiService.exportStructured().subscribe({
-      next: (document) => {
-        this.exporting.set(false);
-        this.document.set(document);
-      },
-      error: (error) => {
-        this.exporting.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.exportError.set(this.readErrorMessage(error, 'Could not export your CV PDF.'));
-      }
-    });
-  }
-
   downloadOriginal(): void {
     const document = this.document();
 
@@ -322,42 +221,21 @@ export class CvDocumentFacade {
     }
   }
 
-  private setDraftPreviewBlob(blob: Blob): void {
-    const previousUrl = this.draftObjectUrl;
-    this.draftObjectUrl = URL.createObjectURL(blob);
-    this.draftBlobUrl.set(this.draftObjectUrl);
-
-    if (previousUrl) {
-      queueMicrotask(() => URL.revokeObjectURL(previousUrl));
-    }
-  }
-
-  private clearDraftObjectUrl(): void {
-    if (this.draftObjectUrl) {
-      URL.revokeObjectURL(this.draftObjectUrl);
-      this.draftObjectUrl = null;
-    }
-  }
-
   private resetState(): void {
     this.cancelLoad();
     this.cancelUpload();
     this.cancelDelete();
-    this.cancelExport();
     this.cancelDownloadOriginal();
     this.clearProfilePhoto();
-    this.clearDraftPreview();
     this.loading.set(false);
     this.uploading.set(false);
     this.deleting.set(false);
-    this.exporting.set(false);
     this.downloadingOriginal.set(false);
     this.document.set(null);
     this.importSummary.set(null);
     this.error.set(null);
     this.uploadError.set(null);
     this.deleteError.set(null);
-    this.exportError.set(null);
     this.downloadOriginalError.set(null);
   }
 
@@ -374,11 +252,6 @@ export class CvDocumentFacade {
   private cancelDelete(): void {
     this.deleteSubscription?.unsubscribe();
     this.deleteSubscription = null;
-  }
-
-  private cancelExport(): void {
-    this.exportSubscription?.unsubscribe();
-    this.exportSubscription = null;
   }
 
   private cancelDownloadOriginal(): void {
@@ -398,25 +271,6 @@ export class CvDocumentFacade {
     anchor.download = fileName;
     anchor.click();
     URL.revokeObjectURL(url);
-  }
-
-  private cancelDraftPreview(): void {
-    this.draftPreviewSubscription?.unsubscribe();
-    this.draftPreviewSubscription = null;
-  }
-
-  private async resolveErrorMessage(error: unknown, fallback: string): Promise<string> {
-    if (error instanceof HttpErrorResponse) {
-      if (error.error instanceof Blob) {
-        const text = await error.error.text();
-
-        if (text.trim()) {
-          return text;
-        }
-      }
-    }
-
-    return this.readErrorMessage(error, fallback);
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

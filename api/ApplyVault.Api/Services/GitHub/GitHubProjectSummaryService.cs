@@ -31,10 +31,6 @@ public interface IGitHubProjectSummaryService
         int perPage,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<CvProjectSummaryDto>> ListAllSummariesAsync(
-        AppUserEntity user,
-        CancellationToken cancellationToken = default);
-
     Task<CvProjectSummaryDto?> GetSummaryAsync(
         AppUserEntity user,
         Guid summaryId,
@@ -182,19 +178,6 @@ public sealed class GitHubProjectSummaryService(
             .OrderByDescending((summary) => summary.UpdatedAt)
             .Skip((normalizedPage - 1) * normalizedPerPage)
             .Take(normalizedPerPage)
-            .ToArrayAsync(cancellationToken);
-
-        return summaries.Select(MapSummary).ToArray();
-    }
-
-    public async Task<IReadOnlyList<CvProjectSummaryDto>> ListAllSummariesAsync(
-        AppUserEntity user,
-        CancellationToken cancellationToken = default)
-    {
-        var summaries = await dbContext.UserCvProjectSummaries
-            .AsNoTracking()
-            .Where((summary) => summary.UserId == user.Id)
-            .OrderByDescending((summary) => summary.UpdatedAt)
             .ToArrayAsync(cancellationToken);
 
         return summaries.Select(MapSummary).ToArray();

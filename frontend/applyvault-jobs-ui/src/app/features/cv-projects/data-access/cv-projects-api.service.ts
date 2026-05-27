@@ -44,10 +44,6 @@ export class CvProjectsApiService {
     });
   }
 
-  listAllSummaries(): Observable<readonly CvProjectSummary[]> {
-    return this.httpClient.get<readonly CvProjectSummary[]>(`${this.apiConfig.baseUrl}/cv-projects/all`);
-  }
-
   generateSummary(request: GenerateCvProjectRequest): Observable<CvProjectSummary> {
     return this.httpClient.post<CvProjectSummary>(`${this.apiConfig.baseUrl}/cv-projects/generate`, request);
   }

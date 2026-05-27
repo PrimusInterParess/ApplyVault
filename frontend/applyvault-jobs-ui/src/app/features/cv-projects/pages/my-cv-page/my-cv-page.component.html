@@ -5,8 +5,7 @@
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
         Upload your CV PDF to store the original file and automatically extract its sections and profile
-        photo. Download the original anytime, then refine the structured content in the
-        <a routerLink="/cv-editor">CV Editor</a>.
+        photo. Download the original anytime and review the extracted content below.
       </p>
     </div>
   </section>
@@ -25,11 +24,6 @@
           accept="application/pdf,.pdf"
           class="my-cv-page__file-input"
           (change)="onCvFileSelected($event)" />
-        @if (cvDocument.hasDocument()) {
-          <a routerLink="/cv-editor" class="my-cv-page__secondary-action my-cv-page__link-action">
-            Open CV Editor
-          </a>
-        }
         <button
           type="button"
           class="my-cv-page__primary-action"
@@ -94,11 +88,6 @@
             <strong>{{ document.originalFileName }}</strong>
             <span>{{ formatFileSize(document.originalFileSizeBytes) }}</span>
             <span>Uploaded {{ document.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
-            @if (document.hasMergedProjects) {
-              <span class="my-cv-page__muted">
-                An edited export is saved separately from this original upload.
-              </span>
-            }
           </div>
 
           @if (extractionStatus(); as status) {
@@ -118,7 +107,7 @@
               } @else {
                 <p>{{ status.notice ?? 'Section extraction did not complete.' }}</p>
                 <p class="my-cv-page__muted">
-                  Your original PDF was saved. Open the CV Editor to extract sections manually.
+                  Your original PDF was saved. Try uploading again to re-run extraction.
                 </p>
               }
             </div>
@@ -154,12 +143,6 @@
           <p class="my-cv-page__label">Structured preview</p>
           <h2 id="cv-preview-heading">Your CV content</h2>
         </div>
-
-        @if (hasPreviewContent() && !cvStructured.loading()) {
-          <a routerLink="/cv-editor" class="my-cv-page__secondary-action my-cv-page__link-action">
-            Edit in CV Editor
-          </a>
-        }
       </div>
 
       @if (cvStructured.error(); as structuredError) {
@@ -172,12 +155,9 @@
         <div class="my-cv-page__preview-empty">
           <h3>No structured content yet</h3>
           <p class="my-cv-page__muted">
-            Extract sections from your uploaded PDF or add them manually in the CV Editor to see your full CV
-            here.
+            Sections will appear here after extraction completes. If nothing shows up, try uploading your CV
+            again.
           </p>
-          <a routerLink="/cv-editor" class="my-cv-page__primary-action my-cv-page__link-action">
-            Open CV Editor
-          </a>
         </div>
       } @else {
         <app-cv-structured-preview

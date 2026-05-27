@@ -57,17 +57,6 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'cv-editor',
-        title: 'CV Editor',
-        data: {
-          shellSubtitle: 'Import, edit, and export a structured CV built from your PDF and project summaries.'
-        },
-        loadComponent: () =>
-          import('./features/cv-projects/pages/cv-editor-page/cv-editor-page.component').then(
-            (module) => module.CvEditorPageComponent
-          )
-      },
-      {
         path: 'cv-projects',
         title: 'Projects',
         data: {

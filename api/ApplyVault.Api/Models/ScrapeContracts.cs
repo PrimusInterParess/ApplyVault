@@ -307,11 +307,6 @@ public sealed record CvStructuredEntryWriteDto(
     int SortOrder
 );
 
-public sealed record InsertCvEntryFromSummaryRequest(
-    Guid SummaryId,
-    string? TargetSectionType
-);
-
 public sealed record CvStructuredImportPreviewDto(
     IReadOnlyList<CvStructuredSectionWriteDto> Sections,
     bool UsedAi,

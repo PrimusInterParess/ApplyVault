@@ -11,9 +11,7 @@ namespace ApplyVault.Api.Controllers;
 public sealed class CvDocumentsController(
     IAppUserService appUserService,
     ICvDocumentService cvDocumentService,
-    ICvStructuredDocumentService cvStructuredDocumentService,
-    ICvStructuredImportService cvStructuredImportService,
-    ICvStructuredExportService cvStructuredExportService) : ControllerBase
+    ICvStructuredDocumentService cvStructuredDocumentService) : ControllerBase
 {
     [HttpGet("current")]
     public async Task<ActionResult<CvDocumentDto>> GetCurrent(CancellationToken cancellationToken = default)
@@ -86,24 +84,6 @@ public sealed class CvDocumentsController(
         };
     }
 
-    [HttpGet("current/content/exported")]
-    public async Task<IActionResult> GetExportedContent(CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var content = await cvDocumentService.OpenExportedContentAsync(user, cancellationToken);
-
-        if (content is null)
-        {
-            return NotFound();
-        }
-
-        return new FileStreamResult(content.Content, content.ContentType)
-        {
-            EnableRangeProcessing = true,
-            FileDownloadName = content.FileName
-        };
-    }
-
     [HttpGet("current/profile-photo")]
     public async Task<IActionResult> GetProfilePhoto(CancellationToken cancellationToken = default)
     {
@@ -135,114 +115,5 @@ public sealed class CvDocumentsController(
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
         var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
         return structured is null ? NotFound() : Ok(structured);
-    }
-
-    [HttpPut("current/structured")]
-    public async Task<ActionResult<CvStructuredDocumentDto>> SaveStructured(
-        [FromBody] SaveCvStructuredDocumentRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            return Ok(await cvStructuredDocumentService.SaveStructuredAsync(
-                user,
-                request,
-                markImported: false,
-                cancellationToken));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
-    }
-
-    [HttpPost("current/import")]
-    public async Task<ActionResult<CvStructuredImportPreviewDto>> PreviewImport(
-        CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            return Ok(await cvStructuredImportService.PreviewImportAsync(user, cancellationToken));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
-    }
-
-    [HttpPost("current/import/confirm")]
-    public async Task<ActionResult<CvStructuredDocumentDto>> ConfirmImport(
-        [FromBody] SaveCvStructuredDocumentRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            return Ok(await cvStructuredImportService.ConfirmImportAsync(user, request, cancellationToken));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
-    }
-
-    [HttpPost("current/sections/{sectionId:guid}/entries/from-summary")]
-    public async Task<ActionResult<CvStructuredEntryDto>> InsertFromSummary(
-        Guid sectionId,
-        [FromBody] InsertCvEntryFromSummaryRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            return Ok(await cvStructuredDocumentService.InsertEntryFromSummaryAsync(
-                user,
-                sectionId,
-                request,
-                cancellationToken));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
-    }
-
-    [HttpPost("current/export/preview")]
-    public async Task<IActionResult> PreviewExportStructured(
-        [FromBody] SaveCvStructuredDocumentRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            var pdfBytes = await cvStructuredExportService.PreviewAsync(user, request, cancellationToken);
-            return File(pdfBytes, "application/pdf");
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
-    }
-
-    [HttpPost("current/export")]
-    public async Task<ActionResult<CvDocumentDto>> ExportStructured(CancellationToken cancellationToken = default)
-    {
-        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-
-        try
-        {
-            return Ok(await cvStructuredExportService.ExportAsync(user, cancellationToken));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return BadRequest(exception.Message);
-        }
     }
 }

@@ -15,12 +15,6 @@ public interface ICvStructuredDocumentService
         SaveCvStructuredDocumentRequest request,
         bool markImported,
         CancellationToken cancellationToken = default);
-
-    Task<CvStructuredEntryDto> InsertEntryFromSummaryAsync(
-        AppUserEntity user,
-        Guid sectionId,
-        InsertCvEntryFromSummaryRequest request,
-        CancellationToken cancellationToken = default);
 }
 
 public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) : ICvStructuredDocumentService
@@ -107,52 +101,6 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
         return (await GetStructuredAsync(user, cancellationToken))!;
     }
 
-    public async Task<CvStructuredEntryDto> InsertEntryFromSummaryAsync(
-        AppUserEntity user,
-        Guid sectionId,
-        InsertCvEntryFromSummaryRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var section = await dbContext.UserCvSections
-            .Include((entry) => entry.Entries)
-            .SingleOrDefaultAsync(
-                (entry) => entry.Id == sectionId && entry.UserId == user.Id,
-                cancellationToken)
-            ?? throw new InvalidOperationException("CV section not found.");
-
-        var summary = await dbContext.UserCvProjectSummaries
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                (entry) => entry.Id == request.SummaryId && entry.UserId == user.Id,
-                cancellationToken)
-            ?? throw new InvalidOperationException("Project summary not found.");
-
-        var nextSortOrder = section.Entries.Count == 0
-            ? 0
-            : section.Entries.Max((entry) => entry.SortOrder) + 1;
-
-        var entry = new UserCvEntryEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            SectionId = section.Id,
-            Title = summary.CvTitle,
-            Subtitle = summary.FullName,
-            DateRange = null,
-            Summary = summary.CvSummary,
-            BulletsJson = summary.CvBullets,
-            TechStack = summary.TechStack,
-            Source = CvEntrySources.GitHubSummary,
-            SourceSummaryId = summary.Id,
-            SortOrder = nextSortOrder
-        };
-
-        dbContext.UserCvEntries.Add(entry);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return MapEntry(entry);
-    }
-
     internal static CvStructuredDocumentDto MapDocument(UserCvDocumentEntity document) =>
         new(
             document.Id,
@@ -161,41 +109,6 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
                 .OrderBy((section) => section.SortOrder)
                 .Select(MapSection)
                 .ToArray());
-
-    internal static CvStructuredDocumentDto MapPreviewRequest(
-        Guid documentId,
-        SaveCvStructuredDocumentRequest request) =>
-        new(
-            documentId,
-            null,
-            request.Sections
-                .OrderBy((section) => section.SortOrder)
-                .Select(MapPreviewSection)
-                .ToArray());
-
-    private static CvStructuredSectionDto MapPreviewSection(CvStructuredSectionWriteDto section) =>
-        new(
-            section.Id ?? Guid.NewGuid(),
-            section.Heading.Trim(),
-            CvSectionTypes.Normalize(section.SectionType),
-            section.SortOrder,
-            section.Entries
-                .OrderBy((entry) => entry.SortOrder)
-                .Select(MapPreviewEntry)
-                .ToArray());
-
-    private static CvStructuredEntryDto MapPreviewEntry(CvStructuredEntryWriteDto entry) =>
-        new(
-            entry.Id ?? Guid.NewGuid(),
-            entry.Title.Trim(),
-            string.IsNullOrWhiteSpace(entry.Subtitle) ? null : entry.Subtitle.Trim(),
-            string.IsNullOrWhiteSpace(entry.DateRange) ? null : entry.DateRange.Trim(),
-            entry.Summary?.Trim() ?? string.Empty,
-            entry.Bullets ?? Array.Empty<string>(),
-            entry.TechStack?.Trim() ?? string.Empty,
-            string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source,
-            entry.SourceSummaryId,
-            entry.SortOrder);
 
     private static CvStructuredSectionDto MapSection(UserCvSectionEntity section) =>
         new(

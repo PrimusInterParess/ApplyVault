@@ -1,0 +1,56 @@
+name: API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  api-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        working-directory: api/ApplyVault.Api
+        run: dotnet restore ApplyVault.Api.sln
+
+      - name: Build
+        working-directory: api/ApplyVault.Api
+        run: dotnet build ApplyVault.Api.sln --configuration Release --no-restore
+
+      - name: Unit tests
+        working-directory: api/ApplyVault.Api
+        run: >
+          dotnet test ../ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --logger "trx;LogFileName=unit-tests.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+
+      - name: Integration tests
+        working-directory: api/ApplyVault.Api
+        run: >
+          dotnet test ../ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --logger "trx;LogFileName=integration-tests.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ runner.temp }}/test-results/**/*.trx
+          if-no-files-found: ignore

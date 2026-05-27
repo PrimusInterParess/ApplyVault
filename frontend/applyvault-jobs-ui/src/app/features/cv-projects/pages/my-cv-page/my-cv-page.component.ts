@@ -42,6 +42,18 @@ export class MyCvPageComponent {
 
   protected readonly hasSections = computed(() => this.sections().length > 0);
 
+  protected readonly canDownloadFormatted = computed(() => {
+    const document = this.cvDocument.document();
+
+    return (
+      !!document?.hasStructuredContent &&
+      this.hasSections() &&
+      !this.cvDocument.loading() &&
+      !this.cvStructured.loading() &&
+      !this.cvDocument.downloadingFormatted()
+    );
+  });
+
   protected readonly canSaveSection = computed(() => {
     const sectionId = this.editingSectionId();
     const draft = this.sectionDraft();

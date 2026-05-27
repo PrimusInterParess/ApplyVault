@@ -6,10 +6,10 @@ using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
 
-public sealed class GoogleAiCvStructuredImportClient(
+public sealed class GoogleAiCvExportClient(
     HttpClient httpClient,
     IOptions<GoogleAiOptions> googleAiOptions,
-    IOptions<CvImportAiOptions> importAiOptions) : ICvStructuredImportAiClient
+    IOptions<CvExportAiOptions> exportAiOptions) : ICvExportAiClient
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -17,15 +17,15 @@ public sealed class GoogleAiCvStructuredImportClient(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public async Task<CvStructuredImportResult> ParseAsync(
-        IReadOnlyList<CvImportSectionInput> sections,
+    public async Task<CvStructuredImportResult> PolishAsync(
+        IReadOnlyList<CvExportSectionInput> sections,
         CancellationToken cancellationToken = default)
     {
         var options = googleAiOptions.Value;
 
         if (!options.Enabled)
         {
-            throw new InvalidOperationException("Google AI is disabled. Enable GoogleAi:Enabled to import CV structure.");
+            throw new InvalidOperationException("Google AI is disabled.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ApiKey))
@@ -50,7 +50,7 @@ public sealed class GoogleAiCvStructuredImportClient(
 
         var generatedJson = ExtractGeneratedJson(responsePayload);
         var result = JsonSerializer.Deserialize<CvStructuredImportResult>(generatedJson, SerializerOptions)
-            ?? throw new InvalidOperationException("Google AI returned an empty CV import payload.");
+            ?? throw new InvalidOperationException("Google AI returned an empty CV export payload.");
 
         return result with
         {
@@ -60,10 +60,17 @@ public sealed class GoogleAiCvStructuredImportClient(
                 {
                     SectionType = CvSectionTypes.Normalize(section.SectionType),
                     Entries = section.Entries?
-                        .Where(CvStructuredImportEntrySupport.EntryHasContent)
+                        .Where(EntryHasContent)
                         .Select((entry) => entry with
                         {
-                            Bullets = entry.Bullets?.Where((bullet) => !string.IsNullOrWhiteSpace(bullet)).ToArray() ?? [],
+                            Title = entry.Title?.Trim() ?? string.Empty,
+                            Subtitle = NullIfEmpty(entry.Subtitle),
+                            DateRange = NullIfEmpty(entry.DateRange),
+                            Summary = entry.Summary?.Trim() ?? string.Empty,
+                            Bullets = entry.Bullets?
+                                .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
+                                .Select((bullet) => bullet.Trim())
+                                .ToArray() ?? [],
                             TechStack = entry.TechStack?.Trim() ?? string.Empty
                         })
                         .ToArray() ?? []
@@ -72,9 +79,9 @@ public sealed class GoogleAiCvStructuredImportClient(
         };
     }
 
-    private object BuildRequest(IReadOnlyList<CvImportSectionInput> sections)
+    private object BuildRequest(IReadOnlyList<CvExportSectionInput> sections)
     {
-        var prompts = importAiOptions.Value;
+        var prompts = exportAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(sections, SerializerOptions);
 
         return new
@@ -102,6 +109,17 @@ public sealed class GoogleAiCvStructuredImportClient(
             generationConfig = GoogleAiCvSectionsResponseSchema.Create()
         };
     }
+
+    private static bool EntryHasContent(CvStructuredImportEntryResult entry) =>
+        !string.IsNullOrWhiteSpace(entry.Title)
+        || !string.IsNullOrWhiteSpace(entry.Subtitle)
+        || !string.IsNullOrWhiteSpace(entry.DateRange)
+        || !string.IsNullOrWhiteSpace(entry.Summary)
+        || entry.Bullets?.Count > 0
+        || !string.IsNullOrWhiteSpace(entry.TechStack);
+
+    private static string? NullIfEmpty(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string ExtractGeneratedJson(string responsePayload)
     {

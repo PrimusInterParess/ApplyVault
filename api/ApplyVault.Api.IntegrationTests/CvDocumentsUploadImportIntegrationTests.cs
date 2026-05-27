@@ -60,6 +60,46 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         var downloadedBytes = await downloadResponse.Content.ReadAsByteArrayAsync();
 
         Assert.Equal(pdfBytes, downloadedBytes);
+
+        var structuredResponse = await client.GetAsync("/api/cv-documents/current/structured");
+
+        Assert.Equal(HttpStatusCode.OK, structuredResponse.StatusCode);
+
+        var structured = await structuredResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(structured);
+
+        var experienceSection = structured!.Sections.Single((section) =>
+            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
+        var experienceEntry = Assert.Single(experienceSection.Entries);
+
+        Assert.Equal("Software Engineer", experienceEntry.Title);
+        Assert.Equal("Acme Corp", experienceEntry.Subtitle);
+        Assert.Equal("2020 – 2024", experienceEntry.DateRange);
+
+        var skillsSection = structured.Sections.Single((section) =>
+            section.SectionType.Equals("Skills", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(skillsSection.Entries, (entry) => entry.Title == "Languages");
+        Assert.Contains(
+            skillsSection.Entries.SelectMany((entry) => entry.Bullets),
+            (bullet) => bullet.Equals("English", StringComparison.OrdinalIgnoreCase));
+
+        var summarySection = structured.Sections.Single((section) =>
+            section.SectionType.Equals("Summary", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(
+            "Experienced software engineer",
+            Assert.Single(summarySection.Entries).Summary,
+            StringComparison.OrdinalIgnoreCase);
+
+        var contactSection = structured.Sections.Single((section) =>
+            section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal("Custom", contactSection.SectionType, ignoreCase: true);
+        Assert.Contains(
+            contactSection.Entries.SelectMany((entry) => entry.Bullets),
+            (bullet) => bullet.Contains("jane@example.com", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -169,7 +209,7 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         Assert.Equal(["Shipped MVP", "Integrated GitHub"], addedEntry.Bullets);
     }
 
-    private static byte[] CreateStructuredCvPdf(bool includeHeadshot)
+    internal static byte[] CreateStructuredCvPdf(bool includeHeadshot)
     {
         using var document = new PdfDocument();
         var page = document.AddPage();
@@ -177,22 +217,46 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
 
         using (var graphics = XGraphics.FromPdfPage(page))
         {
+            var headingFont = new XFont("Arial", 14, XFontStyleEx.Bold);
+            var bodyFont = new XFont("Arial", 11);
+
             if (includeHeadshot)
             {
                 using var image = LoadTinyPngImage();
                 graphics.DrawImage(image, 430, 40, 80, 80);
             }
 
+            var y = 120d;
+
+            graphics.DrawString("Jane Doe", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 18;
+            graphics.DrawString("jane@example.com | +45 12 34 56 78", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 24;
+            graphics.DrawString("Summary", headingFont, XBrushes.Black, new XPoint(50, y));
+            y += 24;
             graphics.DrawString(
-                "Experience",
-                new XFont("Arial", 14, XFontStyleEx.Bold),
+                "Experienced software engineer focused on reliable backend systems.",
+                bodyFont,
                 XBrushes.Black,
-                new XPoint(50, 180));
-            graphics.DrawString(
-                "Software Engineer\nAcme Corp\n2020 – 2024\nBuilt reliable services.",
-                new XFont("Arial", 11),
-                XBrushes.Black,
-                new XPoint(50, 210));
+                new XPoint(50, y));
+            y += 36;
+
+            graphics.DrawString("Experience", headingFont, XBrushes.Black, new XPoint(50, y));
+            y += 24;
+            graphics.DrawString("Software Engineer", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 18;
+            graphics.DrawString("Acme Corp", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 18;
+            graphics.DrawString("2020 – 2024", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 18;
+            graphics.DrawString("Built reliable services.", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 36;
+
+            graphics.DrawString("Skills", headingFont, XBrushes.Black, new XPoint(50, y));
+            y += 24;
+            graphics.DrawString("Languages: English, Danish", bodyFont, XBrushes.Black, new XPoint(50, y));
+            y += 18;
+            graphics.DrawString("Frameworks: .NET, Angular", bodyFont, XBrushes.Black, new XPoint(50, y));
         }
 
         using var output = new MemoryStream();

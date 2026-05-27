@@ -11,7 +11,8 @@ namespace ApplyVault.Api.Controllers;
 public sealed class CvDocumentsController(
     IAppUserService appUserService,
     ICvDocumentService cvDocumentService,
-    ICvStructuredDocumentService cvStructuredDocumentService) : ControllerBase
+    ICvStructuredDocumentService cvStructuredDocumentService,
+    ICvDocumentExportService cvDocumentExportService) : ControllerBase
 {
     [HttpGet("current")]
     public async Task<ActionResult<CvDocumentDto>> GetCurrent(CancellationToken cancellationToken = default)
@@ -115,6 +116,35 @@ public sealed class CvDocumentsController(
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
         var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
         return structured is null ? NotFound() : Ok(structured);
+    }
+
+    [HttpGet("current/export/download")]
+    public async Task<IActionResult> DownloadFormattedExport(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            var exportResult = await cvDocumentExportService.ExportPdfAsync(user, cancellationToken);
+            var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
+            var fileName = document is null
+                ? "cv-export.pdf"
+                : $"{Path.GetFileNameWithoutExtension(document.OriginalFileName)}-export.pdf";
+
+            return File(exportResult.PdfBytes, "application/pdf", fileName);
+        }
+        catch (InvalidOperationException exception)
+        {
+            var message = exception.Message;
+
+            if (message.Contains("before exporting", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("No structured", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound();
+            }
+
+            return BadRequest(message);
+        }
     }
 
     [HttpPut("current/structured")]

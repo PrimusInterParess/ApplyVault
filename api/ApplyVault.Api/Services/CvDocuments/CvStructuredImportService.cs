@@ -105,28 +105,30 @@ public sealed class CvStructuredImportService(
 
                 var aiResult = await importAiClient.ParseAsync(aiInput, cancellationToken);
 
-                var aiSections = aiResult.Sections
-                    .Select((section, index) => new CvStructuredSectionWriteDto(
-                        null,
-                        section.Heading,
-                        CvSectionTypes.Normalize(section.SectionType),
-                        index,
-                        section.Entries
-                            .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
-                                null,
-                                entry.Title,
-                                entry.Subtitle,
-                                entry.DateRange,
-                                entry.Summary,
-                                entry.Bullets,
-                                entry.TechStack,
-                                CvEntrySources.Import,
-                                null,
-                                entryIndex))
-                            .ToArray()))
-                    .ToArray();
+                var aiSections = CvStructuredImportNormalizer.Normalize(
+                    aiResult.Sections
+                        .Select((section, index) => new CvStructuredSectionWriteDto(
+                            null,
+                            section.Heading,
+                            CvSectionTypes.Normalize(section.SectionType),
+                            index,
+                            section.Entries
+                                .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
+                                    null,
+                                    entry.Title,
+                                    entry.Subtitle,
+                                    entry.DateRange,
+                                    entry.Summary,
+                                    entry.Bullets,
+                                    entry.TechStack,
+                                    CvEntrySources.Import,
+                                    null,
+                                    entryIndex))
+                                .ToArray()))
+                        .ToArray(),
+                    rawSections);
 
-                if (aiSections.Length > 0)
+                if (aiSections.Count > 0)
                 {
                     return new CvStructuredImportPreviewDto(aiSections, true, null);
                 }
@@ -141,7 +143,9 @@ public sealed class CvStructuredImportService(
             }
         }
 
-        var heuristicSections = CvStructuredImportHeuristic.Parse(rawSections);
+        var heuristicSections = CvStructuredImportNormalizer.Normalize(
+            CvStructuredImportHeuristic.Parse(rawSections),
+            rawSections);
 
         return new CvStructuredImportPreviewDto(
             heuristicSections,

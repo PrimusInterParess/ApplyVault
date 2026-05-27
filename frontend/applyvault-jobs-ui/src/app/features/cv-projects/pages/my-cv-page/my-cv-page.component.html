@@ -5,7 +5,8 @@
       <h1>My CV</h1>
       <p class="my-cv-page__intro">
         Upload your CV PDF to store the original file and automatically extract its sections and profile
-        photo. Download the original anytime and edit each section below when you need to.
+        photo. Download a formatted PDF from your saved sections or the original anytime, and edit each
+        section below when you need to.
       </p>
     </div>
   </section>
@@ -41,6 +42,17 @@
           <button
             type="button"
             class="my-cv-page__secondary-action"
+            [disabled]="!canDownloadFormatted()"
+            (click)="cvDocument.downloadFormatted()">
+            {{
+              cvDocument.downloadingFormatted()
+                ? 'Generating PDF...'
+                : 'Download formatted PDF'
+            }}
+          </button>
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
             [disabled]="cvDocument.downloadingOriginal()"
             (click)="cvDocument.downloadOriginal()">
             {{ cvDocument.downloadingOriginal() ? 'Downloading...' : 'Download original PDF' }}
@@ -70,6 +82,10 @@
 
     @if (cvDocument.downloadOriginalError(); as downloadOriginalError) {
       <div class="my-cv-page__alert" role="alert">{{ downloadOriginalError }}</div>
+    }
+
+    @if (cvDocument.downloadFormattedError(); as downloadFormattedError) {
+      <div class="my-cv-page__alert" role="alert">{{ downloadFormattedError }}</div>
     }
 
     @if (cvDocument.profilePhotoError(); as profilePhotoError) {

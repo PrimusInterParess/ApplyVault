@@ -17,6 +17,7 @@ export class CvDocumentFacade {
   private uploadSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
   private downloadOriginalSubscription: Subscription | null = null;
+  private downloadFormattedSubscription: Subscription | null = null;
   private profilePhotoSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private profilePhotoObjectUrl: string | null = null;
@@ -25,6 +26,7 @@ export class CvDocumentFacade {
   readonly uploading = signal(false);
   readonly deleting = signal(false);
   readonly downloadingOriginal = signal(false);
+  readonly downloadingFormatted = signal(false);
   readonly loadingProfilePhoto = signal(false);
   readonly document = signal<CvDocument | null>(null);
   readonly importSummary = signal<CvStructuredImportSummary | null>(null);
@@ -32,6 +34,7 @@ export class CvDocumentFacade {
   readonly uploadError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
   readonly downloadOriginalError = signal<string | null>(null);
+  readonly downloadFormattedError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
 
@@ -172,6 +175,37 @@ export class CvDocumentFacade {
     });
   }
 
+  downloadFormatted(): void {
+    const document = this.document();
+
+    if (!document?.hasStructuredContent) {
+      return;
+    }
+
+    this.cancelDownloadFormatted();
+    this.downloadingFormatted.set(true);
+    this.downloadFormattedError.set(null);
+
+    this.downloadFormattedSubscription = this.apiService.downloadFormattedPdf().subscribe({
+      next: (blob) => {
+        this.downloadingFormatted.set(false);
+        const baseName = document.originalFileName.replace(/\.pdf$/i, '');
+        this.triggerDownload(blob, `${baseName}-export.pdf`);
+      },
+      error: (error) => {
+        this.downloadingFormatted.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.downloadFormattedError.set(
+          this.readErrorMessage(error, 'Could not download your formatted CV PDF.')
+        );
+      }
+    });
+  }
+
   private loadProfilePhoto(document: CvDocument): void {
     this.cancelProfilePhoto();
 
@@ -226,17 +260,20 @@ export class CvDocumentFacade {
     this.cancelUpload();
     this.cancelDelete();
     this.cancelDownloadOriginal();
+    this.cancelDownloadFormatted();
     this.clearProfilePhoto();
     this.loading.set(false);
     this.uploading.set(false);
     this.deleting.set(false);
     this.downloadingOriginal.set(false);
+    this.downloadingFormatted.set(false);
     this.document.set(null);
     this.importSummary.set(null);
     this.error.set(null);
     this.uploadError.set(null);
     this.deleteError.set(null);
     this.downloadOriginalError.set(null);
+    this.downloadFormattedError.set(null);
   }
 
   private cancelLoad(): void {
@@ -257,6 +294,11 @@ export class CvDocumentFacade {
   private cancelDownloadOriginal(): void {
     this.downloadOriginalSubscription?.unsubscribe();
     this.downloadOriginalSubscription = null;
+  }
+
+  private cancelDownloadFormatted(): void {
+    this.downloadFormattedSubscription?.unsubscribe();
+    this.downloadFormattedSubscription = null;
   }
 
   private cancelProfilePhoto(): void {

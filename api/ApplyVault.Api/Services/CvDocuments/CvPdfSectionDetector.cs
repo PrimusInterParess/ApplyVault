@@ -20,25 +20,35 @@ public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
     private static readonly string[] KnownSectionPatterns =
     [
         "professional experience",
-        "work experience",
         "employment history",
-        "employment",
-        "experience",
+        "work experience",
         "personal projects",
         "side projects",
         "selected projects",
-        "projects",
         "technical skills",
         "core competencies",
-        "skills",
-        "education",
+        "career history",
+        "work history",
         "certifications",
-        "summary",
-        "profile",
+        "publications",
+        "qualifications",
+        "achievements",
+        "employment",
+        "experience",
         "about me",
         "volunteer",
+        "education",
+        "languages",
+        "references",
+        "objective",
+        "projects",
+        "honors",
         "awards",
-        "publications"
+        "contact information",
+        "contact",
+        "summary",
+        "profile",
+        "skills"
     ];
 
     public IReadOnlyList<CvPdfDetectedSection> DetectSections(Stream pdfStream)
@@ -109,6 +119,17 @@ public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
         return false;
     }
 
+    internal static string NormalizeHeading(string text)
+    {
+        var trimmed = text.Trim();
+        trimmed = Regex.Replace(trimmed, @"\s+", " ");
+        trimmed = trimmed.Trim(':', '.', '-', '–', '—', '•', '·', '|', ' ');
+        trimmed = Regex.Replace(trimmed, @"^[|\-–—•·\s]+", string.Empty);
+        trimmed = Regex.Replace(trimmed, @"[|\-–—•·\s]+$", string.Empty);
+
+        return trimmed.Trim();
+    }
+
     private static IEnumerable<(string Text, double YPoints)> ExtractLines(Page page)
     {
         var words = page.GetWords().ToArray();
@@ -137,14 +158,5 @@ public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
         {
             yield return line;
         }
-    }
-
-    private static string NormalizeHeading(string text)
-    {
-        var trimmed = text.Trim();
-        trimmed = Regex.Replace(trimmed, @"\s+", " ");
-        trimmed = trimmed.Trim(':', '.', '-', '•', '·', ' ');
-
-        return trimmed;
     }
 }

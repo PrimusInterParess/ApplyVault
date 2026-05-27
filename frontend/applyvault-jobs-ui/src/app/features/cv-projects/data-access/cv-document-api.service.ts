@@ -38,6 +38,12 @@ export class CvDocumentApiService {
     );
   }
 
+  downloadFormattedPdf(): Observable<Blob> {
+    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/download`, {
+      responseType: 'blob'
+    });
+  }
+
   delete(): Observable<void> {
     return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/cv-documents/current`);
   }

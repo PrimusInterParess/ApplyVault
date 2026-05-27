@@ -33,6 +33,29 @@ public sealed class CvPdfSectionDetectorTests
         Assert.Equal("work experience", normalizedKey);
     }
 
+    [Theory]
+    [InlineData("| Experience |", "experience")]
+    [InlineData("— Skills —", "skills")]
+    [InlineData("Career History", "career history")]
+    [InlineData("Work History", "work history")]
+    [InlineData("Qualifications", "qualifications")]
+    [InlineData("Languages", "languages")]
+    public void TryMatchSectionHeading_MatchesDecoratedAndExtendedHeadings(string heading, string expectedKey)
+    {
+        var matched = CvPdfSectionDetector.TryMatchSectionHeading(heading, out var normalizedKey);
+
+        Assert.True(matched);
+        Assert.Equal(expectedKey, normalizedKey);
+    }
+
+    [Fact]
+    public void NormalizeHeading_StripsDecorativeWrappers()
+    {
+        var normalized = CvPdfSectionDetector.NormalizeHeading("| Professional Experience |");
+
+        Assert.Equal("Professional Experience", normalized);
+    }
+
     private static byte[] CreatePdfWithLines(IReadOnlyList<string> lines)
     {
         using var document = new PdfDocument();

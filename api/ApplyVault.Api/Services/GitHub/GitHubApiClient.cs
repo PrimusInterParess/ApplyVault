@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace ApplyVault.Api.Services;
 
@@ -23,7 +24,7 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
             $"https://api.github.com/user/repos?sort=updated&affiliation=owner&per_page={safePerPage}&page={safePage}";
 
         using var request = CreateAuthorizedRequest(HttpMethod.Get, url, accessToken);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         var payload = JsonSerializer.Deserialize<List<GitHubRepositoryResponse>>(
@@ -43,7 +44,7 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
         var url = $"https://api.github.com/repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repo)}";
 
         using var request = CreateAuthorizedRequest(HttpMethod.Get, url, accessToken);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         var payload = JsonSerializer.Deserialize<GitHubRepositoryResponse>(
@@ -65,7 +66,7 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
         using var request = CreateAuthorizedRequest(HttpMethod.Get, url, accessToken);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.raw+json"));
 
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
@@ -76,6 +77,30 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
 
         var readmeText = await response.Content.ReadAsStringAsync(cancellationToken);
         return TruncateReadme(readmeText);
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (TaskCanceledException exception) when (exception.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (TaskCanceledException exception)
+        {
+            throw new InvalidOperationException(
+                "GitHub API request timed out. Try again later.",
+                exception);
+        }
     }
 
     private static HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string accessToken)
@@ -108,6 +133,12 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
         };
     }
 
+    private const int ReadmeHeadChars = 7_000;
+
+    private static readonly Regex HighSignalReadmeSectionRegex = new(
+        @"(?im)^#{1,3}\s*(features?|capabilities|what\b|overview|about|architecture|tech(?:\s*stack)?|stack|built\s+with|technologies|implementation|highlights?|functionality)\b.*?(?=^#{1,3}\s|\z)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static string? TruncateReadme(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -116,7 +147,48 @@ public sealed class GitHubApiClient(HttpClient httpClient) : IGitHubApiClient
         }
 
         var trimmed = text.Trim();
-        return trimmed.Length <= ReadmeMaxChars ? trimmed : trimmed[..ReadmeMaxChars];
+
+        if (trimmed.Length <= ReadmeMaxChars)
+        {
+            return trimmed;
+        }
+
+        var head = trimmed[..Math.Min(ReadmeHeadChars, trimmed.Length)];
+        var tail = trimmed.Length > ReadmeHeadChars ? trimmed[ReadmeHeadChars..] : string.Empty;
+        var highSignalSections = ExtractHighSignalReadmeSections(tail);
+
+        if (string.IsNullOrWhiteSpace(highSignalSections))
+        {
+            return trimmed[..ReadmeMaxChars];
+        }
+
+        var combined = $"{head}\n\n---\n\n{highSignalSections}";
+
+        return combined.Length <= ReadmeMaxChars ? combined : combined[..ReadmeMaxChars];
+    }
+
+    private static string ExtractHighSignalReadmeSections(string readmeTail)
+    {
+        var matches = HighSignalReadmeSectionRegex.Matches(readmeTail);
+
+        if (matches.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sections = new List<string>(matches.Count);
+
+        foreach (Match match in matches)
+        {
+            var section = match.Value.Trim();
+
+            if (!string.IsNullOrWhiteSpace(section))
+            {
+                sections.Add(section);
+            }
+        }
+
+        return string.Join("\n\n", sections);
     }
 
     private static GitHubRepositoryListItem MapListItem(GitHubRepositoryResponse response) =>

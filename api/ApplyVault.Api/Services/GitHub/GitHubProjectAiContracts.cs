@@ -11,10 +11,12 @@ public sealed record GitHubProjectAiInput(
     string? ReadmeText);
 
 public sealed record CvProjectSummaryResult(
+    bool SufficientContext,
     string Title,
     string Summary,
     IReadOnlyList<string> Bullets,
-    string TechStack);
+    string TechStack,
+    string RefusalReason);
 
 public interface IGitHubProjectAiClient
 {

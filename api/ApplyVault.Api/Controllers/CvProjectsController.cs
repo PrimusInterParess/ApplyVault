@@ -30,10 +30,13 @@ public sealed class CvProjectsController(
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CvProjectSummaryDto>>> List(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IReadOnlyList<CvProjectSummaryDto>>> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int perPage = 5,
+        CancellationToken cancellationToken = default)
     {
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        return Ok(await gitHubProjectSummaryService.ListSummariesAsync(user, cancellationToken));
+        return Ok(await gitHubProjectSummaryService.ListSummariesAsync(user, page, perPage, cancellationToken));
     }
 
     [HttpGet("{id:guid}")]

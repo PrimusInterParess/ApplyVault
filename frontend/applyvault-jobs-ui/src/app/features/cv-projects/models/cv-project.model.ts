@@ -28,6 +28,10 @@ export interface CvProjectSummary {
   readonly updatedAt: string;
 }
 
+export interface GitHubRepositoryReadme {
+  readonly text: string | null;
+}
+
 export interface GenerateCvProjectRequest {
   readonly fullName: string;
 }

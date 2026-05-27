@@ -24,6 +24,39 @@ public sealed class GitHubReposController(
         {
             return Ok(await gitHubProjectSummaryService.ListRepositoriesAsync(user, page, perPage, cancellationToken));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
+        catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpGet("readme")]
+    public async Task<ActionResult<GitHubRepositoryReadmeDto>> GetReadme(
+        [FromQuery] string fullName,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await gitHubProjectSummaryService.GetRepositoryReadmeAsync(user, fullName, cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
+        catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
         catch (InvalidOperationException exception)
         {
             return BadRequest(exception.Message);

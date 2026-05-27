@@ -206,6 +206,10 @@ public sealed record GitHubRepositoryListItemDto(
     DateTimeOffset? PushedAt
 );
 
+public sealed record GitHubRepositoryReadmeDto(
+    string? Text
+);
+
 public sealed record GenerateCvProjectRequest(
     string FullName
 );

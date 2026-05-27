@@ -52,6 +52,30 @@ public sealed class GoogleAiGitHubProjectClient(
         var result = JsonSerializer.Deserialize<CvProjectSummaryResult>(generatedJson, SerializerOptions)
             ?? throw new InvalidOperationException("Google AI returned an empty project summary payload.");
 
+        if (!result.SufficientContext)
+        {
+            var refusalReason = result.RefusalReason?.Trim();
+
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(refusalReason)
+                    ? GitHubProjectSummaryEligibility.InsufficientDataMessage
+                    : refusalReason);
+        }
+
+        if (!GitHubProjectSummaryEligibility.HasSufficientSummaryData(
+                input.ReadmeText,
+                input.Description,
+                input.PrimaryLanguage,
+                input.Topics))
+        {
+            throw new InvalidOperationException(GitHubProjectSummaryEligibility.InsufficientDataMessage);
+        }
+
+        if (GitHubProjectSummaryEligibility.IsWeakGeneratedSummary(result, input))
+        {
+            throw new InvalidOperationException(GitHubProjectSummaryEligibility.InsufficientDataMessage);
+        }
+
         if (string.IsNullOrWhiteSpace(result.Title) || string.IsNullOrWhiteSpace(result.Summary))
         {
             throw new InvalidOperationException("Google AI returned an incomplete project summary.");
@@ -60,7 +84,8 @@ public sealed class GoogleAiGitHubProjectClient(
         return result with
         {
             Bullets = result.Bullets?.Where((bullet) => !string.IsNullOrWhiteSpace(bullet)).ToArray() ?? [],
-            TechStack = result.TechStack?.Trim() ?? string.Empty
+            TechStack = result.TechStack?.Trim() ?? string.Empty,
+            RefusalReason = result.RefusalReason?.Trim() ?? string.Empty
         };
     }
 
@@ -100,17 +125,40 @@ public sealed class GoogleAiGitHubProjectClient(
                 responseSchema = new
                 {
                     type = "OBJECT",
-                    required = new[] { "title", "summary", "bullets", "techStack" },
+                    required = new[] { "sufficientContext", "title", "summary", "bullets", "techStack", "refusalReason" },
                     properties = new
                     {
-                        title = new { type = "STRING" },
-                        summary = new { type = "STRING" },
+                        sufficientContext = new
+                        {
+                            type = "BOOLEAN",
+                            description = "True only when the repository has enough factual detail for a credible CV entry."
+                        },
+                        title = new
+                        {
+                            type = "STRING",
+                            description = "Human-readable CV project title; reflect what the project does when supported by the source."
+                        },
+                        summary = new
+                        {
+                            type = "STRING",
+                            description = "One or two sentences on purpose, what was built, and main technical or domain context."
+                        },
                         bullets = new
                         {
                             type = "ARRAY",
+                            description = "2-4 distinct, source-supported capability or technical bullets that do not repeat the summary.",
                             items = new { type = "STRING" }
                         },
-                        techStack = new { type = "STRING" }
+                        techStack = new
+                        {
+                            type = "STRING",
+                            description = "Comma-separated technologies explicitly evidenced in the README, description, topics, or primaryLanguage."
+                        },
+                        refusalReason = new
+                        {
+                            type = "STRING",
+                            description = "When sufficientContext is false, briefly explain what factual detail is missing."
+                        }
                     }
                 }
             }

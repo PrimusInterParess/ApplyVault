@@ -2,9 +2,13 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { GitHubConnectionsFacade } from '../../settings/data-access/github-connections.facade';
 import { CvProjectSummary, GitHubRepositoryListItem } from '../models/cv-project.model';
 import { CvProjectsApiService } from './cv-projects-api.service';
+
+export const CV_PROJECT_REPOS_PER_PAGE = 5;
+export const CV_PROJECT_SUMMARIES_PER_PAGE = 5;
 
 @Injectable({ providedIn: 'root' })
 export class CvProjectsFacade {
@@ -12,7 +16,10 @@ export class CvProjectsFacade {
   private readonly gitHubConnections = inject(GitHubConnectionsFacade);
   private readonly apiService = inject(CvProjectsApiService);
   private loadReposSubscription: Subscription | null = null;
+  private loadMoreReposSubscription: Subscription | null = null;
   private loadSummariesSubscription: Subscription | null = null;
+  private loadMoreSummariesSubscription: Subscription | null = null;
+  private loadReadmeSubscription: Subscription | null = null;
   private generateSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
@@ -20,16 +27,24 @@ export class CvProjectsFacade {
 
   readonly loadingRepos = signal(false);
   readonly loadingMoreRepos = signal(false);
+  readonly loadMoreReposError = signal<string | null>(null);
   readonly loadingSummaries = signal(false);
+  readonly loadingMoreSummaries = signal(false);
+  readonly loadMoreSummariesError = signal<string | null>(null);
   readonly generatingFullName = signal<string | null>(null);
   readonly deletingSummaryId = signal<string | null>(null);
   readonly reposError = signal<string | null>(null);
   readonly summariesError = signal<string | null>(null);
   readonly generateError = signal<string | null>(null);
+  readonly loadingReadmeFullName = signal<string | null>(null);
+  readonly readmeByFullName = signal<ReadonlyMap<string, string | null>>(new Map());
+  readonly readmeErrorsByFullName = signal<ReadonlyMap<string, string>>(new Map());
   readonly repos = signal<readonly GitHubRepositoryListItem[]>([]);
   readonly savedSummaries = signal<readonly CvProjectSummary[]>([]);
   readonly repoPage = signal(1);
   readonly hasMoreRepos = signal(true);
+  readonly summaryPage = signal(1);
+  readonly hasMoreSummaries = signal(true);
 
   readonly isGitHubConnected = computed(() => this.gitHubConnections.connections().length > 0);
   readonly savedSummaryByRepoId = computed(() => {
@@ -64,9 +79,20 @@ export class CvProjectsFacade {
           this.loadedUserId = currentUserId;
           this.resetState();
           this.loadSummaries();
+          return;
         }
 
-        if (!connectionsLoading && connected && !this.reposLoadAttempted() && !this.loadingRepos()) {
+        if (!connected) {
+          this.reposLoadAttempted.set(false);
+          return;
+        }
+
+        if (
+          !connectionsLoading &&
+          !this.reposLoadAttempted() &&
+          !this.loadingRepos() &&
+          !this.loadingMoreRepos()
+        ) {
           this.loadRepos();
         }
       },
@@ -82,14 +108,23 @@ export class CvProjectsFacade {
     this.repoPage.set(1);
     this.hasMoreRepos.set(true);
 
-    this.loadReposSubscription = this.apiService.listRepositories(1).subscribe({
+    this.loadMoreReposError.set(null);
+    this.loadReposSubscription = this.apiService.listRepositories(1, CV_PROJECT_REPOS_PER_PAGE).subscribe({
       next: (repos) => {
-        this.repos.set(repos);
-        this.hasMoreRepos.set(repos.length >= 100);
+        const items = repos ?? [];
+
+        this.repos.set(items);
+        this.hasMoreRepos.set(items.length >= CV_PROJECT_REPOS_PER_PAGE);
         this.loadingRepos.set(false);
         this.loadReposSubscription = null;
       },
       error: (error) => {
+        if (isRequestAborted(error)) {
+          this.loadingRepos.set(false);
+          this.loadReposSubscription = null;
+          return;
+        }
+
         this.reposError.set(this.readErrorMessage(error, 'GitHub repositories could not be loaded.'));
         this.repos.set([]);
         this.loadingRepos.set(false);
@@ -105,40 +140,150 @@ export class CvProjectsFacade {
 
     const nextPage = this.repoPage() + 1;
     this.loadingMoreRepos.set(true);
-    this.reposError.set(null);
+    this.loadMoreReposError.set(null);
+    this.cancelLoadMoreRepos();
 
-    this.loadReposSubscription = this.apiService.listRepositories(nextPage).subscribe({
-      next: (repos) => {
-        this.repoPage.set(nextPage);
-        this.repos.update((current) => [...current, ...repos]);
-        this.hasMoreRepos.set(repos.length >= 100);
-        this.loadingMoreRepos.set(false);
-        this.loadReposSubscription = null;
-      },
-      error: (error) => {
-        this.reposError.set(this.readErrorMessage(error, 'More repositories could not be loaded.'));
-        this.loadingMoreRepos.set(false);
-        this.loadReposSubscription = null;
-      }
-    });
+    this.loadMoreReposSubscription = this.apiService
+      .listRepositories(nextPage, CV_PROJECT_REPOS_PER_PAGE)
+      .subscribe({
+        next: (repos) => {
+          if (repos === null) {
+            this.loadingMoreRepos.set(false);
+            this.loadMoreReposSubscription = null;
+            return;
+          }
+
+          this.repoPage.set(nextPage);
+          this.repos.update((current) => [...current, ...repos]);
+          this.hasMoreRepos.set(repos.length >= CV_PROJECT_REPOS_PER_PAGE);
+          this.loadingMoreRepos.set(false);
+          this.loadMoreReposSubscription = null;
+        },
+        error: (error) => {
+          if (isRequestAborted(error)) {
+            this.loadingMoreRepos.set(false);
+            this.loadMoreReposSubscription = null;
+            return;
+          }
+
+          this.loadMoreReposError.set(this.readErrorMessage(error, 'More repositories could not be loaded.'));
+          this.loadingMoreRepos.set(false);
+          this.loadMoreReposSubscription = null;
+        }
+      });
   }
 
   loadSummaries(): void {
     this.cancelLoadSummaries();
     this.loadingSummaries.set(true);
     this.summariesError.set(null);
+    this.summaryPage.set(1);
+    this.hasMoreSummaries.set(true);
+    this.loadMoreSummariesError.set(null);
 
-    this.loadSummariesSubscription = this.apiService.listSummaries().subscribe({
-      next: (summaries) => {
-        this.savedSummaries.set(summaries);
-        this.loadingSummaries.set(false);
-        this.loadSummariesSubscription = null;
+    this.loadSummariesSubscription = this.apiService
+      .listSummaries(1, CV_PROJECT_SUMMARIES_PER_PAGE)
+      .subscribe({
+        next: (summaries) => {
+          this.savedSummaries.set(summaries);
+          this.hasMoreSummaries.set(summaries.length >= CV_PROJECT_SUMMARIES_PER_PAGE);
+          this.loadingSummaries.set(false);
+          this.loadSummariesSubscription = null;
+        },
+        error: () => {
+          this.summariesError.set('Saved project summaries could not be loaded.');
+          this.savedSummaries.set([]);
+          this.loadingSummaries.set(false);
+          this.loadSummariesSubscription = null;
+        }
+      });
+  }
+
+  loadMoreSummaries(): void {
+    if (this.loadingMoreSummaries() || this.loadingSummaries() || !this.hasMoreSummaries()) {
+      return;
+    }
+
+    const nextPage = this.summaryPage() + 1;
+    this.loadingMoreSummaries.set(true);
+    this.loadMoreSummariesError.set(null);
+
+    this.cancelLoadMoreSummaries();
+    this.loadMoreSummariesSubscription = this.apiService
+      .listSummaries(nextPage, CV_PROJECT_SUMMARIES_PER_PAGE)
+      .subscribe({
+        next: (summaries) => {
+          if (summaries === null) {
+            this.loadingMoreSummaries.set(false);
+            this.loadMoreSummariesSubscription = null;
+            return;
+          }
+
+          this.summaryPage.set(nextPage);
+          this.savedSummaries.update((current) => [...current, ...summaries]);
+          this.hasMoreSummaries.set(summaries.length >= CV_PROJECT_SUMMARIES_PER_PAGE);
+          this.loadingMoreSummaries.set(false);
+          this.loadMoreSummariesSubscription = null;
+        },
+        error: (error) => {
+          if (isRequestAborted(error)) {
+            this.loadingMoreSummaries.set(false);
+            this.loadMoreSummariesSubscription = null;
+            return;
+          }
+
+          this.loadMoreSummariesError.set(
+            this.readErrorMessage(error, 'More saved summaries could not be loaded.')
+          );
+          this.loadingMoreSummaries.set(false);
+          this.loadMoreSummariesSubscription = null;
+        }
+      });
+  }
+
+  loadReadme(fullName: string): void {
+    if (this.readmeByFullName().has(fullName)) {
+      return;
+    }
+
+    this.cancelLoadReadme();
+    this.loadingReadmeFullName.set(fullName);
+    this.readmeErrorsByFullName.update((current) => {
+      const next = new Map(current);
+      next.delete(fullName);
+      return next;
+    });
+
+    this.loadReadmeSubscription = this.apiService.getRepositoryReadme(fullName).subscribe({
+      next: (readme) => {
+        if (this.loadingReadmeFullName() !== fullName) {
+          return;
+        }
+
+        this.readmeByFullName.update((current) => {
+          const next = new Map(current);
+          const text = readme.text?.trim();
+          next.set(fullName, text ? text : null);
+          return next;
+        });
+        this.loadingReadmeFullName.set(null);
+        this.loadReadmeSubscription = null;
       },
-      error: () => {
-        this.summariesError.set('Saved project summaries could not be loaded.');
-        this.savedSummaries.set([]);
-        this.loadingSummaries.set(false);
-        this.loadSummariesSubscription = null;
+      error: (error) => {
+        if (this.loadingReadmeFullName() !== fullName) {
+          return;
+        }
+
+        this.readmeErrorsByFullName.update((current) => {
+          const next = new Map(current);
+          next.set(
+            fullName,
+            this.readErrorMessage(error, 'The repository README could not be loaded.')
+          );
+          return next;
+        });
+        this.loadingReadmeFullName.set(null);
+        this.loadReadmeSubscription = null;
       }
     });
   }
@@ -171,6 +316,10 @@ export class CvProjectsFacade {
     });
   }
 
+  clearGenerateError(): void {
+    this.generateError.set(null);
+  }
+
   deleteSummary(id: string): void {
     if (this.deletingSummaryId() === id) {
       return;
@@ -199,30 +348,56 @@ export class CvProjectsFacade {
     this.loadReposSubscription = null;
   }
 
+  private cancelLoadMoreRepos(): void {
+    this.loadMoreReposSubscription?.unsubscribe();
+    this.loadMoreReposSubscription = null;
+  }
+
   private cancelLoadSummaries(): void {
     this.loadSummariesSubscription?.unsubscribe();
     this.loadSummariesSubscription = null;
   }
 
+  private cancelLoadMoreSummaries(): void {
+    this.loadMoreSummariesSubscription?.unsubscribe();
+    this.loadMoreSummariesSubscription = null;
+  }
+
+  private cancelLoadReadme(): void {
+    this.loadReadmeSubscription?.unsubscribe();
+    this.loadReadmeSubscription = null;
+  }
+
   private resetState(): void {
     this.cancelLoadRepos();
+    this.cancelLoadMoreRepos();
     this.cancelLoadSummaries();
+    this.cancelLoadMoreSummaries();
+    this.cancelLoadReadme();
     this.generateSubscription?.unsubscribe();
     this.generateSubscription = null;
     this.deleteSubscription?.unsubscribe();
     this.deleteSubscription = null;
     this.loadingRepos.set(false);
     this.loadingMoreRepos.set(false);
+    this.loadMoreReposError.set(null);
     this.loadingSummaries.set(false);
+    this.loadingMoreSummaries.set(false);
+    this.loadMoreSummariesError.set(null);
     this.generatingFullName.set(null);
     this.deletingSummaryId.set(null);
     this.reposError.set(null);
     this.summariesError.set(null);
     this.generateError.set(null);
+    this.loadingReadmeFullName.set(null);
+    this.readmeByFullName.set(new Map());
+    this.readmeErrorsByFullName.set(new Map());
     this.repos.set([]);
     this.savedSummaries.set([]);
     this.repoPage.set(1);
     this.hasMoreRepos.set(true);
+    this.summaryPage.set(1);
+    this.hasMoreSummaries.set(true);
     this.reposLoadAttempted.set(false);
   }
 

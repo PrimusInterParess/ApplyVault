@@ -20,26 +20,42 @@
       <a routerLink="/settings" class="cv-projects-page__primary-action">Open settings</a>
     </section>
   } @else {
-    <div class="cv-projects-page__layout">
-      <section class="cv-projects-page__panel" aria-labelledby="cv-projects-repo-heading">
-        <div class="cv-projects-page__panel-header">
-          <div>
-            <p class="cv-projects-page__label">GitHub repositories</p>
-            <h2 id="cv-projects-repo-heading">Choose a repository</h2>
-            <p class="cv-projects-page__muted">
-              Repositories are loaded live from GitHub. Generate one summary at a time.
-            </p>
-          </div>
+    @if (facade.isGitHubConnected()) {
+      <section class="cv-projects-page__stats" aria-label="CV projects overview">
+        <article>
+          <span>Repositories shown</span>
+          <strong>{{ filteredRepos().length }}</strong>
+        </article>
+        <article>
+          <span>Saved summaries</span>
+          <strong>{{ facade.savedSummaries().length }}</strong>
+        </article>
+      </section>
+    }
+
+    <section class="cv-projects-page__controls">
+      <div
+        class="cv-projects-page__workspace-toggle"
+        role="group"
+        aria-label="Choose workspace view">
+        @for (option of workspaceModeOptions; track option.value) {
           <button
             type="button"
-            class="cv-projects-page__secondary-action"
-            [disabled]="facade.loadingRepos()"
-            (click)="facade.loadRepos()">
-            {{ facade.loadingRepos() ? 'Refreshing...' : 'Refresh' }}
+            class="cv-projects-page__workspace-chip"
+            [class.cv-projects-page__workspace-chip--active]="isWorkspaceModeActive(option.value)"
+            [attr.aria-pressed]="isWorkspaceModeActive(option.value)"
+            (click)="setWorkspaceMode(option.value)">
+            @if (option.value === 'saved') {
+              {{ savedSummariesModeLabel() }}
+            } @else {
+              {{ option.label }}
+            }
           </button>
-        </div>
+        }
+      </div>
 
-        <div class="cv-projects-page__controls">
+      @if (workspaceMode() === 'browse') {
+        <div class="cv-projects-page__controls-row">
           <label class="cv-projects-page__search">
             <span>Search loaded repos</span>
             <input
@@ -56,182 +72,463 @@
             (click)="toggleForksAndArchived()">
             Show forks &amp; archived
           </button>
+
+          <button
+            type="button"
+            class="cv-projects-page__secondary-action"
+            [disabled]="facade.loadingRepos()"
+            (click)="facade.loadRepos()">
+            {{ facade.loadingRepos() ? 'Refreshing...' : 'Refresh repos' }}
+          </button>
         </div>
-
-        @if (facade.generateError(); as generateError) {
-          <div class="cv-projects-page__alert" role="alert">{{ generateError }}</div>
-        }
-
-        @if (facade.reposError(); as reposError) {
-          <div class="cv-projects-page__alert" role="alert">{{ reposError }}</div>
-        }
-
-        @if (facade.loadingRepos()) {
-          <div class="cv-projects-page__skeleton-list" aria-busy="true" aria-label="Loading repositories">
-            @for (index of skeletonRowIndexes; track index) {
-              <div class="cv-projects-page__skeleton-row">
-                <app-skeleton-block width="42%" height="1rem" />
-                <app-skeleton-block width="68%" height="0.9rem" />
-                <app-skeleton-block width="7rem" height="2.5rem" />
-              </div>
-            }
-          </div>
-        } @else if (filteredRepos().length === 0) {
-          <div class="cv-projects-page__empty">
-            <h3>No repositories to show</h3>
-            <p class="cv-projects-page__muted">
-              Try refreshing, widening the filter, or connecting a GitHub account with owner repositories.
-            </p>
-          </div>
-        } @else {
-          <ul class="cv-projects-page__repo-list">
-            @for (repo of filteredRepos(); track repo.externalRepoId) {
-              <li class="cv-projects-page__repo-row">
-                <div class="cv-projects-page__repo-main">
-                  <div class="cv-projects-page__repo-title-row">
-                    <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer">{{ repo.fullName }}</a>
-                    @if (savedSummaryFor(repo); as savedSummary) {
-                      <span class="cv-projects-page__status-chip cv-projects-page__status-chip--success">Saved</span>
-                    }
-                  </div>
-
-                  @if (repo.description) {
-                    <p class="cv-projects-page__repo-description">{{ repo.description }}</p>
-                  }
-
-                  <div class="cv-projects-page__repo-meta">
-                    @if (repo.primaryLanguage) {
-                      <span class="cv-projects-page__status-chip cv-projects-page__status-chip--compact">
-                        {{ repo.primaryLanguage }}
-                      </span>
-                    }
-                    @if (repo.isFork) {
-                      <span class="cv-projects-page__status-chip">Fork</span>
-                    }
-                    @if (repo.isArchived) {
-                      <span class="cv-projects-page__status-chip">Archived</span>
-                    }
-                    @if (repo.isPrivate) {
-                      <span class="cv-projects-page__status-chip">Private</span>
-                    }
-                    @if (repo.pushedAt) {
-                      <span class="cv-projects-page__muted">Updated {{ repo.pushedAt | date: 'mediumDate' }}</span>
-                    }
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  class="cv-projects-page__primary-action cv-projects-page__primary-action--compact"
-                  [disabled]="isGenerating(repo)"
-                  (click)="generateSummary(repo)">
-                  @if (isGenerating(repo)) {
-                    Generating...
-                  } @else if (savedSummaryFor(repo)) {
-                    Regenerate
-                  } @else {
-                    Generate summary
-                  }
-                </button>
-              </li>
-            }
-          </ul>
-
-          @if (facade.hasMoreRepos()) {
-            <div class="cv-projects-page__list-footer">
-              <button
-                type="button"
-                class="cv-projects-page__secondary-action"
-                [disabled]="facade.loadingMoreRepos()"
-                (click)="facade.loadMoreRepos()">
-                {{ facade.loadingMoreRepos() ? 'Loading...' : 'Load more repositories' }}
-              </button>
-            </div>
-          }
-        }
-      </section>
-
-      <section class="cv-projects-page__panel" aria-labelledby="cv-projects-saved-heading">
-        <div class="cv-projects-page__panel-header">
-          <div>
-            <p class="cv-projects-page__label">Personal projects</p>
-            <h2 id="cv-projects-saved-heading">Saved for your CV</h2>
-            <p class="cv-projects-page__muted">
-              Generated summaries stay here until you remove them or disconnect GitHub.
-            </p>
-          </div>
+      } @else {
+        <div class="cv-projects-page__controls-row">
+          <p class="cv-projects-page__controls-copy">
+            Review generated CV copy, remove entries, or open the source repository on GitHub.
+          </p>
           <button
             type="button"
             class="cv-projects-page__secondary-action"
             [disabled]="facade.loadingSummaries()"
             (click)="facade.loadSummaries()">
-            {{ facade.loadingSummaries() ? 'Refreshing...' : 'Refresh' }}
+            {{ facade.loadingSummaries() ? 'Refreshing...' : 'Refresh summaries' }}
           </button>
         </div>
+      }
+    </section>
 
-        @if (facade.summariesError(); as summariesError) {
-          <div class="cv-projects-page__alert" role="alert">{{ summariesError }}</div>
-        }
+    @if (facade.generateError(); as generateError) {
+      <div class="cv-projects-page__alert" role="alert">{{ generateError }}</div>
+    }
 
-        @if (facade.loadingSummaries()) {
-          <div class="cv-projects-page__skeleton-list" aria-busy="true" aria-label="Loading saved summaries">
+    @if (workspaceMode() === 'browse' && facade.reposError(); as reposError) {
+      <div class="cv-projects-page__alert" role="alert">{{ reposError }}</div>
+    }
+
+    @if (workspaceMode() === 'saved' && facade.summariesError(); as summariesError) {
+      <div class="cv-projects-page__alert" role="alert">{{ summariesError }}</div>
+    }
+
+    <section
+      class="cv-projects-page__content"
+      [class.cv-projects-page__content--mobile-detail]="showMobileDetail()">
+      @if (showMobileDetail()) {
+        <div class="cv-projects-page__mobile-back">
+          <button type="button" class="cv-projects-page__back-button" (click)="backToList()">
+            Back to list
+          </button>
+          @if (workspaceMode() === 'browse') {
+            @if (selectedRepo(); as repo) {
+              <p class="cv-projects-page__mobile-title">{{ repo.fullName }}</p>
+            }
+          } @else {
+            @if (selectedSummary(); as summary) {
+              <p class="cv-projects-page__mobile-title">{{ summary.cvTitle }}</p>
+            }
+          }
+        </div>
+      }
+
+      <aside
+        #listRegion
+        class="cv-projects-page__list"
+        tabindex="0"
+        [attr.aria-label]="workspaceMode() === 'browse' ? 'GitHub repositories' : 'Saved CV summaries'"
+        (keydown)="handleListKeydown($event)">
+        @if (workspaceMode() === 'browse') {
+          @if (facade.loadingRepos()) {
             @for (index of skeletonRowIndexes; track index) {
-              <div class="cv-projects-page__skeleton-row">
-                <app-skeleton-block width="36%" height="1rem" />
-                <app-skeleton-block width="100%" height="3rem" />
+              <div class="cv-projects-page__skeleton-card">
+                <app-skeleton-block width="72%" height="1rem" />
+                <app-skeleton-block width="54%" height="0.85rem" />
+                <app-skeleton-block width="88%" height="0.85rem" />
               </div>
             }
-          </div>
-        } @else if (facade.savedSummaries().length === 0) {
-          <div class="cv-projects-page__empty">
-            <h3>No saved summaries yet</h3>
-            <p class="cv-projects-page__muted">
-              Pick a repository on the left and generate your first personal-project entry.
-            </p>
-          </div>
-        } @else {
-          <div class="cv-projects-page__summary-list">
-            @for (summary of facade.savedSummaries(); track summary.id) {
-              <article class="cv-projects-page__summary-card">
-                <div class="cv-projects-page__summary-header">
-                  <div>
-                    <h3>{{ summary.cvTitle }}</h3>
-                    <p class="cv-projects-page__muted">{{ summary.fullName }}</p>
+          } @else if (filteredRepos().length === 0) {
+            <div class="cv-projects-page__empty">
+              <h3>No repositories to show</h3>
+              <p class="cv-projects-page__muted">
+                Try refreshing, widening the filter, or connecting a GitHub account with owner repositories.
+              </p>
+            </div>
+          } @else {
+            @for (repo of filteredRepos(); track repo.externalRepoId) {
+              <button
+                type="button"
+                class="cv-projects-page__list-card"
+                [class.cv-projects-page__list-card--selected]="isRepoSelected(repo.externalRepoId)"
+                [attr.data-repo-id]="repo.externalRepoId"
+                [attr.aria-current]="isRepoSelected(repo.externalRepoId) ? 'true' : null"
+                (click)="selectRepo(repo.externalRepoId)">
+                <div class="cv-projects-page__list-card-top">
+                  <span class="cv-projects-page__list-card-monogram" aria-hidden="true">
+                    {{ repo.name.slice(0, 1).toUpperCase() }}
+                  </span>
+                  <div class="cv-projects-page__list-card-eyebrow">
+                    <span>{{ repo.fullName.split('/')[0] }}</span>
+                    @if (repo.pushedAt) {
+                      <span>{{ repo.pushedAt | date: 'MMM d, y' }}</span>
+                    }
                   </div>
+                  @if (savedSummaryFor(repo)) {
+                    <span class="cv-projects-page__list-card-badge cv-projects-page__list-card-badge--saved">
+                      Saved
+                    </span>
+                  }
+                </div>
+
+                <h3>{{ repo.name }}</h3>
+
+                <div class="cv-projects-page__list-card-meta">
+                  @if (repo.primaryLanguage) {
+                    <span>{{ repo.primaryLanguage }}</span>
+                  }
+                  @if (repo.isPrivate) {
+                    <span>Private</span>
+                  }
+                  @if (repo.isFork) {
+                    <span>Fork</span>
+                  }
+                </div>
+
+                @if (repo.description) {
+                  <p class="cv-projects-page__list-card-excerpt">{{ repo.description }}</p>
+                }
+              </button>
+            }
+
+            @if (facade.loadingMoreRepos()) {
+              @for (index of loadMoreSkeletonIndexes; track index) {
+                <div class="cv-projects-page__skeleton-card">
+                  <app-skeleton-block width="72%" height="1rem" />
+                  <app-skeleton-block width="54%" height="0.85rem" />
+                </div>
+              }
+            }
+          }
+        } @else {
+          @if (facade.loadingSummaries()) {
+            @for (index of skeletonRowIndexes; track index) {
+              <div class="cv-projects-page__skeleton-card">
+                <app-skeleton-block width="68%" height="1rem" />
+                <app-skeleton-block width="48%" height="0.85rem" />
+                <app-skeleton-block width="82%" height="0.85rem" />
+              </div>
+            }
+          } @else if (facade.savedSummaries().length === 0) {
+            <div class="cv-projects-page__empty">
+              <h3>No saved summaries yet</h3>
+              <p class="cv-projects-page__muted">
+                Switch to Browse repositories, pick a repo, and generate your first personal-project entry.
+              </p>
+            </div>
+          } @else {
+            @for (summary of facade.savedSummaries(); track summary.id) {
+              <button
+                type="button"
+                class="cv-projects-page__list-card"
+                [class.cv-projects-page__list-card--selected]="isSummarySelected(summary.id)"
+                [attr.data-summary-id]="summary.id"
+                [attr.aria-current]="isSummarySelected(summary.id) ? 'true' : null"
+                (click)="selectSummary(summary.id)">
+                <div class="cv-projects-page__list-card-top">
+                  <span class="cv-projects-page__list-card-monogram" aria-hidden="true">
+                    {{ summary.cvTitle.slice(0, 1).toUpperCase() }}
+                  </span>
+                  <div class="cv-projects-page__list-card-eyebrow">
+                    <span>{{ summary.fullName.split('/')[0] }}</span>
+                    <span>{{ summary.updatedAt | date: 'MMM d, y' }}</span>
+                  </div>
+                </div>
+
+                <h3>{{ summary.cvTitle }}</h3>
+                <p class="cv-projects-page__list-card-subtitle">{{ summary.fullName }}</p>
+
+                <div class="cv-projects-page__list-card-meta">
+                  @if (summary.primaryLanguage) {
+                    <span>{{ summary.primaryLanguage }}</span>
+                  }
+                  <span>{{ summary.cvBullets.length }} bullets</span>
+                </div>
+
+                <p class="cv-projects-page__list-card-excerpt">{{ summary.cvSummary }}</p>
+              </button>
+            }
+
+            @if (facade.loadingMoreSummaries()) {
+              @for (index of loadMoreSkeletonIndexes; track index) {
+                <div class="cv-projects-page__skeleton-card">
+                  <app-skeleton-block width="68%" height="1rem" />
+                  <app-skeleton-block width="48%" height="0.85rem" />
+                </div>
+              }
+            }
+          }
+        }
+
+        @if (loadMoreError(); as loadMoreErrorMessage) {
+          <div class="cv-projects-page__load-more-error" role="alert">
+            <p>{{ loadMoreErrorMessage }}</p>
+            <button type="button" class="cv-projects-page__secondary-action" (click)="retryLoadMore()">
+              Try again
+            </button>
+          </div>
+        }
+
+        <footer class="cv-projects-page__list-footer">
+          @if (hasMoreListItems()) {
+            <button
+              type="button"
+              class="cv-projects-page__secondary-action"
+              [disabled]="loadingMoreList()"
+              (click)="loadMore()">
+              {{ loadingMoreList() ? 'Loading more...' : 'Load more' }}
+            </button>
+          } @else if (listItemsLoaded() > 0) {
+            <span class="cv-projects-page__end-of-results">All results loaded</span>
+          }
+        </footer>
+      </aside>
+
+      <section class="cv-projects-page__detail">
+        @if (workspaceMode() === 'browse') {
+          @if (selectedRepo(); as repo) {
+            <article class="cv-projects-page__detail-panel">
+              <div class="cv-projects-page__detail-header">
+                <div>
+                  <p class="cv-projects-page__detail-eyebrow">GitHub repository</p>
+                  <h2>{{ repo.fullName }}</h2>
+                  @if (repo.description) {
+                    <p class="cv-projects-page__detail-description">{{ repo.description }}</p>
+                  }
+                </div>
+
+                <div class="cv-projects-page__detail-actions">
+                  <a
+                    [href]="repo.htmlUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="cv-projects-page__secondary-action">
+                    View on GitHub
+                  </a>
+                  <button
+                    type="button"
+                    class="cv-projects-page__primary-action"
+                    [disabled]="isGenerating(repo) || !canGenerateSummary(repo)"
+                    [attr.title]="generateSummaryDisabledReason(repo)"
+                    [attr.aria-describedby]="
+                      !canGenerateSummary(repo) && !isGenerating(repo)
+                        ? 'cv-projects-summary-notice-' + repo.externalRepoId
+                        : null
+                    "
+                    (click)="generateSummary(repo)">
+                    @if (isGenerating(repo)) {
+                      Generating...
+                    } @else if (savedSummaryFor(repo)) {
+                      Regenerate summary
+                    } @else {
+                      Generate summary
+                    }
+                  </button>
+                </div>
+              </div>
+
+              <div class="cv-projects-page__detail-chips">
+                @if (repo.primaryLanguage) {
+                  <span class="cv-projects-page__status-chip">{{ repo.primaryLanguage }}</span>
+                }
+                @if (repo.isPrivate) {
+                  <span class="cv-projects-page__status-chip">Private</span>
+                }
+                @if (repo.isFork) {
+                  <span class="cv-projects-page__status-chip">Fork</span>
+                }
+                @if (repo.isArchived) {
+                  <span class="cv-projects-page__status-chip">Archived</span>
+                }
+                @if (repo.pushedAt) {
+                  <span class="cv-projects-page__muted">Updated {{ repo.pushedAt | date: 'mediumDate' }}</span>
+                }
+              </div>
+
+              @if (
+                !savedSummaryFor(repo) &&
+                !isLoadingReadme(repo) &&
+                (readmeFor(repo) !== undefined || readmeErrorFor(repo)) &&
+                !canGenerateSummary(repo)
+              ) {
+                <p
+                  class="cv-projects-page__detail-notice"
+                  role="status"
+                  [attr.id]="'cv-projects-summary-notice-' + repo.externalRepoId">
+                  {{ insufficientSummaryDataMessage }}
+                </p>
+              }
+
+              @if (savedSummaryFor(repo); as savedSummary) {
+                <section class="cv-projects-page__detail-section">
+                  <div class="cv-projects-page__detail-section-header">
+                    <div>
+                      <h3>Saved CV preview</h3>
+                      <p class="cv-projects-page__muted">
+                        Generated {{ savedSummary.updatedAt | date: 'medium' }}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="cv-projects-page__text-action"
+                      (click)="setWorkspaceMode('saved'); selectSummary(savedSummary.id)">
+                      Open in saved view
+                    </button>
+                  </div>
+
+                  <h4>{{ savedSummary.cvTitle }}</h4>
+                  <p>{{ savedSummary.cvSummary }}</p>
+
+                  @if (savedSummary.cvBullets.length > 0) {
+                    <ul class="cv-projects-page__detail-bullets">
+                      @for (bullet of savedSummary.cvBullets; track bullet) {
+                        <li>{{ bullet }}</li>
+                      }
+                    </ul>
+                  }
+
+                  @if (savedSummary.techStack) {
+                    <p class="cv-projects-page__tech-stack">{{ savedSummary.techStack }}</p>
+                  }
+                </section>
+              } @else {
+                <section class="cv-projects-page__detail-section cv-projects-page__detail-section--readme">
+                  <h3>README</h3>
+
+                  @if (isLoadingReadme(repo)) {
+                    <div class="cv-projects-page__readme-loading">
+                      <app-skeleton-block width="88%" height="0.9rem" />
+                      <app-skeleton-block width="72%" height="0.9rem" />
+                      <app-skeleton-block width="94%" height="0.9rem" />
+                    </div>
+                  } @else {
+                    @if (readmeErrorFor(repo); as readmeError) {
+                      <p class="cv-projects-page__readme-error" role="alert">{{ readmeError }}</p>
+                    } @else {
+                      @if (readmeFor(repo) !== undefined) {
+                        @if (hasReadmeContent(repo)) {
+                          <div
+                            class="cv-projects-page__readme-body"
+                            [innerHTML]="renderedReadme() | safeHtml"></div>
+                          <p class="cv-projects-page__readme-hint cv-projects-page__muted">
+                            Use <strong>Generate summary</strong> above to turn this into CV-ready copy.
+                          </p>
+                        } @else {
+                          <div class="cv-projects-page__readme-empty">
+                            <h4>No README available</h4>
+                            <p class="cv-projects-page__muted">
+                              This repository does not include a README file, or the file is empty.
+                            </p>
+                            @if (repo.description) {
+                              <div class="cv-projects-page__readme-fallback">
+                                <p class="cv-projects-page__readme-fallback-label">Repository description</p>
+                                <p>{{ repo.description }}</p>
+                              </div>
+                            }
+                            @if (canGenerateSummary(repo)) {
+                              <p class="cv-projects-page__readme-hint cv-projects-page__muted">
+                                Use <strong>Generate summary</strong> above to create CV-ready copy from what GitHub
+                                provides.
+                              </p>
+                            } @else {
+                              <p class="cv-projects-page__muted">
+                                Add a README or repository description on GitHub before generating CV copy for this
+                                project.
+                              </p>
+                            }
+                          </div>
+                        }
+                      }
+                    }
+                  }
+                </section>
+              }
+            </article>
+          } @else if (!facade.loadingRepos()) {
+            <div class="cv-projects-page__detail-empty">
+              <h2>Select a repository</h2>
+              <p class="cv-projects-page__muted">
+                Choose a repository from the list to review details and generate CV copy.
+              </p>
+            </div>
+          }
+        } @else {
+          @if (selectedSummary(); as summary) {
+            <article class="cv-projects-page__detail-panel">
+              <div class="cv-projects-page__detail-header">
+                <div>
+                  <p class="cv-projects-page__detail-eyebrow">Saved for your CV</p>
+                  <h2>{{ summary.cvTitle }}</h2>
+                  <p class="cv-projects-page__detail-description">{{ summary.fullName }}</p>
+                </div>
+
+                <div class="cv-projects-page__detail-actions">
+                  <a
+                    [href]="summary.htmlUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="cv-projects-page__secondary-action">
+                    View on GitHub
+                  </a>
                   <button
                     type="button"
                     class="cv-projects-page__danger-action"
                     [disabled]="facade.deletingSummaryId() === summary.id"
                     (click)="facade.deleteSummary(summary.id)">
-                    {{ facade.deletingSummaryId() === summary.id ? 'Removing...' : 'Remove' }}
+                    {{ facade.deletingSummaryId() === summary.id ? 'Removing...' : 'Remove summary' }}
                   </button>
                 </div>
+              </div>
 
+              <div class="cv-projects-page__detail-chips">
+                @if (summary.primaryLanguage) {
+                  <span class="cv-projects-page__status-chip">{{ summary.primaryLanguage }}</span>
+                }
+                <span class="cv-projects-page__muted">Generated {{ summary.updatedAt | date: 'medium' }}</span>
+              </div>
+
+              <section class="cv-projects-page__detail-section">
+                <h3>Summary</h3>
                 <p>{{ summary.cvSummary }}</p>
+              </section>
 
-                @if (summary.cvBullets.length > 0) {
-                  <ul>
+              @if (summary.cvBullets.length > 0) {
+                <section class="cv-projects-page__detail-section">
+                  <h3>Highlights</h3>
+                  <ul class="cv-projects-page__detail-bullets">
                     @for (bullet of summary.cvBullets; track bullet) {
                       <li>{{ bullet }}</li>
                     }
                   </ul>
-                }
+                </section>
+              }
 
-                @if (summary.techStack) {
+              @if (summary.techStack) {
+                <section class="cv-projects-page__detail-section">
+                  <h3>Tech stack</h3>
                   <p class="cv-projects-page__tech-stack">{{ summary.techStack }}</p>
-                }
-
-                <div class="cv-projects-page__summary-footer">
-                  <a [href]="summary.htmlUrl" target="_blank" rel="noopener noreferrer">View on GitHub</a>
-                  <span class="cv-projects-page__muted">
-                    Generated {{ summary.updatedAt | date: 'medium' }}
-                  </span>
-                </div>
-              </article>
-            }
-          </div>
+                </section>
+              }
+            </article>
+          } @else if (!facade.loadingSummaries()) {
+            <div class="cv-projects-page__detail-empty">
+              <h2>No saved summaries yet</h2>
+              <p class="cv-projects-page__muted">
+                Browse repositories and generate your first personal-project entry for your CV.
+              </p>
+              <button type="button" class="cv-projects-page__primary-action" (click)="setWorkspaceMode('browse')">
+                Browse repositories
+              </button>
+            </div>
+          }
         }
       </section>
-    </div>
+    </section>
   }
 </main>

@@ -15,6 +15,11 @@ public interface IGitHubProjectSummaryService
         int perPage,
         CancellationToken cancellationToken = default);
 
+    Task<GitHubRepositoryReadmeDto> GetRepositoryReadmeAsync(
+        AppUserEntity user,
+        string fullName,
+        CancellationToken cancellationToken = default);
+
     Task<CvProjectSummaryDto> GenerateAsync(
         AppUserEntity user,
         string fullName,
@@ -22,6 +27,8 @@ public interface IGitHubProjectSummaryService
 
     Task<IReadOnlyList<CvProjectSummaryDto>> ListSummariesAsync(
         AppUserEntity user,
+        int page,
+        int perPage,
         CancellationToken cancellationToken = default);
 
     Task<CvProjectSummaryDto?> GetSummaryAsync(
@@ -58,6 +65,18 @@ public sealed class GitHubProjectSummaryService(
         return repositories.Select(MapRepositoryListItem).ToArray();
     }
 
+    public async Task<GitHubRepositoryReadmeDto> GetRepositoryReadmeAsync(
+        AppUserEntity user,
+        string fullName,
+        CancellationToken cancellationToken = default)
+    {
+        var (owner, repo) = ParseFullName(fullName);
+        var (_, accessToken) = await gitHubAccountResolver.ResolveAsync(user, cancellationToken);
+        var readmeText = await gitHubApiClient.GetReadmeTextAsync(accessToken, owner, repo, cancellationToken);
+
+        return new GitHubRepositoryReadmeDto(readmeText);
+    }
+
     public async Task<CvProjectSummaryDto> GenerateAsync(
         AppUserEntity user,
         string fullName,
@@ -73,6 +92,15 @@ public sealed class GitHubProjectSummaryService(
 
         var repository = await gitHubApiClient.GetRepositoryAsync(accessToken, owner, repo, cancellationToken);
         var readmeText = await gitHubApiClient.GetReadmeTextAsync(accessToken, owner, repo, cancellationToken);
+
+        if (!GitHubProjectSummaryEligibility.HasSufficientSummaryData(
+                readmeText,
+                repository.Description,
+                repository.PrimaryLanguage,
+                repository.Topics))
+        {
+            throw new InvalidOperationException(GitHubProjectSummaryEligibility.InsufficientDataMessage);
+        }
 
         var aiResult = await gitHubProjectAiClient.GenerateAsync(
             new GitHubProjectAiInput(
@@ -137,12 +165,19 @@ public sealed class GitHubProjectSummaryService(
 
     public async Task<IReadOnlyList<CvProjectSummaryDto>> ListSummariesAsync(
         AppUserEntity user,
+        int page,
+        int perPage,
         CancellationToken cancellationToken = default)
     {
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPerPage = Math.Clamp(perPage, 1, 100);
+
         var summaries = await dbContext.UserCvProjectSummaries
             .AsNoTracking()
             .Where((summary) => summary.UserId == user.Id)
             .OrderByDescending((summary) => summary.UpdatedAt)
+            .Skip((normalizedPage - 1) * normalizedPerPage)
+            .Take(normalizedPerPage)
             .ToArrayAsync(cancellationToken);
 
         return summaries.Select(MapSummary).ToArray();

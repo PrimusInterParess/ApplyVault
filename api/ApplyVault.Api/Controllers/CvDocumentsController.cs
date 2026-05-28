@@ -1,5 +1,6 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -122,13 +123,20 @@ public sealed class CvDocumentsController(
     }
 
     [HttpGet("current/export/download")]
-    public async Task<IActionResult> DownloadFormattedExport(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> DownloadFormattedExport(
+        [FromQuery] int templateId = 1,
+        CancellationToken cancellationToken = default)
     {
+        if (!CvExportHtmlTemplateCatalog.IsValidTemplateId(templateId))
+        {
+            return BadRequest($"templateId must be between {CvExportHtmlTemplateCatalog.MinTemplateId} and {CvExportHtmlTemplateCatalog.MaxTemplateId}.");
+        }
+
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
 
         try
         {
-            var exportResult = await cvDocumentExportService.ExportPdfAsync(user, cancellationToken);
+            var exportResult = await cvDocumentExportService.ExportPdfAsync(user, templateId, cancellationToken);
             var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
             var fileName = document is null
                 ? "cv-export.pdf"

@@ -1,11 +1,17 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
 
+import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { CvStructuredSectionPanelComponent } from '../../components/cv-structured-section-panel/cv-structured-section-panel.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import { CvImprovementSuggestion, CvStructuredSection } from '../../models/cv-structured.model';
+import {
+  CV_EXPORT_TEMPLATES,
+  DEFAULT_CV_EXPORT_TEMPLATE_ID,
+  MAX_CV_EXPORT_TEMPLATE_ID
+} from '../../models/cv-export-template.model';
 import {
   cloneSectionForDraft,
   mergeSection,
@@ -27,6 +33,8 @@ import {
 export class MyCvPageComponent {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
+  protected readonly cvExportTemplates = CV_EXPORT_TEMPLATES;
+  protected readonly defaultCvExportTemplateId = DEFAULT_CV_EXPORT_TEMPLATE_ID;
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly aiPanelOpen = signal(false);
   protected readonly suggestionsPanelOpen = signal(false);
@@ -211,6 +219,17 @@ export class MyCvPageComponent {
     }
 
     this.cvDocument.upload(file);
+  }
+
+  protected onExportTemplateChange(event: Event): void {
+    const rawValue = readInputValue(event);
+    const templateId = Number.parseInt(rawValue, 10);
+
+    if (!Number.isInteger(templateId) || templateId < 1 || templateId > MAX_CV_EXPORT_TEMPLATE_ID) {
+      return;
+    }
+
+    this.cvDocument.setExportTemplateId(templateId);
   }
 
   protected updateAiInstructions(event: Event): void {

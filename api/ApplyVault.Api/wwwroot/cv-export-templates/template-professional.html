@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CV</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #111;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+    .cv-header {
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .cv-header::after {
+      content: '';
+      display: table;
+      clear: both;
+    }
+    .cv-photo {
+      width: 84px;
+      height: 84px;
+      object-fit: cover;
+      float: right;
+      margin: 0 0 8px 14px;
+    }
+    .cv-name {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.15;
+      color: #111;
+    }
+    .cv-tagline {
+      margin: 4px 0 8px;
+      font-size: 13px;
+      font-weight: 400;
+      color: #222;
+    }
+    .cv-contact {
+      margin: 0;
+    }
+    .cv-contact-line {
+      margin: 0 0 2px;
+      font-size: 11px;
+      color: #333;
+    }
+    .cv-body { padding: 0; }
+    .section { margin-bottom: 14px; }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid #111;
+      color: #111;
+    }
+    .entry { margin-bottom: 12px; }
+    .entry-title-line {
+      font-weight: 700;
+      font-size: 11.5px;
+      line-height: 1.35;
+    }
+    .entry-date {
+      font-size: 11px;
+      color: #333;
+      margin-top: 2px;
+    }
+    .entry-summary { margin: 6px 0 0; }
+    .entry-bullets { margin: 6px 0 0 18px; padding: 0; }
+    .entry-bullets li { margin-bottom: 3px; }
+    .entry-tech { font-size: 11px; color: #333; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="cv-header">
+    {{ProfilePhotoHtml}}
+    {{HeaderHtml}}
+  </div>
+  <div class="cv-body">
+    {{MainHtml}}
+  </div>
+</body>
+</html>

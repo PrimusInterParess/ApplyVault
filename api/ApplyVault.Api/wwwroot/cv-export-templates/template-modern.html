@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CV</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #333; font-size: 14px; line-height: 1.4; }
+    .cv-layout { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .cv-sidebar { width: 32%; background-color: #2c3e50; color: #fff; padding: 20px 18px; vertical-align: top; }
+    .cv-main { width: 68%; padding: 20px 24px; vertical-align: top; background: #fff; }
+    .cv-photo { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; display: block; margin-bottom: 14px; border: 2px solid rgba(255,255,255,0.35); }
+    .section { margin-bottom: 16px; }
+    .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 2px solid rgba(255,255,255,0.35); padding-bottom: 4px; margin: 0 0 10px; color: inherit; }
+    .cv-main .section-title { color: #1b4f72; border-bottom-color: #1b4f72; }
+    .entry { margin-bottom: 12px; }
+    .entry-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .cv-sidebar .entry-header { display: block; }
+    .entry-title { font-weight: 700; }
+    .entry-date { font-size: 12px; opacity: 0.85; }
+    .entry-subtitle { font-size: 13px; margin-top: 2px; opacity: 0.9; }
+    .entry-summary { margin: 6px 0 0; line-height: 1.4; }
+    .entry-bullets { margin: 6px 0 0 18px; padding: 0; }
+    .entry-bullets li { margin-bottom: 4px; }
+    .entry-tech { font-size: 12px; margin: 4px 0 0; opacity: 0.9; }
+    .cv-sidebar .entry-summary, .cv-sidebar .entry-tech { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <table class="cv-layout" role="presentation">
+    <tbody>
+      <tr>
+        <td class="cv-sidebar">
+          {{ProfilePhotoHtml}}
+          {{SidebarHtml}}
+        </td>
+        <td class="cv-main">
+          {{MainHtml}}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

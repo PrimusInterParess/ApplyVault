@@ -1,0 +1,101 @@
+/* Shared print/PDF rules for Chromium (Puppeteer) multi-page CV export */
+
+@page {
+  size: A4;
+  margin: 10mm 12mm;
+}
+
+html,
+body {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.cv-layout {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  page-break-inside: auto;
+}
+
+.cv-layout > tbody > tr > td {
+  vertical-align: top;
+  page-break-inside: auto;
+}
+
+.section {
+  break-inside: auto;
+  page-break-inside: auto;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.entry-header {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.entry-title,
+.entry-subtitle,
+.entry-summary,
+.entry-tech {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.entry-date {
+  white-space: normal;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.entry-bullets {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.entry-bullets li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cv-photo {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.cv-header::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.cv-header {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.cv-name,
+.cv-tagline,
+.cv-contact-line {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cv-body::after {
+  content: '';
+  display: table;
+  clear: both;
+}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CV</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #1a1a2e; font-size: 13px; line-height: 1.45; }
+    .cv-layout { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .cv-sidebar { width: 34%; background: linear-gradient(180deg, #6c5ce7 0%, #a29bfe 100%); color: #fff; padding: 22px 18px; vertical-align: top; }
+    .cv-main { width: 66%; padding: 22px 26px; background: #fafafa; vertical-align: top; }
+    .cv-photo { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; margin-bottom: 16px; border: 3px solid rgba(255,255,255,0.6); }
+    .section { margin-bottom: 16px; }
+    .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 10px; font-weight: 700; opacity: 0.95; }
+    .cv-main .section-title { color: #6c5ce7; }
+    .entry { margin-bottom: 12px; padding-left: 10px; border-left: 3px solid rgba(255,255,255,0.45); }
+    .cv-main .entry { border-left-color: #6c5ce7; }
+    .entry-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .cv-sidebar .entry-header { display: block; }
+    .entry-title { font-weight: 700; font-size: 14px; }
+    .entry-date { font-size: 11px; opacity: 0.85; }
+    .entry-subtitle { margin-top: 2px; opacity: 0.92; }
+    .entry-summary { margin: 6px 0 0; line-height: 1.45; }
+    .entry-bullets { margin: 6px 0 0 18px; padding: 0; }
+    .entry-bullets li { margin-bottom: 4px; }
+    .entry-tech { font-size: 12px; margin-top: 4px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <table class="cv-layout" role="presentation">
+    <tbody>
+      <tr>
+        <td class="cv-sidebar">
+          {{ProfilePhotoHtml}}
+          {{SidebarHtml}}
+        </td>
+        <td class="cv-main">
+          {{MainHtml}}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

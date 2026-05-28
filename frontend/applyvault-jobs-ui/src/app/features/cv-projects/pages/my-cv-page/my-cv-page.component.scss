@@ -408,16 +408,19 @@
 .my-cv-page__panel-header {
   display: flex;
   justify-content: space-between;
-  align-items: start;
+  align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
 .my-cv-page__actions {
   display: flex;
+  flex: 1 1 20rem;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: flex-end;
+  max-width: 100%;
 }
 
 .my-cv-page__file-input {
@@ -708,6 +711,36 @@
   color: var(--app-accent);
 }
 
+.my-cv-page__export-template {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: min(100%, 14rem);
+}
+
+.my-cv-page__export-template-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.my-cv-page__export-template-select {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+  color: var(--app-text);
+  font: inherit;
+}
+
+.my-cv-page__export-template-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .my-cv-page__primary-action,
 .my-cv-page__secondary-action,
 .my-cv-page__danger-action {
@@ -736,12 +769,18 @@
 }
 
 .my-cv-page__secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--app-border-strong);
   background: var(--app-bg-soft);
   color: var(--app-text);
 }
 
 .my-cv-page__danger-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid color-mix(in srgb, var(--app-danger) 35%, var(--app-border-strong));
   background: color-mix(in srgb, var(--app-danger) 10%, var(--app-bg-soft));
   color: var(--app-text);
@@ -847,6 +886,23 @@
 
   .my-cv-page__ai-panel {
     width: min(32rem, 100vw);
+  }
+}
+
+@media (max-width: 960px) {
+  .my-cv-page__panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .my-cv-page__actions {
+    flex: 1 1 auto;
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .my-cv-page__actions :is(button, .my-cv-page__export-template) {
+    width: 100%;
   }
 }
 

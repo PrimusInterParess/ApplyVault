@@ -245,6 +245,18 @@
             (click)="cvDocument.reimportStructured()">
             {{ cvDocument.reimporting() ? 'Re-importing sections...' : 'Re-import sections' }}
           </button>
+          <label class="my-cv-page__export-template">
+            <span class="my-cv-page__export-template-label">PDF template</span>
+            <select
+              class="my-cv-page__export-template-select"
+              [disabled]="!canDownloadFormatted()"
+              [value]="cvDocument.selectedExportTemplateId()"
+              (change)="onExportTemplateChange($event)">
+              @for (template of cvExportTemplates; track template.id) {
+                <option [value]="template.id">{{ template.label }}</option>
+              }
+            </select>
+          </label>
           <button
             type="button"
             class="my-cv-page__secondary-action"

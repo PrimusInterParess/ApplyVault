@@ -1,6 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
+using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -10,6 +11,7 @@ public interface ICvDocumentExportService
 {
     Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
+        int templateId = 1,
         CancellationToken cancellationToken = default);
 }
 
@@ -17,12 +19,13 @@ public sealed class CvDocumentExportService(
     ICvStructuredDocumentService structuredDocumentService,
     ICvDocumentService cvDocumentService,
     ICvExportAiClient exportAiClient,
-    ICvPdfExportRenderer pdfExportRenderer,
+    ICvExportRenderDispatcher exportRenderDispatcher,
     IOptions<GoogleAiOptions> googleAiOptions,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
 {
     public async Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
+        int templateId = 1,
         CancellationToken cancellationToken = default)
     {
         var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
@@ -77,7 +80,7 @@ public sealed class CvDocumentExportService(
             }
         }
 
-        var pdfBytes = pdfExportRenderer.Render(renderRequest);
+        var pdfBytes = await exportRenderDispatcher.RenderAsync(renderRequest, templateId, cancellationToken);
 
         return new CvPdfExportResult(pdfBytes, usedAi, notice);
     }

@@ -2,6 +2,7 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.Eures;
+using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -114,6 +115,10 @@ public static class ServiceCollectionExtensions
         services
             .AddOptions<CvExportAiOptions>()
             .Bind(configuration.GetSection(CvExportAiOptions.SectionName));
+
+        services
+            .AddOptions<CvHtmlExportOptions>()
+            .Bind(configuration.GetSection(CvHtmlExportOptions.SectionName));
 
         if (!environment.IsDevelopment())
         {
@@ -256,6 +261,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredUpdateService, CvStructuredUpdateService>();
         services.AddScoped<ICvStructuredSuggestionsService, CvStructuredSuggestionsService>();
         services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
+        services.AddCvHtmlExport(configuration);
         services.AddScoped<ICvDocumentExportService, CvDocumentExportService>();
         services.AddScoped<LocalFilesystemCvDocumentStorage>();
         services.AddScoped<AzureBlobCvDocumentStorage>();

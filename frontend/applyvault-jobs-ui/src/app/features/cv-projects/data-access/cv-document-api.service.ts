@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -44,9 +44,16 @@ export class CvDocumentApiService {
     );
   }
 
-  downloadFormattedPdf(): Observable<Blob> {
+  downloadFormattedPdf(templateId = 1): Observable<Blob> {
+    let params = new HttpParams();
+
+    if (templateId > 1) {
+      params = params.set('templateId', String(templateId));
+    }
+
     return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/download`, {
-      responseType: 'blob'
+      responseType: 'blob',
+      params
     });
   }
 

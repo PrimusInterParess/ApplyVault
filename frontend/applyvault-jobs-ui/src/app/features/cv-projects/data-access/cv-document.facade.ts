@@ -5,6 +5,11 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { CvDocument, CvStructuredImportSummary } from '../models/cv-document.model';
+import {
+  CV_EXPORT_TEMPLATE_STORAGE_KEY,
+  DEFAULT_CV_EXPORT_TEMPLATE_ID,
+  MAX_CV_EXPORT_TEMPLATE_ID
+} from '../models/cv-export-template.model';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
 
@@ -40,6 +45,7 @@ export class CvDocumentFacade {
   readonly downloadFormattedError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
+  readonly selectedExportTemplateId = signal(this.readStoredExportTemplateId());
 
   readonly hasDocument = computed(() => this.document() !== null);
 
@@ -210,6 +216,16 @@ export class CvDocumentFacade {
     });
   }
 
+  setExportTemplateId(templateId: number): void {
+    this.selectedExportTemplateId.set(templateId);
+
+    try {
+      sessionStorage.setItem(CV_EXPORT_TEMPLATE_STORAGE_KEY, String(templateId));
+    } catch {
+      // Ignore storage failures (private mode, quota, etc.).
+    }
+  }
+
   downloadFormatted(): void {
     const document = this.document();
 
@@ -217,11 +233,13 @@ export class CvDocumentFacade {
       return;
     }
 
+    const templateId = this.selectedExportTemplateId();
+
     this.cancelDownloadFormatted();
     this.downloadingFormatted.set(true);
     this.downloadFormattedError.set(null);
 
-    this.downloadFormattedSubscription = this.apiService.downloadFormattedPdf().subscribe({
+    this.downloadFormattedSubscription = this.apiService.downloadFormattedPdf(templateId).subscribe({
       next: (blob) => {
         this.downloadingFormatted.set(false);
         const baseName = document.originalFileName.replace(/\.pdf$/i, '');
@@ -356,6 +374,24 @@ export class CvDocumentFacade {
     anchor.download = fileName;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  private readStoredExportTemplateId(): number {
+    try {
+      const stored = sessionStorage.getItem(CV_EXPORT_TEMPLATE_STORAGE_KEY);
+
+      if (!stored) {
+        return DEFAULT_CV_EXPORT_TEMPLATE_ID;
+      }
+
+      const parsed = Number.parseInt(stored, 10);
+
+      return Number.isInteger(parsed) && parsed >= 1 && parsed <= MAX_CV_EXPORT_TEMPLATE_ID
+        ? parsed
+        : DEFAULT_CV_EXPORT_TEMPLATE_ID;
+    } catch {
+      return DEFAULT_CV_EXPORT_TEMPLATE_ID;
+    }
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

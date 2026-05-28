@@ -32,6 +32,7 @@ export class CvStructuredSectionPanelComponent {
   readonly saveError = input<string | null>(null);
   readonly canSave = input(false);
   public readonly aiUpdateSelected = input(false);
+  public readonly suggestionSelected = input(false);
   public readonly showAiUpdateAction = input(false);
   readonly draft = model<CvStructuredSection | null>(null);
 

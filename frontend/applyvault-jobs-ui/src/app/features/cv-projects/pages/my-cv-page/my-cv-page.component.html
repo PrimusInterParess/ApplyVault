@@ -1,4 +1,203 @@
 <main class="my-cv-page">
+  <aside
+    class="my-cv-page__ai-panel"
+    [class.my-cv-page__ai-panel--open]="aiPanelOpen()"
+    role="complementary"
+    aria-label="CV AI update panel">
+    <div class="my-cv-page__ai-handle-rail" aria-hidden="true">
+      <button
+        type="button"
+        class="my-cv-page__ai-handle"
+        [disabled]="!hasSections() || cvDocument.loading() || cvStructured.loading()"
+        [attr.aria-expanded]="aiPanelOpen()"
+        [attr.aria-label]="aiPanelOpen() ? 'Close AI update panel' : 'Open AI update panel'"
+        (click)="toggleAiPanel()">
+        <span class="my-cv-page__ai-handle-triangle" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="my-cv-page__ai-body">
+      <header class="my-cv-page__ai-header">
+        <div>
+          <p class="my-cv-page__label">AI update</p>
+          <h3 class="my-cv-page__suggestions-title">Update sections with instructions</h3>
+          <p class="my-cv-page__muted">
+            Describe what to change. Optionally pick focus sections below so you do not need to paste their
+            content into the instructions.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="my-cv-page__secondary-action my-cv-page__ai-close"
+          (click)="closeAiPanel()">
+          Close
+        </button>
+      </header>
+
+      <form class="my-cv-page__ai-update" (submit)="$event.preventDefault(); updateStructuredWithAi()">
+        <details class="my-cv-page__ai-focus" open>
+          <summary class="my-cv-page__ai-focus-summary">
+            <span class="my-cv-page__ai-focus-summary-title">Focus sections</span>
+            <span class="my-cv-page__ai-focus-summary-meta">
+              Optional · {{ aiUpdateSectionIds().length }} selected
+            </span>
+          </summary>
+
+          <p class="my-cv-page__muted my-cv-page__ai-focus-help">
+            Target specific sections; leave none selected to allow changes anywhere.
+          </p>
+
+          <div class="my-cv-page__ai-focus-chips" role="group" aria-label="Focus sections for AI update">
+            @for (section of sections(); track section.id) {
+              <button
+                type="button"
+                class="my-cv-page__ai-focus-chip"
+                [class.my-cv-page__ai-focus-chip--active]="isAiUpdateSectionSelected(section.id)"
+                [disabled]="cvStructured.updatingWithAi() || cvStructured.generatingSuggestions() || !!editingSectionId()"
+                [attr.aria-pressed]="isAiUpdateSectionSelected(section.id)"
+                (click)="toggleAiUpdateSection(section.id)">
+                <span>{{ aiUpdateSectionLabel(section) }}</span>
+                <span class="my-cv-page__ai-focus-chip-type">{{ section.sectionType }}</span>
+              </button>
+            }
+          </div>
+        </details>
+
+        <label class="my-cv-page__ai-field">
+          <span>Instructions</span>
+          <textarea
+            rows="4"
+            [disabled]="cvStructured.updatingWithAi() || cvStructured.generatingSuggestions() || !!editingSectionId()"
+            [value]="aiUpdateInstructions()"
+            placeholder="Example: Make the summary more backend-focused and tighten each experience entry to two achievement bullets."
+            (input)="updateAiInstructions($event)"></textarea>
+        </label>
+
+        @if (cvStructured.aiUpdateError(); as aiUpdateError) {
+          <div class="my-cv-page__alert" role="alert">{{ aiUpdateError }}</div>
+        }
+
+        <div class="my-cv-page__ai-actions">
+          <button
+            type="submit"
+            class="my-cv-page__primary-action"
+            [disabled]="!canUpdateWithAi()">
+            {{ cvStructured.updatingWithAi() ? 'Updating CV with AI...' : 'Update CV with AI' }}
+          </button>
+          @if (editingSectionId()) {
+            <p class="my-cv-page__muted">Finish or cancel the current section edit before using AI update.</p>
+          }
+        </div>
+      </form>
+    </div>
+  </aside>
+
+  <aside
+    class="my-cv-page__suggestions-panel"
+    [class.my-cv-page__suggestions-panel--open]="suggestionsPanelOpen()"
+    role="complementary"
+    aria-label="CV suggestions panel">
+    <div class="my-cv-page__suggestions-handle-rail" aria-hidden="true">
+      <button
+        type="button"
+        class="my-cv-page__suggestions-handle"
+        [disabled]="!hasSections() || cvDocument.loading() || cvStructured.loading()"
+        [attr.aria-expanded]="suggestionsPanelOpen()"
+        [attr.aria-label]="suggestionsPanelOpen() ? 'Close suggestions panel' : 'Open suggestions panel'"
+        (click)="toggleSuggestionsPanel()">
+        <span class="my-cv-page__suggestions-handle-triangle" aria-hidden="true"></span>
+        @if (cvStructured.suggestions().length > 0) {
+          <span class="my-cv-page__suggestions-handle-badge" aria-hidden="true">
+            {{ cvStructured.suggestions().length }}
+          </span>
+        }
+      </button>
+    </div>
+
+    <div class="my-cv-page__suggestions-body">
+      <header class="my-cv-page__suggestions-header">
+        <div>
+          <p class="my-cv-page__label">AI suggestions</p>
+          <h3 class="my-cv-page__suggestions-title">Improve your CV</h3>
+          <p class="my-cv-page__muted">
+            Generate advice from your saved entries, select what you like, then apply them as an AI update.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="my-cv-page__secondary-action my-cv-page__suggestions-close"
+          (click)="closeSuggestionsPanel()">
+          Close
+        </button>
+      </header>
+
+      <div class="my-cv-page__suggestions-actions">
+        <button
+          type="button"
+          class="my-cv-page__secondary-action"
+          [disabled]="!canGenerateSuggestions()"
+          (click)="generateSuggestions()">
+          {{ cvStructured.generatingSuggestions() ? 'Generating suggestions...' : 'Generate suggestions' }}
+        </button>
+
+        <button
+          type="button"
+          class="my-cv-page__primary-action"
+          [disabled]="!canApplySelectedSuggestions()"
+          (click)="applySelectedSuggestions()">
+          {{ cvStructured.updatingWithAi() ? 'Applying suggestions...' : 'Apply selected' }}
+        </button>
+
+        <p class="my-cv-page__muted">
+          {{ selectedSuggestions().length }} selected
+          @if (cvStructured.suggestions().length > 0) {
+            out of {{ cvStructured.suggestions().length }}
+          }.
+        </p>
+      </div>
+
+      @if (cvStructured.suggestionError(); as suggestionError) {
+        <div class="my-cv-page__alert" role="alert">{{ suggestionError }}</div>
+      }
+
+      <div class="my-cv-page__suggestions-scroll" [attr.aria-busy]="cvStructured.generatingSuggestions()">
+        @if (cvStructured.generatingSuggestions()) {
+          <div class="my-cv-page__sections-skeleton" aria-label="Generating CV suggestions">
+            <app-skeleton-block width="100%" height="5rem" />
+            <app-skeleton-block width="100%" height="5rem" />
+          </div>
+        } @else if (cvStructured.suggestions().length > 0) {
+          <div class="my-cv-page__suggestions-list">
+            @for (suggestion of cvStructured.suggestions(); track suggestion.id) {
+              <button
+                type="button"
+                class="my-cv-page__suggestion-card"
+                [class.my-cv-page__suggestion-card--selected]="isSuggestionSelected(suggestion.id)"
+                [disabled]="cvStructured.updatingWithAi() || !!editingSectionId()"
+                [attr.aria-pressed]="isSuggestionSelected(suggestion.id)"
+                (click)="toggleSuggestion(suggestion.id)">
+                <span class="my-cv-page__suggestion-card-header">
+                  <span class="my-cv-page__suggestion-title">{{ suggestion.title }}</span>
+                  <span class="my-cv-page__suggestion-meta">
+                    {{ suggestion.category }} - {{ suggestion.impact }} impact
+                  </span>
+                </span>
+                <span class="my-cv-page__suggestion-rationale">{{ suggestion.rationale }}</span>
+                <span class="my-cv-page__suggestion-instruction">{{ suggestion.suggestedInstruction }}</span>
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="my-cv-page__suggestions-empty">
+            <p class="my-cv-page__muted">
+              No suggestions yet. Click “Generate suggestions” to create a set you can apply.
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </aside>
+
   <section class="my-cv-page__hero">
     <div>
       <p class="my-cv-page__eyebrow">Personal document</p>
@@ -185,132 +384,7 @@
         </div>
       } @else {
         @if (hasSections()) {
-          <section class="my-cv-page__ai-update" aria-labelledby="cv-ai-suggestions-heading">
-            <div class="my-cv-page__panel-header">
-              <div>
-                <p class="my-cv-page__label">AI suggestions</p>
-                <h3 id="cv-ai-suggestions-heading">Find ways to improve your CV</h3>
-                <p class="my-cv-page__muted">
-                  Generate advice from your saved entries, select the suggestions you like, then apply them as an AI
-                  update.
-                </p>
-              </div>
-              <button
-                type="button"
-                class="my-cv-page__secondary-action"
-                [disabled]="!canGenerateSuggestions()"
-                (click)="generateSuggestions()">
-                {{ cvStructured.generatingSuggestions() ? 'Generating suggestions...' : 'Generate suggestions' }}
-              </button>
-            </div>
-
-            @if (cvStructured.suggestionError(); as suggestionError) {
-              <div class="my-cv-page__alert" role="alert">{{ suggestionError }}</div>
-            }
-
-            @if (cvStructured.generatingSuggestions()) {
-              <div class="my-cv-page__sections-skeleton" aria-busy="true" aria-label="Generating CV suggestions">
-                <app-skeleton-block width="100%" height="5rem" />
-                <app-skeleton-block width="100%" height="5rem" />
-              </div>
-            } @else if (cvStructured.suggestions().length > 0) {
-              <div class="my-cv-page__suggestions-list">
-                @for (suggestion of cvStructured.suggestions(); track suggestion.id) {
-                  <button
-                    type="button"
-                    class="my-cv-page__suggestion-card"
-                    [class.my-cv-page__suggestion-card--selected]="isSuggestionSelected(suggestion.id)"
-                    [disabled]="cvStructured.updatingWithAi() || !!editingSectionId()"
-                    [attr.aria-pressed]="isSuggestionSelected(suggestion.id)"
-                    (click)="toggleSuggestion(suggestion.id)">
-                    <span class="my-cv-page__suggestion-card-header">
-                      <span class="my-cv-page__suggestion-title">{{ suggestion.title }}</span>
-                      <span class="my-cv-page__suggestion-meta">
-                        {{ suggestion.category }} - {{ suggestion.impact }} impact
-                      </span>
-                    </span>
-                    <span class="my-cv-page__suggestion-rationale">{{ suggestion.rationale }}</span>
-                    <span class="my-cv-page__suggestion-instruction">{{ suggestion.suggestedInstruction }}</span>
-                  </button>
-                }
-              </div>
-
-              <div class="my-cv-page__ai-actions">
-                <button
-                  type="button"
-                  class="my-cv-page__primary-action"
-                  [disabled]="!canApplySelectedSuggestions()"
-                  (click)="applySelectedSuggestions()">
-                  {{
-                    cvStructured.updatingWithAi()
-                      ? 'Applying suggestions...'
-                      : 'Apply selected suggestions'
-                  }}
-                </button>
-                <p class="my-cv-page__muted">
-                  {{ selectedSuggestions().length }} selected. Applying suggestions will update your saved sections.
-                </p>
-              </div>
-            }
-          </section>
-
-          <form class="my-cv-page__ai-update" (submit)="$event.preventDefault(); updateStructuredWithAi()">
-            <div>
-              <p class="my-cv-page__label">AI update</p>
-              <h3>Update sections with instructions</h3>
-              <p class="my-cv-page__muted">
-                Describe what to change. Optionally pick focus sections below so you do not need to paste their
-                content into the instructions.
-              </p>
-            </div>
-
-            <div class="my-cv-page__ai-focus">
-              <p class="my-cv-page__label">Focus sections</p>
-              <p class="my-cv-page__muted">
-                Optional. Target specific sections; leave none selected to allow changes anywhere.
-              </p>
-              <div class="my-cv-page__ai-focus-chips" role="group" aria-label="Focus sections for AI update">
-                @for (section of sections(); track section.id) {
-                  <button
-                    type="button"
-                    class="my-cv-page__ai-focus-chip"
-                    [class.my-cv-page__ai-focus-chip--active]="isAiUpdateSectionSelected(section.id)"
-                    [disabled]="cvStructured.updatingWithAi() || cvStructured.generatingSuggestions() || !!editingSectionId()"
-                    [attr.aria-pressed]="isAiUpdateSectionSelected(section.id)"
-                    (click)="toggleAiUpdateSection(section.id)">
-                    <span>{{ aiUpdateSectionLabel(section) }}</span>
-                    <span class="my-cv-page__ai-focus-chip-type">{{ section.sectionType }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-
-            <label class="my-cv-page__ai-field">
-              <span>Instructions</span>
-              <textarea
-                rows="4"
-                [disabled]="cvStructured.updatingWithAi() || cvStructured.generatingSuggestions() || !!editingSectionId()"
-                [value]="aiUpdateInstructions()"
-                placeholder="Example: Make the summary more backend-focused and tighten each experience entry to two achievement bullets."
-                (input)="updateAiInstructions($event)"></textarea>
-            </label>
-
-            @if (cvStructured.aiUpdateError(); as aiUpdateError) {
-              <div class="my-cv-page__alert" role="alert">{{ aiUpdateError }}</div>
-            }
-
-            <div class="my-cv-page__ai-actions">
-              <button
-                type="submit"
-                class="my-cv-page__primary-action"
-                [disabled]="!canUpdateWithAi()">
-                {{ cvStructured.updatingWithAi() ? 'Updating CV with AI...' : 'Update CV with AI' }}
-              </button>
-              @if (editingSectionId()) {
-                <p class="my-cv-page__muted">Finish or cancel the current section edit before using AI update.</p>
-              }
-            </div>
-          </form>
+          <!-- AI update moved to the left side panel -->
         }
 
         <div class="my-cv-page__preview-document">
@@ -342,6 +416,7 @@
                   [canSave]="isEditingSection(section.id) && canSaveSection()"
                   [draft]="sectionDraft()"
                   [aiUpdateSelected]="isAiUpdateSectionSelected(section.id)"
+                  [suggestionSelected]="isSuggestionSectionSelected(section.id)"
                   [showAiUpdateAction]="!editingSectionId()"
                   (draftChange)="sectionDraft.set($event)"
                   (edit)="beginSectionEdit(section)"

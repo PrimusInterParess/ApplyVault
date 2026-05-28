@@ -297,6 +297,7 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   box-shadow: var(--app-shadow-md);
   transition:
     transform 160ms ease,
@@ -320,16 +321,47 @@
   transform: translateY(-1px);
   border-color: var(--app-border-strong);
   box-shadow: var(--app-shadow-hover);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--app-surface) 85%, var(--app-bg-soft)) 0%,
+    var(--app-surface-alt) 100%
+  );
+}
+
+.cv-projects-page__list-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
+  outline-offset: 2px;
 }
 
 .cv-projects-page__list-card--selected {
-  border-color: var(--app-accent);
-  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-bg-soft) 100%);
+  border-color: color-mix(in srgb, var(--app-accent) 70%, var(--app-border-strong));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--app-accent) 14%, var(--app-surface)) 0%,
+    color-mix(in srgb, var(--app-accent) 7%, var(--app-bg-soft)) 100%
+  );
   box-shadow: var(--app-shadow-hover);
 }
 
 .cv-projects-page__list-card--selected::before {
-  width: 4px;
+  width: 6px;
+}
+
+.cv-projects-page__list-card--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 40%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  color: var(--app-accent-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
 }
 
 .cv-projects-page__list-card-top {

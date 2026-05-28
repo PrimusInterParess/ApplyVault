@@ -1,6 +1,8 @@
 <section
   class="cv-section"
   [class.cv-section--editing]="editing()"
+  [class.cv-section--ai-update-selected]="aiUpdateSelected()"
+  [class.cv-section--suggestion-selected]="suggestionSelected()"
   [class.cv-section--summary]="isSummarySection(activeSection().sectionType)"
   [class.cv-section--skills]="isSkillsSection(activeSection().sectionType)"
   [class.cv-section--contact]="isContactSection(activeSection())">
@@ -8,6 +10,14 @@
     <div class="cv-section__intro">
       @if (!isContactSection(activeSection()) || editing()) {
         <h3 class="cv-section__title">{{ activeSection().heading || activeSection().sectionType || 'Untitled section' }}</h3>
+      }
+      @if (!editing() && aiUpdateSelected()) {
+        <span class="cv-section__marker" aria-label="Selected for AI update">AI update</span>
+      }
+      @if (!editing() && suggestionSelected()) {
+        <span class="cv-section__marker cv-section__marker--suggestion" aria-label="Targeted by selected suggestion">
+          Suggested
+        </span>
       }
     </div>
 

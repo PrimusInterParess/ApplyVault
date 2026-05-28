@@ -30,6 +30,69 @@
   overflow: hidden;
 }
 
+.cv-section--ai-update-selected:not(.cv-section--editing) {
+  position: relative;
+  padding: 0.55rem 0.75rem 0.75rem;
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-accent) 6%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 30%, transparent);
+}
+
+.cv-section--ai-update-selected:not(.cv-section--editing) .cv-section__header {
+  padding: 0 0 0.45rem;
+  border-bottom-color: color-mix(in srgb, var(--app-accent) 25%, var(--app-border));
+}
+
+.cv-section--suggestion-selected:not(.cv-section--editing) {
+  position: relative;
+  padding: 0.55rem 0.75rem 0.75rem;
+  padding-left: 1rem;
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-accent) 9%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 35%, transparent);
+}
+
+.cv-section--suggestion-selected:not(.cv-section--editing)::before {
+  content: '';
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  left: 0;
+  width: 6px;
+  border-radius: 999px;
+  background: var(--app-accent);
+}
+
+.cv-section--suggestion-selected:not(.cv-section--editing) .cv-section__header {
+  border-bottom-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+}
+
+.cv-section--suggestion-selected:not(.cv-section--editing) .cv-section__title {
+  color: var(--app-accent-dark);
+}
+
+.cv-section__marker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 1.4rem;
+  margin-top: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface));
+  color: var(--app-accent-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cv-section__marker--suggestion {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 14%, var(--app-surface));
+}
+
 .cv-section__header {
   display: flex;
   justify-content: space-between;

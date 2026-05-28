@@ -28,6 +28,8 @@ export class MyCvPageComponent {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly deleteConfirmOpen = signal(false);
+  protected readonly aiPanelOpen = signal(false);
+  protected readonly suggestionsPanelOpen = signal(false);
   protected readonly editingSectionId = signal<string | null>(null);
   protected readonly sectionDraft = signal<CvStructuredSection | null>(null);
   protected readonly aiUpdateInstructions = signal('');
@@ -84,6 +86,20 @@ export class MyCvPageComponent {
     const selected = new Set(this.selectedSuggestionIds());
 
     return this.cvStructured.suggestions().filter((suggestion) => selected.has(suggestion.id));
+  });
+
+  protected readonly selectedSuggestionSectionIds = computed(() => {
+    const sectionIds = new Set<string>();
+    const sections = this.sections();
+
+    for (const suggestion of this.selectedSuggestions()) {
+      const resolved = this.resolveSuggestionSectionId(suggestion, sections);
+      if (resolved) {
+        sectionIds.add(resolved);
+      }
+    }
+
+    return sectionIds;
   });
 
   protected readonly canApplySelectedSuggestions = computed(() =>
@@ -280,11 +296,24 @@ export class MyCvPageComponent {
     this.cvStructured.updateWithAi(this.aiUpdateInstructions(), this.validSectionIds(this.aiUpdateSectionIds()));
   }
 
+  protected openAiPanel(): void {
+    this.aiPanelOpen.set(true);
+  }
+
+  protected closeAiPanel(): void {
+    this.aiPanelOpen.set(false);
+  }
+
+  protected toggleAiPanel(): void {
+    this.aiPanelOpen.update((open) => !open);
+  }
+
   protected generateSuggestions(): void {
     if (!this.canGenerateSuggestions()) {
       return;
     }
 
+    this.suggestionsPanelOpen.set(true);
     this.selectedSuggestionIds.set([]);
     this.cvStructured.generateSuggestions(this.validSectionIds(this.aiUpdateSectionIds()));
   }
@@ -304,6 +333,43 @@ export class MyCvPageComponent {
         : [...selected, suggestionId]
     );
     this.cvStructured.clearAiUpdateError();
+  }
+
+  protected openSuggestionsPanel(): void {
+    this.suggestionsPanelOpen.set(true);
+  }
+
+  protected closeSuggestionsPanel(): void {
+    this.suggestionsPanelOpen.set(false);
+  }
+
+  protected toggleSuggestionsPanel(): void {
+    this.suggestionsPanelOpen.update((open) => !open);
+  }
+
+  protected isSuggestionSectionSelected(sectionId: string): boolean {
+    return this.selectedSuggestionSectionIds().has(sectionId);
+  }
+
+  private resolveSuggestionSectionId(
+    suggestion: CvImprovementSuggestion,
+    sections: readonly CvStructuredSection[]
+  ): string | null {
+    if (suggestion.sectionId) {
+      return suggestion.sectionId;
+    }
+
+    if (!suggestion.entryId) {
+      return null;
+    }
+
+    for (const section of sections) {
+      if (section.entries.some((entry) => entry.id === suggestion.entryId)) {
+        return section.id;
+      }
+    }
+
+    return null;
   }
 
   protected applySelectedSuggestions(): void {

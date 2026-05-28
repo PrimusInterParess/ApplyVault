@@ -5,7 +5,9 @@ import { Observable } from 'rxjs';
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument, CvDocumentUploadResult, CvStructuredReimportResult } from '../models/cv-document.model';
 import {
+  CvImprovementSuggestions,
   CvStructuredDocument,
+  GenerateCvImprovementSuggestionsRequest,
   SaveCvStructuredDocumentRequest,
   UpdateCvStructuredWithAiRequest
 } from '../models/cv-structured.model';
@@ -84,6 +86,22 @@ export class CvDocumentApiService {
 
     return this.httpClient.post<CvStructuredDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-update`,
+      request
+    );
+  }
+
+  generateStructuredSuggestions(
+    sectionIds?: readonly string[],
+    maxSuggestions = 6
+  ): Observable<CvImprovementSuggestions> {
+    const request: GenerateCvImprovementSuggestionsRequest = { maxSuggestions };
+
+    if (sectionIds && sectionIds.length > 0) {
+      request.sectionIds = [...sectionIds];
+    }
+
+    return this.httpClient.post<CvImprovementSuggestions>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-suggestions`,
       request
     );
   }

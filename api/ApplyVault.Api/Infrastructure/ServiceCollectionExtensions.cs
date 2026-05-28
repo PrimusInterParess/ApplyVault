@@ -108,6 +108,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(CvUpdateAiOptions.SectionName));
 
         services
+            .AddOptions<CvSuggestionsAiOptions>()
+            .Bind(configuration.GetSection(CvSuggestionsAiOptions.SectionName));
+
+        services
             .AddOptions<CvExportAiOptions>()
             .Bind(configuration.GetSection(CvExportAiOptions.SectionName));
 
@@ -216,6 +220,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IGitHubProjectAiClient, GoogleAiGitHubProjectClient>();
         services.AddHttpClient<ICvStructuredImportAiClient, GoogleAiCvStructuredImportClient>();
         services.AddHttpClient<ICvStructuredUpdateAiClient, GoogleAiCvStructuredUpdateClient>();
+        services.AddHttpClient<ICvStructuredSuggestionsAiClient, GoogleAiCvStructuredSuggestionsClient>();
         services.AddHttpClient<ICvExportAiClient, GoogleAiCvExportClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
@@ -249,6 +254,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
         services.AddScoped<ICvStructuredUpdateService, CvStructuredUpdateService>();
+        services.AddScoped<ICvStructuredSuggestionsService, CvStructuredSuggestionsService>();
         services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
         services.AddScoped<ICvDocumentExportService, CvDocumentExportService>();
         services.AddScoped<LocalFilesystemCvDocumentStorage>();

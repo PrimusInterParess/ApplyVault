@@ -107,6 +107,59 @@
   background: var(--app-bg-soft);
 }
 
+.my-cv-page__suggestions-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.my-cv-page__suggestion-card {
+  display: grid;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+
+.my-cv-page__suggestion-card--selected {
+  border-color: var(--app-accent);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__suggestion-card:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.my-cv-page__suggestion-title {
+  display: block;
+  font-weight: 800;
+}
+
+.my-cv-page__suggestion-meta {
+  display: block;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.my-cv-page__suggestion-rationale,
+.my-cv-page__suggestion-instruction {
+  color: var(--app-text-muted);
+  line-height: 1.55;
+}
+
+.my-cv-page__suggestion-instruction {
+  padding-top: 0.55rem;
+  color: var(--app-text);
+}
+
 .my-cv-page__ai-field {
   display: grid;
   gap: 0.45rem;

@@ -3,7 +3,11 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
-import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
+import {
+  CvImprovementSuggestion,
+  CvStructuredDocument,
+  CvStructuredSection
+} from '../models/cv-structured.model';
 import { toSaveRequest } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
@@ -13,14 +17,18 @@ export class CvStructuredFacade {
   private loadSubscription: Subscription | null = null;
   private saveSubscription: Subscription | null = null;
   private aiUpdateSubscription: Subscription | null = null;
+  private suggestionsSubscription: Subscription | null = null;
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
   readonly updatingWithAi = signal(false);
+  readonly generatingSuggestions = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
+  readonly suggestions = signal<CvImprovementSuggestion[]>([]);
   readonly error = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
   readonly aiUpdateError = signal<string | null>(null);
+  readonly suggestionError = signal<string | null>(null);
 
   load(): void {
     this.cancelLoad();
@@ -85,22 +93,52 @@ export class CvStructuredFacade {
     this.aiUpdateSubscription = this.apiService
       .updateStructuredWithAi(trimmedInstructions, sectionIds)
       .subscribe({
-      next: (document) => {
-        this.updatingWithAi.set(false);
-        this.structured.set(document);
-      },
-      error: (error) => {
-        this.updatingWithAi.set(false);
+        next: (document) => {
+          this.updatingWithAi.set(false);
+          this.structured.set(document);
+        },
+        error: (error) => {
+          this.updatingWithAi.set(false);
 
-        if (isRequestAborted(error)) {
-          return;
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          this.aiUpdateError.set(
+            this.readErrorMessage(error, 'Could not update structured CV content with AI.')
+          );
         }
+      });
+  }
 
-        this.aiUpdateError.set(
-          this.readErrorMessage(error, 'Could not update structured CV content with AI.')
-        );
-      }
-    });
+  generateSuggestions(sectionIds?: readonly string[], maxSuggestions = 6): void {
+    if (this.generatingSuggestions()) {
+      return;
+    }
+
+    this.cancelSuggestions();
+    this.generatingSuggestions.set(true);
+    this.suggestionError.set(null);
+
+    this.suggestionsSubscription = this.apiService
+      .generateStructuredSuggestions(sectionIds, maxSuggestions)
+      .subscribe({
+        next: (result) => {
+          this.generatingSuggestions.set(false);
+          this.suggestions.set(result.suggestions);
+        },
+        error: (error) => {
+          this.generatingSuggestions.set(false);
+
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          this.suggestionError.set(
+            this.readErrorMessage(error, 'Could not generate CV improvement suggestions.')
+          );
+        }
+      });
   }
 
   clearSaveError(): void {
@@ -109,6 +147,15 @@ export class CvStructuredFacade {
 
   clearAiUpdateError(): void {
     this.aiUpdateError.set(null);
+  }
+
+  clearSuggestionError(): void {
+    this.suggestionError.set(null);
+  }
+
+  clearSuggestions(): void {
+    this.suggestions.set([]);
+    this.suggestionError.set(null);
   }
 
   setStructured(document: CvStructuredDocument): void {
@@ -128,6 +175,11 @@ export class CvStructuredFacade {
   private cancelAiUpdate(): void {
     this.aiUpdateSubscription?.unsubscribe();
     this.aiUpdateSubscription = null;
+  }
+
+  private cancelSuggestions(): void {
+    this.suggestionsSubscription?.unsubscribe();
+    this.suggestionsSubscription = null;
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

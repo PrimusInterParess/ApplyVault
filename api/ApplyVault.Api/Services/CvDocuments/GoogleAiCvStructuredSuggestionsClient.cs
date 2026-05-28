@@ -7,10 +7,10 @@ using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
 
-public sealed class GoogleAiCvStructuredUpdateClient(
+public sealed class GoogleAiCvStructuredSuggestionsClient(
     HttpClient httpClient,
     IOptions<GoogleAiOptions> googleAiOptions,
-    IOptions<CvUpdateAiOptions> updateAiOptions) : ICvStructuredUpdateAiClient
+    IOptions<CvSuggestionsAiOptions> suggestionsAiOptions) : ICvStructuredSuggestionsAiClient
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -18,17 +18,17 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public async Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+    public async Task<CvImprovementSuggestionsDto> GenerateAsync(
         CvStructuredDocumentDto current,
-        string instructions,
         IReadOnlyList<Guid>? focusSectionIds = null,
+        int maxSuggestions = 6,
         CancellationToken cancellationToken = default)
     {
         var options = googleAiOptions.Value;
 
         if (!options.Enabled)
         {
-            throw new InvalidOperationException("Google AI is disabled. Enable GoogleAi:Enabled to update CV structure.");
+            throw new InvalidOperationException("Google AI is disabled. Enable GoogleAi:Enabled to generate CV suggestions.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ApiKey))
@@ -44,7 +44,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(current, instructions, focusSectionIds),
+            BuildRequest(current, focusSectionIds, maxSuggestions),
             SerializerOptions,
             timeoutCts.Token);
 
@@ -52,18 +52,18 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         response.EnsureSuccessStatusCode();
 
         var generatedJson = ExtractGeneratedJson(responsePayload);
-        var result = JsonSerializer.Deserialize<CvStructuredUpdateAiResponse>(generatedJson, SerializerOptions)
-            ?? throw new InvalidOperationException("Google AI returned an empty CV update payload.");
+        var result = JsonSerializer.Deserialize<CvStructuredSuggestionsAiResponse>(generatedJson, SerializerOptions)
+            ?? throw new InvalidOperationException("Google AI returned an empty CV suggestions payload.");
 
-        return CvStructuredUpdateNormalizer.Normalize(current, result);
+        return Normalize(current, result, maxSuggestions);
     }
 
     private object BuildRequest(
         CvStructuredDocumentDto current,
-        string instructions,
-        IReadOnlyList<Guid>? focusSectionIds)
+        IReadOnlyList<Guid>? focusSectionIds,
+        int maxSuggestions)
     {
-        var prompts = updateAiOptions.Value;
+        var prompts = suggestionsAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(current, SerializerOptions);
         var focusSections = BuildFocusSectionsText(current, focusSectionIds);
 
@@ -82,14 +82,14 @@ public sealed class GoogleAiCvStructuredUpdateClient(
                         new
                         {
                             text = prompts.UserPromptTemplate
-                                .Replace("{{instructions}}", instructions, StringComparison.Ordinal)
+                                .Replace("{{maxSuggestions}}", maxSuggestions.ToString(), StringComparison.Ordinal)
                                 .Replace("{{focusSections}}", focusSections, StringComparison.Ordinal)
                                 .Replace("{{payloadJson}}", payloadJson, StringComparison.Ordinal)
                         }
                     }
                 }
             },
-            generationConfig = GoogleAiCvStructuredUpdateResponseSchema.Create()
+            generationConfig = GoogleAiCvStructuredSuggestionsResponseSchema.Create()
         };
     }
 
@@ -99,27 +99,63 @@ public sealed class GoogleAiCvStructuredUpdateClient(
     {
         if (focusSectionIds is null || focusSectionIds.Count == 0)
         {
-            return "Apply the instructions across the full CV as appropriate.";
+            return "Review the full CV and suggest the highest-value improvements.";
         }
 
         var sectionsById = current.Sections.ToDictionary((section) => section.Id);
         var lines = new List<string>
         {
-            "Focus sections (apply instructions primarily to these; keep all other sections unchanged unless the instruction explicitly requires broader edits):"
+            "Focus sections (suggest improvements primarily for these sections):"
         };
 
         foreach (var sectionId in focusSectionIds)
         {
-            if (!sectionsById.TryGetValue(sectionId, out var section))
+            if (sectionsById.TryGetValue(sectionId, out var section))
             {
-                continue;
+                lines.Add($"- {section.Heading} (id: {section.Id})");
             }
-
-            lines.Add($"- {section.Heading} (id: {section.Id})");
         }
 
         return string.Join(Environment.NewLine, lines);
     }
+
+    private static CvImprovementSuggestionsDto Normalize(
+        CvStructuredDocumentDto current,
+        CvStructuredSuggestionsAiResponse response,
+        int maxSuggestions)
+    {
+        var knownSectionIds = current.Sections.Select((section) => section.Id).ToHashSet();
+        var knownEntryIds = current.Sections.SelectMany((section) => section.Entries).Select((entry) => entry.Id).ToHashSet();
+        var suggestions = response.Suggestions
+            .Where((suggestion) =>
+                !string.IsNullOrWhiteSpace(suggestion.Title) &&
+                !string.IsNullOrWhiteSpace(suggestion.Rationale) &&
+                !string.IsNullOrWhiteSpace(suggestion.SuggestedInstruction))
+            .Take(maxSuggestions)
+            .Select((suggestion, index) =>
+            {
+                var sectionId = ParseKnownGuid(suggestion.SectionId, knownSectionIds);
+                var entryId = ParseKnownGuid(suggestion.EntryId, knownEntryIds);
+
+                return new CvImprovementSuggestionDto(
+                    string.IsNullOrWhiteSpace(suggestion.Id) ? $"suggestion-{index + 1}" : suggestion.Id.Trim(),
+                    suggestion.Title.Trim(),
+                    suggestion.Rationale.Trim(),
+                    suggestion.SuggestedInstruction.Trim(),
+                    sectionId,
+                    entryId,
+                    string.IsNullOrWhiteSpace(suggestion.Category) ? "Content" : suggestion.Category.Trim(),
+                    string.IsNullOrWhiteSpace(suggestion.Impact) ? "Medium" : suggestion.Impact.Trim());
+            })
+            .ToArray();
+
+        return new CvImprovementSuggestionsDto(current.DocumentId, current.StructuredImportedAt, suggestions);
+    }
+
+    private static Guid? ParseKnownGuid(string? value, HashSet<Guid> knownIds) =>
+        Guid.TryParse(value, out var parsed) && knownIds.Contains(parsed)
+            ? parsed
+            : null;
 
     private static string ExtractGeneratedJson(string responsePayload)
     {

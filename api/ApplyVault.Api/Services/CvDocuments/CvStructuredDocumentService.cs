@@ -38,6 +38,10 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
         bool markImported,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
         var document = await dbContext.UserCvDocuments
             .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken)
             ?? throw new InvalidOperationException("Upload a CV PDF before saving structured content.");
@@ -101,6 +105,10 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
 
         document.UpdatedAt = utcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
         return (await GetStructuredAsync(user, cancellationToken))!;
     }

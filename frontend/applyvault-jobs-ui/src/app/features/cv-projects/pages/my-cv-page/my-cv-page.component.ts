@@ -5,7 +5,7 @@ import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.com
 import { CvStructuredSectionPanelComponent } from '../../components/cv-structured-section-panel/cv-structured-section-panel.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
-import { CvStructuredSection } from '../../models/cv-structured.model';
+import { CvImprovementSuggestion, CvStructuredSection } from '../../models/cv-structured.model';
 import {
   cloneSectionForDraft,
   mergeSection,
@@ -32,6 +32,7 @@ export class MyCvPageComponent {
   protected readonly sectionDraft = signal<CvStructuredSection | null>(null);
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
+  protected readonly selectedSuggestionIds = signal<string[]>([]);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
@@ -64,6 +65,34 @@ export class MyCvPageComponent {
     !this.cvStructured.loading() &&
     !this.cvStructured.savingSectionId() &&
     !this.cvStructured.updatingWithAi() &&
+    !this.cvStructured.generatingSuggestions() &&
+    !this.editingSectionId()
+  );
+
+  protected readonly canGenerateSuggestions = computed(() =>
+    this.cvDocument.hasDocument() &&
+    this.hasSections() &&
+    !this.cvDocument.loading() &&
+    !this.cvStructured.loading() &&
+    !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.updatingWithAi() &&
+    !this.cvStructured.generatingSuggestions() &&
+    !this.editingSectionId()
+  );
+
+  protected readonly selectedSuggestions = computed(() => {
+    const selected = new Set(this.selectedSuggestionIds());
+
+    return this.cvStructured.suggestions().filter((suggestion) => selected.has(suggestion.id));
+  });
+
+  protected readonly canApplySelectedSuggestions = computed(() =>
+    this.selectedSuggestions().length > 0 &&
+    !this.cvDocument.loading() &&
+    !this.cvStructured.loading() &&
+    !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.updatingWithAi() &&
+    !this.cvStructured.generatingSuggestions() &&
     !this.editingSectionId()
   );
 
@@ -132,6 +161,7 @@ export class MyCvPageComponent {
         this.cancelSectionEdit();
         this.aiUpdateInstructions.set('');
         this.aiUpdateSectionIds.set([]);
+        this.selectedSuggestionIds.set([]);
       }
 
       this.wasUpdatingWithAi = updatingWithAi;
@@ -178,7 +208,7 @@ export class MyCvPageComponent {
   }
 
   protected toggleAiUpdateSection(sectionId: string): void {
-    if (this.cvStructured.updatingWithAi() || this.editingSectionId()) {
+    if (this.cvStructured.updatingWithAi() || this.cvStructured.generatingSuggestions() || this.editingSectionId()) {
       return;
     }
 
@@ -207,7 +237,12 @@ export class MyCvPageComponent {
   }
 
   protected beginSectionEdit(section: CvStructuredSection): void {
-    if (this.cvStructured.savingSectionId() || this.cvStructured.updatingWithAi() || this.editingSectionId()) {
+    if (
+      this.cvStructured.savingSectionId() ||
+      this.cvStructured.updatingWithAi() ||
+      this.cvStructured.generatingSuggestions() ||
+      this.editingSectionId()
+    ) {
       return;
     }
 
@@ -242,7 +277,65 @@ export class MyCvPageComponent {
       return;
     }
 
-    this.cvStructured.updateWithAi(this.aiUpdateInstructions(), this.aiUpdateSectionIds());
+    this.cvStructured.updateWithAi(this.aiUpdateInstructions(), this.validSectionIds(this.aiUpdateSectionIds()));
+  }
+
+  protected generateSuggestions(): void {
+    if (!this.canGenerateSuggestions()) {
+      return;
+    }
+
+    this.selectedSuggestionIds.set([]);
+    this.cvStructured.generateSuggestions(this.validSectionIds(this.aiUpdateSectionIds()));
+  }
+
+  protected isSuggestionSelected(suggestionId: string): boolean {
+    return this.selectedSuggestionIds().includes(suggestionId);
+  }
+
+  protected toggleSuggestion(suggestionId: string): void {
+    if (this.cvStructured.updatingWithAi() || this.cvStructured.generatingSuggestions() || this.editingSectionId()) {
+      return;
+    }
+
+    this.selectedSuggestionIds.update((selected) =>
+      selected.includes(suggestionId)
+        ? selected.filter((id) => id !== suggestionId)
+        : [...selected, suggestionId]
+    );
+    this.cvStructured.clearAiUpdateError();
+  }
+
+  protected applySelectedSuggestions(): void {
+    const selected = this.selectedSuggestions();
+
+    if (!this.canApplySelectedSuggestions() || selected.length === 0) {
+      return;
+    }
+
+    const instructions = selected
+      .map((suggestion, index) => `${index + 1}. ${this.suggestionApplyInstruction(suggestion)}`)
+      .join('\n');
+    const sectionIds = this.validSectionIds(
+      selected
+        .map((suggestion) => suggestion.sectionId)
+        .filter((sectionId): sectionId is string => !!sectionId)
+    );
+
+    this.cvStructured.updateWithAi(
+      `Apply these selected CV improvement suggestions:\n${instructions}`,
+      sectionIds
+    );
+  }
+
+  private validSectionIds(sectionIds: readonly string[]): string[] {
+    const existingSectionIds = new Set(this.sections().map((section) => section.id));
+
+    return [...new Set(sectionIds)].filter((sectionId) => existingSectionIds.has(sectionId));
+  }
+
+  private suggestionApplyInstruction(suggestion: CvImprovementSuggestion): string {
+    return suggestion.suggestedInstruction?.trim() || suggestion.title.trim();
   }
 
   protected beginDeleteCv(): void {

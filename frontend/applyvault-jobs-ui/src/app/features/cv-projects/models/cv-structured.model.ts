@@ -63,6 +63,28 @@ export interface UpdateCvStructuredWithAiRequest {
   sectionIds?: string[];
 }
 
+export interface GenerateCvImprovementSuggestionsRequest {
+  sectionIds?: string[];
+  maxSuggestions: number;
+}
+
+export interface CvImprovementSuggestions {
+  readonly documentId: string;
+  structuredImportedAt: string | null;
+  suggestions: CvImprovementSuggestion[];
+}
+
+export interface CvImprovementSuggestion {
+  readonly id: string;
+  title: string;
+  rationale: string;
+  suggestedInstruction: string;
+  sectionId: string | null;
+  entryId: string | null;
+  category: string;
+  impact: string;
+}
+
 export const CV_SECTION_TYPES: readonly CvSectionType[] = [
   'Experience',
   'Projects',

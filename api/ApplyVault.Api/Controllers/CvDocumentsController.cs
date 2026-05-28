@@ -14,6 +14,7 @@ public sealed class CvDocumentsController(
     ICvStructuredDocumentService cvStructuredDocumentService,
     ICvStructuredImportService cvStructuredImportService,
     ICvStructuredUpdateService cvStructuredUpdateService,
+    ICvStructuredSuggestionsService cvStructuredSuggestionsService,
     ICvDocumentExportService cvDocumentExportService) : ControllerBase
 {
     [HttpGet("current")]
@@ -203,6 +204,27 @@ public sealed class CvDocumentsController(
         try
         {
             return Ok(await cvStructuredUpdateService.UpdateWithAiAsync(user, request, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("current/structured/ai-suggestions")]
+    public async Task<ActionResult<CvImprovementSuggestionsDto>> GenerateStructuredSuggestionsWithAi(
+        [FromBody] GenerateCvImprovementSuggestionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvStructuredSuggestionsService.GenerateAsync(user, request, cancellationToken));
         }
         catch (KeyNotFoundException)
         {

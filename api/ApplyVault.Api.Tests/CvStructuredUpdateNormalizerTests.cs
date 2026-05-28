@@ -6,12 +6,79 @@ namespace ApplyVault.Api.Tests;
 public sealed class CvStructuredUpdateNormalizerTests
 {
     [Fact]
+    public void Normalize_DropsUnknownSourceSummaryIds()
+    {
+        var knownSourceSummaryId = Guid.NewGuid();
+        var current = new CvStructuredDocumentDto(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            [
+                new CvStructuredSectionDto(
+                    Guid.NewGuid(),
+                    "Experience",
+                    "Experience",
+                    0,
+                    [
+                        new CvStructuredEntryDto(
+                            Guid.NewGuid(),
+                            "Software Engineer",
+                            "Acme",
+                            null,
+                            "Built services.",
+                            [],
+                            ".NET",
+                            CvEntrySources.GitHubSummary,
+                            knownSourceSummaryId,
+                            0)
+                    ])
+            ]);
+
+        var response = new CvStructuredUpdateAiResponse(
+            [
+                new CvStructuredUpdateAiSection(
+                    current.Sections[0].Id.ToString(),
+                    "Experience",
+                    "Experience",
+                    0,
+                    [
+                        new CvStructuredUpdateAiEntry(
+                            current.Sections[0].Entries[0].Id.ToString(),
+                            "Software Engineer",
+                            "Acme",
+                            null,
+                            "Built reliable services.",
+                            [],
+                            ".NET",
+                            CvEntrySources.GitHubSummary,
+                            Guid.NewGuid().ToString(),
+                            0),
+                        new CvStructuredUpdateAiEntry(
+                            null,
+                            "Side Project",
+                            null,
+                            null,
+                            "Built a side project.",
+                            [],
+                            "Angular",
+                            CvEntrySources.Manual,
+                            knownSourceSummaryId.ToString(),
+                            1)
+                    ])
+            ]);
+
+        var normalized = CvStructuredUpdateNormalizer.Normalize(current, response);
+
+        Assert.Null(normalized.Sections[0].Entries[0].SourceSummaryId);
+        Assert.Equal(knownSourceSummaryId, normalized.Sections[0].Entries[1].SourceSummaryId);
+    }
+
+    [Fact]
     public void Normalize_PreservesIdsAndReindexesSortOrder()
     {
         var sectionId = Guid.NewGuid();
         var entryId = Guid.NewGuid();
 
-        var request = CvStructuredUpdateNormalizer.Normalize(new CvStructuredUpdateAiResponse(
+        var request = CvStructuredUpdateNormalizer.Normalize(EmptyCurrentDocument, new CvStructuredUpdateAiResponse(
         [
             new CvStructuredUpdateAiSection(
                 sectionId.ToString(),
@@ -46,7 +113,7 @@ public sealed class CvStructuredUpdateNormalizerTests
     [Fact]
     public void Normalize_DropsEmptyEntriesAndUsesManualSourceWhenMissing()
     {
-        var request = CvStructuredUpdateNormalizer.Normalize(new CvStructuredUpdateAiResponse(
+        var request = CvStructuredUpdateNormalizer.Normalize(EmptyCurrentDocument, new CvStructuredUpdateAiResponse(
         [
             new CvStructuredUpdateAiSection(
                 "not-a-guid",
@@ -86,4 +153,7 @@ public sealed class CvStructuredUpdateNormalizerTests
         Assert.Equal(CvSectionTypes.Custom, section.SectionType);
         Assert.Equal(CvEntrySources.Manual, entry.Source);
     }
+
+    private static CvStructuredDocumentDto EmptyCurrentDocument { get; } =
+        new(Guid.NewGuid(), null, []);
 }

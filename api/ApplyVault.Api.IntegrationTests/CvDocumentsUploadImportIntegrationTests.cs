@@ -274,6 +274,71 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
     }
 
     [Fact]
+    public async Task Ai_suggestions_returns_advice_without_rewriting_structured_sections()
+    {
+        using var customFactory = factory.WithWebHostBuilder((builder) =>
+        {
+            builder.ConfigureTestServices((services) =>
+            {
+                var descriptors = services
+                    .Where((descriptor) => descriptor.ServiceType == typeof(ICvStructuredSuggestionsAiClient))
+                    .ToList();
+
+                foreach (var descriptor in descriptors)
+                {
+                    services.Remove(descriptor);
+                }
+
+                services.AddSingleton<ICvStructuredSuggestionsAiClient, FakeCvStructuredSuggestionsAiClient>();
+            });
+        });
+        using var client = customFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TestUserTokens.UserA);
+
+        var pdfBytes = CreateStructuredCvPdf(includeHeadshot: false);
+
+        using var form = new MultipartFormDataContent();
+        var pdf = new ByteArrayContent(pdfBytes);
+        pdf.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(pdf, "file", "cv.pdf");
+
+        var uploadResponse = await client.PostAsync("/api/cv-documents/current", form);
+
+        Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
+
+        var originalResponse = await client.GetAsync("/api/cv-documents/current/structured");
+        var original = await originalResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(original);
+        var originalExperience = original!.Sections.First((section) =>
+            section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
+        var originalEntry = originalExperience.Entries[0];
+
+        var suggestionsResponse = await client.PostAsJsonAsync(
+            "/api/cv-documents/current/structured/ai-suggestions",
+            new GenerateCvImprovementSuggestionsRequest(MaxSuggestions: 3));
+
+        Assert.Equal(HttpStatusCode.OK, suggestionsResponse.StatusCode);
+
+        var suggestions = await suggestionsResponse.Content.ReadFromJsonAsync<CvImprovementSuggestionsDto>();
+
+        Assert.NotNull(suggestions);
+        var suggestion = Assert.Single(suggestions!.Suggestions);
+        Assert.Equal("Tighten the experience impact", suggestion.Title);
+        Assert.Contains("achievement", suggestion.SuggestedInstruction);
+
+        var unchangedResponse = await client.GetAsync("/api/cv-documents/current/structured");
+        var unchanged = await unchangedResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+        var unchangedEntry = unchanged!.Sections
+            .Single((section) => section.Id == originalExperience.Id)
+            .Entries
+            .Single((entry) => entry.Id == originalEntry.Id);
+
+        Assert.Equal(originalEntry.Title, unchangedEntry.Title);
+    }
+
+    [Fact]
     public async Task Reimport_replaces_edited_sections_and_preserves_contact()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
@@ -452,6 +517,35 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
                 .ToArray();
 
             return Task.FromResult(new SaveCvStructuredDocumentRequest(sections));
+        }
+    }
+
+    private sealed class FakeCvStructuredSuggestionsAiClient : ICvStructuredSuggestionsAiClient
+    {
+        public Task<CvImprovementSuggestionsDto> GenerateAsync(
+            CvStructuredDocumentDto current,
+            IReadOnlyList<Guid>? focusSectionIds = null,
+            int maxSuggestions = 6,
+            CancellationToken cancellationToken = default)
+        {
+            var experience = current.Sections.First((section) =>
+                section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
+            var entry = experience.Entries[0];
+
+            return Task.FromResult(new CvImprovementSuggestionsDto(
+                current.DocumentId,
+                current.StructuredImportedAt,
+                [
+                    new CvImprovementSuggestionDto(
+                        "suggestion-1",
+                        "Tighten the experience impact",
+                        "The experience entry can better emphasize the outcome of the service work.",
+                        "Rewrite the Acme Corp experience bullet to emphasize the achievement and measurable impact using only existing facts.",
+                        experience.Id,
+                        entry.Id,
+                        "Impact",
+                        "High")
+                ]));
         }
     }
 }

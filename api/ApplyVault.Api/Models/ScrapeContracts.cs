@@ -291,6 +291,28 @@ public sealed record UpdateCvStructuredWithAiRequest(
     IReadOnlyList<Guid>? SectionIds = null
 );
 
+public sealed record GenerateCvImprovementSuggestionsRequest(
+    IReadOnlyList<Guid>? SectionIds = null,
+    int MaxSuggestions = 6
+);
+
+public sealed record CvImprovementSuggestionsDto(
+    Guid DocumentId,
+    DateTimeOffset? StructuredImportedAt,
+    IReadOnlyList<CvImprovementSuggestionDto> Suggestions
+);
+
+public sealed record CvImprovementSuggestionDto(
+    string Id,
+    string Title,
+    string Rationale,
+    string SuggestedInstruction,
+    Guid? SectionId,
+    Guid? EntryId,
+    string Category,
+    string Impact
+);
+
 public sealed record CvStructuredSectionWriteDto(
     Guid? Id,
     string Heading,

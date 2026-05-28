@@ -4,8 +4,16 @@ namespace ApplyVault.Api.Services;
 
 internal static class CvStructuredUpdateNormalizer
 {
-    public static SaveCvStructuredDocumentRequest Normalize(CvStructuredUpdateAiResponse response)
+    public static SaveCvStructuredDocumentRequest Normalize(
+        CvStructuredDocumentDto current,
+        CvStructuredUpdateAiResponse response)
     {
+        var knownSourceSummaryIds = current.Sections
+            .SelectMany((section) => section.Entries)
+            .Select((entry) => entry.SourceSummaryId)
+            .OfType<Guid>()
+            .ToHashSet();
+
         var sections = response.Sections
             .Where((section) => !string.IsNullOrWhiteSpace(section.Heading))
             .OrderBy((section) => section.SortOrder)
@@ -30,7 +38,7 @@ internal static class CvStructuredUpdateNormalizer
                             .ToArray(),
                         entry.TechStack?.Trim() ?? string.Empty,
                         string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source.Trim(),
-                        ParseGuid(entry.SourceSummaryId),
+                        ParseKnownSourceSummaryId(entry.SourceSummaryId, knownSourceSummaryIds),
                         entryIndex))
                     .ToArray()))
             .Where((section) => section.Entries.Count > 0)
@@ -41,6 +49,15 @@ internal static class CvStructuredUpdateNormalizer
 
     private static Guid? ParseGuid(string? value) =>
         Guid.TryParse(value, out var id) ? id : null;
+
+    private static Guid? ParseKnownSourceSummaryId(string? value, HashSet<Guid> knownSourceSummaryIds)
+    {
+        var sourceSummaryId = ParseGuid(value);
+
+        return sourceSummaryId is not null && knownSourceSummaryIds.Contains(sourceSummaryId.Value)
+            ? sourceSummaryId
+            : null;
+    }
 
     private static bool EntryHasContent(CvStructuredUpdateAiEntry entry) =>
         !string.IsNullOrWhiteSpace(entry.Title)

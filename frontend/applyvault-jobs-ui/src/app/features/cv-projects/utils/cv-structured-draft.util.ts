@@ -1,3 +1,5 @@
+import { moveItemInArray } from '@angular/cdk/drag-drop';
+
 import {
   CvStructuredEntry,
   CvStructuredSection,
@@ -87,6 +89,18 @@ export function mergeSection(
   }
 
   return [...sections.map((section) => cloneSectionForDraft(section)), cloneSectionForDraft(updatedSection)];
+}
+
+export function reorderSections(
+  sections: readonly CvStructuredSection[],
+  fromIndex: number,
+  toIndex: number
+): CvStructuredSection[] {
+  const nextSections = sections.map((section) => cloneSectionForDraft(section));
+
+  moveItemInArray(nextSections, fromIndex, toIndex);
+  normalizeSectionSortOrders(nextSections);
+  return nextSections;
 }
 
 export function removeSectionById(

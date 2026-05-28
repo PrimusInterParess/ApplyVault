@@ -1,3 +1,4 @@
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
 
@@ -15,7 +16,9 @@ import {
 import {
   cloneSectionForDraft,
   mergeSection,
-  sectionEquals
+  reorderSections,
+  sectionEquals,
+  sectionsAreEqual
 } from '../../utils/cv-structured-draft.util';
 
 @Component({
@@ -24,6 +27,7 @@ import {
   imports: [
     CommonModule,
     DatePipe,
+    DragDropModule,
     SkeletonBlockComponent,
     CvStructuredSectionPanelComponent
   ],
@@ -43,14 +47,31 @@ export class MyCvPageComponent {
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
   protected readonly selectedSuggestionIds = signal<string[]>([]);
+  protected readonly sectionOrderDraft = signal<CvStructuredSection[] | null>(null);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
 
-  protected readonly sections = computed(() => {
+  protected readonly serverSections = computed(() => {
     const items = this.cvStructured.structured()?.sections ?? [];
 
     return [...items].sort((left, right) => left.sortOrder - right.sortOrder);
+  });
+
+  protected readonly sections = computed(() => {
+    const draft = this.sectionOrderDraft();
+
+    return draft ?? this.serverSections();
+  });
+
+  protected readonly hasPendingSectionReorder = computed(() => {
+    const draft = this.sectionOrderDraft();
+
+    if (!draft) {
+      return false;
+    }
+
+    return !sectionsAreEqual(draft, this.serverSections());
   });
 
   protected readonly hasSections = computed(() => this.sections().length > 0);
@@ -74,9 +95,11 @@ export class MyCvPageComponent {
     !this.cvDocument.loading() &&
     !this.cvStructured.loading() &&
     !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.savingSectionOrder() &&
     !this.cvStructured.updatingWithAi() &&
     !this.cvStructured.generatingSuggestions() &&
-    !this.editingSectionId()
+    !this.editingSectionId() &&
+    !this.hasPendingSectionReorder()
   );
 
   protected readonly canGenerateSuggestions = computed(() =>
@@ -85,8 +108,28 @@ export class MyCvPageComponent {
     !this.cvDocument.loading() &&
     !this.cvStructured.loading() &&
     !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.savingSectionOrder() &&
     !this.cvStructured.updatingWithAi() &&
     !this.cvStructured.generatingSuggestions() &&
+    !this.editingSectionId() &&
+    !this.hasPendingSectionReorder()
+  );
+
+  protected readonly canReorderSections = computed(() =>
+    this.hasSections() &&
+    !this.cvDocument.loading() &&
+    !this.cvStructured.loading() &&
+    !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.savingSectionOrder() &&
+    !this.cvStructured.updatingWithAi() &&
+    !this.cvStructured.generatingSuggestions() &&
+    !this.editingSectionId()
+  );
+
+  protected readonly canSaveSectionOrder = computed(() =>
+    this.hasPendingSectionReorder() &&
+    !this.cvStructured.savingSectionOrder() &&
+    !this.cvStructured.savingSectionId() &&
     !this.editingSectionId()
   );
 
@@ -115,9 +158,11 @@ export class MyCvPageComponent {
     !this.cvDocument.loading() &&
     !this.cvStructured.loading() &&
     !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.savingSectionOrder() &&
     !this.cvStructured.updatingWithAi() &&
     !this.cvStructured.generatingSuggestions() &&
-    !this.editingSectionId()
+    !this.editingSectionId() &&
+    !this.hasPendingSectionReorder()
   );
 
   protected readonly canSaveSection = computed(() => {
@@ -150,6 +195,7 @@ export class MyCvPageComponent {
   });
 
   private lastSavingSectionId: string | null = null;
+  private wasSavingSectionOrder = false;
   private wasUpdatingWithAi = false;
 
   constructor() {
@@ -164,6 +210,18 @@ export class MyCvPageComponent {
     effect(() => {
       this.structuredReloadKey();
       this.cancelSectionEdit();
+      this.discardSectionOrder();
+    });
+
+    effect(() => {
+      const savingSectionOrder = this.cvStructured.savingSectionOrder();
+      const saveError = this.cvStructured.saveError();
+
+      if (this.wasSavingSectionOrder && !savingSectionOrder && !saveError) {
+        this.discardSectionOrder();
+      }
+
+      this.wasSavingSectionOrder = savingSectionOrder;
     });
 
     effect(() => {
@@ -243,7 +301,12 @@ export class MyCvPageComponent {
   }
 
   protected toggleAiUpdateSection(sectionId: string): void {
-    if (this.cvStructured.updatingWithAi() || this.cvStructured.generatingSuggestions() || this.editingSectionId()) {
+    if (
+      this.cvStructured.updatingWithAi() ||
+      this.cvStructured.generatingSuggestions() ||
+      this.editingSectionId() ||
+      this.hasPendingSectionReorder()
+    ) {
       return;
     }
 
@@ -274,9 +337,11 @@ export class MyCvPageComponent {
   protected beginSectionEdit(section: CvStructuredSection): void {
     if (
       this.cvStructured.savingSectionId() ||
+      this.cvStructured.savingSectionOrder() ||
       this.cvStructured.updatingWithAi() ||
       this.cvStructured.generatingSuggestions() ||
-      this.editingSectionId()
+      this.editingSectionId() ||
+      this.hasPendingSectionReorder()
     ) {
       return;
     }
@@ -305,6 +370,29 @@ export class MyCvPageComponent {
     }
 
     this.cvStructured.save(mergeSection(this.sections(), draft), sectionId);
+  }
+
+  protected onSectionDrop(event: CdkDragDrop<void>): void {
+    if (!this.canReorderSections() || event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    this.sectionOrderDraft.set(
+      reorderSections(this.sections(), event.previousIndex, event.currentIndex)
+    );
+  }
+
+  protected saveSectionOrder(): void {
+    if (!this.canSaveSectionOrder()) {
+      return;
+    }
+
+    this.cvStructured.clearSaveError();
+    this.cvStructured.saveSectionOrder(this.sections());
+  }
+
+  protected discardSectionOrder(): void {
+    this.sectionOrderDraft.set(null);
   }
 
   protected updateStructuredWithAi(): void {
@@ -342,7 +430,12 @@ export class MyCvPageComponent {
   }
 
   protected toggleSuggestion(suggestionId: string): void {
-    if (this.cvStructured.updatingWithAi() || this.cvStructured.generatingSuggestions() || this.editingSectionId()) {
+    if (
+      this.cvStructured.updatingWithAi() ||
+      this.cvStructured.generatingSuggestions() ||
+      this.editingSectionId() ||
+      this.hasPendingSectionReorder()
+    ) {
       return;
     }
 

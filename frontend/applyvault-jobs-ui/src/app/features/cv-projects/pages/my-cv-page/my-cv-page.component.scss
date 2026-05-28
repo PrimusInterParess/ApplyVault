@@ -844,9 +844,84 @@
   box-shadow: var(--app-shadow-sm);
 }
 
+.my-cv-page__section-order-hint {
+  margin: 0.35rem 0 0;
+  max-width: 36rem;
+}
+
+.my-cv-page__section-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
 .my-cv-page__sections {
   display: grid;
   gap: 0.55rem;
+}
+
+.my-cv-page__section-drag {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.my-cv-page__section-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-soft);
+  color: var(--app-text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.my-cv-page__section-drag-handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.my-cv-page__section-drag-handle:active:not(:disabled) {
+  cursor: grabbing;
+}
+
+.my-cv-page__section-drag-grip {
+  display: block;
+  width: 0.55rem;
+  height: 0.9rem;
+  background:
+    radial-gradient(circle, currentColor 0.11rem, transparent 0.12rem) 0 0 / 0.55rem 0.3rem,
+    radial-gradient(circle, currentColor 0.11rem, transparent 0.12rem) 0 0.3rem / 0.55rem 0.3rem,
+    radial-gradient(circle, currentColor 0.11rem, transparent 0.12rem) 0 0.6rem / 0.55rem 0.3rem;
+}
+
+.my-cv-page__section-drag-content {
+  min-width: 0;
+}
+
+.my-cv-page__section-drag-panel {
+  min-height: 4rem;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+}
+
+.cdk-drag-preview.my-cv-page__section-drag {
+  box-shadow: var(--app-shadow-lg);
+  opacity: 0.96;
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .my-cv-page__sections-skeleton {
@@ -910,7 +985,8 @@
   .my-cv-page__suggestions-panel,
   .my-cv-page__suggestions-handle,
   .my-cv-page__ai-panel,
-  .my-cv-page__ai-handle {
+  .my-cv-page__ai-handle,
+  .cdk-drag-animating {
     transition: none;
   }
 }

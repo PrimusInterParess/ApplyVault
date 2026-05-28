@@ -21,6 +21,7 @@ export class CvStructuredFacade {
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
+  readonly savingSectionOrder = signal(false);
   readonly updatingWithAi = signal(false);
   readonly generatingSuggestions = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
@@ -60,6 +61,7 @@ export class CvStructuredFacade {
   save(sections: readonly CvStructuredSection[], sectionId: string): void {
     this.cancelSave();
     this.savingSectionId.set(sectionId);
+    this.savingSectionOrder.set(false);
     this.saveError.set(null);
 
     this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
@@ -75,6 +77,29 @@ export class CvStructuredFacade {
         }
 
         this.saveError.set(this.readErrorMessage(error, 'Could not save structured CV content.'));
+      }
+    });
+  }
+
+  saveSectionOrder(sections: readonly CvStructuredSection[]): void {
+    this.cancelSave();
+    this.savingSectionId.set(null);
+    this.savingSectionOrder.set(true);
+    this.saveError.set(null);
+
+    this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
+      next: (document) => {
+        this.savingSectionOrder.set(false);
+        this.structured.set(document);
+      },
+      error: (error) => {
+        this.savingSectionOrder.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.saveError.set(this.readErrorMessage(error, 'Could not save section order.'));
       }
     });
   }

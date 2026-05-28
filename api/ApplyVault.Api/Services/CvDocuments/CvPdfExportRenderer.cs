@@ -130,7 +130,13 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
 
             if (!string.IsNullOrWhiteSpace(entry.Title))
             {
-                column.Item().Text(entry.Title).FontSize(13).Bold().FontColor(AccentColor);
+                column.Item().Text(text =>
+                {
+                    CvExportInlinePdfRenderer.AppendRuns(
+                        text,
+                        entry.Title,
+                        (span) => span.FontSize(13).Bold().FontColor(AccentColor));
+                });
             }
 
             var contactLines = entry.Bullets.Count > 0
@@ -139,9 +145,21 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
 
             if (contactLines.Count > 0)
             {
-                column.Item().Text(string.Join("  |  ", contactLines))
-                    .FontSize(8.5f)
-                    .FontColor(MutedColor);
+                column.Item().Text(text =>
+                {
+                    for (var lineIndex = 0; lineIndex < contactLines.Count; lineIndex++)
+                    {
+                        if (lineIndex > 0)
+                        {
+                            text.Span("  |  ").FontSize(8.5f).FontColor(MutedColor);
+                        }
+
+                        CvExportInlinePdfRenderer.AppendRuns(
+                            text,
+                            contactLines[lineIndex],
+                            (span) => span.FontSize(8.5f).FontColor(MutedColor));
+                    }
+                });
             }
         });
     }
@@ -200,7 +218,13 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
             {
                 column.Item().Row((row) =>
                 {
-                    row.RelativeItem().Text(entry.Title).FontSize(compact ? 10.5f : 10).Bold();
+                    row.RelativeItem().Text(text =>
+                    {
+                        CvExportInlinePdfRenderer.AppendRuns(
+                            text,
+                            entry.Title,
+                            (span) => span.FontSize(compact ? 10.5f : 10).Bold());
+                    });
 
                     if (!string.IsNullOrWhiteSpace(entry.DateRange))
                     {
@@ -219,12 +243,24 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
 
             if (!string.IsNullOrWhiteSpace(entry.Subtitle))
             {
-                column.Item().Text(entry.Subtitle).FontSize(9).FontColor(MutedColor).Italic();
+                column.Item().Text(text =>
+                {
+                    CvExportInlinePdfRenderer.AppendRuns(
+                        text,
+                        entry.Subtitle,
+                        (span) => span.FontSize(9).FontColor(MutedColor).Italic());
+                });
             }
 
             foreach (var paragraph in CvExportTextNormalizer.Paragraphs(entry.Summary))
             {
-                column.Item().Text(paragraph).FontSize(compact ? 9.5f : 9.5f);
+                column.Item().Text(text =>
+                {
+                    CvExportInlinePdfRenderer.AppendRuns(
+                        text,
+                        paragraph,
+                        (span) => span.FontSize(compact ? 9.5f : 9.5f));
+                });
             }
 
             var bullets = GetDisplayBullets(entry, sectionType);
@@ -240,7 +276,13 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
                         bulletColumn.Item().Row((row) =>
                         {
                             row.ConstantItem(10).Text("•").FontSize(9.5f);
-                            row.RelativeItem().Text(bullet).FontSize(9.5f);
+                            row.RelativeItem().Text(text =>
+                            {
+                                CvExportInlinePdfRenderer.AppendRuns(
+                                    text,
+                                    bullet,
+                                    (span) => span.FontSize(9.5f));
+                            });
                         });
                     }
                 });

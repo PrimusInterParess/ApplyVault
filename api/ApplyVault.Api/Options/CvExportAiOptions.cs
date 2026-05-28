@@ -24,7 +24,8 @@ public sealed class CvExportAiOptions
           - techStack: comma-separated technologies when relevant; empty string otherwise
 
         Rules:
-        - Do not use markdown, HTML, or bold markers in any field
+        - Do not add new markdown, HTML, or formatting markers unless the source already uses them for emphasis.
+        - Preserve existing inline markdown in fields you rewrite: **bold**, *italic*, and [label](url) links.
         - Put dates only in dateRange, not in title or subtitle
         - Keep bullets concise and factual
         - For Skills sections, prefer bullets for individual skills; use techStack only for grouped labels when needed

@@ -325,42 +325,67 @@
   font-weight: 700;
 }
 
-.cv-section__editor-wrap {
+.cv-section__form {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.85rem;
   padding: 0.85rem 1rem 1rem;
   background: var(--app-bg-soft);
 }
 
-.cv-section__editor-hint {
-  margin: 0;
+.cv-section__field-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--app-text-muted);
-  font-size: 0.82rem;
-  line-height: 1.45;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.cv-section__editor {
+.cv-section__heading-input {
   width: 100%;
-  min-height: 14rem;
-  padding: 0.75rem 0.85rem;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius);
   background: var(--app-surface);
   color: var(--app-text);
   font: inherit;
   font-size: 0.9rem;
-  line-height: 1.55;
-  resize: vertical;
 }
 
-.cv-section__editor:focus {
+.cv-section__heading-input:focus {
   outline: none;
   border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 14%, transparent);
 }
 
-.cv-section__editor:disabled {
-  opacity: 0.65;
+.cv-section__entries {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cv-section__add-entry {
+  justify-self: start;
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-section__add-entry:hover:not(:disabled) {
+  border-color: var(--app-accent);
+  color: var(--app-accent-dark);
+}
+
+.cv-section__add-entry:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -369,8 +394,7 @@
     padding: 0.85rem;
   }
 
-  .cv-section__document,
-  .cv-section__editor-wrap {
+  .cv-section__document {
     padding-inline: 0.85rem;
   }
 }

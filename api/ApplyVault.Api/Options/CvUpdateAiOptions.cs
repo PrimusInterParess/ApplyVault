@@ -32,7 +32,9 @@ public sealed class CvUpdateAiOptions
         - Put bullet-like achievements in bullets, not in summary.
         - For Skills sections, put individual skills in bullets; use title for skill groups only.
         - For Summary sections, use a single entry with prose in summary; title may be empty or "Summary".
-        - Do not use markdown, HTML, or bold markers in any field.
+        - Do not add new markdown, HTML, or formatting markers unless the user instruction explicitly requires emphasis.
+        - Preserve existing inline markdown in fields you rewrite: **bold**, *italic*, and [label](url) links.
+        - Do not add headings, bullet prefixes ("-"), or block markdown inside summary, title, or subtitle fields.
         - If an instruction conflicts with the current CV facts and does not provide replacement facts, preserve the current facts.
         """;
 

@@ -22,7 +22,8 @@ public sealed class CvSuggestionsAiOptions
         - Suggest improvements that make entries clearer, more outcome-oriented, better scoped, or easier to scan.
         - If a suggestion targets a known section or entry, include its exact id.
         - Keep suggestions grounded in current CV facts and phrasing.
-        - Do not use markdown, HTML, or bold markers in any field.
+        - Do not use markdown, HTML, or bold markers in suggestion title, rationale, or suggestedInstruction fields.
+        - When quoting or referencing existing CV phrasing that contains inline markdown, preserve those markers in suggestedInstruction.
         """;
 
     public const string DefaultUserPromptTemplate =

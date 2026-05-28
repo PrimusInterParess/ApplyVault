@@ -52,14 +52,42 @@
   }
 
   @if (editing()) {
-    <div class="cv-section__editor-wrap">
-      <p class="cv-section__editor-hint">Edit this section as plain text. Markdown like **bold** is supported.</p>
-      <textarea
-        class="cv-section__editor"
-        rows="14"
+    <div class="cv-section__form">
+      <label class="cv-section__field-label">
+        Section heading
+        <input
+          class="cv-section__heading-input"
+          type="text"
+          [disabled]="saving() || disabled()"
+          [value]="activeSection().heading"
+          (input)="updateHeading($event)" />
+      </label>
+
+      <div class="cv-section__entries">
+        @for (entry of sortedEntries(); track entry.id + ':' + editFormKey(); let index = $index) {
+          <app-cv-structured-entry-editor
+            [entry]="entry"
+            [entryIndex]="index"
+            [fieldRevision]="editFormKey()"
+            [sectionType]="activeSection().sectionType"
+            [isContactSection]="isContactSection(activeSection())"
+            [disabled]="saving() || disabled()"
+            [canMoveUp]="index > 0"
+            [canMoveDown]="index < sortedEntries().length - 1"
+            (entryChange)="updateEntry(entry.id, $event)"
+            (moveUp)="moveEntry(entry.id, 'up')"
+            (moveDown)="moveEntry(entry.id, 'down')"
+            (remove)="removeEntry(entry)" />
+        }
+      </div>
+
+      <button
+        type="button"
+        class="cv-section__add-entry"
         [disabled]="saving() || disabled()"
-        [value]="editorText()"
-        (input)="updateEditorText($event)"></textarea>
+        (click)="addEntry()">
+        Add entry
+      </button>
     </div>
   } @else if (!hasEntries()) {
     <p class="cv-section__empty">No content in this section yet.</p>
@@ -90,13 +118,13 @@
             <p class="cv-section__entry-meta" [innerHTML]="renderInlineMarkdown(entryMeta(entry)) | safeHtml"></p>
           }
 
-          @if (entry.summary.trim()) {
+          @if (entry.summary.trim() || (isSummarySection(activeSection().sectionType) && entry.title.trim())) {
             <div
               class="cv-section__entry-body"
-              [innerHTML]="renderMarkdown(entry.summary) | safeHtml"></div>
+              [innerHTML]="renderMarkdown(entryBodySourceText(entry, activeSection().sectionType)) | safeHtml"></div>
           }
 
-          @if (entry.bullets.length > 0 && !isContactSection(activeSection())) {
+          @if (entry.bullets.length > 0 && !isContactSection(activeSection()) && !isSkillsSection(activeSection().sectionType)) {
             <ul class="cv-section__bullets">
               @for (bullet of entry.bullets; track $index) {
                 <li [innerHTML]="renderInlineMarkdown(bullet) | safeHtml"></li>
@@ -104,10 +132,10 @@
             </ul>
           }
 
-          @if (entry.techStack.trim()) {
+          @if (entry.techStack.trim() || (isSkillsSection(activeSection().sectionType) && entry.bullets.length > 0)) {
             @if (isSkillsSection(activeSection().sectionType)) {
               <div class="cv-section__skills" aria-label="Skills">
-                @for (item of techStackItems(entry); track item) {
+                @for (item of skillItems(entry); track item) {
                   <span>{{ item }}</span>
                 }
               </div>

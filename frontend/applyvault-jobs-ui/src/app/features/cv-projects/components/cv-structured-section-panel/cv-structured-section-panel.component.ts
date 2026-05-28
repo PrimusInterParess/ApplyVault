@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, model, output, signal } from '@angular/core';
+import { Component, computed, input, model, output } from '@angular/core';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
@@ -8,15 +8,21 @@ import {
   CvStructuredSection
 } from '../../models/cv-structured.model';
 import {
-  parseSectionMarkdown,
-  sectionToMarkdown
-} from '../../utils/cv-structured-text.util';
+  addEntryToSection,
+  entryHasContent,
+  moveEntryInSection,
+  removeEntryFromSection,
+  updateEntryField,
+  updateSectionHeading
+} from '../../utils/cv-structured-draft.util';
+import { entryBodySourceText } from '../../utils/cv-structured-edit-normalizer.util';
 import { renderInlineMarkdown, renderMarkdown } from '../../utils/markdown.util';
+import { CvStructuredEntryEditorComponent } from '../cv-structured-entry-editor/cv-structured-entry-editor.component';
 
 @Component({
   selector: 'app-cv-structured-section-panel',
   standalone: true,
-  imports: [SafeHtmlPipe],
+  imports: [SafeHtmlPipe, CvStructuredEntryEditorComponent],
   templateUrl: './cv-structured-section-panel.component.html',
   styleUrl: './cv-structured-section-panel.component.scss',
   host: {
@@ -34,6 +40,7 @@ export class CvStructuredSectionPanelComponent {
   public readonly aiUpdateSelected = input(false);
   public readonly suggestionSelected = input(false);
   public readonly showAiUpdateAction = input(false);
+  readonly editFormKey = input(0);
   readonly draft = model<CvStructuredSection | null>(null);
 
   readonly edit = output<void>();
@@ -44,32 +51,15 @@ export class CvStructuredSectionPanelComponent {
   protected readonly renderMarkdown = renderMarkdown;
   protected readonly renderInlineMarkdown = renderInlineMarkdown;
 
-  protected readonly editorText = signal('');
+  protected readonly activeSection = computed(() => {
+    const draft = this.draft();
 
-  protected readonly activeSection = computed(() =>
-    this.editing() && this.draft() ? this.draft()! : this.section()
-  );
+    if (this.editing() && draft && draft.id === this.section().id) {
+      return draft;
+    }
 
-  private editingActive = false;
-
-  constructor() {
-    effect(() => {
-      const editing = this.editing();
-      const draft = this.draft();
-
-      if (!editing) {
-        this.editingActive = false;
-        this.editorText.set('');
-        return;
-      }
-
-      if (!this.editingActive && draft) {
-        this.editorText.set(sectionToMarkdown(draft));
-      }
-
-      this.editingActive = true;
-    });
-  }
+    return this.section();
+  });
 
   protected readonly sortedEntries = computed(() =>
     [...this.activeSection().entries].sort((left, right) => left.sortOrder - right.sortOrder)
@@ -106,16 +96,82 @@ export class CvStructuredSectionPanelComponent {
       .filter((item) => item.length > 0);
   }
 
-  protected updateEditorText(event: Event): void {
-    const value = readInputValue(event);
-    const currentDraft = this.draft();
+  protected skillItems(entry: CvStructuredEntry): readonly string[] {
+    const techItems = this.techStackItems(entry);
 
-    this.editorText.set(value);
+    if (techItems.length > 0) {
+      return techItems;
+    }
 
-    if (!currentDraft || !this.editing() || this.saving()) {
+    return entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
+  }
+
+  protected readonly entryBodySourceText = entryBodySourceText;
+
+  protected updateHeading(event: Event): void {
+    const draft = this.draft();
+
+    if (!draft || draft.id !== this.section().id || !this.editing() || this.saving()) {
       return;
     }
 
-    this.draft.set(parseSectionMarkdown(value, currentDraft));
+    this.draft.set(updateSectionHeading(draft, readInputValue(event)));
+  }
+
+  protected updateEntry(entryId: string, patch: Partial<CvStructuredEntry>): void {
+    const draft = this.draft();
+
+    if (!draft || draft.id !== this.section().id || !this.editing() || this.saving()) {
+      return;
+    }
+
+    this.draft.set(updateEntryField(draft, entryId, patch));
+  }
+
+  protected addEntry(): void {
+    const draft = this.draft();
+
+    if (!draft || !this.editing() || this.saving()) {
+      return;
+    }
+
+    this.draft.set(addEntryToSection(draft));
+  }
+
+  protected removeEntry(entry: CvStructuredEntry): void {
+    const draft = this.draft();
+
+    if (!draft || !this.editing() || this.saving()) {
+      return;
+    }
+
+    if (entryHasContent(entry) && !window.confirm('Remove this entry and its content?')) {
+      return;
+    }
+
+    this.draft.set(removeEntryFromSection(draft, entry.id));
+  }
+
+  protected moveEntry(entryId: string, direction: 'up' | 'down'): void {
+    const draft = this.draft();
+
+    if (!draft || !this.editing() || this.saving()) {
+      return;
+    }
+
+    const entries = [...draft.entries].sort((left, right) => left.sortOrder - right.sortOrder);
+    const index = entries.findIndex((entry) => entry.id === entryId);
+
+    if (index < 0) {
+      return;
+    }
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= entries.length) {
+      return;
+    }
+
+    this.draft.set(moveEntryInSection(draft, index, targetIndex));
   }
 }

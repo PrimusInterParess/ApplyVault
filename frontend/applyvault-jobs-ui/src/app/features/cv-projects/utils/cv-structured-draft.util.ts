@@ -47,6 +47,86 @@ export function createEmptySection(sortOrder: number): CvStructuredSection {
   };
 }
 
+export function updateSectionHeading(section: CvStructuredSection, heading: string): CvStructuredSection {
+  return {
+    ...section,
+    heading
+  };
+}
+
+export function updateEntryField(
+  section: CvStructuredSection,
+  entryId: string,
+  patch: Partial<Pick<CvStructuredEntry, 'title' | 'subtitle' | 'dateRange' | 'summary' | 'bullets' | 'techStack'>>
+): CvStructuredSection {
+  return {
+    ...section,
+    entries: section.entries.map((entry) =>
+      entry.id === entryId
+        ? {
+            ...entry,
+            ...patch,
+            bullets: patch.bullets ? [...patch.bullets] : entry.bullets
+          }
+        : entry
+    )
+  };
+}
+
+export function addEntryToSection(section: CvStructuredSection): CvStructuredSection {
+  const nextEntries = [
+    ...section.entries.map((entry) => ({ ...entry, bullets: [...entry.bullets] })),
+    createEmptyEntry(section.entries.length)
+  ];
+
+  normalizeEntrySortOrders(nextEntries);
+
+  return {
+    ...section,
+    entries: nextEntries
+  };
+}
+
+export function removeEntryFromSection(section: CvStructuredSection, entryId: string): CvStructuredSection {
+  const nextEntries = section.entries
+    .filter((entry) => entry.id !== entryId)
+    .map((entry) => ({ ...entry, bullets: [...entry.bullets] }));
+
+  normalizeEntrySortOrders(nextEntries);
+
+  return {
+    ...section,
+    entries: nextEntries
+  };
+}
+
+export function moveEntryInSection(
+  section: CvStructuredSection,
+  fromIndex: number,
+  toIndex: number
+): CvStructuredSection {
+  const nextEntries = section.entries.map((entry) => ({ ...entry, bullets: [...entry.bullets] }));
+
+  moveItemInArray(nextEntries, fromIndex, toIndex);
+  normalizeEntrySortOrders(nextEntries);
+
+  return {
+    ...section,
+    entries: nextEntries
+  };
+}
+
+export function entryHasContent(entry: CvStructuredEntry): boolean {
+  return (
+    entry.title.trim().length > 0 ||
+    (entry.subtitle?.trim().length ?? 0) > 0 ||
+    (entry.dateRange?.trim().length ?? 0) > 0 ||
+    entry.summary.trim().length > 0 ||
+    entry.bullets.some((bullet) => bullet.trim().length > 0) ||
+    entry.techStack.trim().length > 0
+  );
+}
+
 export function createEmptyEntry(sortOrder: number): CvStructuredEntry {
   return {
     id: crypto.randomUUID(),

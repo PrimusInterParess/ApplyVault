@@ -1,0 +1,84 @@
+.cv-markdown-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cv-markdown-field__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-markdown-field__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cv-markdown-field__tool {
+  min-height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: calc(var(--app-radius) - 2px);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cv-markdown-field__tool:hover:not(:disabled) {
+  border-color: var(--app-border-strong);
+  background: var(--app-bg-soft);
+}
+
+.cv-markdown-field__tool:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cv-markdown-field__input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.cv-markdown-field__input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 14%, transparent);
+}
+
+.cv-markdown-field__input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.cv-markdown-field__preview {
+  padding: 0.55rem 0.65rem;
+  border: 1px dashed var(--app-border);
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-bg-soft) 70%, var(--app-surface));
+  color: var(--app-text);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.cv-markdown-field__preview--block :where(p) {
+  margin: 0;
+}
+
+.cv-markdown-field__preview--block :where(p + p) {
+  margin-top: 0.3rem;
+}

@@ -1,0 +1,226 @@
+<article class="cv-entry-editor">
+  <header class="cv-entry-editor__header">
+    <p class="cv-entry-editor__title">Entry {{ entryIndex() + 1 }}</p>
+    <div class="cv-entry-editor__actions">
+      <button
+        type="button"
+        class="cv-entry-editor__action"
+        [disabled]="disabled() || !canMoveUp()"
+        aria-label="Move entry up"
+        (click)="moveUp.emit()">
+        ↑
+      </button>
+      <button
+        type="button"
+        class="cv-entry-editor__action"
+        [disabled]="disabled() || !canMoveDown()"
+        aria-label="Move entry down"
+        (click)="moveDown.emit()">
+        ↓
+      </button>
+      <button
+        type="button"
+        class="cv-entry-editor__action cv-entry-editor__action--danger"
+        [disabled]="disabled()"
+        aria-label="Remove entry"
+        (click)="remove.emit()">
+        Remove
+      </button>
+    </div>
+  </header>
+
+  <div class="cv-entry-editor__fields">
+    @if (isSummarySection()) {
+      <app-cv-markdown-field
+        label="Summary"
+        previewMode="block"
+        [rows]="6"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="summaryFieldText()"
+        placeholder="Write your professional summary"
+        (valueChange)="updateSummary($event)" />
+
+      <div class="cv-entry-editor__list">
+        <p class="cv-entry-editor__plain-label">Additional points</p>
+        @for (bullet of entry().bullets; track $index) {
+          <div class="cv-entry-editor__bullet">
+            <app-cv-markdown-field
+              [rows]="2"
+              [fieldRevision]="fieldRevision()"
+              [disabled]="disabled()"
+              [value]="bullet"
+              placeholder="Supporting detail"
+              (valueChange)="updateBullet($index, $event)" />
+            <button
+              type="button"
+              class="cv-entry-editor__action"
+              [disabled]="disabled()"
+              aria-label="Remove point"
+              (click)="removeBullet($index)">
+              ×
+            </button>
+          </div>
+        }
+        <button type="button" class="cv-entry-editor__add" [disabled]="disabled()" (click)="addBullet()">
+          Add point
+        </button>
+      </div>
+    } @else if (isSkillsSection()) {
+      <label class="cv-entry-editor__plain-label">
+        Category / heading
+        <input
+          class="cv-entry-editor__input"
+          type="text"
+          [disabled]="disabled()"
+          [value]="entry().title"
+          placeholder="Programming Languages & Frameworks"
+          (input)="updateField('title', $event)" />
+      </label>
+
+      <app-cv-markdown-field
+        label="Description"
+        previewMode="block"
+        [rows]="4"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="summaryFieldText()"
+        placeholder="Brief overview of this skill group"
+        (valueChange)="updateSummary($event)" />
+
+      <label class="cv-entry-editor__plain-label">
+        Skills
+        <input
+          class="cv-entry-editor__input"
+          type="text"
+          [disabled]="disabled()"
+          [value]="skillsFieldText()"
+          placeholder="React, TypeScript, Node.js"
+          (input)="updateTechStack($event)" />
+      </label>
+      <p class="cv-entry-editor__hint">Separate skills with commas, semicolons, or pipes.</p>
+    } @else if (isContactSection()) {
+      <label class="cv-entry-editor__plain-label">
+        Name / heading
+        <input
+          class="cv-entry-editor__input"
+          type="text"
+          [disabled]="disabled()"
+          [value]="entry().title"
+          placeholder="Your name"
+          (input)="updateField('title', $event)" />
+      </label>
+
+      <div class="cv-entry-editor__list">
+        <p class="cv-entry-editor__plain-label">Contact lines</p>
+        @for (line of entry().bullets; track $index) {
+          <div class="cv-entry-editor__list-row">
+            <input
+              class="cv-entry-editor__input"
+              type="text"
+              [disabled]="disabled()"
+              [value]="line"
+              placeholder="email@example.com"
+              (input)="updateContactLine($index, $event)" />
+            <button
+              type="button"
+              class="cv-entry-editor__action"
+              [disabled]="disabled()"
+              aria-label="Remove contact line"
+              (click)="removeContactLine($index)">
+              ×
+            </button>
+          </div>
+        }
+        <button
+          type="button"
+          class="cv-entry-editor__add"
+          [disabled]="disabled()"
+          (click)="addContactLine()">
+          Add contact line
+        </button>
+      </div>
+    } @else {
+      <label class="cv-entry-editor__plain-label">
+        Title
+        <input
+          class="cv-entry-editor__input"
+          type="text"
+          [disabled]="disabled()"
+          [value]="entry().title"
+          placeholder="Job title, project, or degree"
+          (input)="updateField('title', $event)" />
+      </label>
+
+      <div class="cv-entry-editor__row">
+        <label class="cv-entry-editor__plain-label">
+          Subtitle
+          <input
+            class="cv-entry-editor__input"
+            type="text"
+            [disabled]="disabled()"
+            [value]="entry().subtitle ?? ''"
+            placeholder="Company or institution"
+            (input)="updateField('subtitle', $event)" />
+        </label>
+        <label class="cv-entry-editor__plain-label">
+          Dates
+          <input
+            class="cv-entry-editor__input"
+            type="text"
+            [disabled]="disabled()"
+            [value]="entry().dateRange ?? ''"
+            placeholder="Jan 2020 – Present"
+            (input)="updateField('dateRange', $event)" />
+        </label>
+      </div>
+
+      <app-cv-markdown-field
+        label="Summary"
+        previewMode="block"
+        [rows]="4"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="summaryFieldText()"
+        placeholder="Short description of the role or project"
+        (valueChange)="updateSummary($event)" />
+
+      <div class="cv-entry-editor__list">
+        <p class="cv-entry-editor__plain-label">Bullets</p>
+        @for (bullet of entry().bullets; track $index) {
+          <div class="cv-entry-editor__bullet">
+            <app-cv-markdown-field
+              [rows]="2"
+              [fieldRevision]="fieldRevision()"
+              [disabled]="disabled()"
+              [value]="bullet"
+              placeholder="Achievement or responsibility"
+              (valueChange)="updateBullet($index, $event)" />
+            <button
+              type="button"
+              class="cv-entry-editor__action"
+              [disabled]="disabled()"
+              aria-label="Remove bullet"
+              (click)="removeBullet($index)">
+              ×
+            </button>
+          </div>
+        }
+        <button type="button" class="cv-entry-editor__add" [disabled]="disabled()" (click)="addBullet()">
+          Add bullet
+        </button>
+      </div>
+
+      <label class="cv-entry-editor__plain-label">
+        Technologies
+        <input
+          class="cv-entry-editor__input"
+          type="text"
+          [disabled]="disabled()"
+          [value]="entry().techStack"
+          placeholder="React, PostgreSQL, Azure"
+          (input)="updateField('techStack', $event)" />
+      </label>
+    }
+  </div>
+</article>

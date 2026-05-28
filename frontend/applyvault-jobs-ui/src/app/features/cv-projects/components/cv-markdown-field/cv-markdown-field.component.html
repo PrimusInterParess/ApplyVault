@@ -1,0 +1,66 @@
+<div class="cv-markdown-field">
+  @if (label(); as fieldLabel) {
+    <label class="cv-markdown-field__label">{{ fieldLabel }}</label>
+  }
+
+  @if (showToolbar()) {
+    <div class="cv-markdown-field__toolbar" role="toolbar" aria-label="Text formatting">
+      <button
+        type="button"
+        class="cv-markdown-field__tool"
+        [disabled]="disabled()"
+        aria-label="Bold"
+        (click)="applyBold()">
+        B
+      </button>
+      <button
+        type="button"
+        class="cv-markdown-field__tool"
+        [disabled]="disabled()"
+        aria-label="Italic"
+        (click)="applyItalic()">
+        I
+      </button>
+      <button
+        type="button"
+        class="cv-markdown-field__tool"
+        [disabled]="disabled()"
+        aria-label="Link"
+        (click)="applyLink()">
+        Link
+      </button>
+      @if (previewMode() === 'block') {
+        <button
+          type="button"
+          class="cv-markdown-field__tool"
+          [disabled]="disabled()"
+          aria-label="Bullet line"
+          (click)="applyBulletPrefix()">
+          •
+        </button>
+      }
+    </div>
+  }
+
+  <textarea
+    #textarea
+    class="cv-markdown-field__input"
+    [rows]="rows()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [value]="value()"
+    (input)="onInput($event)"></textarea>
+
+  @if (value().trim()) {
+    <div
+      class="cv-markdown-field__preview"
+      [class.cv-markdown-field__preview--block]="previewMode() === 'block'"
+      aria-label="Formatted preview">
+      @if (previewMode() === 'block') {
+        <div [innerHTML]="renderMarkdown(value()) | safeHtml"></div>
+      } @else {
+        <span [innerHTML]="renderInlineMarkdown(value()) | safeHtml"></span>
+      }
+    </div>
+  }
+</div>

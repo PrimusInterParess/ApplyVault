@@ -1,0 +1,123 @@
+.cv-entry-editor {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+}
+
+.cv-entry-editor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cv-entry-editor__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cv-entry-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cv-entry-editor__action,
+.cv-entry-editor__add {
+  min-height: 1.85rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-entry-editor__action:hover:not(:disabled),
+.cv-entry-editor__add:hover:not(:disabled) {
+  background: var(--app-surface);
+}
+
+.cv-entry-editor__action:disabled,
+.cv-entry-editor__add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cv-entry-editor__action--danger {
+  color: var(--app-danger);
+}
+
+.cv-entry-editor__fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cv-entry-editor__row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cv-entry-editor__plain-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-entry-editor__input {
+  width: 100%;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.cv-entry-editor__input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 14%, transparent);
+}
+
+.cv-entry-editor__list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cv-entry-editor__list-row,
+.cv-entry-editor__bullet {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.cv-entry-editor__hint {
+  margin: -0.25rem 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .cv-entry-editor__row {
+    grid-template-columns: 1fr;
+  }
+}

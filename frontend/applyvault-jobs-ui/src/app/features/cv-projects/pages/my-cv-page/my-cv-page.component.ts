@@ -14,12 +14,14 @@ import {
   MAX_CV_EXPORT_TEMPLATE_ID
 } from '../../models/cv-export-template.model';
 import {
+  addEntryToSection,
   cloneSectionForDraft,
   mergeSection,
   reorderSections,
   sectionEquals,
   sectionsAreEqual
 } from '../../utils/cv-structured-draft.util';
+import { normalizeSectionForEditing } from '../../utils/cv-structured-edit-normalizer.util';
 
 @Component({
   selector: 'app-my-cv-page',
@@ -44,6 +46,7 @@ export class MyCvPageComponent {
   protected readonly suggestionsPanelOpen = signal(false);
   protected readonly editingSectionId = signal<string | null>(null);
   protected readonly sectionDraft = signal<CvStructuredSection | null>(null);
+  protected readonly sectionEditFormKey = signal(0);
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
   protected readonly selectedSuggestionIds = signal<string[]>([]);
@@ -241,6 +244,7 @@ export class MyCvPageComponent {
 
       if (this.wasUpdatingWithAi && !updatingWithAi && !aiUpdateError) {
         this.cancelSectionEdit();
+        this.discardSectionOrder();
         this.aiUpdateInstructions.set('');
         this.aiUpdateSectionIds.set([]);
         this.selectedSuggestionIds.set([]);
@@ -348,7 +352,17 @@ export class MyCvPageComponent {
 
     this.cvStructured.clearSaveError();
     this.editingSectionId.set(section.id);
-    this.sectionDraft.set(cloneSectionForDraft(section));
+
+    const serverSection = this.cvStructured.structured()?.sections.find((item) => item.id === section.id);
+    const source = serverSection ?? this.sections().find((item) => item.id === section.id) ?? section;
+    let draft = normalizeSectionForEditing(cloneSectionForDraft(source));
+
+    if (draft.entries.length === 0) {
+      draft = addEntryToSection(draft);
+    }
+
+    this.sectionDraft.set(draft);
+    this.sectionEditFormKey.update((key) => key + 1);
   }
 
   protected cancelSectionEdit(): void {

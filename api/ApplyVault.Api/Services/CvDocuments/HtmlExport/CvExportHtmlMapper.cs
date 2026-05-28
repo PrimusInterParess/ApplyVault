@@ -100,12 +100,12 @@ internal static class CvExportHtmlMapper
         {
             if (!string.IsNullOrWhiteSpace(entry.Title))
             {
-                builder.Append($"""<h1 class="cv-name">{Encode(entry.Title)}</h1>""");
+                builder.Append($"""<h1 class="cv-name">{RenderInline(entry.Title)}</h1>""");
             }
 
             if (!string.IsNullOrWhiteSpace(entry.Subtitle))
             {
-                builder.Append($"""<p class="cv-tagline">{Encode(entry.Subtitle)}</p>""");
+                builder.Append($"""<p class="cv-tagline">{RenderInline(entry.Subtitle)}</p>""");
             }
 
             var contactLines = entry.Bullets.Count > 0
@@ -118,7 +118,7 @@ internal static class CvExportHtmlMapper
 
                 foreach (var line in contactLines)
                 {
-                    builder.Append($"""<p class="cv-contact-line">{Encode(line)}</p>""");
+                    builder.Append($"""<p class="cv-contact-line">{RenderInline(line)}</p>""");
                 }
 
                 builder.Append("</div>");
@@ -156,7 +156,7 @@ internal static class CvExportHtmlMapper
 
         if (!string.IsNullOrWhiteSpace(titleLine))
         {
-            builder.Append($"""<div class="entry-title-line">{Encode(titleLine)}</div>""");
+            builder.Append($"""<div class="entry-title-line">{RenderProfessionalTitleLine(entry)}</div>""");
         }
 
         if (!string.IsNullOrWhiteSpace(entry.DateRange))
@@ -166,7 +166,7 @@ internal static class CvExportHtmlMapper
 
         if (!string.IsNullOrWhiteSpace(entry.Summary))
         {
-            builder.Append($"""<p class="entry-summary">{Encode(entry.Summary)}</p>""");
+            builder.Append($"""<p class="entry-summary">{RenderInline(entry.Summary)}</p>""");
         }
 
         var bullets = GetDisplayBullets(entry, sectionType);
@@ -177,7 +177,7 @@ internal static class CvExportHtmlMapper
 
             foreach (var bullet in bullets)
             {
-                builder.Append($"""<li>{Encode(bullet)}</li>""");
+                builder.Append($"""<li>{RenderInline(bullet)}</li>""");
             }
 
             builder.Append("</ul>");
@@ -246,7 +246,7 @@ internal static class CvExportHtmlMapper
 
             if (!string.IsNullOrWhiteSpace(entry.Title))
             {
-                builder.Append($"""<div class="entry-title">{Encode(entry.Title)}</div>""");
+                builder.Append($"""<div class="entry-title">{RenderInline(entry.Title)}</div>""");
             }
 
             if (!string.IsNullOrWhiteSpace(entry.DateRange))
@@ -259,13 +259,13 @@ internal static class CvExportHtmlMapper
 
         if (!string.IsNullOrWhiteSpace(entry.Subtitle))
         {
-            builder.Append($"""<div class="entry-subtitle">{Encode(entry.Subtitle)}</div>""");
+            builder.Append($"""<div class="entry-subtitle">{RenderInline(entry.Subtitle)}</div>""");
         }
 
         if (!string.IsNullOrWhiteSpace(entry.Summary))
         {
             var tag = compact ? "p" : "p";
-            builder.Append($"""<{tag} class="entry-summary">{Encode(entry.Summary)}</{tag}>""");
+            builder.Append($"""<{tag} class="entry-summary">{RenderInline(entry.Summary)}</{tag}>""");
         }
 
         var bullets = GetDisplayBullets(entry, sectionType);
@@ -276,7 +276,7 @@ internal static class CvExportHtmlMapper
 
             foreach (var bullet in bullets)
             {
-                builder.Append($"""<li>{Encode(bullet)}</li>""");
+                builder.Append($"""<li>{RenderInline(bullet)}</li>""");
             }
 
             builder.Append("</ul>");
@@ -329,6 +329,27 @@ internal static class CvExportHtmlMapper
         string.IsNullOrWhiteSpace(sectionType)
             ? "custom"
             : sectionType.Trim().ToLowerInvariant();
+
+    private static string RenderProfessionalTitleLine(CvExportEntry entry)
+    {
+        var hasTitle = !string.IsNullOrWhiteSpace(entry.Title);
+        var hasSubtitle = !string.IsNullOrWhiteSpace(entry.Subtitle);
+
+        if (hasTitle && hasSubtitle)
+        {
+            return $"{RenderInline(entry.Title)} | {RenderInline(entry.Subtitle)}";
+        }
+
+        if (hasTitle)
+        {
+            return RenderInline(entry.Title);
+        }
+
+        return hasSubtitle ? RenderInline(entry.Subtitle!) : string.Empty;
+    }
+
+    private static string RenderInline(string? value) =>
+        CvExportInlineHtmlRenderer.Render(value);
 
     private static string Encode(string? value) =>
         WebUtility.HtmlEncode(value ?? string.Empty);

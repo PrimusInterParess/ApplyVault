@@ -45,6 +45,7 @@ Thumbs.db
 # .NET build artifacts
 bin/
 obj/
+artifacts/
 .cursor-test-obj/
 .tmp-test-bin/
 .tmp-test-obj/

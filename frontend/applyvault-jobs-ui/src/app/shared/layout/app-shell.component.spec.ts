@@ -30,7 +30,6 @@ describe('AppShellComponent', () => {
   it('shows the signed-in user email in the shell', () => {
     const sessionText = fixture.nativeElement.querySelector('.app-shell__session')?.textContent ?? '';
 
-    expect(sessionText).toContain('Signed in as');
     expect(sessionText).toContain(TEST_CURRENT_USER.email);
   });
 });

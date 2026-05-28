@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
+  computed,
   effect,
   ElementRef,
   HostListener,
@@ -76,6 +77,13 @@ export class JobResultsPageComponent implements OnInit {
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
   protected readonly readInputValue = readInputValue;
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
+
+  protected readonly featuredJobs = computed(() =>
+    this.facade
+      .results()
+      .filter((job) => job.captureQuality.needsReview || job.interviewEvent !== null)
+      .slice(0, 2)
+  );
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

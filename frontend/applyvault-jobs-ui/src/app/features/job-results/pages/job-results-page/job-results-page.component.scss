@@ -3,8 +3,8 @@
 }
 
 .jobs-page {
-  padding: 1.25rem;
-  max-width: 1320px;
+  padding: 2rem 1.5rem 2.5rem;
+  max-width: var(--app-content-max-width);
   margin: 0 auto;
   font-size: 0.92rem;
 }
@@ -13,14 +13,17 @@
 .jobs-page__state,
 .jobs-page__empty {
   border: 1px solid var(--app-border);
-  background: linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-alt) 100%);
+  background: var(--app-surface);
   border-radius: var(--app-radius);
-  box-shadow: var(--app-shadow-lg);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .jobs-page__hero {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  max-width: 42rem;
+  margin: 0 auto 1.75rem;
+  text-align: center;
 }
 
 h1,
@@ -29,16 +32,65 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
-  line-height: 1.15;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  line-height: 1.12;
 }
 
 .jobs-page__intro {
-  margin: 0;
-  max-width: 52ch;
+  margin: 0 auto;
+  max-width: 38ch;
   color: var(--app-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.jobs-page__featured {
+  margin-bottom: 1.5rem;
+}
+
+.jobs-page__featured-header {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.jobs-page__featured-header h2 {
+  font-size: 1.25rem;
+}
+
+.jobs-page__featured-hint {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.86rem;
+}
+
+.jobs-page__featured-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.jobs-page__featured-card .job-card {
+  min-height: 100%;
+}
+
+.jobs-page__list-header {
+  margin-bottom: 0.35rem;
+}
+
+.jobs-page__list-header h2 {
+  font-size: 1.1rem;
+}
+
+.jobs-page__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.jobs-page__stats article {
+  padding: 0.85rem 1rem;
+  border-radius: var(--app-radius-sm);
 }
 
 .jobs-page__banner,
@@ -470,7 +522,11 @@ h1 {
 
 @media (max-width: 1080px) {
   .jobs-page {
-    padding: 0.85rem;
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .jobs-page__featured-grid {
+    grid-template-columns: 1fr;
   }
 
   .jobs-page__stats {

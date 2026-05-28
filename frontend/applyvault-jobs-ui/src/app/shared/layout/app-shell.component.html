@@ -1,12 +1,10 @@
 <div class="app-shell">
   <header class="app-shell__header">
     <div class="app-shell__header-inner">
-      <div class="app-shell__brand">
-        <p class="app-shell__eyebrow">ApplyVault dashboard</p>
-        @if (subtitle(); as pageSubtitle) {
-          <p class="app-shell__subtitle">{{ pageSubtitle }}</p>
-        }
-      </div>
+      <a routerLink="/jobs" class="app-shell__brand" aria-label="ApplyVault home">
+        <span class="app-shell__logo-mark" aria-hidden="true">AV</span>
+        <span class="app-shell__logo-text">ApplyVault</span>
+      </a>
 
       <nav class="app-shell__nav" aria-label="Primary navigation">
         <a
@@ -41,10 +39,10 @@
         </a>
       </nav>
 
-      <div class="app-shell__user">
+      <div class="app-shell__actions">
         @if (auth.currentUser(); as currentUser) {
           <p class="app-shell__session">
-            Signed in as {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
+            {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}
           </p>
         }
         <button type="button" class="app-shell__sign-out" (click)="signOut()">Sign out</button>
@@ -55,4 +53,15 @@
   <main class="app-shell__content">
     <router-outlet />
   </main>
+
+  <footer class="app-shell__footer">
+    <div class="app-shell__footer-inner">
+      <p class="app-shell__copyright">&copy; ApplyVault</p>
+      <nav class="app-shell__footer-nav" aria-label="Footer navigation">
+        <a routerLink="/jobs" class="app-shell__footer-link">Jobs</a>
+        <a routerLink="/eures" class="app-shell__footer-link">EURES</a>
+        <a routerLink="/settings" class="app-shell__footer-link">Settings</a>
+      </nav>
+    </div>
+  </footer>
 </div>

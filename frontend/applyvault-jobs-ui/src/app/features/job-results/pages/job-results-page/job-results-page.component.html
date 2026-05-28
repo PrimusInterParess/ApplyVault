@@ -1,10 +1,10 @@
 <!-- cspell:words eures EURES ApplyVault -->
 <main class="jobs-page">
   <section class="jobs-page__hero">
-    <div>
-      <h1>Saved jobs</h1>
-      <p class="jobs-page__intro">Triage captures, fix low-confidence fields, and schedule interviews in one workspace.</p>
-    </div>
+    <h1>Saved jobs</h1>
+    <p class="jobs-page__intro">
+      Triage captures, fix low-confidence fields, and schedule interviews in one workspace.
+    </p>
   </section>
 
   @if (loadBannerMessage(); as bannerMessage) {
@@ -80,6 +80,24 @@
       <button type="button" (click)="facade.load()">Try again</button>
     </section>
   } @else {
+    @if (featuredJobs().length > 0) {
+      <section class="jobs-page__featured" aria-label="Featured jobs">
+        <div class="jobs-page__featured-header">
+          <h2>Featured jobs</h2>
+          <p class="jobs-page__featured-hint">Roles that need review or have upcoming interviews</p>
+        </div>
+        <div class="jobs-page__featured-grid">
+          @for (job of featuredJobs(); track job.id) {
+            <app-job-result-card
+              class="jobs-page__featured-card"
+              [job]="job"
+              [selected]="facade.selectedResultId() === job.id"
+              (choose)="selectResult($event)" />
+          }
+        </div>
+      </section>
+    }
+
     <section class="jobs-page__controls">
       <div class="jobs-page__controls-row">
         <div class="jobs-page__filters">
@@ -209,6 +227,9 @@
             <button type="button" class="jobs-page__primary-action" (click)="clearAllFilters()">Clear filters</button>
           </div>
         } @else {
+          <div class="jobs-page__list-header">
+            <h2>Latest jobs</h2>
+          </div>
           @for (job of facade.filteredResults(); track job.id) {
             <app-job-result-card
               [job]="job"

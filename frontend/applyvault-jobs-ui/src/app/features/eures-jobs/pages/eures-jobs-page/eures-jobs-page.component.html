@@ -1,14 +1,12 @@
 <main class="eures-page">
   <section class="eures-page__hero">
-    <div>
-      <h1>EURES job search</h1>
-      <p class="eures-page__intro">
-        Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
-      </p>
-    </div>
+    <h1>EURES job search</h1>
+    <p class="eures-page__intro">
+      Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
+    </p>
   </section>
 
-  <section class="eures-page__search">
+  <section class="eures-page__filters" aria-label="Search filters">
     @if (facade.keywords().length > 0) {
       <div class="eures-page__selected-keywords" aria-label="Selected keywords">
         @for (keyword of facade.keywords(); track keyword) {
@@ -27,10 +25,10 @@
       </div>
     }
 
-    <div class="eures-page__search-row">
-      <label class="jobs-page__field jobs-page__field--search">
-        <span>Keywords</span>
-        <div class="jobs-page__search-wrap">
+    <div class="eures-page__filter-row">
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Keywords</span>
+        <div class="eures-page__filter-control">
           <input
             type="search"
             [value]="draftKeyword()"
@@ -40,7 +38,7 @@
           @if (draftKeyword().length > 0) {
             <button
               type="button"
-              class="jobs-page__search-clear"
+              class="eures-page__filter-clear"
               aria-label="Clear keyword draft"
               (click)="clearDraftKeyword()">
               ×
@@ -49,18 +47,34 @@
         </div>
       </label>
 
-      <label class="jobs-page__field">
-        <span>Country</span>
-        <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
-          @for (option of locationOptions; track option.code) {
-            <option [value]="option.code">{{ option.label }}</option>
-          }
-        </select>
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Location</span>
+        <div class="eures-page__filter-control">
+          <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
+            @for (option of locationOptions; track option.code) {
+              <option [value]="option.code">{{ option.label }}</option>
+            }
+          </select>
+        </div>
       </label>
 
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Department</span>
+        <div class="eures-page__filter-control">
+          <select [value]="activeSuggestionGroup()" (change)="updateSuggestionGroup($event)">
+            <option value="">All areas</option>
+            @for (group of keywordSuggestionGroups; track group.label) {
+              <option [value]="group.label">{{ group.label }}</option>
+            }
+          </select>
+        </div>
+      </label>
+    </div>
+
+    <div class="eures-page__filter-actions">
       <button
         type="button"
-        class="jobs-page__primary-action"
+        class="eures-page__search-action"
         (click)="runSearch()"
         [disabled]="!canSearch()"
         [attr.aria-describedby]="searchDisabledHint() ? 'eures-search-hint' : null">
@@ -84,7 +98,7 @@
         </p>
       </div>
 
-      @for (group of keywordSuggestionGroups; track group.label) {
+      @for (group of visibleSuggestionGroups(); track group.label) {
         <div class="eures-page__suggestion-group">
           <span class="eures-page__suggestion-label">{{ group.label }}</span>
           <div class="eures-page__suggestion-chips">
@@ -173,6 +187,11 @@
       <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
     </section>
   } @else if (facade.hasSearched()) {
+    <section class="eures-page__results-header">
+      <h2>Latest jobs</h2>
+      <p class="eures-page__results-summary">{{ facade.resultsSummary() }}</p>
+    </section>
+
     <section class="jobs-page__controls">
       <div class="jobs-page__controls-row">
         <p class="jobs-page__filter-summary">{{ facade.resultsSummary() }}</p>

@@ -51,6 +51,7 @@ export class EuresJobsPageComponent implements OnInit {
   readonly readInputValue = readInputValue;
 
   protected readonly draftKeyword = signal('');
+  protected readonly activeSuggestionGroup = signal('');
   protected readonly mobileDetailEngaged = signal(false);
   protected readonly loadBannerMessage = signal('');
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
@@ -80,6 +81,16 @@ export class EuresJobsPageComponent implements OnInit {
     }
 
     return '';
+  });
+
+  protected readonly visibleSuggestionGroups = computed(() => {
+    const activeGroup = this.activeSuggestionGroup();
+
+    if (!activeGroup) {
+      return this.keywordSuggestionGroups;
+    }
+
+    return this.keywordSuggestionGroups.filter((group) => group.label === activeGroup);
   });
 
   constructor() {
@@ -197,6 +208,10 @@ export class EuresJobsPageComponent implements OnInit {
   protected updateLocationCode(event: Event): void {
     this.facade.updateLocationCode(readInputValue(event));
     this.syncUrlIfNeeded();
+  }
+
+  protected updateSuggestionGroup(event: Event): void {
+    this.activeSuggestionGroup.set(readInputValue(event));
   }
 
   protected toggleSuggestion(keyword: string): void {

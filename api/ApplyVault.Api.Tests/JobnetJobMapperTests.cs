@@ -39,6 +39,59 @@ public sealed class JobnetJobMapperTests
     }
 
     [Fact]
+    public void MapDetail_PreservesSafeHtmlStructure()
+    {
+        var detail = JobnetTestData.CreateDetailJob(
+            "Backend Developer",
+            "Contoso A/S",
+            "<p>Build <strong>APIs</strong></p><ul><li>C#</li></ul>");
+
+        var mapped = JobnetJobMapper.MapDetail("job-3", detail);
+
+        Assert.Contains("<p>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<strong>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<ul>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<li>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Build", mapped.Description);
+        Assert.Contains("APIs", mapped.Description);
+        Assert.Contains("C#", mapped.Description);
+    }
+
+    [Fact]
+    public void MapDetail_RemovesUnsafeHtml()
+    {
+        var detail = JobnetTestData.CreateDetailJob(
+            "Backend Developer",
+            "Contoso A/S",
+            "<p>Safe</p><script>alert('x')</script><iframe src=\"evil\"></iframe>");
+
+        var mapped = JobnetJobMapper.MapDetail("job-4", detail);
+
+        Assert.Contains("<p>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Safe", mapped.Description);
+        Assert.DoesNotContain("script", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("iframe", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("alert", mapped.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void MapDetailFromSearch_PreservesSafeHtmlStructure()
+    {
+        var job = JobnetTestData.CreateSearchJob(
+            "E10990623",
+            "Developer",
+            "Contoso",
+            "<p>Build <strong>APIs</strong></p><ul><li>C#</li></ul>");
+
+        var mapped = JobnetJobMapper.MapDetailFromSearch("E10990623", job);
+
+        Assert.Contains("<p>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<strong>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<ul>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<li>", mapped.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void SupportsNativeDetailEndpoint_OnlyAcceptsGuidIds()
     {
         Assert.True(JobnetJobIdentifiers.SupportsNativeDetailEndpoint("b2b58b21-1353-47c7-afdb-5bb1ff15fd5a"));

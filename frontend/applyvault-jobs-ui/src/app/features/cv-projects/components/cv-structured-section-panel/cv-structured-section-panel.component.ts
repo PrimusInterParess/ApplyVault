@@ -16,7 +16,7 @@ import {
   updateSectionHeading
 } from '../../utils/cv-structured-draft.util';
 import { entryBodySourceText } from '../../utils/cv-structured-edit-normalizer.util';
-import { renderInlineMarkdown, renderMarkdown } from '../../utils/markdown.util';
+import { renderInlineMarkdown, renderMarkdown } from '../../../../core/markdown/markdown.util';
 import { CvStructuredEntryEditorComponent } from '../cv-structured-entry-editor/cv-structured-entry-editor.component';
 
 @Component({

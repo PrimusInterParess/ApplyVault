@@ -190,12 +190,64 @@ button {
   margin-bottom: 0;
 }
 
+.job-detail__description {
+  margin-top: 0.65rem;
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+}
+
+.job-detail__description-body,
+.job-detail__description.job-detail__description-body {
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
 .job-detail__description-body p,
 .job-detail__description-body ul,
 .job-detail__description-body ol,
 .job-detail__description-body pre,
 .job-detail__description-body blockquote {
   margin: 0 0 1rem;
+}
+
+.job-detail__description-body h1,
+.job-detail__description-body h2,
+.job-detail__description-body h3,
+.job-detail__description-body h4,
+.job-detail__description-body h5,
+.job-detail__description-body h6 {
+  margin: 1.25rem 0 0.65rem;
+  line-height: 1.25;
+  color: var(--app-text);
+}
+
+.job-detail__description-body h1:first-child,
+.job-detail__description-body h2:first-child,
+.job-detail__description-body h3:first-child,
+.job-detail__description-body h4:first-child,
+.job-detail__description-body h5:first-child,
+.job-detail__description-body h6:first-child {
+  margin-top: 0;
+}
+
+.job-detail__description-body strong,
+.job-detail__description-body b {
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.job-detail__description-body table {
+  width: 100%;
+  margin: 0 0 1rem;
+  border-collapse: collapse;
+}
+
+.job-detail__description-body th,
+.job-detail__description-body td {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--app-border);
+  text-align: left;
+  vertical-align: top;
 }
 
 .job-detail__description-body ul,
@@ -209,4 +261,9 @@ button {
   border: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.job-detail__description-body a {
+  color: var(--app-accent-dark);
+  font-weight: 600;
 }

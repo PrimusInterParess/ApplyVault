@@ -50,6 +50,7 @@ artifacts/
 .tmp-test-bin/
 .tmp-test-obj/
 _tmp_test_out/
+.test-out/
 
 # Local ASP.NET development settings
 appsettings.Development.json

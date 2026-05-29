@@ -97,7 +97,9 @@
     }
 
     @if (selectedJob.description) {
-      <article class="job-detail__description" [innerHTML]="selectedJob.description | safeHtml"></article>
+      <article
+        class="job-detail__description job-detail__description-body"
+        [innerHTML]="renderJobDescription(selectedJob.description) | safeHtml"></article>
     } @else {
       <p class="job-detail__muted">No description was returned for this listing.</p>
     }

@@ -1,15 +1,11 @@
-using System.Net;
 using System.Text.RegularExpressions;
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.Shared;
 
 namespace ApplyVault.Api.Services.Jobnet;
 
 internal static class JobnetJobMapper
 {
-    private static readonly Regex HtmlTagPattern = new(
-        "<[^>]+>",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     public const string WorkInDenmarkClassification = "WorkInDenmark";
 
     public static bool HasWorkInDenmarkClassification(IEnumerable<string>? classifications)
@@ -54,7 +50,7 @@ internal static class JobnetJobMapper
             location,
             FormatPublicationDate(detail.PublicationDateTime),
             ResolveSourceUrl(id, detail.Application?.UrlText),
-            StripHtml(detail.Body),
+            JobDescriptionHtmlSanitizer.Sanitize(detail.Body),
             ResolveApplicationUrl(detail.Application),
             detail.Job?.Occupation,
             FormatWorkHours(detail.Job?.WorkHourPartTime),
@@ -77,7 +73,7 @@ internal static class JobnetJobMapper
             location,
             FormatPublicationDate(job.PublicationDate),
             ResolveSourceUrl(id, job.JobAdUrl),
-            StripHtml(job.Description),
+            JobDescriptionHtmlSanitizer.Sanitize(job.Description),
             ResolveApplicationUrlFromSearch(job),
             job.Occupation,
             FormatWorkHours(job.WorkHourPartTime),
@@ -182,18 +178,6 @@ internal static class JobnetJobMapper
             false => "Full-time",
             _ => null
         };
-    }
-
-    private static string StripHtml(string? html)
-    {
-        if (string.IsNullOrWhiteSpace(html))
-        {
-            return string.Empty;
-        }
-
-        var withoutTags = HtmlTagPattern.Replace(html, " ");
-        var decoded = WebUtility.HtmlDecode(withoutTags);
-        return Regex.Replace(decoded, @"\s+", " ").Trim();
     }
 
     private static string? NormalizeSingleLine(string? value)

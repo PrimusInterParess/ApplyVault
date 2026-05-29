@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { ExternalJobDetail } from '../../models/external-job.model';
 import { getJobSearchProvider, JobSearchSource } from '../../models/job-source.model';
+import { renderJobDescription } from '../../utils/job-description-render.util';
 import { formatEuresPublicationDate } from '../../utils/eures-date.util';
 
 @Component({
@@ -39,4 +40,6 @@ export class ExternalJobDetailComponent {
   protected readonly sourceLabel = computed(() =>
     getJobSearchProvider(this.source()).detailLabel
   );
+
+  protected readonly renderJobDescription = renderJobDescription;
 }

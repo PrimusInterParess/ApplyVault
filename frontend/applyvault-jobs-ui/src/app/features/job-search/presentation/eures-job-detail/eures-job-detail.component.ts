@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { EuresJobDetail } from '../../models/eures-job.model';
+import { renderJobDescription } from '../../utils/job-description-render.util';
 import { formatEuresPublicationDate } from '../../utils/eures-date.util';
 
 @Component({
@@ -33,4 +34,6 @@ export class EuresJobDetailComponent {
   protected readonly canSave = computed(() => {
     return Boolean(this.job()) && !this.saving() && !this.savedJobId();
   });
+
+  protected readonly renderJobDescription = renderJobDescription;
 }

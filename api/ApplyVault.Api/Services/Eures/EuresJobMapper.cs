@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.Shared;
 
 namespace ApplyVault.Api.Services.Eures;
 
@@ -44,7 +45,7 @@ internal static class EuresJobMapper
             FormatLocation(profile?.Locations, locationMap: null),
             FormatPublicationDate(detail.CreationDate),
             sourceUrl,
-            profile?.Description,
+            JobDescriptionHtmlSanitizer.Sanitize(profile?.Description),
             applicationUrl,
             profile?.PositionOfferingCode,
             FormatWorkHours(profile?.PositionScheduleCodes));

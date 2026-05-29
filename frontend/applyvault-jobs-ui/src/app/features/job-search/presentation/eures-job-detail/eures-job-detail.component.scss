@@ -171,13 +171,6 @@ h2 {
   border-color: color-mix(in srgb, var(--app-warning) 35%, var(--app-border));
 }
 
-.job-detail__description {
-  margin-top: 0.65rem;
-  line-height: 1.6;
-  max-width: 72ch;
-  overflow-wrap: anywhere;
-}
-
 .job-detail__skeleton-header,
 .job-detail__skeleton-actions {
   display: grid;

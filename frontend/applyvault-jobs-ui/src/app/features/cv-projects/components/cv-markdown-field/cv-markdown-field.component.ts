@@ -6,7 +6,7 @@ import {
   prefixMarkdownLine,
   wrapMarkdownSelection
 } from '../../utils/markdown-selection.util';
-import { renderInlineMarkdown, renderMarkdown } from '../../utils/markdown.util';
+import { renderInlineMarkdown, renderMarkdown } from '../../../../core/markdown/markdown.util';
 
 @Component({
   selector: 'app-cv-markdown-field',

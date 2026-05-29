@@ -4,7 +4,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 
 - a Chrome Manifest V3 extension that scrapes job listing details from the active tab
 - a local ASP.NET Core API backed by EF Core and SQL Server LocalDB
-- an Angular dashboard for reviewing saved jobs, fixing weak captures, and managing interview follow-up
+- an Angular dashboard for reviewing saved jobs, searching public listings, editing structured CV content, and managing interview follow-up
 
 ## Current Capabilities
 
@@ -21,19 +21,22 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Connect a GitHub account from settings via OAuth (stored server-side; tokens are never exposed to the browser).
 - Browse connected GitHub repositories from the dashboard and generate CV-ready personal-project summaries with Google AI from repo metadata and README content.
 - Persist generated CV project summaries per user (title, summary, bullets, tech stack) with regenerate and delete; summaries are removed when GitHub is disconnected.
-- Upload one PDF CV per user from the dashboard, store the file on local disk or Azure Blob Storage, and preview it in the browser with replace and delete flows.
+- Upload one PDF CV per user from the dashboard, store the file on local disk or Azure Blob Storage, and auto-extract structured sections on upload (Google AI with heuristic fallback) plus optional profile-photo extraction.
+- Edit structured CV sections (Experience, Projects, Education, Skills, Summary, Custom) with inline editing, drag-and-drop reorder, re-import from the stored PDF, Google AI section updates, and reviewable improvement suggestions.
+- Export a formatted PDF from structured CV content using selectable HTML templates (Classic, Modern, Minimal ATS, Creative, Professional).
+- Preview the original uploaded PDF in the browser with replace and delete flows.
 - Connect a Gmail mailbox from settings and poll for job-related emails with a hosted background sync worker.
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
 - Show whether the latest rejection or interview update came from Gmail sync or a manual dashboard action.
 - Render saved job descriptions as Markdown in the dashboard detail view.
-- Search public EURES job listings from the dashboard with multi-keyword filters, keyword expansion for common IT terms (for example `.net`), country pickers, and shareable URL state.
-- Rank and paginate EURES results on the API with a short-lived in-memory cache so paging and load-more requests reuse the same ranked result set.
-- Browse EURES listings with dedicated card and detail components, load-more and scroll-based fetching, keyboard list navigation, and saved-listing indicators.
-- Inspect EURES listing details in the dashboard, save listings into ApplyVault, and open the original posting in a new tab.
+- Search public job listings from a unified **Search** page that supports **EURES** and **Work in Denmark** (Jobnet) with a source toggle, multi-keyword filters, keyword expansion for common IT terms (for example `.net`), country pickers, and shareable URL state (`/search?source=eures|jobnet&keywords=...`).
+- Rank and paginate EURES and Jobnet results on the API with a short-lived distributed cache (Redis when `ConnectionStrings:Redis` is set; in-memory fallback for a single API replica) so paging and load-more requests reuse the same ranked result set.
+- Browse external listings with shared card and detail components, load-more and scroll-based fetching, keyboard list navigation, and saved-listing indicators.
+- Inspect EURES and Work in Denmark listing details in the dashboard, save listings into ApplyVault, and open the original posting in a new tab.
 - Filter saved jobs by debounced search term, source hostname, and workflow state (needs review, interview, rejected, hide rejected), with sort options for saved date, title, company, and interview date.
 - Show a live filter summary and workspace stats that reflect the full saved dataset, not just the filtered subset.
-- Share one authenticated app shell across Jobs, EURES, My CV, Projects, and Settings with active nav highlighting and sign-out.
-- Render untrusted HTML safely in job and EURES detail views via centralized sanitization.
+- Share one authenticated app shell across Jobs, Search, My CV, Projects, and Settings with active nav highlighting and sign-out.
+- Render untrusted HTML safely in job and external-listing detail views via centralized sanitization.
 - Confirm destructive actions in modal dialogs before deleting saved jobs, removing an uploaded CV, or disconnecting calendar, GitHub, and mail providers.
 - Schedule and edit interview events in a modal dialog from the job detail panel.
 - Show loading skeletons and section status chips while lists, detail panels, and settings integrations load.
@@ -43,13 +46,13 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `src/`
   Chrome extension source, including popup UI, background service worker, content scripts, and shared contracts.
 - `api/ApplyVault.Api/`
-  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. CV PDF files are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage.
+  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export.
 - `api/ApplyVault.Api.Tests/`
-  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES job search, and related API services.
+  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search, CV structured import/export, and related API services.
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
-  Angular application for reviewing saved results, searching EURES listings, uploading a CV PDF, generating CV project summaries from GitHub, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `eures-jobs`, `cv-projects`, `settings`) with presentation components in each feature’s `presentation/` folder. Critical-path specs live alongside features and in `src/testing/` (auth mocks, API fixtures).
+  Angular application for reviewing saved results, searching EURES and Work in Denmark listings, editing structured CV content, generating CV project summaries from GitHub, and managing integrations. Feature areas live under `src/app/features/` (for example `job-results`, `job-search`, `cv-projects`, `settings`) with presentation components in each feature’s `presentation/` folder. Legacy `eures-jobs` code remains for reference but routes use `job-search`. Critical-path specs live alongside features and in `src/testing/` (auth mocks, API fixtures).
 - `plans/production-readiness/`
   Step-by-step plans for production hardening steps 4–17 (config, deploy, security, scale). Steps 1–3 live in `plans/prod-0N-*.md`.
 - `plans/`
@@ -116,9 +119,18 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/cv-projects/generate` — generate or regenerate a summary from a repo `fullName` (for example `owner/repo`)
 - `DELETE /api/cv-projects/{id}`
 - `GET /api/cv-documents/current` — metadata for the signed-in user’s uploaded CV PDF (404 when none)
-- `POST /api/cv-documents/current` — upload or replace the current CV (PDF only, max 5 MB by default)
-- `GET /api/cv-documents/current/content` — stream the current CV PDF for preview/download
+- `POST /api/cv-documents/current` — upload or replace the current CV (PDF only, max 5 MB by default); returns document metadata and structured import summary
+- `GET /api/cv-documents/current/content` — stream the current CV PDF for preview/download (alias of original content)
+- `GET /api/cv-documents/current/content/original`
+- `GET /api/cv-documents/current/content/original/download`
+- `GET /api/cv-documents/current/profile-photo`
 - `DELETE /api/cv-documents/current`
+- `GET /api/cv-documents/current/structured`
+- `PUT /api/cv-documents/current/structured`
+- `POST /api/cv-documents/current/structured/reimport`
+- `POST /api/cv-documents/current/structured/ai-update`
+- `POST /api/cv-documents/current/structured/ai-suggestions`
+- `GET /api/cv-documents/current/export/download?templateId=1` — export formatted PDF from structured content
 - `GET /api/mail-connections`
 - `POST /api/mail-connections/gmail/start`
 - `GET /api/mail-connections/gmail/callback`
@@ -126,8 +138,11 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/eures/jobs/search`
 - `GET /api/eures/jobs/{id}`
 - `POST /api/eures/jobs/{id}/save`
+- `POST /api/jobnet/jobs/search`
+- `GET /api/jobnet/jobs/{id}`
+- `POST /api/jobnet/jobs/{id}/save`
 
-Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES search/save, CV document upload/preview, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
+Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES and Jobnet search/save, CV document upload/preview/structured editing/export, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
 
 `POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../github/callback`, `GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
 
@@ -171,7 +186,9 @@ Configuration is layered: `appsettings.json` (safe defaults) → `appsettings.{E
 Option sections (validated at startup when enabled):
 
 - `GoogleAi`
-  Optional AI repair for low-confidence captures and CV project summary generation. Provide an API key and model when you want enrichment enabled. CV project generation requires `GoogleAi:Enabled` to be `true`.
+  Optional AI repair for low-confidence captures, CV structured import/update/suggestions, CV project summary generation, and CV export polish. Provide an API key and model when you want enrichment enabled. CV AI features require `GoogleAi:Enabled` to be `true`.
+- `CvImportAi`, `CvUpdateAi`, `CvSuggestionsAi`, `CvExportAi`
+  Prompt templates for CV structured import, AI section updates, improvement suggestions, and export copy polish. Defaults are suitable for most setups; override only when you want different tone or structure.
 - `GitHubProjectAi`
   Prompt templates for CV project summary generation (`SystemPrompt`, `UserPromptTemplate`). Defaults are suitable for most setups; override only when you want different tone or structure.
 - `ScrapeResultEnrichment`
@@ -185,9 +202,15 @@ Option sections (validated at startup when enabled):
 - `MailIntegration`
   Enables Gmail sync, configures the Gmail OAuth client and callback URL, sets the Angular post-connect redirect, and controls poll cadence plus the initial mailbox lookback window. The Gmail background sync worker is registered only when `MailIntegration:Enabled` is `true`.
 - `EuresIntegration`
-  Configures the EURES API base URL, default country/location code, max results per page, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached in memory for five minutes before server-side pagination is applied.
+  Configures the EURES API base URL, default country/location code, max results per page, upstream scan limits, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached for five minutes (Redis when configured) before server-side pagination is applied.
+- `JobnetIntegration`
+  Configures the Jobnet BFF base URL (`https://jobnet.dk/bff` by default), search/detail paths, Work in Denmark filtering, radius and sort defaults, upstream scan limits, classification detail-fetch limits, and ranked/classification cache TTLs used by Work in Denmark search endpoints.
 - `CvDocumentStorage`
-  Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object.
+  Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object and triggers structured re-import.
+- `CvHtmlExport`
+  Controls HTML-template PDF export (`EnableHtmlTemplates`, `TemplatesSubfolder`, `MaxConcurrentExports`). Templates are numbered 1–5 (Classic through Professional).
+- `ConnectionStrings:Redis`
+  Optional shared Redis for EURES/Jobnet ranked-result caches and Gmail sync locking when running more than one API replica. Omit for single-replica local dev (in-memory cache and in-process lock fallback).
 - `Cors`
   Allowed browser origins for production. Leave `AllowedOrigins` empty in Development to allow any origin; set explicit origins (for example `http://localhost:4200`) before exposing the API publicly.
 - `Database`
@@ -207,7 +230,7 @@ npm start
 
 The dashboard runs on `http://localhost:4200/` and reads saved results from `http://localhost:5173/api`.
 
-Authenticated dashboard routes (`/jobs`, `/eures`, `/my-cv`, `/cv-projects`, `/settings`) render inside a shared app shell with primary navigation, the signed-in user, and sign-out. Login and OAuth callback routes stay outside the shell.
+Authenticated dashboard routes (`/jobs`, `/search`, `/my-cv`, `/cv-projects`, `/settings`) render inside a shared app shell with primary navigation, the signed-in user, and sign-out. Legacy paths `/eures` and `/workindenmark` redirect to `/search` with the appropriate `source` query param. Login and OAuth callback routes stay outside the shell.
 
 The saved jobs page (`/jobs`) supports:
 
@@ -216,7 +239,7 @@ The saved jobs page (`/jobs`) supports:
 - sorting by saved date, title, company, or interview date
 - a live filter summary (for example “Showing 3 of 12 jobs”) alongside workspace stats for total results, companies, sources, and rejected jobs (stats reflect the full saved dataset, not the filtered subset)
 - distinct empty states for “no saved jobs” vs “no matches for current filters”
-- deep-link selection via `?selected=<job-id>` (used after saving from EURES)
+- deep-link selection via `?selected=<job-id>` (used after saving from Search)
 - capture quality review with field-level confidence and review reasons
 - sanitized Markdown description cleanup and rendering
 - interview event editing in a modal dialog and calendar-event creation for connected providers
@@ -235,11 +258,15 @@ The settings page also supports:
 
 The My CV page (`/my-cv`) supports:
 
-- uploading a single PDF CV (validated server-side; replaces any previous upload)
-- inline metadata (original filename, size, uploaded time) and an iframe preview loaded from `GET /api/cv-documents/current/content`
-- **Add projects to CV** / **Regenerate CV with projects** (`POST /api/cv-documents/current/merge-projects`) to append all saved project summaries from `/cv-projects` as a **Personal Projects** section (deterministic PDF layout; no AI)
+- uploading a single PDF CV (validated server-side; replaces any previous upload and auto-imports structured sections)
+- inline metadata (original filename, size, uploaded time, import status) and an iframe preview of the original PDF
+- structured section panels with inline edit, add entry, drag-and-drop reorder, and save per section or for section order
+- **Re-import from PDF** to refresh structured content from the stored upload
+- **AI update** panel for natural-language edits with optional focus sections (`POST /api/cv-documents/current/structured/ai-update`)
+- **Improvement suggestions** panel to generate, review, and apply AI suggestions (`POST /api/cv-documents/current/structured/ai-suggestions`)
+- **Download formatted CV** with template picker (Classic, Modern, Minimal ATS, Creative, Professional) via `GET /api/cv-documents/current/export/download`
 - **Replace CV** and **Delete CV** actions with a confirmation dialog before removal
-- loading skeletons and separate error banners for metadata load, upload, merge, preview, and delete failures
+- loading skeletons and separate error banners for metadata load, upload, structured save, export, preview, and delete failures
 
 The Projects page (`/cv-projects`) supports:
 
@@ -252,14 +279,15 @@ The Projects page (`/cv-projects`) supports:
 - per-summary remove actions and automatic cleanup when GitHub is disconnected
 - loading skeletons and inline error banners for repo load, generation, and summary fetch failures
 
-The EURES job search page (`/eures`) supports:
+The Job Search page (`/search`) supports:
 
+- source toggle between **EURES** and **Work in Denmark** (Jobnet) when multiple providers are enabled
 - multi-keyword search with removable keyword chips and popular IT suggestion groups
-- country picker with common ISO codes (Denmark, Sweden, Germany, and others)
-- shareable URL state for keywords, location, and selected listing (for example `/eures?keywords=software,angular&location=dk&selected=<listing-id>`)
+- country picker with common ISO codes (Denmark, Sweden, Germany, and others) for EURES searches
+- shareable URL state for source, keywords, location, and selected listing (for example `/search?source=jobnet&keywords=software,angular&location=dk&selected=<listing-id>`)
 - server-ranked results with **Load more** and automatic fetch when the list or page scroll nears the bottom; retry on load-more errors
-- dedicated `eures-job-card` and `eures-job-detail` presentation components for list selection, saved-state badges, and detail actions
-- re-search when keywords or country change after an initial search
+- shared `external-job-card` and `external-job-detail` presentation components for list selection, saved-state badges, and detail actions
+- re-search when keywords, country, or source change after an initial search
 - formatted publication dates, mobile Results/Detail tabs, keyboard arrow navigation in the list, and focus management after search
 - sanitized HTML rendering for listing descriptions
 - **Save to ApplyVault** on the detail panel, with retry on error and a link to the saved job on `/jobs`
@@ -281,7 +309,7 @@ Integration tests (HTTP + auth pipeline):
 dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
 ```
 
-Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, and the EURES job search client, keyword expander, ranked-result caching, mapper, relevance scoring, and request normalization. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
+Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, EURES and Jobnet job search (client, keyword expander, ranked-result caching, mapper, relevance scoring, request normalization), and CV structured import/export/update services. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
 
 ### 6. Run frontend critical-path tests
 
@@ -295,7 +323,7 @@ npm run test:ci
 
 Use `npm test` (or `ng test`) for watch mode during development.
 
-Coverage includes auth guards, the auth interceptor, app shell session display, saved jobs list/empty state, and EURES search flows. Shared test helpers live in `frontend/applyvault-jobs-ui/src/testing/`.
+Coverage includes auth guards, the auth interceptor, app shell session display, saved jobs list/empty state, unified job search flows (EURES and Jobnet source switching), and job-search URL state helpers. Shared test helpers live in `frontend/applyvault-jobs-ui/src/testing/`.
 
 ### 7. CI
 
@@ -348,12 +376,13 @@ Useful checks:
 6. Let the API score capture quality and optionally enrich weak fields before persisting the result.
 7. Start the Angular dashboard, sign in with the same Supabase account, and review saved results in the browser.
 8. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
-9. Optionally upload a CV PDF from **My CV** (`/my-cv`); local dev stores files under `App_Data/cv-documents` when `CvDocumentStorage:Provider` is `Local`.
-10. Optionally connect GitHub from dashboard settings after enabling `GitHubIntegration` and configuring a GitHub OAuth App, then open **Projects** (`/cv-projects`) to browse repositories and generate AI-written personal-project entries (requires `GoogleAi:Enabled`).
-11. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
-12. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
-13. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
-14. Optionally open the EURES job search page, run a keyword search for a country, load additional pages of results, save a listing to ApplyVault, and inspect listing details before opening the source posting.
+9. Optionally upload a CV PDF from **My CV** (`/my-cv`); local dev stores files under `App_Data/cv-documents` when `CvDocumentStorage:Provider` is `Local`, and structured sections are extracted automatically on upload.
+10. Edit structured CV sections, run AI updates or suggestions, and download a formatted export when ready.
+11. Optionally connect GitHub from dashboard settings after enabling `GitHubIntegration` and configuring a GitHub OAuth App, then open **Projects** (`/cv-projects`) to browse repositories and generate AI-written personal-project entries (requires `GoogleAi:Enabled`).
+12. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
+13. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
+14. If the role progresses, save an interview time manually or let Gmail sync detect it, then push it to a connected calendar provider.
+15. Optionally open **Search** (`/search`), pick EURES or Work in Denmark, run a keyword search, load additional pages of results, save a listing to ApplyVault, and inspect listing details before opening the source posting.
 
 ## Manual Verification
 
@@ -371,28 +400,31 @@ Useful checks:
 12. If a calendar provider is connected, create a calendar event from the saved interview and verify the provider link is returned.
 13. Toggle the rejected state and verify the change persists after refresh.
 14. If `GitHubIntegration` is enabled, connect GitHub from settings and verify the OAuth callback returns to `/integrations/github/callback?provider=github&success=true`, then confirm the connected account appears on the settings page.
-15. Open `/my-cv`, upload a PDF, and confirm metadata and an inline preview appear; replace the file and confirm the preview updates.
-16. With at least one saved project summary, use **Add projects to CV** on `/my-cv` and confirm the preview updates with appended **Personal Projects** pages; use **Regenerate CV with projects** and confirm the page count does not grow with duplicate sections.
-17. Delete the CV and confirm the confirmation dialog is required; verify the empty state returns and `GET /api/cv-documents/current` returns **404**.
-18. With GitHub connected and `GoogleAi:Enabled`, open `/cv-projects`, load repositories, generate a summary for one repo, and confirm the saved panel shows title, summary, bullets, and tech stack.
-19. Regenerate the same repository and confirm the saved summary updates; remove it and confirm it disappears from the saved panel.
-20. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal; verify saved CV project summaries are cleared after disconnect.
-21. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
-22. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
-23. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
-24. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
-24. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
-25. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
-26. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
-27. Open `/eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
-28. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
-29. Refresh `/eures?keywords=software&location=dk` and confirm keywords, location, and selection restore from the URL.
-30. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
-31. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
-32. Delete a saved job and confirm the modal confirmation step is required before removal.
-33. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
-34. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
-35. Sign out from any authenticated page and confirm you return to `/login`.
+15. Open `/my-cv`, upload a PDF, and confirm metadata, structured section import status, and an inline preview appear; replace the file and confirm structured content refreshes.
+16. Edit a structured section, reorder sections, and confirm changes persist after refresh; use **Re-import from PDF** and confirm sections update from the stored upload.
+17. With `GoogleAi:Enabled`, run an AI section update and generate improvement suggestions; apply at least one suggestion and confirm the structured content changes.
+18. Download a formatted CV export with a non-default template and confirm a PDF downloads successfully.
+19. Delete the CV and confirm the confirmation dialog is required; verify the empty state returns and `GET /api/cv-documents/current` returns **404**.
+20. With GitHub connected and `GoogleAi:Enabled`, open `/cv-projects`, load repositories, generate a summary for one repo, and confirm the saved panel shows title, summary, bullets, and tech stack.
+21. Regenerate the same repository and confirm the saved summary updates; remove it and confirm it disappears from the saved panel.
+22. Disconnect GitHub and confirm the disconnect confirmation modal appears before removal; verify saved CV project summaries are cleared after disconnect.
+23. If `MailIntegration` is enabled, connect Gmail from settings and verify the callback returns to the dashboard with a success state.
+24. Confirm the settings page shows mailbox sync status, last synced time, and any sync error details for the connected Gmail account.
+25. Send or surface a recent Gmail rejection/interview email for a saved job, wait for the poll interval, and verify the job detail shows Gmail as the latest status source.
+26. If Gmail sync detects interview details and a calendar provider is already connected, verify the linked interview can still be pushed to the provider from the dashboard flow.
+27. Open a restricted page like `chrome://extensions` and confirm the extension reports a graceful error.
+28. On `/jobs`, filter by search term, source, and workflow (for example **Needs review**); sort by title or interview date and confirm the filter summary updates while stats stay based on the full saved dataset.
+29. Clear filters and confirm the full list returns; open interview editing and confirm the modal dialog saves and dismisses correctly.
+30. Open `/search?source=eures`, run a keyword search with a country from the picker, and verify results load in the card list with a selectable detail panel.
+31. Switch to **Work in Denmark** (`/search?source=jobnet`) and run a search; confirm Jobnet listings load with the same card/detail UX.
+32. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
+33. Refresh `/search?source=eures&keywords=software&location=dk` and confirm source, keywords, location, and selection restore from the URL.
+34. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
+35. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+36. Delete a saved job and confirm the modal confirmation step is required before removal.
+37. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
+38. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+39. Sign out from any authenticated page and confirm you return to `/login`.
 
 ## Production readiness
 
@@ -417,13 +449,14 @@ ApplyVault is developed for local use first; production hardening is tracked exp
 | 13 Logging and monitoring | Done | [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md) |
 | 14 Rate limiting | Done | [`production-readiness/prod-14-rate-limiting.md`](plans/production-readiness/prod-14-rate-limiting.md) |
 | 15 Frontend critical-path tests | Done | [`production-readiness/prod-15-frontend-critical-path-tests.md`](plans/production-readiness/prod-15-frontend-critical-path-tests.md) |
-| 16–17 EURES cache, Gmail sync (multi-instance) | Pending | [`production-readiness/README.md`](plans/production-readiness/README.md) — defer if single API replica |
+| 16 EURES cache (multi-instance) | Done | [`production-readiness/prod-16-eures-cache-multi-instance.md`](plans/production-readiness/prod-16-eures-cache-multi-instance.md) |
+| 17 Gmail sync (multi-instance) | Done | [`production-readiness/prod-17-gmail-sync-multi-instance.md`](plans/production-readiness/prod-17-gmail-sync-multi-instance.md) |
 
-**Completed (steps 1–15):** Authenticated scrape ingest; per-user data isolation; HTTP integration tests; environment config and migrations; CI; Docker/Caddy deploy; frontend/extension production builds; OAuth, CORS/HSTS, health probes, structured logging, rate limiting; and Karma specs for dashboard auth, jobs, and EURES critical paths.
+**Completed (steps 1–17):** Authenticated scrape ingest; per-user data isolation; HTTP integration tests; environment config and migrations; CI; Docker/Caddy deploy; frontend/extension production builds; OAuth, CORS/HSTS, health probes, structured logging, rate limiting; Karma specs for dashboard auth, jobs, and job search critical paths; distributed EURES/Jobnet ranked-result cache and Gmail sync locking via optional Redis.
 
-**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, tagged readiness/liveness probes at `/health` and `/health/live`, JSON request logging, and partition-based rate limits with `429` + `Retry-After`.
+**Local foundations in place:** Config-driven CORS with HTTPS origin validation, HSTS at the Caddy edge, tagged readiness/liveness probes at `/health` and `/health/live`, JSON request logging, and partition-based rate limits (global API, scrape ingest, EURES search, Jobnet search, OAuth callbacks) with `429` + `Retry-After`.
 
-**Not required for single-replica hosting:** EURES cache and Gmail sync horizontal-scale fixes (steps 16–17) when running more than one API replica. Document single-replica mode in [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md).
+**Multi-instance hosting:** Set `ConnectionStrings:Redis` when running more than one API replica so EURES/Jobnet ranked caches and Gmail sync use shared Redis instead of per-process memory. See [`deploy/RUNBOOK.md`](deploy/RUNBOOK.md#multi-instance-redis).
 
 **After pulling step 2:** restart the API so the new migration runs (`Database.Migrate()` at startup). Orphan `UserId IS NULL` rows are soft-deleted then deleted before the column becomes required.
 

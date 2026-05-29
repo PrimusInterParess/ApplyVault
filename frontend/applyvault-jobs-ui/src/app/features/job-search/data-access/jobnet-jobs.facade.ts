@@ -30,7 +30,7 @@ type FetchPageOptions = {
   append?: boolean;
 };
 
-type SearchIntent = { request: JobnetJobSearchRequest; options: FetchPageOptions };
+type SearchIntent = { request: JobnetJobSearchRequest; options: FetchPageOptions; epoch: number };
 type DetailIntent = { id: string; language: string };
 type SaveIntent = { id: string; language: string };
 
@@ -45,6 +45,7 @@ export class JobnetJobsFacade {
   private readonly detailCancel$ = new Subject<void>();
   private readonly saveIntent$ = new Subject<SaveIntent>();
   private readonly saveCancel$ = new Subject<void>();
+  private searchEpoch = 0;
 
   readonly resultsPerPage = signal(JOBNET_RESULTS_PER_PAGE);
 
@@ -143,20 +144,24 @@ export class JobnetJobsFacade {
 
     this.searchIntent$
       .pipe(
-        exhaustMap(({ request, options }) =>
+        exhaustMap(({ request, options, epoch }) =>
           this.apiService.search(request).pipe(
             takeUntil(this.searchCancel$),
-            map((response) => ({ kind: 'success' as const, response, options })),
+            map((response) => ({ kind: 'success' as const, response, options, epoch })),
             catchError((error: unknown) =>
               isRequestAborted(error)
                 ? EMPTY
-                : of({ kind: 'error' as const, error, options })
+                : of({ kind: 'error' as const, error, options, epoch })
             )
           )
         ),
         takeUntilDestroyed(destroyRef)
       )
       .subscribe((result) => {
+        if (result.epoch !== this.searchEpoch) {
+          return;
+        }
+
         if (result.kind === 'error') {
           const message = this.resolveSearchError(result.error);
 
@@ -538,6 +543,8 @@ export class JobnetJobsFacade {
       this.loadingMore.set(true);
     } else {
       this.cancelPendingSearch();
+      this.searchEpoch += 1;
+      this.clearPagedResults();
       this.loading.set(true);
       this.error.set(null);
     }
@@ -552,7 +559,19 @@ export class JobnetJobsFacade {
 
     const request = this.buildSearchRequest(normalizedKeywords, targetPage);
 
-    this.searchIntent$.next({ request, options: { ...options, append: isAppend } });
+    this.searchIntent$.next({
+      request,
+      options: { ...options, append: isAppend },
+      epoch: this.searchEpoch
+    });
+  }
+
+  private clearPagedResults(): void {
+    this.results.set([]);
+    this.totalResults.set(0);
+    this.upstreamTotalResults.set(null);
+    this.resultsTruncated.set(false);
+    this.page.set(1);
   }
 
   private mergeResults(
@@ -645,11 +664,7 @@ export class JobnetJobsFacade {
   }
 
   private resetResults(): void {
-    this.results.set([]);
-    this.totalResults.set(0);
-    this.upstreamTotalResults.set(null);
-    this.resultsTruncated.set(false);
-    this.page.set(1);
+    this.clearPagedResults();
     this.cancelPendingDetail();
     this.selectedJobId.set(null);
     this.selectedJob.set(null);

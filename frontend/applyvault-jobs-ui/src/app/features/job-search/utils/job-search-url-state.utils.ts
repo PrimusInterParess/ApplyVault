@@ -3,6 +3,7 @@ import { ParamMap } from '@angular/router';
 import { JobSearchUrlQueryParams } from '../models/external-job.model';
 import { JobSearchSource, normalizeJobSearchSource } from '../models/job-source.model';
 import { isKnownEuresLocationCode, normalizeEuresLocationCode } from '../models/eures-location-options';
+import { normalizeEuresKeywords } from './eures-keyword.utils';
 
 export const JOB_SEARCH_URL_QUERY_KEYS = [
   'source',
@@ -56,4 +57,27 @@ export function readEuresCountryFromQueryParams(params: ParamMap): string | null
 
 export function normalizeJobSearchSourceFromParams(params: ParamMap): JobSearchSource {
   return normalizeJobSearchSource(params.get('source'));
+}
+
+export function readJobSearchKeywordsFromQueryParams(params: ParamMap): readonly string[] {
+  const keywordsParam = params.get('keywords');
+
+  if (!keywordsParam?.trim()) {
+    return [];
+  }
+
+  return normalizeEuresKeywords(keywordsParam.split(/[,;]+/));
+}
+
+export function buildJobSearchQueryKeyFromParams(params: ParamMap): string {
+  const source = normalizeJobSearchSourceFromParams(params);
+
+  return JSON.stringify(
+    buildJobSearchUrlQueryParams({
+      source,
+      keywords: readJobSearchKeywordsFromQueryParams(params),
+      country: source === 'eures' ? readEuresCountryFromQueryParams(params) : null,
+      selectedJobId: params.get('selected')
+    })
+  );
 }

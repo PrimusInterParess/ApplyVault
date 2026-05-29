@@ -34,7 +34,10 @@ import {
 import { ExternalJobCardComponent } from '../../presentation/external-job-card/external-job-card.component';
 import { ExternalJobDetailComponent } from '../../presentation/external-job-detail/external-job-detail.component';
 import { JobSearchSourceToggleComponent } from '../../presentation/job-search-source-toggle/job-search-source-toggle.component';
-import { jobSearchQueryParamsEqual } from '../../utils/job-search-url-state.utils';
+import {
+  buildJobSearchQueryKeyFromParams,
+  jobSearchQueryParamsEqual
+} from '../../utils/job-search-url-state.utils';
 
 @Component({
   selector: 'app-job-search-page',
@@ -71,6 +74,7 @@ export class JobSearchPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(EnvironmentInjector);
   private suppressUrlSync = false;
+  private pendingUrlSyncKey: string | null = null;
   private lastSyncedQueryKey = '';
   private lastFocusedGeneration = 0;
   private shouldFocusAfterSearch = false;
@@ -497,6 +501,12 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   private applyRouteParams(params: ParamMap, options: { triggerSearch: boolean }): void {
+    const urlQueryKey = buildJobSearchQueryKeyFromParams(params);
+
+    if (this.pendingUrlSyncKey !== null && urlQueryKey !== this.pendingUrlSyncKey) {
+      return;
+    }
+
     this.facade.initFromQueryParams(params);
 
     if (!options.triggerSearch) {
@@ -512,6 +522,14 @@ export class JobSearchPageComponent implements OnInit {
     }
 
     if (queryKey === this.lastSyncedQueryKey) {
+      if (selected) {
+        this.facade.selectWhenLoaded(selected);
+      }
+
+      return;
+    }
+
+    if (this.pendingUrlSyncKey !== null && queryKey === this.pendingUrlSyncKey) {
       if (selected) {
         this.facade.selectWhenLoaded(selected);
       }
@@ -539,7 +557,7 @@ export class JobSearchPageComponent implements OnInit {
       return;
     }
 
-    this.lastSyncedQueryKey = queryKey;
+    this.pendingUrlSyncKey = queryKey;
     this.suppressUrlSync = true;
 
     void this.router
@@ -550,7 +568,10 @@ export class JobSearchPageComponent implements OnInit {
         replaceUrl: true
       })
       .finally(() => {
+        this.pendingUrlSyncKey = null;
+        this.lastSyncedQueryKey = queryKey;
         this.suppressUrlSync = false;
+        this.applyRouteParams(this.route.snapshot.queryParamMap, { triggerSearch: false });
       });
   }
 }

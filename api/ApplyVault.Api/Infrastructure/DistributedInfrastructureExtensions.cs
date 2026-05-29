@@ -1,5 +1,6 @@
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.Eures;
+using ApplyVault.Api.Services.Jobnet;
 using StackExchange.Redis;
 
 namespace ApplyVault.Api.Infrastructure;
@@ -31,6 +32,8 @@ public static class DistributedInfrastructureExtensions
         }
 
         services.AddScoped<EuresRankedResultsCache>();
+        services.AddScoped<JobnetRankedResultsCache>();
+        services.AddScoped<JobnetClassificationCache>();
         services.AddSingleton<GmailMailSyncWorker>();
 
         return services;

@@ -11,12 +11,15 @@ import {
 import { EURES_LOCATION_OPTIONS } from '../models/eures-location-options';
 import { buildJobSearchUrlQueryParams, normalizeJobSearchSourceFromParams } from '../utils/job-search-url-state.utils';
 import { EuresJobsFacade } from './eures-jobs.facade';
+import { JobnetJobsFacade } from './jobnet-jobs.facade';
 
 @Injectable()
 export class JobSearchFacade {
   private readonly euresFacade = inject(EuresJobsFacade);
+  private readonly jobnetFacade = inject(JobnetJobsFacade);
   private readonly providerFacades: JobSearchProviderRegistry = {
-    eures: this.euresFacade
+    eures: this.euresFacade,
+    jobnet: this.jobnetFacade
   };
 
   readonly source = signal<JobSearchSource>('eures');
@@ -30,7 +33,10 @@ export class JobSearchFacade {
   readonly detailError = computed(() => this.activeFacade().detailError());
   readonly totalResults = computed(() => this.activeFacade().totalResults());
   readonly selectedJobId = computed(() => this.activeFacade().selectedJobId());
-  readonly hasSearched = computed(() => this.activeFacade().hasSearched());
+  readonly hasSearched = computed(() => {
+    const source = this.source();
+    return this.providerFacades[source].hasSearched();
+  });
   readonly saving = computed(() => this.activeFacade().saving());
   readonly saveError = computed(() => this.activeFacade().saveError());
   readonly savedJobId = computed(() => this.activeFacade().savedJobId());
@@ -40,7 +46,12 @@ export class JobSearchFacade {
   readonly keywordsLabel = computed(() => this.activeFacade().keywordsLabel());
   readonly hasActiveSearch = computed(() => this.activeFacade().hasActiveSearch());
   readonly initialLoading = computed(() => this.activeFacade().initialLoading());
-  readonly resultsSummary = computed(() => this.activeFacade().resultsSummary());
+  readonly resultsSummary = computed(() => {
+    const source = this.source();
+    return this.providerFacades[source].resultsSummary();
+  });
+  readonly idleSearchPrompt = computed(() => getJobSearchProvider(this.source()).idleSearchPrompt);
+  readonly emptyStateIntro = computed(() => getJobSearchProvider(this.source()).emptyStateIntro);
   readonly hasMoreResults = computed(() => this.activeFacade().hasMoreResults());
   readonly hasValidLocation = computed(() => this.activeFacade().hasValidLocation());
   readonly locationInitWarning = computed(() =>
@@ -53,6 +64,17 @@ export class JobSearchFacade {
   readonly results = computed((): readonly ExternalJobListing[] => {
     if (this.source() === 'eures') {
       return this.euresFacade.results().map((job) => ({
+        id: job.id,
+        title: job.title,
+        employer: job.employer,
+        location: job.location,
+        publicationDate: job.publicationDate,
+        sourceUrl: job.sourceUrl
+      }));
+    }
+
+    if (this.source() === 'jobnet') {
+      return this.jobnetFacade.results().map((job) => ({
         id: job.id,
         title: job.title,
         employer: job.employer,
@@ -87,6 +109,27 @@ export class JobSearchFacade {
       };
     }
 
+    if (this.source() === 'jobnet') {
+      const job = this.jobnetFacade.selectedJob();
+
+      if (!job) {
+        return null;
+      }
+
+      return {
+        id: job.id,
+        title: job.title,
+        employer: job.employer,
+        location: job.location,
+        publicationDate: job.publicationDate,
+        sourceUrl: job.sourceUrl,
+        description: job.description,
+        applicationUrl: job.applicationUrl,
+        contractType: job.contractType,
+        workHours: job.workHours
+      };
+    }
+
     return null;
   });
 
@@ -102,6 +145,7 @@ export class JobSearchFacade {
   initFromQueryParams(params: ParamMap): void {
     this.source.set(normalizeJobSearchSourceFromParams(params));
     this.euresFacade.initFromQueryParams(params);
+    this.jobnetFacade.initFromQueryParams(params);
   }
 
   loadInitialSearch(selectJobId?: string | null): void {
@@ -203,5 +247,6 @@ export class JobSearchFacade {
   private syncSharedKeywords(keywords: readonly string[]): void {
     const sharedKeywords = [...keywords];
     this.euresFacade.keywords.set(sharedKeywords);
+    this.jobnetFacade.keywords.set(sharedKeywords);
   }
 }

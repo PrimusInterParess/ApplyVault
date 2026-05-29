@@ -28,7 +28,7 @@ internal sealed class EuresJobSearchService(
             request.RequestLanguage);
         var sessionId = BuildSessionId(cacheKey);
 
-        var rankedJobs = await rankedResultsCache.GetOrCreateAsync(
+        var rankedSnapshot = await rankedResultsCache.GetOrCreateAsync(
             cacheKey,
             async (ct) =>
             {
@@ -57,10 +57,13 @@ internal sealed class EuresJobSearchService(
             },
             cancellationToken);
 
-        return PaginateResults(rankedJobs, request.Page, request.ResultsPerPage);
+        return PaginateResults(
+            rankedSnapshot,
+            request.Page,
+            request.ResultsPerPage);
     }
 
-    private async Task<EuresJobListingDto[]> FetchSingleKeywordRankedJobsAsync(
+    private async Task<EuresRankedSearchSnapshot> FetchSingleKeywordRankedJobsAsync(
         IReadOnlyList<string> userKeywords,
         string euresSearchTerm,
         EuresJobSearchRequest request,
@@ -70,22 +73,55 @@ internal sealed class EuresJobSearchService(
         EuresIntegrationOptions integrationOptions,
         CancellationToken cancellationToken)
     {
-        var fetchSize = Math.Max(request.ResultsPerPage, integrationOptions.MaxResultsPerPage);
-        var searchResponse = await apiClient.SearchAsync(
-            EuresApiClient.BuildSearchPayload(
-                euresSearchTerm,
-                fetchSize,
-                page: 1,
-                sortSearch,
-                locationCode,
-                request.RequestLanguage,
-                sessionId),
-            cancellationToken);
+        var fetchSize = Math.Clamp(integrationOptions.MaxResultsPerPage, 1, 100);
+        var maxPages = Math.Max(1, integrationOptions.MaxUpstreamScanPages);
+        var maxCachedResults = Math.Max(1, integrationOptions.MaxCachedRankedResults);
+        var mergedJobs = new Dictionary<string, RankedJobListing>(StringComparer.OrdinalIgnoreCase);
+        int? upstreamTotalRecords = null;
+        var hitSafetyCap = false;
 
-        return RankJobs(searchResponse, userKeywords, request.RequestLanguage);
+        for (var pageNumber = 1; pageNumber <= maxPages; pageNumber++)
+        {
+            var searchResponse = await apiClient.SearchAsync(
+                EuresApiClient.BuildSearchPayload(
+                    euresSearchTerm,
+                    fetchSize,
+                    pageNumber,
+                    sortSearch,
+                    locationCode,
+                    request.RequestLanguage,
+                    sessionId),
+                cancellationToken);
+
+            upstreamTotalRecords ??= searchResponse?.NumberRecords;
+            var jobsOnPage = searchResponse?.Jvs?.Count ?? 0;
+
+            MergeRankedJobs(
+                mergedJobs,
+                searchResponse,
+                userKeywords,
+                request.RequestLanguage,
+                trustUpstreamMatches: true,
+                maxCachedResults);
+
+            if (ShouldStopUpstreamScan(
+                    mergedJobs.Count,
+                    upstreamTotalRecords,
+                    pageNumber,
+                    fetchSize,
+                    jobsOnPage,
+                    maxPages,
+                    maxCachedResults,
+                    out hitSafetyCap))
+            {
+                break;
+            }
+        }
+
+        return BuildSnapshot(mergedJobs, upstreamTotalRecords, hitSafetyCap);
     }
 
-    private async Task<EuresJobListingDto[]> FetchKeywordUnionRankedJobsAsync(
+    private async Task<EuresRankedSearchSnapshot> FetchKeywordUnionRankedJobsAsync(
         IReadOnlyList<string> userKeywords,
         IReadOnlyList<string> euresSearchTerms,
         EuresJobSearchRequest request,
@@ -95,7 +131,8 @@ internal sealed class EuresJobSearchService(
         EuresIntegrationOptions integrationOptions,
         CancellationToken cancellationToken)
     {
-        var fetchPerKeyword = Math.Max(request.ResultsPerPage, integrationOptions.MaxResultsPerPage);
+        var fetchPerKeyword = Math.Clamp(integrationOptions.MaxResultsPerPage, 1, 100);
+        var maxCachedResults = Math.Max(1, integrationOptions.MaxCachedRankedResults);
         var searchTasks = euresSearchTerms
             .Select((searchTerm) => apiClient.SearchAsync(
                 EuresApiClient.BuildSearchPayload(
@@ -114,14 +151,80 @@ internal sealed class EuresJobSearchService(
 
         foreach (var searchResponse in searchResponses)
         {
-            MergeRankedJobs(mergedJobs, searchResponse, userKeywords, request.RequestLanguage);
+            MergeRankedJobs(
+                mergedJobs,
+                searchResponse,
+                userKeywords,
+                request.RequestLanguage,
+                trustUpstreamMatches: false,
+                maxCachedResults);
         }
 
-        return mergedJobs.Values
+        return BuildSnapshot(mergedJobs, upstreamTotalRecords: null, resultsTruncated: false);
+    }
+
+    private static EuresRankedSearchSnapshot BuildSnapshot(
+        Dictionary<string, RankedJobListing> mergedJobs,
+        int? upstreamTotalRecords,
+        bool resultsTruncated)
+    {
+        var rankedJobs = mergedJobs.Values
             .OrderByDescending((entry) => entry.RelevanceScore)
             .ThenByDescending((entry) => entry.CreationDate)
             .Select((entry) => entry.Listing)
             .ToArray();
+
+        var truncated = resultsTruncated
+            || (upstreamTotalRecords is > 0 && rankedJobs.Length < upstreamTotalRecords.Value);
+
+        return new EuresRankedSearchSnapshot(rankedJobs, upstreamTotalRecords, truncated);
+    }
+
+    private static bool ShouldStopUpstreamScan(
+        int rankedCount,
+        int? upstreamTotal,
+        int pageNumber,
+        int fetchSize,
+        int jobsOnPage,
+        int maxPages,
+        int maxCachedResults,
+        out bool hitSafetyCap)
+    {
+        hitSafetyCap = false;
+
+        if (jobsOnPage == 0)
+        {
+            return true;
+        }
+
+        if (rankedCount >= maxCachedResults)
+        {
+            hitSafetyCap = true;
+            return true;
+        }
+
+        if (jobsOnPage < fetchSize)
+        {
+            return true;
+        }
+
+        if (upstreamTotal is > 0 && rankedCount >= upstreamTotal.Value)
+        {
+            return true;
+        }
+
+        if (upstreamTotal is > 0 && pageNumber * fetchSize >= upstreamTotal.Value)
+        {
+            return true;
+        }
+
+        if (pageNumber >= maxPages)
+        {
+            hitSafetyCap = true;
+            return true;
+        }
+
+        return false;
     }
 
     private static string BuildCacheKey(
@@ -149,42 +252,41 @@ internal sealed class EuresJobSearchService(
         return $"applyvault-{hash:X8}";
     }
 
-    private static EuresJobListingDto[] RankJobs(
-        EuresSearchResponsePayload? searchResponse,
-        IReadOnlyList<string> userKeywords,
-        string requestLanguage)
-    {
-        return searchResponse?.Jvs?
-            .Select((job) => CreateRankedListing(job, userKeywords, requestLanguage))
-            .Where((entry) => entry.RelevanceScore > 0)
-            .OrderByDescending((entry) => entry.RelevanceScore)
-            .ThenByDescending((entry) => entry.CreationDate)
-            .Select((entry) => entry.Listing)
-            .ToArray() ?? [];
-    }
-
     private static void MergeRankedJobs(
         Dictionary<string, RankedJobListing> mergedJobs,
         EuresSearchResponsePayload? searchResponse,
         IReadOnlyList<string> userKeywords,
-        string requestLanguage)
+        string requestLanguage,
+        bool trustUpstreamMatches,
+        int maxCachedResults)
     {
-        if (searchResponse?.Jvs is null)
+        if (searchResponse?.Jvs is null || mergedJobs.Count >= maxCachedResults)
         {
             return;
         }
 
         foreach (var job in searchResponse.Jvs)
         {
+            if (mergedJobs.Count >= maxCachedResults)
+            {
+                break;
+            }
+
             if (string.IsNullOrWhiteSpace(job.Id))
             {
                 continue;
             }
 
             var rankedListing = CreateRankedListing(job, userKeywords, requestLanguage);
-            if (rankedListing.RelevanceScore <= 0)
+
+            if (!trustUpstreamMatches && rankedListing.RelevanceScore <= 0)
             {
                 continue;
+            }
+
+            if (trustUpstreamMatches && rankedListing.RelevanceScore <= 0)
+            {
+                rankedListing = rankedListing with { RelevanceScore = 1 };
             }
 
             if (mergedJobs.TryGetValue(job.Id, out var existing)
@@ -214,10 +316,11 @@ internal sealed class EuresJobSearchService(
     }
 
     private static EuresJobSearchResponse PaginateResults(
-        IReadOnlyList<EuresJobListingDto> rankedJobs,
+        EuresRankedSearchSnapshot rankedSnapshot,
         int page,
         int resultsPerPage)
     {
+        var rankedJobs = rankedSnapshot.Jobs;
         var skip = (page - 1) * resultsPerPage;
         var pageJobs = rankedJobs
             .Skip(skip)
@@ -225,10 +328,12 @@ internal sealed class EuresJobSearchService(
             .ToArray();
 
         return new EuresJobSearchResponse(
-            rankedJobs.Count,
+            rankedJobs.Length,
             page,
             resultsPerPage,
-            pageJobs);
+            pageJobs,
+            rankedSnapshot.UpstreamTotalRecords,
+            rankedSnapshot.ResultsTruncated);
     }
 
     private static string ResolveSortSearch(string? sortSearch, bool multipleKeywords)

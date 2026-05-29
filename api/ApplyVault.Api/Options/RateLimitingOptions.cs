@@ -7,6 +7,7 @@ public sealed class RateLimitingOptions
     public const string PolicyGlobalApi = "global-api";
     public const string PolicyScrapeIngest = "scrape-ingest";
     public const string PolicyEuresSearch = "eures-search";
+    public const string PolicyJobnetSearch = "jobnet-search";
     public const string PolicyOAuthCallback = "oauth-callback";
 
     public bool Enabled { get; set; } = true;
@@ -24,6 +25,12 @@ public sealed class RateLimitingOptions
     };
 
     public RateLimitPolicyOptions EuresSearch { get; set; } = new()
+    {
+        PermitLimit = 20,
+        WindowSeconds = 60
+    };
+
+    public RateLimitPolicyOptions JobnetSearch { get; set; } = new()
     {
         PermitLimit = 20,
         WindowSeconds = 60

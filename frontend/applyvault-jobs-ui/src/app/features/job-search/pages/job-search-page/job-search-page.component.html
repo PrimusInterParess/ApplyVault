@@ -6,9 +6,13 @@
         (sourceChange)="onSourceChange($event)" />
     }
 
-    <h1>EURES job search</h1>
+    <h1>{{ facade.providerLabel() }} job search</h1>
     <p class="eures-page__intro">
-      Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
+      @if (facade.source() === 'jobnet') {
+        Search Work in Denmark listings from Jobnet, then save promising roles to your review workspace.
+      } @else {
+        Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
+      }
     </p>
   </section>
 
@@ -56,11 +60,17 @@
       <label class="eures-page__filter">
         <span class="eures-page__filter-label">Country</span>
         <div class="eures-page__filter-control">
-          <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
-            @for (option of locationOptions; track option.code) {
-              <option [value]="option.code">{{ option.label }}</option>
-            }
-          </select>
+          @if (facade.source() === 'eures') {
+            <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
+              @for (option of locationOptions; track option.code) {
+                <option [value]="option.code">{{ option.label }}</option>
+              }
+            </select>
+          } @else {
+            <select disabled aria-label="Country filter not used for Work in Denmark">
+              <option>Denmark (Work in Denmark)</option>
+            </select>
+          }
         </div>
       </label>
 
@@ -185,14 +195,25 @@
   } @else if (facade.hasSearched() && facade.totalResults() === 0) {
     <section class="jobs-page__state">
       <h2 tabindex="-1">No matching listings</h2>
-      <p>
-        Nothing matched
-        @if (facade.keywordsLabel()) {
-          <strong>{{ facade.keywordsLabel() }}</strong>
-        }
-        in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
-      </p>
-      <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
+      @if (facade.source() === 'jobnet') {
+        <p>
+          Nothing matched
+          @if (facade.keywordsLabel()) {
+            <strong>{{ facade.keywordsLabel() }}</strong>
+          }
+          in Work in Denmark.
+        </p>
+        <p>Try fewer keywords or pick broader suggestion chips.</p>
+      } @else {
+        <p>
+          Nothing matched
+          @if (facade.keywordsLabel()) {
+            <strong>{{ facade.keywordsLabel() }}</strong>
+          }
+          in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
+        </p>
+        <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
+      }
       <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
     </section>
   } @else if (facade.hasSearched()) {
@@ -304,10 +325,14 @@
   } @else {
     <section class="jobs-page__state">
       <h2>No results yet</h2>
-      <p>Run a search to load EURES listings, or try a popular IT search below.</p>
+      <p>{{ facade.emptyStateIntro() }}</p>
       <ol class="jobs-page__onboarding-steps">
         <li>Add keywords or select suggestion chips</li>
-        <li>Choose a country and search EURES</li>
+        @if (facade.source() === 'jobnet') {
+          <li>Search Work in Denmark listings</li>
+        } @else {
+          <li>Choose a country and search EURES</li>
+        }
         <li>Select a listing to read details and save to ApplyVault</li>
       </ol>
       <a routerLink="/jobs" class="jobs-page__secondary-action">View saved jobs</a>

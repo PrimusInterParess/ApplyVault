@@ -12,15 +12,25 @@ namespace ApplyVault.Api.Tests;
 public sealed class EuresJobSearchServiceTests
 {
     [Fact]
-    public async Task SearchAsync_SingleKeyword_ReturnsRankedPaginatedResults()
+    public async Task SearchAsync_SingleKeyword_OrdersByRelevanceThenNewestDate()
     {
         var responsePayload = new EuresSearchResponsePayload
         {
             NumberRecords = 2,
             Jvs =
             [
-                EuresTestData.CreateSearchJob("job-low", "Marketing Specialist", "Contoso", "General marketing"),
-                EuresTestData.CreateSearchJob("job-high", "Backend Developer", "Fabrikam", "API development", creationDate: EuresTestData.SampleCreationDate + 1_000)
+                EuresTestData.CreateSearchJob(
+                    "job-newer-irrelevant",
+                    "Marketing Specialist",
+                    "Contoso",
+                    "General marketing",
+                    creationDate: EuresTestData.SampleCreationDate + 1_000),
+                EuresTestData.CreateSearchJob(
+                    "job-older-relevant",
+                    "Backend Developer",
+                    "Fabrikam",
+                    "API development",
+                    creationDate: EuresTestData.SampleCreationDate)
             ]
         };
 
@@ -33,17 +43,105 @@ public sealed class EuresJobSearchServiceTests
         {
             Keyword = "developer",
             Page = 1,
-            ResultsPerPage = 1,
+            ResultsPerPage = 2,
             LocationCode = "dk",
             RequestLanguage = "en"
         });
 
-        Assert.Equal(1, result.TotalResults);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(1, result.ResultsPerPage);
+        Assert.Equal(2, result.TotalResults);
+        Assert.Equal("job-older-relevant", result.Jobs[0].Id);
+        Assert.Equal("job-newer-irrelevant", result.Jobs[1].Id);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SingleKeyword_UsesNewestDateAsTieBreaker()
+    {
+        var responsePayload = new EuresSearchResponsePayload
+        {
+            NumberRecords = 2,
+            Jvs =
+            [
+                EuresTestData.CreateSearchJob(
+                    "job-older-match",
+                    "Backend Developer",
+                    "Contoso",
+                    "API development",
+                    creationDate: EuresTestData.SampleCreationDate),
+                EuresTestData.CreateSearchJob(
+                    "job-newer-match",
+                    "Platform Developer",
+                    "Fabrikam",
+                    "Platform development",
+                    creationDate: EuresTestData.SampleCreationDate + 1_000)
+            ]
+        };
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(EuresTestData.SerializeSearchResponse(responsePayload), Encoding.UTF8, "application/json")
+        });
+
+        var result = await service.SearchAsync(new EuresJobSearchRequest
+        {
+            Keyword = "developer",
+            Page = 1,
+            ResultsPerPage = 2,
+            LocationCode = "dk",
+            RequestLanguage = "en"
+        });
+
+        Assert.Equal("job-newer-match", result.Jobs[0].Id);
+        Assert.Equal("job-older-match", result.Jobs[1].Id);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SingleKeyword_IncludesZeroRelevanceUpstreamMatches()
+    {
+        var responsePayload = new EuresSearchResponsePayload
+        {
+            NumberRecords = 1,
+            Jvs = [EuresTestData.CreateSearchJob("job-irrelevant", "Chef", "Restaurant", "Cooking")]
+        };
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(EuresTestData.SerializeSearchResponse(responsePayload), Encoding.UTF8, "application/json")
+        });
+
+        var result = await service.SearchAsync(new EuresJobSearchRequest
+        {
+            Keyword = "developer",
+            Page = 1,
+            ResultsPerPage = 10
+        });
+
         Assert.Single(result.Jobs);
-        Assert.Equal("job-high", result.Jobs[0].Id);
-        Assert.Equal("Backend Developer", result.Jobs[0].Title);
+        Assert.Equal(1, result.TotalResults);
+    }
+
+    [Fact]
+    public async Task SearchAsync_MultipleKeywords_StillFiltersZeroRelevanceJobs()
+    {
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                EuresTestData.SerializeSearchResponse(new EuresSearchResponsePayload
+                {
+                    Jvs = [EuresTestData.CreateSearchJob("job-irrelevant", "Chef", "Restaurant", "Cooking")]
+                }),
+                Encoding.UTF8,
+                "application/json")
+        });
+
+        var result = await service.SearchAsync(new EuresJobSearchRequest
+        {
+            Keywords = ["developer", "backend"],
+            Page = 1,
+            ResultsPerPage = 10
+        });
+
+        Assert.Empty(result.Jobs);
+        Assert.Equal(0, result.TotalResults);
     }
 
     [Fact]
@@ -84,27 +182,60 @@ public sealed class EuresJobSearchServiceTests
     }
 
     [Fact]
-    public async Task SearchAsync_FiltersOutZeroRelevanceJobs()
+    public async Task SearchAsync_SingleKeyword_FetchesAllUpstreamPages()
     {
-        var responsePayload = new EuresSearchResponsePayload
-        {
-            Jvs = [EuresTestData.CreateSearchJob("job-irrelevant", "Chef", "Restaurant", "Cooking")]
-        };
+        var upstreamRequests = 0;
 
-        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        var service = CreateService((request) =>
         {
-            Content = new StringContent(EuresTestData.SerializeSearchResponse(responsePayload), Encoding.UTF8, "application/json")
+            upstreamRequests++;
+            var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            var page = body.Contains("\"page\":2", StringComparison.Ordinal) ? 2 : 1;
+
+            var payload = page switch
+            {
+                1 => new EuresSearchResponsePayload
+                {
+                    NumberRecords = 55,
+                    Jvs = Enumerable.Range(1, 50)
+                        .Select((index) => EuresTestData.CreateSearchJob(
+                            $"job-{index}",
+                            $"Software role {index}",
+                            "Contoso",
+                            "General software work"))
+                        .ToArray()
+                },
+                _ => new EuresSearchResponsePayload
+                {
+                    NumberRecords = 55,
+                    Jvs = Enumerable.Range(51, 5)
+                        .Select((index) => EuresTestData.CreateSearchJob(
+                            $"job-{index}",
+                            $"Software role {index}",
+                            "Contoso",
+                            "General software work"))
+                        .ToArray()
+                }
+            };
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(EuresTestData.SerializeSearchResponse(payload), Encoding.UTF8, "application/json")
+            };
         });
 
         var result = await service.SearchAsync(new EuresJobSearchRequest
         {
-            Keyword = "developer",
+            Keyword = "software",
             Page = 1,
-            ResultsPerPage = 10
+            ResultsPerPage = 5,
+            LocationCode = "dk",
+            RequestLanguage = "en"
         });
 
-        Assert.Empty(result.Jobs);
-        Assert.Equal(0, result.TotalResults);
+        Assert.Equal(2, upstreamRequests);
+        Assert.Equal(55, result.TotalResults);
+        Assert.Equal(5, result.Jobs.Count);
     }
 
     private static EuresJobSearchService CreateService(Func<HttpRequestMessage, HttpResponseMessage> responder)

@@ -1,0 +1,74 @@
+﻿{
+    "title":  "Developer tool sales and growth consultant",
+    "body":  "\u003cp\u003e\u003cstrong\u003eWe\u0027re looking for a growth architect consultant who\u0027s done this before. (3-4 weeks)\u003c/strong\u003e\u003c/p\u003e\u003cp\u003eMemtrace is structural memory for AI coding agents ΓÇö a bi-directional knowledge graph compiled from AST that gives agents deterministic, real-time answers across an entire codebase. 97% accuracy on code search, 80% token reduction, and it is blazing fast 15ms. First week: 10+ teams including engineers at enterprises, startup/scale ups , and YC companies. No paid marketing. Real signal....",
+    "publicationDateTime":  "2026-04-20T00:00:00+02:00",
+    "unpublicationDateTime":  "2026-06-15T15:51:24.567+02:00",
+    "job":  {
+                "type":  "Ordinaert",
+                "address":  {
+                                "countryCode":  "DK",
+                                "countryName":  "Danmark"
+                            },
+                "noFixedWorkplace":  true,
+                "isLimitedPeriod":  true,
+                "isDisabilityFriendly":  false,
+                "isPartTime":  true,
+                "maximumWeeklyHours":  20,
+                "minimumWeeklyHours":  12,
+                "conceptUriDa":  "http://data.star.dk/esco/occupation/75726e9f-050c-4cf3-9ce5-c99e238680c3",
+                "preferredLabelDa":  "Virksomhedsudvikler",
+                "driversLicenses":  [
+
+                                    ],
+                "classifications":  [
+                                        "EURES",
+                                        "WorkInDenmark"
+                                    ],
+                "shifts":  [
+                               "Dagarbejde"
+                           ],
+                "isFavorite":  false
+            },
+    "application":  {
+                        "deadlineDate":  "2026-06-15T00:00:00+02:00",
+                        "availablePositions":  1,
+                        "contactPersons":  [
+                                               {
+                                                   "firstNames":  "Lishuai",
+                                                   "lastName":  "Jing",
+                                                   "title":  "CEO",
+                                                   "emailAddress":  "lishuai@syncable.dev",
+                                                   "phoneNumber":  "52787336"
+                                               }
+                                           ],
+                        "emailAddress":  "lishuai@syncable.dev",
+                        "urlText":  "",
+                        "isApplicationDeadlineASAP":  false
+                    },
+    "isAnonymousEmployer":  false,
+    "id":  "b2b58b21-1353-47c7-afdb-5bb1ff15fd5a",
+    "approvalStatus":  "Godkendt",
+    "views":  15,
+    "user":  "JobAG",
+    "createdDateTime":  "2026-04-20T15:56:38.5822993+02:00",
+    "updatedDateTime":  "2026-04-21T10:18:33.2338247+02:00",
+    "employer":  {
+                     "cvrNumber":  "46250729",
+                     "pNumber":  "1032126002",
+                     "name":  "Syncable ApS",
+                     "hasCompanyLogo":  false,
+                     "address":  {
+                                     "streetName":  "Christianshavns Voldgade",
+                                     "houseNumber":  "21",
+                                     "floor":  "1",
+                                     "door":  "tv",
+                                     "city":  "K├╕benhavn K",
+                                     "postalCode":  "1424",
+                                     "municipality":  "K├╕benhavn",
+                                     "countryCode":  "DK",
+                                     "countryName":  "Danmark"
+                                 }
+                 },
+    "organisationTypeId":  24,
+    "hasLogo":  false
+}

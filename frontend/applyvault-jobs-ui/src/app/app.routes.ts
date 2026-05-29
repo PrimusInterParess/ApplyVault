@@ -38,7 +38,7 @@ export const routes: Routes = [
         path: 'search',
         title: 'Job Search',
         data: {
-          shellSubtitle: 'Search public job listings from EURES.'
+          shellSubtitle: 'Search public job listings from EURES and Work in Denmark.'
         },
         loadComponent: () =>
           import('./features/job-search/pages/job-search-page/job-search-page.component').then(
@@ -48,6 +48,11 @@ export const routes: Routes = [
       {
         path: 'eures',
         redirectTo: 'search?source=eures',
+        pathMatch: 'full'
+      },
+      {
+        path: 'workindenmark',
+        redirectTo: 'search?source=jobnet',
         pathMatch: 'full'
       },
       {

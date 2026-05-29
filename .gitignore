@@ -49,6 +49,7 @@ artifacts/
 .cursor-test-obj/
 .tmp-test-bin/
 .tmp-test-obj/
+_tmp_test_out/
 
 # Local ASP.NET development settings
 appsettings.Development.json

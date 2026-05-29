@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { createAuthServiceMock } from '../../../../testing/auth-test-utils';
 import { TEST_API_BASE_URL } from '../../../../testing/api-fixtures';
 import { EuresJobsFacade } from './eures-jobs.facade';
+import { JobnetJobsFacade } from './jobnet-jobs.facade';
 import { JobSearchFacade } from './job-search.facade';
 
 describe('JobSearchFacade', () => {
@@ -19,6 +20,7 @@ describe('JobSearchFacade', () => {
       providers: [
         JobSearchFacade,
         EuresJobsFacade,
+        JobnetJobsFacade,
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_CONFIG, useValue: { baseUrl: TEST_API_BASE_URL } },
@@ -63,5 +65,28 @@ describe('JobSearchFacade', () => {
       location: null,
       selected: null
     });
+  });
+
+  it('builds Jobnet URL params', () => {
+    const jobnetFacade = TestBed.inject(JobnetJobsFacade);
+    jobnetFacade.keywords.set(['developer']);
+    facade.source.set('jobnet');
+
+    expect(facade.buildQueryParamState()).toEqual({
+      source: 'jobnet',
+      keywords: 'developer',
+      country: null,
+      location: null,
+      selected: null
+    });
+  });
+
+  it('updates idle copy when switching providers', () => {
+    expect(facade.resultsSummary()).toContain('EURES');
+
+    facade.setSource('jobnet');
+
+    expect(facade.resultsSummary()).toContain('Work in Denmark');
+    expect(facade.emptyStateIntro()).toContain('Work in Denmark');
   });
 });

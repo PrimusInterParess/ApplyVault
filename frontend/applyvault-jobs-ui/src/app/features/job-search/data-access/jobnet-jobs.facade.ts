@@ -8,32 +8,20 @@ import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { AuthService } from '../../../core/auth/auth.service';
 import { JobResultsFacade } from '../../job-results/data-access/job-results.facade';
 import {
-  EuresJobDetail,
-  EuresJobListing,
-  EuresJobSearchRequest
-} from '../models/eures-job.model';
-import {
-  EURES_DEFAULT_LOCATION_CODE,
-  isKnownEuresLocationCode,
-  normalizeEuresLocationCode
-} from '../models/eures-location-options';
-import { formatIndexedSearchSummary } from '../utils/job-search-results-summary.util';
+  JobnetJobDetail,
+  JobnetJobListing,
+  JobnetJobSearchRequest
+} from '../models/jobnet-job.model';
 import { getJobSearchProvider } from '../models/job-source.model';
+import { formatIndexedSearchSummary } from '../utils/job-search-results-summary.util';
 import {
   canonicalizeEuresKeyword,
   matchesEuresKeyword,
   normalizeEuresKeywords
 } from '../utils/eures-keyword.utils';
-import {
-  buildEuresUrlQueryParams,
-  EuresUrlQueryParams
-} from '../utils/eures-url-state.utils';
-import {
-  readEuresCountryFromQueryParams
-} from '../utils/job-search-url-state.utils';
-import { EuresJobsApiService } from './eures-jobs-api.service';
+import { JobnetJobsApiService } from './jobnet-jobs-api.service';
 
-export const EURES_RESULTS_PER_PAGE = 5;
+export const JOBNET_RESULTS_PER_PAGE = 5;
 
 type FetchPageOptions = {
   resetSelection: boolean;
@@ -42,14 +30,14 @@ type FetchPageOptions = {
   append?: boolean;
 };
 
-type SearchIntent = { request: EuresJobSearchRequest; options: FetchPageOptions };
+type SearchIntent = { request: JobnetJobSearchRequest; options: FetchPageOptions };
 type DetailIntent = { id: string; language: string };
 type SaveIntent = { id: string; language: string };
 
 @Injectable()
-export class EuresJobsFacade {
+export class JobnetJobsFacade {
   private readonly authService = inject(AuthService);
-  private readonly apiService = inject(EuresJobsApiService);
+  private readonly apiService = inject(JobnetJobsApiService);
   private readonly jobResultsFacade = inject(JobResultsFacade);
   private readonly searchIntent$ = new Subject<SearchIntent>();
   private readonly searchCancel$ = new Subject<void>();
@@ -58,11 +46,9 @@ export class EuresJobsFacade {
   private readonly saveIntent$ = new Subject<SaveIntent>();
   private readonly saveCancel$ = new Subject<void>();
 
-  readonly resultsPerPage = signal(EURES_RESULTS_PER_PAGE);
+  readonly resultsPerPage = signal(JOBNET_RESULTS_PER_PAGE);
 
   readonly keywords = signal<string[]>(['software']);
-  readonly locationCode = signal(EURES_DEFAULT_LOCATION_CODE);
-  readonly locationInitWarning = signal<string | null>(null);
   readonly requestLanguage = signal('en');
   readonly page = signal(1);
   readonly loading = signal(false);
@@ -74,9 +60,9 @@ export class EuresJobsFacade {
   readonly totalResults = signal(0);
   readonly upstreamTotalResults = signal<number | null>(null);
   readonly resultsTruncated = signal(false);
-  readonly results = signal<readonly EuresJobListing[]>([]);
+  readonly results = signal<readonly JobnetJobListing[]>([]);
   readonly selectedJobId = signal<string | null>(null);
-  readonly selectedJob = signal<EuresJobDetail | null>(null);
+  readonly selectedJob = signal<JobnetJobDetail | null>(null);
   readonly hasSearched = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
@@ -88,14 +74,12 @@ export class EuresJobsFacade {
 
   readonly keywordsLabel = computed(() => this.keywords().join(', '));
 
-  readonly hasActiveSearch = computed(
-    () => this.keywords().length > 0 && this.hasValidLocation()
-  );
+  readonly hasActiveSearch = computed(() => this.keywords().length > 0);
 
   readonly initialLoading = computed(() => this.loading() && this.results().length === 0);
 
   readonly resultsSummary = computed(() => {
-    const provider = getJobSearchProvider('eures');
+    const provider = getJobSearchProvider('jobnet');
 
     if (!this.hasSearched()) {
       return provider.idleSearchPrompt;
@@ -114,7 +98,7 @@ export class EuresJobsFacade {
     return formatIndexedSearchSummary(this.results().length, total, this.keywordsLabel(), {
       upstreamTotal: this.upstreamTotalResults(),
       resultsTruncated: this.resultsTruncated(),
-      sourceLabel: 'EURES'
+      sourceLabel: 'Jobnet'
     });
   });
 
@@ -127,6 +111,8 @@ export class EuresJobsFacade {
 
     return this.page() * this.resultsPerPage() < total;
   });
+
+  readonly hasValidLocation = computed(() => true);
 
   readonly savedListingIds = computed(() => {
     const savedByUrl = new Map<string, string>();
@@ -151,8 +137,6 @@ export class EuresJobsFacade {
 
     return listingToSaved;
   });
-
-  readonly hasValidLocation = computed(() => isKnownEuresLocationCode(this.locationCode()));
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -297,35 +281,10 @@ export class EuresJobsFacade {
         this.keywords.set(parsedKeywords);
       }
     }
-
-    if (params.get('source')?.trim().toLowerCase() !== 'eures' && params.get('source')?.trim()) {
-      return;
-    }
-
-    const country = readEuresCountryFromQueryParams(params);
-
-    if (country) {
-      this.locationCode.set(country);
-      this.locationInitWarning.set(null);
-      return;
-    }
-
-    const legacyLocationParam = params.get('location');
-
-    if (legacyLocationParam?.trim()) {
-      this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
-      this.locationInitWarning.set(
-        `Unknown country code "${legacyLocationParam.trim()}". Using Denmark instead.`
-      );
-    }
   }
 
   loadInitialSearch(selectJobId?: string | null): void {
     if (!this.authService.session() || this.hasSearched()) {
-      return;
-    }
-
-    if (!this.hasValidLocation()) {
       return;
     }
 
@@ -337,7 +296,7 @@ export class EuresJobsFacade {
   }
 
   restoreFromUrlState(selectJobId?: string | null): void {
-    if (!this.authService.session() || !this.hasValidLocation()) {
+    if (!this.authService.session()) {
       return;
     }
 
@@ -345,14 +304,6 @@ export class EuresJobsFacade {
       resetSelection: !selectJobId,
       autoSelectFirst: !selectJobId,
       selectJobId: selectJobId ?? null
-    });
-  }
-
-  buildQueryParamState(): EuresUrlQueryParams {
-    return buildEuresUrlQueryParams({
-      keywords: this.keywords(),
-      locationCode: this.locationCode(),
-      selectedJobId: this.selectedJobId()
     });
   }
 
@@ -389,10 +340,6 @@ export class EuresJobsFacade {
 
   isListingSaved(id: string): boolean {
     return this.savedListingIds().has(id);
-  }
-
-  savedJobIdForListing(id: string): string | null {
-    return this.savedListingIds().get(id) ?? null;
   }
 
   selectWhenLoaded(id: string): void {
@@ -470,7 +417,7 @@ export class EuresJobsFacade {
     if (this.hasSearched() && this.keywords().length === 0) {
       this.cancelPendingRequests();
       this.resetResults();
-      this.error.set('Select or add at least one keyword to search EURES.');
+      this.error.set('Select or add at least one keyword to search Work in Denmark.');
     }
   }
 
@@ -480,7 +427,7 @@ export class EuresJobsFacade {
     if (this.hasSearched()) {
       this.cancelPendingRequests();
       this.resetResults();
-      this.error.set('Select or add at least one keyword to search EURES.');
+      this.error.set('Select or add at least one keyword to search Work in Denmark.');
     }
   }
 
@@ -517,26 +464,6 @@ export class EuresJobsFacade {
     this.detailError.set(null);
   }
 
-  updateLocationCode(value: string): void {
-    const normalizedLocation = normalizeEuresLocationCode(value);
-
-    if (!isKnownEuresLocationCode(normalizedLocation)) {
-      return;
-    }
-
-    if (this.locationCode() === normalizedLocation) {
-      return;
-    }
-
-    this.locationCode.set(normalizedLocation);
-    this.locationInitWarning.set(null);
-
-    if (this.hasSearched()) {
-      this.page.set(1);
-      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
-    }
-  }
-
   saveSelectedJob(): void {
     const selectedId = this.selectedJobId();
     const selectedJob = this.selectedJob();
@@ -554,7 +481,7 @@ export class EuresJobsFacade {
     });
   }
 
-  private syncSavedStateFromExistingJobs(detail: EuresJobDetail): void {
+  private syncSavedStateFromExistingJobs(detail: JobnetJobDetail): void {
     const candidateUrls = [detail.applicationUrl, detail.sourceUrl]
       .map((url) => url?.trim())
       .filter((url): url is string => Boolean(url));
@@ -579,7 +506,7 @@ export class EuresJobsFacade {
     return resolveHttpErrorMessage(error, {
       fallback: 'Could not save this listing to ApplyVault. Please try again.',
       statusMessages: {
-        401: 'Sign in again to save EURES listings.',
+        401: 'Sign in again to save Work in Denmark listings.',
         404: 'This listing was not found or is no longer available.',
         502: 'Saving is temporarily unavailable. Try again in a moment.'
       }
@@ -598,12 +525,7 @@ export class EuresJobsFacade {
     const normalizedKeywords = normalizeEuresKeywords(this.keywords());
 
     if (normalizedKeywords.length === 0) {
-      this.error.set('Select or add at least one keyword to search EURES.');
-      return;
-    }
-
-    if (!this.hasValidLocation()) {
-      this.error.set('Select a valid country before searching EURES.');
+      this.error.set('Select or add at least one keyword to search Work in Denmark.');
       return;
     }
 
@@ -634,10 +556,10 @@ export class EuresJobsFacade {
   }
 
   private mergeResults(
-    current: readonly EuresJobListing[],
-    incoming: readonly EuresJobListing[],
+    current: readonly JobnetJobListing[],
+    incoming: readonly JobnetJobListing[],
     append?: boolean
-  ): readonly EuresJobListing[] {
+  ): readonly JobnetJobListing[] {
     if (!append) {
       return incoming;
     }
@@ -651,10 +573,9 @@ export class EuresJobsFacade {
   private buildSearchRequest(
     keywords: readonly string[],
     page: number
-  ): EuresJobSearchRequest {
+  ): JobnetJobSearchRequest {
     return {
       keywords,
-      locationCode: this.locationCode().trim() || EURES_DEFAULT_LOCATION_CODE,
       page,
       resultsPerPage: this.resultsPerPage(),
       requestLanguage: this.requestLanguage().trim() || 'en'
@@ -662,7 +583,7 @@ export class EuresJobsFacade {
   }
 
   private syncSelectionAfterSearch(
-    jobs: readonly EuresJobListing[],
+    jobs: readonly JobnetJobListing[],
     options: FetchPageOptions
   ): void {
     const pendingId = this.pendingSelectedId();
@@ -703,11 +624,11 @@ export class EuresJobsFacade {
 
   private resolveSearchError(error: unknown): string {
     return resolveHttpErrorMessage(error, {
-      fallback: 'EURES search failed. Check that the API is running and you are signed in.',
+      fallback: 'Work in Denmark search failed. Check that the API is running and you are signed in.',
       statusMessages: {
         400: 'Invalid search request. Check your keywords and try again.',
-        401: 'Sign in again to search EURES.',
-        502: 'EURES search is temporarily unavailable. Try again in a moment.'
+        401: 'Sign in again to search Work in Denmark listings.',
+        502: 'Work in Denmark search is temporarily unavailable. Try again in a moment.'
       }
     });
   }
@@ -717,8 +638,8 @@ export class EuresJobsFacade {
       fallback: 'Could not load the selected job detail.',
       statusMessages: {
         404: 'This listing was not found or is no longer available.',
-        401: 'Sign in again to view EURES job details.',
-        502: 'EURES detail is temporarily unavailable. Try again in a moment.'
+        401: 'Sign in again to view Work in Denmark job details.',
+        502: 'Work in Denmark detail is temporarily unavailable. Try again in a moment.'
       }
     });
   }
@@ -738,9 +659,7 @@ export class EuresJobsFacade {
     this.cancelPendingRequests();
     this.resetSaveState();
     this.keywords.set(['software']);
-    this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
-    this.locationInitWarning.set(null);
-    this.resultsPerPage.set(EURES_RESULTS_PER_PAGE);
+    this.resultsPerPage.set(JOBNET_RESULTS_PER_PAGE);
     this.requestLanguage.set('en');
     this.loading.set(false);
     this.loadingMore.set(false);

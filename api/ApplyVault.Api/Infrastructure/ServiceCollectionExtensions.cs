@@ -2,6 +2,7 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.Eures;
+using ApplyVault.Api.Services.Jobnet;
 using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -169,6 +170,14 @@ public static class ServiceCollectionExtensions
                 "EuresIntegration:TimeoutSeconds must be between 5 and 120.")
             .ValidateOnStart();
 
+        services
+            .AddOptions<JobnetIntegrationOptions>()
+            .Bind(configuration.GetSection(JobnetIntegrationOptions.SectionName))
+            .Validate(
+                (options) => options.TimeoutSeconds is >= 5 and <= 120,
+                "JobnetIntegration:TimeoutSeconds must be between 5 and 120.")
+            .ValidateOnStart();
+
         var cvDocumentStorageBuilder = services
             .AddOptions<CvDocumentStorageOptions>()
             .Bind(configuration.GetSection(CvDocumentStorageOptions.SectionName))
@@ -229,6 +238,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ICvExportAiClient, GoogleAiCvExportClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
+        services.AddExceptionHandler<JobnetJobClientExceptionHandler>();
         services.AddProblemDetails();
         services.AddMemoryCache();
         services.AddSingleton<IEuresJobSearchRequestNormalizer, EuresJobSearchRequestNormalizer>();
@@ -240,6 +250,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EuresJobSearchService>();
         services.AddScoped<IEuresJobClient, EuresJobClient>();
         services.AddScoped<IEuresJobSaveService, EuresJobSaveService>();
+        services.AddSingleton<IJobnetJobSearchRequestNormalizer, JobnetJobSearchRequestNormalizer>();
+        services.AddHttpClient<JobnetApiClient>((serviceProvider, client) =>
+        {
+            var jobnetOptions = serviceProvider.GetRequiredService<IOptions<JobnetIntegrationOptions>>().Value;
+            JobnetHttpClientConfigurator.Configure(client, jobnetOptions);
+        });
+        services.AddScoped<JobnetJobSearchService>();
+        services.AddScoped<IJobnetJobClient, JobnetJobClient>();
+        services.AddScoped<IJobnetJobSaveService, JobnetJobSaveService>();
         services.AddScoped<ICalendarProvider, GoogleCalendarProvider>();
         services.AddScoped<ICalendarProvider, MicrosoftCalendarProvider>();
         services.AddScoped<ICalendarProviderFactory, CalendarProviderFactory>();

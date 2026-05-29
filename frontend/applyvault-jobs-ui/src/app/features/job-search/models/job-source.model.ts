@@ -1,6 +1,6 @@
-export type JobSearchSource = 'eures';
+export type JobSearchSource = 'eures' | 'jobnet';
 
-export const JOB_SEARCH_SOURCES = ['eures'] as const satisfies readonly JobSearchSource[];
+export const JOB_SEARCH_SOURCES = ['eures', 'jobnet'] as const satisfies readonly JobSearchSource[];
 
 export interface JobSearchProviderDefinition {
   readonly id: JobSearchSource;
@@ -8,6 +8,9 @@ export interface JobSearchProviderDefinition {
   readonly searchActionLabel: string;
   readonly monogram: string;
   readonly detailLabel: string;
+  readonly idleSearchPrompt: string;
+  readonly searchingPrompt: string;
+  readonly emptyStateIntro: string;
 }
 
 export const JOB_SEARCH_PROVIDERS: readonly JobSearchProviderDefinition[] = [
@@ -16,7 +19,20 @@ export const JOB_SEARCH_PROVIDERS: readonly JobSearchProviderDefinition[] = [
     label: 'EURES',
     searchActionLabel: 'Search EURES',
     monogram: 'EU',
-    detailLabel: 'EURES listing'
+    detailLabel: 'EURES listing',
+    idleSearchPrompt: 'Run a search to load EURES listings',
+    searchingPrompt: 'Searching EURES listings...',
+    emptyStateIntro: 'Run a search to load EURES listings, or try a popular IT search below.'
+  },
+  {
+    id: 'jobnet',
+    label: 'Work in Denmark',
+    searchActionLabel: 'Search Work in Denmark',
+    monogram: 'DK',
+    detailLabel: 'Work in Denmark listing',
+    idleSearchPrompt: 'Run a search to load Work in Denmark listings',
+    searchingPrompt: 'Searching Work in Denmark listings...',
+    emptyStateIntro: 'Run a search to load Work in Denmark listings, or try a popular IT search below.'
   }
 ];
 

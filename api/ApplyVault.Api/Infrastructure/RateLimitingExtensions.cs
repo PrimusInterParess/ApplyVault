@@ -77,6 +77,7 @@ public static class RateLimitingExtensions
 
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyScrapeIngest, CreateFixedWindowPolicy);
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyEuresSearch, CreateEuresSlidingWindowPolicy);
+            rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyJobnetSearch, CreateJobnetSlidingWindowPolicy);
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyOAuthCallback, CreateOAuthCallbackPolicy);
         });
 
@@ -120,6 +121,31 @@ public static class RateLimitingExtensions
 
         var partitionKey = $"{RateLimitingOptions.PolicyEuresSearch}:{RateLimitingPartitionKeys.GetUserOrClientIp(httpContext)}";
         var policy = options.EuresSearch;
+
+        return RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey,
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = policy.PermitLimit,
+                Window = TimeSpan.FromSeconds(policy.WindowSeconds),
+                SegmentsPerWindow = 4,
+                QueueLimit = 0
+            });
+    }
+
+    private static RateLimitPartition<string> CreateJobnetSlidingWindowPolicy(HttpContext httpContext)
+    {
+        var options = httpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()
+            .Value;
+
+        if (!options.Enabled)
+        {
+            return RateLimitPartition.GetNoLimiter(string.Empty);
+        }
+
+        var partitionKey = $"{RateLimitingOptions.PolicyJobnetSearch}:{RateLimitingPartitionKeys.GetUserOrClientIp(httpContext)}";
+        var policy = options.JobnetSearch;
 
         return RateLimitPartition.GetSlidingWindowLimiter(
             partitionKey,

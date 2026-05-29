@@ -1,31 +1,30 @@
-export interface EuresJobSearchRequest {
+export interface JobnetJobSearchRequest {
   keywords: readonly string[];
-  locationCode?: string | null;
   page?: number;
   resultsPerPage?: number;
   requestLanguage?: string;
-  sortSearch?: string;
 }
 
-export interface EuresJobListing {
+export interface JobnetJobListing {
   id: string;
   title: string | null;
   employer: string | null;
   location: string | null;
   publicationDate: string | null;
   sourceUrl: string | null;
+  workInDenmark: boolean;
 }
 
-export interface EuresJobSearchResponse {
+export interface JobnetJobSearchResponse {
   totalResults: number;
   page: number;
   resultsPerPage: number;
-  jobs: readonly EuresJobListing[];
+  jobs: readonly JobnetJobListing[];
   upstreamTotalResults?: number | null;
   resultsTruncated?: boolean;
 }
 
-export interface EuresJobDetail {
+export interface JobnetJobDetail {
   id: string;
   title: string | null;
   employer: string | null;
@@ -36,9 +35,10 @@ export interface EuresJobDetail {
   applicationUrl: string | null;
   contractType: string | null;
   workHours: string | null;
+  workInDenmark: boolean;
 }
 
-export interface SaveEuresJobResponse {
+export interface SaveJobnetJobResponse {
   id: string;
   savedAt: string;
   alreadyExists: boolean;

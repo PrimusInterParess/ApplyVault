@@ -1,23 +1,26 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using ApplyVault.Api.Options;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 
-namespace ApplyVault.Api.Services.Eures;
+namespace ApplyVault.Api.Services.Jobnet;
 
-internal sealed class EuresRankedResultsCache(IDistributedCache cache)
+internal sealed class JobnetRankedResultsCache(
+    IDistributedCache cache,
+    IOptions<JobnetIntegrationOptions> options)
 {
-    private static readonly TimeSpan RankedResultsCacheLifetime = TimeSpan.FromMinutes(5);
-    private const string KeyPrefix = "eures:ranked:";
+    private const string KeyPrefix = "jobnet:ranked:";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<EuresRankedSearchSnapshot> GetOrCreateAsync(
+    public async Task<JobnetRankedSearchSnapshot> GetOrCreateAsync(
         string cacheKey,
-        Func<CancellationToken, Task<EuresRankedSearchSnapshot>> factory,
+        Func<CancellationToken, Task<JobnetRankedSearchSnapshot>> factory,
         CancellationToken cancellationToken = default)
     {
         var storageKey = BuildStorageKey(cacheKey);
@@ -25,7 +28,7 @@ internal sealed class EuresRankedResultsCache(IDistributedCache cache)
 
         if (cachedBytes is { Length: > 0 })
         {
-            var cachedSnapshot = JsonSerializer.Deserialize<EuresRankedSearchSnapshot>(cachedBytes, SerializerOptions);
+            var cachedSnapshot = JsonSerializer.Deserialize<JobnetRankedSearchSnapshot>(cachedBytes, SerializerOptions);
             if (cachedSnapshot is not null)
             {
                 return cachedSnapshot;
@@ -33,6 +36,7 @@ internal sealed class EuresRankedResultsCache(IDistributedCache cache)
         }
 
         var rankedSnapshot = await factory(cancellationToken).ConfigureAwait(false);
+        var ttlMinutes = Math.Max(1, options.Value.RankedCacheTtlMinutes);
         var payload = JsonSerializer.SerializeToUtf8Bytes(rankedSnapshot, SerializerOptions);
 
         await cache.SetAsync(
@@ -40,7 +44,7 @@ internal sealed class EuresRankedResultsCache(IDistributedCache cache)
             payload,
             new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = RankedResultsCacheLifetime
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(ttlMinutes)
             },
             cancellationToken).ConfigureAwait(false);
 

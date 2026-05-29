@@ -22,6 +22,7 @@ import { readInputValue } from '../../../../core/dom/input-value.util';
 import { JobResultsFacade } from '../../../job-results/data-access/job-results.facade';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { EuresJobsFacade } from '../../data-access/eures-jobs.facade';
+import { JobnetJobsFacade } from '../../data-access/jobnet-jobs.facade';
 import { JobSearchFacade } from '../../data-access/job-search.facade';
 import { EURES_KEYWORD_SUGGESTION_GROUPS } from '../../models/eures-keyword-suggestions';
 import { EURES_LOCATION_OPTIONS } from '../../models/eures-location-options';
@@ -46,7 +47,7 @@ import { jobSearchQueryParamsEqual } from '../../utils/job-search-url-state.util
     ExternalJobDetailComponent,
     JobSearchSourceToggleComponent
   ],
-  providers: [EuresJobsFacade, JobSearchFacade],
+  providers: [EuresJobsFacade, JobnetJobsFacade, JobSearchFacade],
   templateUrl: './job-search-page.component.html',
   styleUrl: './job-search-page.component.scss'
 })
@@ -81,7 +82,7 @@ export class JobSearchPageComponent implements OnInit {
   );
 
   protected readonly searchDisabledHint = computed(() => {
-    if (!this.facade.hasValidLocation()) {
+    if (this.facade.source() === 'eures' && !this.facade.hasValidLocation()) {
       return 'Select a valid country to search.';
     }
 
@@ -275,8 +276,10 @@ export class JobSearchPageComponent implements OnInit {
   protected canSearch(): boolean {
     const hasKeywords =
       this.facade.keywords().length > 0 || this.draftKeyword().trim().length > 0;
+    const hasValidLocation =
+      this.facade.source() === 'jobnet' || this.facade.hasValidLocation();
 
-    return this.facade.hasValidLocation() && hasKeywords && !this.facade.loading();
+    return hasValidLocation && hasKeywords && !this.facade.loading();
   }
 
   protected removeKeyword(keyword: string): void {

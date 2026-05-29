@@ -2,16 +2,13 @@ using System.Text.Json.Serialization;
 
 namespace ApplyVault.Api.Models;
 
-public sealed class EuresJobSearchRequest
+public sealed class JobnetJobSearchRequest
 {
     [JsonPropertyName("keywords")]
     public List<string>? Keywords { get; set; }
 
     [JsonPropertyName("keyword")]
     public string? Keyword { get; set; }
-
-    [JsonPropertyName("locationCode")]
-    public string? LocationCode { get; set; }
 
     [JsonPropertyName("page")]
     public int Page { get; set; } = 1;
@@ -20,8 +17,6 @@ public sealed class EuresJobSearchRequest
     public int ResultsPerPage { get; set; } = 20;
 
     public string RequestLanguage { get; set; } = "en";
-
-    public string SortSearch { get; set; } = "MOST_RECENT";
 
     public IReadOnlyList<string> ResolveKeywords()
     {
@@ -44,24 +39,25 @@ public sealed class EuresJobSearchRequest
     }
 }
 
-public sealed record EuresJobListingDto(
+public sealed record JobnetJobListingDto(
     string Id,
     string? Title,
     string? Employer,
     string? Location,
     string? PublicationDate,
-    string? SourceUrl
+    string? SourceUrl,
+    bool WorkInDenmark
 );
 
-public sealed record EuresJobSearchResponse(
+public sealed record JobnetJobSearchResponse(
     int TotalResults,
     int Page,
     int ResultsPerPage,
-    IReadOnlyList<EuresJobListingDto> Jobs,
+    IReadOnlyList<JobnetJobListingDto> Jobs,
     int? UpstreamTotalResults = null,
     bool ResultsTruncated = false);
 
-public sealed record EuresJobDetailResponse(
+public sealed record JobnetJobDetailResponse(
     string Id,
     string? Title,
     string? Employer,
@@ -71,10 +67,11 @@ public sealed record EuresJobDetailResponse(
     string? Description,
     string? ApplicationUrl,
     string? ContractType,
-    string? WorkHours
+    string? WorkHours,
+    bool WorkInDenmark
 );
 
-public sealed record SaveEuresJobResponse(
+public sealed record SaveJobnetJobResponse(
     Guid Id,
     DateTimeOffset SavedAt,
     bool AlreadyExists

@@ -1,6 +1,10 @@
+using System.Net;
+using System.Text;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.Jobnet;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests;
@@ -53,22 +57,98 @@ public sealed class JobnetJobDetailComposerTests
         Assert.False(string.IsNullOrWhiteSpace(response.DescriptionExcerpt));
     }
 
-    private static JobnetJobDetailComposer CreateComposer(JobnetRawDetail rawDetail)
+    [Fact]
+    public async Task ComposeAsync_ReturnsFullDescription_ForEuresImportedStructuredHtml()
     {
-        var strategy = new StubFetchStrategy(_ => true, (_, _) => Task.FromResult<JobnetRawDetail?>(rawDetail));
-        var resolver = new JobnetJobDetailResolver([strategy]);
-        var options = Microsoft.Extensions.Options.Options.Create(new JobnetIntegrationOptions { WorkInDenmarkOnly = true });
+        var mapped = JobnetJobMapper.MapDetailFromSearch(
+            "E11069412",
+            JobnetTestData.CreateSearchJob(
+                "E11069412",
+                "Senior Backend Developer",
+                "Nordea Bank Danmark",
+                "<p><strong>We are hiring</strong></p><p>Build APIs with Java and Spring Boot across distributed systems and ship production features every week.</p>",
+                jobAdUrl: "https://careers.nordea.com/job/example"));
 
-        return new JobnetJobDetailComposer(resolver, new JobnetDescriptionQualityAssessor(), options);
+        var composer = CreateComposer(
+            new JobnetRawDetail(JobnetDescriptionSource.SearchFallback, mapped));
+
+        var response = await composer.ComposeAsync("E11069412", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal(JobnetDescriptionQualityValues.QualityFull, response.DescriptionQuality);
+        Assert.Contains("<p>", response.Description, StringComparison.OrdinalIgnoreCase);
     }
 
-    private sealed class StubFetchStrategy(
-        Func<string, bool> canHandle,
-        Func<string, CancellationToken, Task<JobnetRawDetail?>> fetch) : IJobnetJobDetailFetchStrategy
+    private static JobnetJobDetailComposer CreateComposer(JobnetRawDetail rawDetail)
     {
-        public bool CanHandle(string id) => canHandle(id);
+        var options = Microsoft.Extensions.Options.Options.Create(new JobnetIntegrationOptions
+        {
+            WorkInDenmarkOnly = true,
+            BaseUrl = "https://jobnet.dk/bff"
+        });
+        var memoryCache = new MemoryDistributedCache(
+            Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions()));
+        var payloadCache = new JobnetSearchPayloadCache(memoryCache, options);
 
-        public Task<JobnetRawDetail?> FetchAsync(string id, CancellationToken cancellationToken) =>
-            fetch(id, cancellationToken);
+        if (rawDetail.Source == JobnetDescriptionSource.SearchFallback)
+        {
+            payloadCache.SetAsync(
+                ToSearchPayload(rawDetail.Mapped),
+                CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        var handler = new StubHttpMessageHandler((request) =>
+        {
+            if (rawDetail.Source != JobnetDescriptionSource.NativeDetail)
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            var detail = JobnetTestData.CreateDetailJob(
+                rawDetail.Mapped.Title ?? "Untitled",
+                rawDetail.Mapped.Employer,
+                rawDetail.Mapped.Description,
+                workInDenmark: rawDetail.Mapped.WorkInDenmark,
+                applicationUrl: rawDetail.Mapped.ApplicationUrl);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JobnetTestData.SerializeDetailResponse(detail),
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        });
+
+        var fetcher = new JobnetJobDetailFetcher(
+            new JobnetApiClient(
+                new HttpClient(handler) { BaseAddress = new Uri("https://jobnet.dk/bff") },
+                options),
+            payloadCache);
+
+        return new JobnetJobDetailComposer(fetcher, new JobnetDescriptionQualityAssessor(), options);
+    }
+
+    private static JobnetSearchJobPayload ToSearchPayload(JobnetMappedJobDetail mapped) =>
+        new()
+        {
+            JobAdId = mapped.Id,
+            Title = mapped.Title,
+            HiringOrgName = mapped.Employer,
+            WorkPlaceAddress = mapped.Location,
+            PublicationDate = mapped.PublicationDate,
+            JobAdUrl = mapped.SourceUrl,
+            Description = mapped.Description,
+            Occupation = mapped.ContractType,
+            WorkHourPartTime = mapped.WorkHours == "Part-time" ? true : mapped.WorkHours == "Full-time" ? false : null
+        };
+
+    private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(responder(request));
     }
 }

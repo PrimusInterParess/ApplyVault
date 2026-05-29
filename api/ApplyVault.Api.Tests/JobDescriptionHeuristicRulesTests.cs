@@ -29,4 +29,17 @@ public sealed class JobDescriptionHeuristicRulesTests
 
         Assert.False(JobDescriptionHeuristicRules.ShouldUsePreviewOnly(request));
     }
+
+    [Fact]
+    public void ShouldUsePreviewOnly_IsFalse_ForEuresImportedStructuredHtml()
+    {
+        var request = new JobnetDescriptionAssessmentRequest(
+            "<p><strong>We are hiring</strong></p><p>Build APIs with Java and Spring Boot across distributed systems and ship production features every week.</p>",
+            "Senior Backend Developer",
+            "Nordea Bank Danmark",
+            "E11069412",
+            JobnetDescriptionSource.SearchFallback);
+
+        Assert.False(JobDescriptionHeuristicRules.ShouldUsePreviewOnly(request));
+    }
 }

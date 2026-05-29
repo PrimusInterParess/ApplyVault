@@ -38,12 +38,6 @@ internal static class JobDescriptionHeuristicRules
     {
         var score = 0;
 
-        if (request.Source == JobnetDescriptionSource.SearchFallback
-            && JobnetJobIdentifiers.IsEuresImported(request.Id))
-        {
-            score += 2;
-        }
-
         if (HasScrapedLayout(request.Description))
         {
             score += 2;
@@ -55,6 +49,11 @@ internal static class JobDescriptionHeuristicRules
         }
 
         if (HasRepeatedTitleOrEmployerLines(request.Description, request.Title, request.Employer))
+        {
+            score += 1;
+        }
+
+        if (request.Source == JobnetDescriptionSource.SearchFallback && score > 0)
         {
             score += 1;
         }

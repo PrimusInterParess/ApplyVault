@@ -1,26 +1,4 @@
-@if (detailLoading()) {
-  <div class="job-detail job-detail--loading" aria-busy="true" aria-label="Loading job detail">
-    <div class="job-detail__skeleton-header">
-      <span class="job-detail__skeleton-line job-detail__skeleton-line--eyebrow"></span>
-      <span class="job-detail__skeleton-line job-detail__skeleton-line--title"></span>
-      <span class="job-detail__skeleton-line job-detail__skeleton-line--subtitle"></span>
-    </div>
-    <div class="job-detail__skeleton-actions">
-      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
-      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
-    </div>
-    <span class="job-detail__skeleton-line job-detail__skeleton-line--body"></span>
-  </div>
-} @else if (detailError()) {
-  <section class="job-detail job-detail--error" aria-live="polite">
-    <h3>Detail unavailable</h3>
-    <p>{{ detailError() }}</p>
-    <button type="button" class="job-detail__secondary-action" (click)="retryDetail.emit()">
-      Retry detail
-    </button>
-  </section>
-} @else if (job()) {
-  @let selectedJob = job()!;
+@if (job(); as selectedJob) {
   <section class="job-detail">
     <div class="job-detail__header">
       <div class="job-detail__header-content">
@@ -96,12 +74,48 @@
       </article>
     }
 
-    <app-job-description-panel
-      [mode]="descriptionDisplayMode()"
-      [description]="selectedJob.description"
-      [excerpt]="selectedJob.descriptionExcerpt ?? null"
-      [qualityReason]="selectedJob.descriptionQualityReason ?? null"
-      [listingUrl]="detailUrl()" />
+    @if (detailLoading()) {
+      <div class="job-detail__description-loading" aria-busy="true" aria-label="Loading job description">
+        <span class="job-detail__skeleton-line job-detail__skeleton-line--body"></span>
+        <span class="job-detail__skeleton-line job-detail__skeleton-line--body"></span>
+      </div>
+    } @else if (detailError()) {
+      <section class="job-detail__description-error" aria-live="polite">
+        <h3>Description unavailable</h3>
+        <p>{{ detailError() }}</p>
+        <button type="button" class="job-detail__secondary-action" (click)="retryDetail.emit()">
+          Retry description
+        </button>
+      </section>
+    } @else {
+      <app-job-description-panel
+        [mode]="descriptionDisplayMode()"
+        [description]="selectedJob.description"
+        [excerpt]="selectedJob.descriptionExcerpt ?? null"
+        [qualityReason]="selectedJob.descriptionQualityReason ?? null"
+        [listingUrl]="detailUrl()" />
+    }
+  </section>
+} @else if (detailLoading()) {
+  <div class="job-detail job-detail--loading" aria-busy="true" aria-label="Loading job detail">
+    <div class="job-detail__skeleton-header">
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--eyebrow"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--title"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--subtitle"></span>
+    </div>
+    <div class="job-detail__skeleton-actions">
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
+    </div>
+    <span class="job-detail__skeleton-line job-detail__skeleton-line--body"></span>
+  </div>
+} @else if (detailError()) {
+  <section class="job-detail job-detail--error" aria-live="polite">
+    <h3>Detail unavailable</h3>
+    <p>{{ detailError() }}</p>
+    <button type="button" class="job-detail__secondary-action" (click)="retryDetail.emit()">
+      Retry detail
+    </button>
   </section>
 } @else {
   <section class="job-detail job-detail--empty">

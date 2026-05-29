@@ -234,6 +234,7 @@ export class JobnetJobsFacade {
         }
 
         this.selectedJob.set(result.detail);
+        this.detailError.set(null);
         this.detailLoading.set(false);
         this.syncSavedStateFromExistingJobs(result.detail);
       });
@@ -452,7 +453,9 @@ export class JobnetJobsFacade {
     this.selectedJobId.set(id);
     this.detailLoading.set(true);
     this.detailError.set(null);
-    this.selectedJob.set(null);
+
+    const listing = this.results().find((job) => job.id === id);
+    this.selectedJob.set(listing ? this.createPartialDetailFromListing(listing) : null);
 
     this.detailIntent$.next({
       id,
@@ -700,5 +703,25 @@ export class JobnetJobsFacade {
     this.cancelPendingSearch();
     this.cancelPendingDetail();
     this.saveCancel$.next();
+  }
+
+  private createPartialDetailFromListing(listing: JobnetJobListing): JobnetJobDetail {
+    return {
+      id: listing.id,
+      title: listing.title,
+      employer: listing.employer,
+      location: listing.location,
+      publicationDate: listing.publicationDate,
+      sourceUrl: listing.sourceUrl,
+      description: null,
+      applicationUrl: listing.sourceUrl,
+      contractType: null,
+      workHours: null,
+      workInDenmark: listing.workInDenmark,
+      descriptionSource: 'searchFallback',
+      descriptionQuality: 'full',
+      descriptionExcerpt: null,
+      descriptionQualityReason: null
+    };
   }
 }

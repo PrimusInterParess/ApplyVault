@@ -34,6 +34,7 @@ public static class DistributedInfrastructureExtensions
         services.AddScoped<EuresRankedResultsCache>();
         services.AddScoped<JobnetRankedResultsCache>();
         services.AddScoped<JobnetClassificationCache>();
+        services.AddScoped<JobnetSearchPayloadCache>();
         services.AddSingleton<GmailMailSyncWorker>();
 
         return services;

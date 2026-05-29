@@ -258,9 +258,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<JobnetJobSearchService>();
         services.AddScoped<IJobDescriptionQualityAssessor, JobnetDescriptionQualityAssessor>();
-        services.AddScoped<IJobnetJobDetailFetchStrategy, JobnetNativeDetailFetchStrategy>();
-        services.AddScoped<IJobnetJobDetailFetchStrategy, JobnetSearchFallbackFetchStrategy>();
-        services.AddScoped<JobnetJobDetailResolver>();
+        services.AddScoped<JobnetJobDetailFetcher>();
         services.AddScoped<IJobnetJobDetailComposer, JobnetJobDetailComposer>();
         services.AddScoped<IJobnetJobClient, JobnetJobClient>();
         services.AddScoped<IJobnetJobSaveService, JobnetJobSaveService>();

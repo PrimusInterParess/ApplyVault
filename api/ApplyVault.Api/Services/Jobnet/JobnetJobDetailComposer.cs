@@ -10,7 +10,7 @@ internal interface IJobnetJobDetailComposer
 }
 
 internal sealed class JobnetJobDetailComposer(
-    JobnetJobDetailResolver resolver,
+    JobnetJobDetailFetcher detailFetcher,
     IJobDescriptionQualityAssessor qualityAssessor,
     IOptions<JobnetIntegrationOptions> options) : IJobnetJobDetailComposer
 {
@@ -21,7 +21,7 @@ internal sealed class JobnetJobDetailComposer(
             return null;
         }
 
-        var raw = await resolver.FetchAsync(id.Trim(), cancellationToken);
+        var raw = await detailFetcher.FetchAsync(id.Trim(), cancellationToken);
 
         if (raw is null)
         {

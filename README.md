@@ -50,7 +50,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `api/ApplyVault.Api/`
   ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export.
 - `api/ApplyVault.Api.Tests/`
-  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search (including description quality heuristics, detail fetch strategies, and detail composition), CV structured import/export, and related API services.
+  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search (including description quality heuristics, search payload cache, detail fetcher, and detail composition), CV structured import/export, and related API services.
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
@@ -206,7 +206,7 @@ Option sections (validated at startup when enabled):
 - `EuresIntegration`
   Configures the EURES API base URL, default country/location code, max results per page, upstream scan limits, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached for five minutes (Redis when configured) before server-side pagination is applied.
 - `JobnetIntegration`
-  Configures the Jobnet BFF base URL (`https://jobnet.dk/bff` by default), search/detail paths, Work in Denmark filtering, radius and sort defaults, upstream scan limits, classification detail-fetch limits (`MaxClassificationDetailFetches`, `MaxDetailFetchConcurrency`), search retry attempts, and ranked/classification cache TTLs used by Work in Denmark search endpoints. Detail responses include `descriptionSource` (`nativeDetail` or `searchFallback`), `descriptionQuality` (`full` or `previewOnly`), and optional excerpt/reason fields when heuristics detect scraped or navigation-heavy text.
+  Configures the Jobnet BFF base URL (`https://jobnet.dk/bff` by default), search/detail paths, Work in Denmark filtering, radius and sort defaults, upstream scan limits, classification detail-fetch limits (`MaxClassificationDetailFetches` verifies Work in Denmark during search for native GUID listings; `MaxDetailFetchConcurrency` caps parallel checks), search retry attempts, and ranked/classification cache TTLs used by Work in Denmark search endpoints. Search caches each ranked job’s upstream search payload by id (`JobnetSearchPayloadCache`, same TTL as `RankedCacheTtlMinutes`) so detail and save requests reuse search-time data instead of re-querying Jobnet. Detail responses include `descriptionSource` (`nativeDetail` or `searchFallback`), `descriptionQuality` (`full` or `previewOnly`), and optional excerpt/reason fields when heuristics detect scraped or navigation-heavy text.
 - `CvDocumentStorage`
   Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object and triggers structured re-import.
 - `CvHtmlExport`
@@ -294,6 +294,16 @@ The Job Search page (`/search`) supports:
 - a shared `job-description-panel` that renders full sanitized HTML when the API marks a description as `full`, shows a short excerpt plus quality reason with a **Read full listing** link when quality is `previewOnly`, and handles missing descriptions gracefully
 - **Save to ApplyVault** on the detail panel, with retry on error and a link to the saved job on `/jobs`
 - loading skeletons during search, detail fetch, and incremental load-more
+- optimistic detail rendering for Work in Denmark: listing title, employer, and location appear immediately on selection; only the description area waits for or retries the detail request
+
+#### Jobnet (Work in Denmark) data flow
+
+Jobnet listings use two id shapes from the upstream BFF:
+
+- **GUID ids** (for example `b2b58b21-...`) — native Jobnet postings; full detail comes from `/FindJob/JobAdDetails/{id}`. When `WorkInDenmarkOnly` is enabled, search may fetch native detail for GUID candidates to confirm the `WorkInDenmark` classification before they appear in results.
+- **E-prefixed ids** (for example `E11069412`) — EURES-imported listings shown on Jobnet; native detail returns 400, so description and metadata come from the search payload.
+
+During search, ranked listings are mapped to `JobnetJobListingDto` for the list UI and the raw search payload is cached by job id. When the dashboard requests detail (`GET /api/jobnet/jobs/{id}`), `JobnetJobDetailFetcher` reads the cache first (for E-prefixed jobs) or the native detail endpoint (for GUID jobs), then `JobnetDescriptionQualityAssessor` marks descriptions as `full` or `previewOnly` based on content heuristics (scraped nav junk), not the id prefix alone.
 
 Unknown routes render a 404 page with a link back to `/jobs` when signed in or `/login` when signed out.
 
@@ -311,7 +321,7 @@ Integration tests (HTTP + auth pipeline):
 dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
 ```
 
-Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, EURES and Jobnet job search (client, keyword expander, ranked-result caching, mapper, relevance scoring, request normalization, description quality assessor, heuristic rules, detail fetch strategies, and detail composer), and CV structured import/export/update services. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
+Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, EURES and Jobnet job search (client, keyword expander, ranked-result caching, search payload cache, mapper, relevance scoring, request normalization, description quality assessor, heuristic rules, detail fetcher, and detail composer), and CV structured import/export/update services. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
 
 ### 6. Run frontend critical-path tests
 

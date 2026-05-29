@@ -8,7 +8,8 @@ internal sealed class JobnetJobSearchService(
     JobnetApiClient apiClient,
     IOptions<JobnetIntegrationOptions> options,
     JobnetRankedResultsCache rankedResultsCache,
-    JobnetClassificationCache classificationCache)
+    JobnetClassificationCache classificationCache,
+    JobnetSearchPayloadCache searchPayloadCache)
 {
     public async Task<JobnetJobSearchResponse> SearchAsync(
         JobnetJobSearchRequest request,
@@ -74,12 +75,13 @@ internal sealed class JobnetJobSearchService(
 
             if (integrationOptions.WorkInDenmarkOnly)
             {
-                MergeEuresImportedJobs(
+                await MergeEuresImportedJobsAsync(
                     searchResponse?.JobAds ?? [],
                     keywords,
                     rankedEntries,
                     trustUpstreamMatches,
-                    maxCachedResults);
+                    maxCachedResults,
+                    cancellationToken);
 
                 if (detailFetchCount < maxDetailFetches && rankedEntries.Count < maxCachedResults)
                 {
@@ -96,12 +98,13 @@ internal sealed class JobnetJobSearchService(
             }
             else
             {
-                MergeUnfilteredJobs(
+                await MergeUnfilteredJobsAsync(
                     searchResponse?.JobAds ?? [],
                     keywords,
                     rankedEntries,
                     trustUpstreamMatches,
-                    maxCachedResults);
+                    maxCachedResults,
+                    cancellationToken);
             }
 
             if (ShouldStopUpstreamScan(
@@ -177,12 +180,13 @@ internal sealed class JobnetJobSearchService(
         return false;
     }
 
-    private static void MergeEuresImportedJobs(
+    private async Task MergeEuresImportedJobsAsync(
         IReadOnlyList<JobnetSearchJobPayload> jobs,
         IReadOnlyList<string> keywords,
         Dictionary<string, RankedJobListing> rankedEntries,
         bool trustUpstreamMatches,
-        int maxCachedResults)
+        int maxCachedResults,
+        CancellationToken cancellationToken)
     {
         foreach (var job in jobs)
         {
@@ -196,7 +200,13 @@ internal sealed class JobnetJobSearchService(
                 continue;
             }
 
-            TryAddRankedJob(rankedEntries, job, keywords, workInDenmark: true, trustUpstreamMatches);
+            await TryAddRankedJobAsync(
+                rankedEntries,
+                job,
+                keywords,
+                workInDenmark: true,
+                trustUpstreamMatches,
+                cancellationToken);
         }
     }
 
@@ -266,18 +276,25 @@ internal sealed class JobnetJobSearchService(
                 continue;
             }
 
-            TryAddRankedJob(rankedEntries, job, keywords, workInDenmark: true, trustUpstreamMatches);
+            await TryAddRankedJobAsync(
+                rankedEntries,
+                job,
+                keywords,
+                workInDenmark: true,
+                trustUpstreamMatches,
+                cancellationToken);
         }
 
         return classifications.Count((entry) => entry.FetchedDetail);
     }
 
-    private void MergeUnfilteredJobs(
+    private async Task MergeUnfilteredJobsAsync(
         IReadOnlyList<JobnetSearchJobPayload> jobs,
         IReadOnlyList<string> keywords,
         Dictionary<string, RankedJobListing> rankedEntries,
         bool trustUpstreamMatches,
-        int maxCachedResults)
+        int maxCachedResults,
+        CancellationToken cancellationToken)
     {
         foreach (var job in jobs)
         {
@@ -286,7 +303,13 @@ internal sealed class JobnetJobSearchService(
                 break;
             }
 
-            TryAddRankedJob(rankedEntries, job, keywords, workInDenmark: true, trustUpstreamMatches);
+            await TryAddRankedJobAsync(
+                rankedEntries,
+                job,
+                keywords,
+                workInDenmark: true,
+                trustUpstreamMatches,
+                cancellationToken);
         }
     }
 
@@ -318,12 +341,13 @@ internal sealed class JobnetJobSearchService(
             keywords) > 0;
     }
 
-    private static void TryAddRankedJob(
+    private async Task TryAddRankedJobAsync(
         Dictionary<string, RankedJobListing> rankedEntries,
         JobnetSearchJobPayload job,
         IReadOnlyList<string> keywords,
         bool workInDenmark,
-        bool trustUpstreamMatches)
+        bool trustUpstreamMatches,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(job.JobAdId))
         {
@@ -358,6 +382,7 @@ internal sealed class JobnetJobSearchService(
         }
 
         rankedEntries[job.JobAdId] = new RankedJobListing(listing, relevanceScore, publicationSortKey);
+        await searchPayloadCache.SetAsync(job, cancellationToken).ConfigureAwait(false);
     }
 
     private static JobnetJobSearchResponse PaginateResults(

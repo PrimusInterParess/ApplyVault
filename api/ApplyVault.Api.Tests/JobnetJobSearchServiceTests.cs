@@ -347,6 +347,9 @@ public sealed class JobnetJobSearchServiceTests
                 options),
             new JobnetClassificationCache(
                 new MemoryDistributedCache(Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions())),
+                options),
+            new JobnetSearchPayloadCache(
+                new MemoryDistributedCache(Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions())),
                 options));
     }
 

@@ -54,11 +54,20 @@ internal sealed class JobnetJobSearchService(
 
         for (var pageNumber = 1; pageNumber <= maxPages; pageNumber++)
         {
-            var searchResponse = await apiClient.SearchAsync(
-                searchString,
-                pageNumber,
-                fetchSize,
-                cancellationToken);
+            JobnetSearchResponsePayload? searchResponse;
+            try
+            {
+                searchResponse = await apiClient.SearchAsync(
+                    searchString,
+                    pageNumber,
+                    fetchSize,
+                    cancellationToken);
+            }
+            catch (JobnetJobClientException) when (rankedEntries.Count > 0)
+            {
+                hitSafetyCap = true;
+                break;
+            }
 
             upstreamTotalJobAdCount ??= searchResponse?.TotalJobAdCount;
             var jobsOnPage = searchResponse?.JobAds?.Count ?? 0;

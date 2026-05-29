@@ -1,0 +1,36 @@
+.job-description-panel {
+  margin-top: 0.65rem;
+}
+
+.job-description-panel--preview {
+  padding: 0.65rem;
+  border: 1px solid var(--app-border);
+  background: linear-gradient(180deg, var(--app-surface-highlight) 0%, var(--app-surface-alt) 100%);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.job-description-panel__excerpt {
+  margin: 0 0 0.65rem;
+  line-height: 1.55;
+}
+
+.job-description-panel__muted {
+  margin: 0 0 0.65rem;
+  color: var(--app-text-muted);
+}
+
+.job-description-panel__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.86rem;
+  border: 1px solid var(--app-border-strong);
+  background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-dark) 100%);
+  color: var(--app-surface);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--app-shadow-md);
+}

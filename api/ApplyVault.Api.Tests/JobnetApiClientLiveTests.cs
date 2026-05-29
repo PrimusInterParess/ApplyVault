@@ -26,10 +26,11 @@ public sealed class JobnetApiClientLiveTests
         Assert.NotEmpty(search!.JobAds ?? []);
         Assert.True(search.TotalJobAdCount > 0);
 
-        var firstId = search.JobAds![0].JobAdId;
-        Assert.False(string.IsNullOrWhiteSpace(firstId));
+        var guidJob = search.JobAds!
+            .FirstOrDefault((job) => JobnetJobIdentifiers.SupportsNativeDetailEndpoint(job.JobAdId));
+        Assert.NotNull(guidJob);
 
-        var detail = await client.GetJobByIdAsync(firstId!);
+        var detail = await client.GetJobByIdAsync(guidJob!.JobAdId!);
         Assert.NotNull(detail);
         Assert.False(string.IsNullOrWhiteSpace(detail!.Title));
     }

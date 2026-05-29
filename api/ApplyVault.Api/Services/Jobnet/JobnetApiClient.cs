@@ -27,16 +27,15 @@ internal sealed class JobnetApiClient(
             pageNumber,
             resultsPerPage,
             integrationOptions);
+        var requestUri = BuildUri($"{integrationOptions.SearchPath}?{query}");
 
-        using var response = await httpClient.GetAsync(
-            BuildUri($"{integrationOptions.SearchPath}?{query}"),
-            cancellationToken);
+        using var response = await SendGetWithRetryAsync(requestUri, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new JobnetJobClientException(
-                $"Jobnet search failed with status {(int)response.StatusCode}. {TruncateResponseBody(responseBody)}");
+                $"Jobnet search failed with status {(int)response.StatusCode} for {TruncateUri(requestUri)}. {TruncateResponseBody(responseBody)}");
         }
 
         await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -59,7 +58,8 @@ internal sealed class JobnetApiClient(
         var encodedId = Uri.EscapeDataString(id.Trim());
         var detailPath = integrationOptions.DetailPathTemplate.Replace("{id}", encodedId, StringComparison.Ordinal);
 
-        using var response = await httpClient.GetAsync(BuildUri(detailPath), cancellationToken);
+        var requestUri = BuildUri(detailPath);
+        using var response = await SendGetWithRetryAsync(requestUri, cancellationToken);
 
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
         {
@@ -70,7 +70,7 @@ internal sealed class JobnetApiClient(
         {
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new JobnetJobClientException(
-                $"Jobnet detail failed with status {(int)response.StatusCode}. {TruncateResponseBody(responseBody)}");
+                $"Jobnet detail failed with status {(int)response.StatusCode} for {TruncateUri(requestUri)}. {TruncateResponseBody(responseBody)}");
         }
 
         await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -132,6 +132,48 @@ internal sealed class JobnetApiClient(
         return string.Equals(orderType, "CreationDate", StringComparison.OrdinalIgnoreCase)
             ? "PublicationDate"
             : orderType;
+    }
+
+    private async Task<HttpResponseMessage> SendGetWithRetryAsync(
+        Uri requestUri,
+        CancellationToken cancellationToken)
+    {
+        var maxAttempts = Math.Clamp(options.Value.SearchMaxRetryAttempts, 1, 5);
+        HttpResponseMessage? response = null;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            response = await httpClient.GetAsync(requestUri, cancellationToken);
+
+            if (response.IsSuccessStatusCode
+                || !IsTransientUpstreamFailure(response.StatusCode)
+                || attempt >= maxAttempts)
+            {
+                return response;
+            }
+
+            await response.Content.ReadAsStringAsync(cancellationToken);
+            response.Dispose();
+
+            var delayMs = Math.Min(2000, 250 * (1 << (attempt - 1)));
+            await Task.Delay(delayMs, cancellationToken);
+        }
+
+        return response!;
+    }
+
+    private static bool IsTransientUpstreamFailure(HttpStatusCode statusCode) =>
+        statusCode is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.InternalServerError
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
+
+    private static string TruncateUri(Uri uri)
+    {
+        var value = uri.ToString();
+        return value.Length <= 160 ? value : $"{value[..160]}...";
     }
 
     private static string TruncateResponseBody(string? responseBody)

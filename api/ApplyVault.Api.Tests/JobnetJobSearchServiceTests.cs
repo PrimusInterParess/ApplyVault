@@ -269,6 +269,57 @@ public sealed class JobnetJobSearchServiceTests
         Assert.Equal(5, result.Jobs.Count);
     }
 
+    [Fact]
+    public async Task SearchAsync_UpstreamFailureAfterFirstPage_ReturnsPartialResults()
+    {
+        var upstreamRequests = 0;
+
+        var service = CreateService(
+            workInDenmarkOnly: false,
+            (request) =>
+            {
+                upstreamRequests++;
+                var query = request.RequestUri!.Query;
+
+                if (query.Contains("pageNumber=2", StringComparison.Ordinal))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent(
+                            "{\"errorInformation\":null,\"correlationId\":null}",
+                            Encoding.UTF8,
+                            "application/json")
+                    };
+                }
+
+                var payload = new JobnetSearchResponsePayload
+                {
+                    TotalJobAdCount = 100,
+                    JobAds = Enumerable.Range(1, 50)
+                        .Select((index) => JobnetTestData.CreateSearchJob(
+                            $"job-{index}",
+                            $"Software role {index}",
+                            "Contoso",
+                            "software"))
+                        .ToList()
+                };
+
+                return JsonResponse(payload);
+            });
+
+        var result = await service.SearchAsync(new JobnetJobSearchRequest
+        {
+            Keyword = "software",
+            Page = 1,
+            ResultsPerPage = 10
+        });
+
+        Assert.True(upstreamRequests >= 2);
+        Assert.Equal(50, result.TotalResults);
+        Assert.True(result.ResultsTruncated);
+        Assert.Equal(10, result.Jobs.Count);
+    }
+
     private static JobnetJobSearchService CreateService(
         bool workInDenmarkOnly,
         Func<HttpRequestMessage, HttpResponseMessage> responder)
@@ -284,7 +335,8 @@ public sealed class JobnetJobSearchServiceTests
             BaseUrl = "https://jobnet.dk/bff",
             WorkInDenmarkOnly = workInDenmarkOnly,
             MaxResultsPerPage = 50,
-            MaxUpstreamScanPages = 20
+            MaxUpstreamScanPages = 20,
+            ScanResultsPerPage = 50
         });
 
         return new JobnetJobSearchService(

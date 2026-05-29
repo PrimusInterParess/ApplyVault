@@ -257,6 +257,11 @@ public static class ServiceCollectionExtensions
             JobnetHttpClientConfigurator.Configure(client, jobnetOptions);
         });
         services.AddScoped<JobnetJobSearchService>();
+        services.AddScoped<IJobDescriptionQualityAssessor, JobnetDescriptionQualityAssessor>();
+        services.AddScoped<IJobnetJobDetailFetchStrategy, JobnetNativeDetailFetchStrategy>();
+        services.AddScoped<IJobnetJobDetailFetchStrategy, JobnetSearchFallbackFetchStrategy>();
+        services.AddScoped<JobnetJobDetailResolver>();
+        services.AddScoped<IJobnetJobDetailComposer, JobnetJobDetailComposer>();
         services.AddScoped<IJobnetJobClient, JobnetJobClient>();
         services.AddScoped<IJobnetJobSaveService, JobnetJobSaveService>();
         services.AddScoped<ICalendarProvider, GoogleCalendarProvider>();

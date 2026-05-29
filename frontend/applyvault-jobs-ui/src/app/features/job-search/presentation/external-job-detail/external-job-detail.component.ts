@@ -2,16 +2,16 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { ExternalJobDetail } from '../../models/external-job.model';
 import { getJobSearchProvider, JobSearchSource } from '../../models/job-source.model';
-import { renderJobDescription } from '../../utils/job-description-render.util';
+import { JobDescriptionPanelComponent } from '../job-description-panel/job-description-panel.component';
+import { resolveJobDescriptionDisplayMode } from '../../utils/job-description-display.util';
 import { formatEuresPublicationDate } from '../../utils/eures-date.util';
 
 @Component({
   selector: 'app-external-job-detail',
   standalone: true,
-  imports: [DatePipe, SafeHtmlPipe, RouterLink],
+  imports: [DatePipe, RouterLink, JobDescriptionPanelComponent],
   templateUrl: './external-job-detail.component.html',
   styleUrl: './external-job-detail.component.scss'
 })
@@ -41,5 +41,7 @@ export class ExternalJobDetailComponent {
     getJobSearchProvider(this.source()).detailLabel
   );
 
-  protected readonly renderJobDescription = renderJobDescription;
+  protected readonly descriptionDisplayMode = computed(() =>
+    resolveJobDescriptionDisplayMode(this.job())
+  );
 }

@@ -135,7 +135,11 @@ public sealed class JobnetJobSaveServiceTests
             applicationUrl: applicationUrl);
 
         var mapped = JobnetJobMapper.MapDetail("job-1", payload);
-        return mapped with { ApplicationUrl = applicationUrl, SourceUrl = applicationUrl };
+        return JobnetJobDetailTestData.ToDetailResponse(mapped) with
+        {
+            ApplicationUrl = applicationUrl,
+            SourceUrl = applicationUrl
+        };
     }
 
     private static ApplyVaultDbContext CreateDbContext()

@@ -68,7 +68,11 @@ public sealed record JobnetJobDetailResponse(
     string? ApplicationUrl,
     string? ContractType,
     string? WorkHours,
-    bool WorkInDenmark
+    bool WorkInDenmark,
+    string DescriptionSource,
+    string DescriptionQuality,
+    string? DescriptionExcerpt,
+    string? DescriptionQualityReason
 );
 
 public sealed record SaveJobnetJobResponse(

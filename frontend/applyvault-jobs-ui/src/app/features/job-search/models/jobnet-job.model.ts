@@ -1,3 +1,6 @@
+export type JobnetDescriptionSource = 'nativeDetail' | 'searchFallback';
+export type JobnetDescriptionQuality = 'full' | 'previewOnly';
+
 export interface JobnetJobSearchRequest {
   keywords: readonly string[];
   page?: number;
@@ -36,6 +39,10 @@ export interface JobnetJobDetail {
   contractType: string | null;
   workHours: string | null;
   workInDenmark: boolean;
+  descriptionSource: JobnetDescriptionSource;
+  descriptionQuality: JobnetDescriptionQuality;
+  descriptionExcerpt: string | null;
+  descriptionQualityReason: string | null;
 }
 
 export interface SaveJobnetJobResponse {

@@ -22,13 +22,15 @@ public sealed class JobnetIntegrationOptions
 
     public int TimeoutSeconds { get; set; } = 30;
 
-    public int MaxUpstreamScanPages { get; set; } = 20;
+    public int MaxUpstreamScanPages { get; set; } = 10;
 
-    public int ScanResultsPerPage { get; set; } = 50;
+    public int ScanResultsPerPage { get; set; } = 10;
 
     public int MaxCachedRankedResults { get; set; } = 500;
 
-    public int MaxClassificationDetailFetches { get; set; } = 100;
+    public int MaxClassificationDetailFetches { get; set; } = 30;
+
+    public int SearchMaxRetryAttempts { get; set; } = 3;
 
     public int MaxDetailFetchConcurrency { get; set; } = 6;
 
@@ -36,5 +38,5 @@ public sealed class JobnetIntegrationOptions
 
     public int DefaultKmRadius { get; set; } = 50;
 
-    public string DefaultOrderType { get; set; } = "PublicationDate";
+    public string DefaultOrderType { get; set; } = "BestMatch";
 }

@@ -1,0 +1,27 @@
+@switch (mode()) {
+  @case ('preview') {
+    <article class="job-description-panel job-description-panel--preview">
+      @if (excerpt(); as previewText) {
+        <p class="job-description-panel__excerpt">{{ previewText }}</p>
+      }
+      @if (qualityReason(); as reason) {
+        <p class="job-description-panel__muted">{{ reason }}</p>
+      }
+      @if (listingUrl(); as openUrl) {
+        <a [href]="openUrl" target="_blank" rel="noreferrer" class="job-description-panel__link">
+          Read full listing
+        </a>
+      }
+    </article>
+  }
+  @case ('full') {
+    @if (description(); as fullDescription) {
+      <article
+        class="job-description-panel job-description-panel--full job-detail__description job-detail__description-body"
+        [innerHTML]="renderJobDescription(fullDescription) | safeHtml"></article>
+    }
+  }
+  @default {
+    <p class="job-description-panel__muted">No description was returned for this listing.</p>
+  }
+}

@@ -126,7 +126,11 @@ export class JobSearchFacade {
         description: job.description,
         applicationUrl: job.applicationUrl,
         contractType: job.contractType,
-        workHours: job.workHours
+        workHours: job.workHours,
+        descriptionSource: job.descriptionSource,
+        descriptionQuality: job.descriptionQuality,
+        descriptionExcerpt: job.descriptionExcerpt,
+        descriptionQualityReason: job.descriptionQualityReason
       };
     }
 

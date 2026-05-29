@@ -17,6 +17,10 @@ export interface ExternalJobDetail extends ExternalJobListing {
   workHours?: string | null;
   tags?: readonly string[];
   jobTypes?: readonly string[];
+  descriptionSource?: 'nativeDetail' | 'searchFallback';
+  descriptionQuality?: 'full' | 'previewOnly';
+  descriptionExcerpt?: string | null;
+  descriptionQualityReason?: string | null;
 }
 
 export interface JobSearchUrlQueryParams {

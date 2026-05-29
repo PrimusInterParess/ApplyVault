@@ -1,6 +1,6 @@
 # ApplyVault Jobs UI
 
-Angular dashboard for reviewing saved job captures, searching EURES listings, uploading a CV PDF, generating CV project summaries from GitHub, and managing calendar/mail integrations.
+Angular dashboard for reviewing saved job captures, searching EURES and Work in Denmark (Jobnet) listings, uploading a CV PDF, generating CV project summaries from GitHub, and managing calendar/mail integrations.
 
 ## Development server
 
@@ -38,7 +38,11 @@ npm run test:ci   # single run, headless Chrome (CI)
 | `auth.interceptor.spec.ts` | `Authorization: Bearer` attached when session present |
 | `app-shell.component.spec.ts` | Signed-in user email in the shell |
 | `job-results-page.component.spec.ts` | Empty state and saved job cards |
-| `eures-jobs-page.component.spec.ts` | EURES search request and result rendering |
+| `job-search-page.component.spec.ts` | Unified search page (EURES and Jobnet source switching) |
+| `job-search.facade.spec.ts` | Search facade request/response handling |
+| `job-search-url-state.utils.spec.ts` | Shareable `/search` URL query state |
+| `job-description-display.util.spec.ts` | Full vs preview-only description display mode |
+| `job-description-render.util.spec.ts` | Sanitized HTML description rendering |
 
 Shared fixtures and auth mocks: `src/testing/`.
 

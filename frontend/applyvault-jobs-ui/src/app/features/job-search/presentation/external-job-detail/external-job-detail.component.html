@@ -96,13 +96,12 @@
       </article>
     }
 
-    @if (selectedJob.description) {
-      <article
-        class="job-detail__description job-detail__description-body"
-        [innerHTML]="renderJobDescription(selectedJob.description) | safeHtml"></article>
-    } @else {
-      <p class="job-detail__muted">No description was returned for this listing.</p>
-    }
+    <app-job-description-panel
+      [mode]="descriptionDisplayMode()"
+      [description]="selectedJob.description"
+      [excerpt]="selectedJob.descriptionExcerpt ?? null"
+      [qualityReason]="selectedJob.descriptionQualityReason ?? null"
+      [listingUrl]="detailUrl()" />
   </section>
 } @else {
   <section class="job-detail job-detail--empty">

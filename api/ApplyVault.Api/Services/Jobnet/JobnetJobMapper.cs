@@ -32,7 +32,7 @@ internal static class JobnetJobMapper
             workInDenmark);
     }
 
-    public static JobnetJobDetailResponse MapDetail(
+    public static JobnetMappedJobDetail MapDetail(
         string id,
         JobnetDetailResponsePayload detail)
     {
@@ -43,7 +43,7 @@ internal static class JobnetJobMapper
             detail.Employer?.Address?.CountryName,
             detail.Employer?.Address);
 
-        return new JobnetJobDetailResponse(
+        return new JobnetMappedJobDetail(
             id,
             NormalizeSingleLine(detail.Title),
             employer,
@@ -57,7 +57,7 @@ internal static class JobnetJobMapper
             workInDenmark);
     }
 
-    public static JobnetJobDetailResponse MapDetailFromSearch(
+    public static JobnetMappedJobDetail MapDetailFromSearch(
         string id,
         JobnetSearchJobPayload job)
     {
@@ -66,7 +66,7 @@ internal static class JobnetJobMapper
             job.Country,
             postalCode: job.PostalDistrictName ?? job.PostalCode?.ToString());
 
-        return new JobnetJobDetailResponse(
+        return new JobnetMappedJobDetail(
             id,
             NormalizeSingleLine(job.Title),
             NormalizeSingleLine(job.HiringOrgName),

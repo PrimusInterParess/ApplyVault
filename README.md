@@ -33,6 +33,8 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Rank and paginate EURES and Jobnet results on the API with a short-lived distributed cache (Redis when `ConnectionStrings:Redis` is set; in-memory fallback for a single API replica) so paging and load-more requests reuse the same ranked result set.
 - Browse external listings with shared card and detail components, load-more and scroll-based fetching, keyboard list navigation, and saved-listing indicators.
 - Inspect EURES and Work in Denmark listing details in the dashboard, save listings into ApplyVault, and open the original posting in a new tab.
+- Assess Work in Denmark listing descriptions for quality on the API: native Jobnet detail responses render as full HTML, while EURES-imported listings and noisy scraped text fall back to a short excerpt with a quality reason and a link to the source posting.
+- Show external listing descriptions in a shared `job-description-panel` that switches between full sanitized HTML, preview-only excerpt mode, and an empty state.
 - Filter saved jobs by debounced search term, source hostname, and workflow state (needs review, interview, rejected, hide rejected), with sort options for saved date, title, company, and interview date.
 - Show a live filter summary and workspace stats that reflect the full saved dataset, not just the filtered subset.
 - Share one authenticated app shell across Jobs, Search, My CV, Projects, and Settings with active nav highlighting and sign-out.
@@ -48,7 +50,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `api/ApplyVault.Api/`
   ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export.
 - `api/ApplyVault.Api.Tests/`
-  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search, CV structured import/export, and related API services.
+  Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search (including description quality heuristics, detail fetch strategies, and detail composition), CV structured import/export, and related API services.
 - `api/ApplyVault.Api.IntegrationTests/`
   HTTP integration tests (`WebApplicationFactory`) for auth and tenancy; separate project so unit tests stay fast.
 - `frontend/applyvault-jobs-ui/`
@@ -139,7 +141,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `GET /api/eures/jobs/{id}`
 - `POST /api/eures/jobs/{id}/save`
 - `POST /api/jobnet/jobs/search`
-- `GET /api/jobnet/jobs/{id}`
+- `GET /api/jobnet/jobs/{id}` — includes `descriptionSource`, `descriptionQuality`, and optional `descriptionExcerpt` / `descriptionQualityReason` when heuristics flag scraped or low-quality text
 - `POST /api/jobnet/jobs/{id}/save`
 
 Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES and Jobnet search/save, CV document upload/preview/structured editing/export, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
@@ -204,7 +206,7 @@ Option sections (validated at startup when enabled):
 - `EuresIntegration`
   Configures the EURES API base URL, default country/location code, max results per page, upstream scan limits, and request timeout used by the job search endpoints. Search requests accept `page` and `resultsPerPage`; ranked results for a keyword/location/session are cached for five minutes (Redis when configured) before server-side pagination is applied.
 - `JobnetIntegration`
-  Configures the Jobnet BFF base URL (`https://jobnet.dk/bff` by default), search/detail paths, Work in Denmark filtering, radius and sort defaults, upstream scan limits, classification detail-fetch limits, and ranked/classification cache TTLs used by Work in Denmark search endpoints.
+  Configures the Jobnet BFF base URL (`https://jobnet.dk/bff` by default), search/detail paths, Work in Denmark filtering, radius and sort defaults, upstream scan limits, classification detail-fetch limits (`MaxClassificationDetailFetches`, `MaxDetailFetchConcurrency`), search retry attempts, and ranked/classification cache TTLs used by Work in Denmark search endpoints. Detail responses include `descriptionSource` (`nativeDetail` or `searchFallback`), `descriptionQuality` (`full` or `previewOnly`), and optional excerpt/reason fields when heuristics detect scraped or navigation-heavy text.
 - `CvDocumentStorage`
   Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object and triggers structured re-import.
 - `CvHtmlExport`
@@ -289,7 +291,7 @@ The Job Search page (`/search`) supports:
 - shared `external-job-card` and `external-job-detail` presentation components for list selection, saved-state badges, and detail actions
 - re-search when keywords, country, or source change after an initial search
 - formatted publication dates, mobile Results/Detail tabs, keyboard arrow navigation in the list, and focus management after search
-- sanitized HTML rendering for listing descriptions
+- a shared `job-description-panel` that renders full sanitized HTML when the API marks a description as `full`, shows a short excerpt plus quality reason with a **Read full listing** link when quality is `previewOnly`, and handles missing descriptions gracefully
 - **Save to ApplyVault** on the detail panel, with retry on error and a link to the saved job on `/jobs`
 - loading skeletons during search, detail fetch, and incremental load-more
 
@@ -309,7 +311,7 @@ Integration tests (HTTP + auth pipeline):
 dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
 ```
 
-Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, EURES and Jobnet job search (client, keyword expander, ranked-result caching, mapper, relevance scoring, request normalization), and CV structured import/export/update services. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
+Unit tests cover the Gmail mail client, mail sync processor, email classification rules, the email-driven job/interview update services, EURES and Jobnet job search (client, keyword expander, ranked-result caching, mapper, relevance scoring, request normalization, description quality assessor, heuristic rules, detail fetch strategies, and detail composer), and CV structured import/export/update services. Integration tests cover scrape-result auth and per-user tenancy over HTTP.
 
 ### 6. Run frontend critical-path tests
 
@@ -323,7 +325,7 @@ npm run test:ci
 
 Use `npm test` (or `ng test`) for watch mode during development.
 
-Coverage includes auth guards, the auth interceptor, app shell session display, saved jobs list/empty state, unified job search flows (EURES and Jobnet source switching), and job-search URL state helpers. Shared test helpers live in `frontend/applyvault-jobs-ui/src/testing/`.
+Coverage includes auth guards, the auth interceptor, app shell session display, saved jobs list/empty state, unified job search flows (EURES and Jobnet source switching), job-search URL state helpers, and job description display/render utilities. Shared test helpers live in `frontend/applyvault-jobs-ui/src/testing/`.
 
 ### 7. CI
 
@@ -419,12 +421,13 @@ Useful checks:
 31. Switch to **Work in Denmark** (`/search?source=jobnet`) and run a search; confirm Jobnet listings load with the same card/detail UX.
 32. Click **Load more** (or scroll near the bottom) and confirm additional listings append without losing the current selection.
 33. Refresh `/search?source=eures&keywords=software&location=dk` and confirm source, keywords, location, and selection restore from the URL.
-34. Select a listing, confirm sanitized description content renders, and verify the external listing link opens the source posting.
-35. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
-36. Delete a saved job and confirm the modal confirmation step is required before removal.
-37. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
-38. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
-39. Sign out from any authenticated page and confirm you return to `/login`.
+34. Select a listing, confirm sanitized description content renders (full HTML when quality is `full`), and verify the external listing link opens the source posting.
+35. Select a Work in Denmark listing whose description quality is `previewOnly` (common for EURES-imported jobs) and confirm the detail panel shows an excerpt, quality reason, and **Read full listing** link instead of raw scraped page content.
+36. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
+37. Delete a saved job and confirm the modal confirmation step is required before removal.
+38. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
+39. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
+40. Sign out from any authenticated page and confirm you return to `/login`.
 
 ## Production readiness
 

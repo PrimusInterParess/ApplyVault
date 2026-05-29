@@ -1,0 +1,13 @@
+<div class="job-search-source-toggle" role="tablist" aria-label="Job search source">
+  @for (provider of providers; track provider.id) {
+    <button
+      type="button"
+      role="tab"
+      class="job-search-source-toggle__option"
+      [class.job-search-source-toggle__option--active]="source() === provider.id"
+      [attr.aria-selected]="source() === provider.id"
+      (click)="setSource(provider.id)">
+      {{ provider.label }}
+    </button>
+  }
+</div>

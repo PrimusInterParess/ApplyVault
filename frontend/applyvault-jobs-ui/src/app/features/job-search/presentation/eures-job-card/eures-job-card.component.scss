@@ -1,0 +1,112 @@
+.job-card {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 1rem;
+  background: var(--app-surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--app-shadow-sm);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.job-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+  box-shadow: var(--app-shadow-md);
+}
+
+.job-card--selected {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 6%, var(--app-surface));
+  box-shadow: var(--app-shadow-md);
+}
+
+.job-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.job-card__monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--app-radius-sm);
+  background: color-mix(in srgb, var(--app-accent) 14%, var(--app-surface));
+  color: var(--app-accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.job-card__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.job-card__company {
+  margin: 0.2rem 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.job-card__status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--app-success-soft);
+  color: var(--app-accent-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.job-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.job-card__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.job-card__pill--muted {
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.job-card__pill-icon {
+  color: var(--app-accent-dark);
+  font-size: 0.72rem;
+  line-height: 1;
+}

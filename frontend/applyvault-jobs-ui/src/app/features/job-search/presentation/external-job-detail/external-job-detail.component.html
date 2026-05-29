@@ -1,0 +1,111 @@
+@if (detailLoading()) {
+  <div class="job-detail job-detail--loading" aria-busy="true" aria-label="Loading job detail">
+    <div class="job-detail__skeleton-header">
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--eyebrow"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--title"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--subtitle"></span>
+    </div>
+    <div class="job-detail__skeleton-actions">
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
+      <span class="job-detail__skeleton-line job-detail__skeleton-line--action"></span>
+    </div>
+    <span class="job-detail__skeleton-line job-detail__skeleton-line--body"></span>
+  </div>
+} @else if (detailError()) {
+  <section class="job-detail job-detail--error" aria-live="polite">
+    <h3>Detail unavailable</h3>
+    <p>{{ detailError() }}</p>
+    <button type="button" class="job-detail__secondary-action" (click)="retryDetail.emit()">
+      Retry detail
+    </button>
+  </section>
+} @else if (job()) {
+  @let selectedJob = job()!;
+  <section class="job-detail">
+    <div class="job-detail__header">
+      <div class="job-detail__header-content">
+        <p class="job-detail__eyebrow">{{ sourceLabel() }}</p>
+        <h2>{{ selectedJob.title || 'Untitled listing' }}</h2>
+        <p class="job-detail__company">{{ selectedJob.employer || 'Unknown employer' }}</p>
+        @if (selectedJob.location) {
+          <p class="job-detail__location">{{ selectedJob.location }}</p>
+        }
+      </div>
+
+      <div class="job-detail__actions job-detail__actions--primary">
+        @if (detailUrl(); as openUrl) {
+          <a [href]="openUrl" target="_blank" rel="noreferrer" class="job-detail__primary-link">
+            Open listing
+          </a>
+        }
+      </div>
+    </div>
+
+    <div class="job-detail__chips">
+      @if (postedAt(); as date) {
+        <span>Posted {{ date | date: 'MMM d, y':'UTC' }}</span>
+      }
+      @if (selectedJob.remote) {
+        <span>Remote</span>
+      }
+      @if (selectedJob.contractType) {
+        <span>{{ selectedJob.contractType }}</span>
+      }
+      @if (selectedJob.workHours) {
+        <span>{{ selectedJob.workHours }}</span>
+      }
+      @for (tag of selectedJob.tags ?? []; track tag) {
+        <span>{{ tag }}</span>
+      }
+      @if (savedJobId()) {
+        <span class="job-detail__chip job-detail__chip--reviewed">In ApplyVault</span>
+      }
+    </div>
+
+    <div class="job-detail__actions">
+      <button
+        type="button"
+        class="job-detail__secondary-action"
+        [disabled]="!canSave()"
+        (click)="save.emit()">
+        {{ saving() ? 'Saving...' : 'Save to ApplyVault' }}
+      </button>
+    </div>
+
+    @if (saveError(); as saveErrorMessage) {
+      <article class="job-detail__panel job-detail__panel--attention">
+        <p>{{ saveErrorMessage }}</p>
+        <button type="button" class="job-detail__secondary-action" [disabled]="saving()" (click)="save.emit()">
+          Try again
+        </button>
+      </article>
+    }
+
+    @if (savedJobId(); as savedId) {
+      <article class="job-detail__panel">
+        <p>
+          {{
+            saveAlreadyExists()
+              ? 'This listing is already saved in ApplyVault.'
+              : 'Saved to ApplyVault.'
+          }}
+        </p>
+        <a [routerLink]="['/jobs']" [queryParams]="{ selected: savedId }" class="job-detail__primary-link">
+          View saved job
+        </a>
+      </article>
+    }
+
+    @if (selectedJob.description) {
+      <article class="job-detail__description" [innerHTML]="selectedJob.description | safeHtml"></article>
+    } @else {
+      <p class="job-detail__muted">No description was returned for this listing.</p>
+    }
+  </section>
+} @else {
+  <section class="job-detail job-detail--empty">
+    <h3>Select a listing</h3>
+    <p>Choose a result from the list to read the full description and save it to ApplyVault.</p>
+    <p class="job-detail__muted">Tip: use arrow keys while the list is focused, then Enter to open.</p>
+  </section>
+}

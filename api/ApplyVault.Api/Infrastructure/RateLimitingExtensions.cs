@@ -76,7 +76,7 @@ public static class RateLimitingExtensions
             });
 
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyScrapeIngest, CreateFixedWindowPolicy);
-            rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyEuresSearch, CreateSlidingWindowPolicy);
+            rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyEuresSearch, CreateEuresSlidingWindowPolicy);
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyOAuthCallback, CreateOAuthCallbackPolicy);
         });
 
@@ -107,7 +107,7 @@ public static class RateLimitingExtensions
             });
     }
 
-    private static RateLimitPartition<string> CreateSlidingWindowPolicy(HttpContext httpContext)
+    private static RateLimitPartition<string> CreateEuresSlidingWindowPolicy(HttpContext httpContext)
     {
         var options = httpContext.RequestServices
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()

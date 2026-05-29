@@ -35,15 +35,20 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'eures',
-        title: 'EURES Job Search',
+        path: 'search',
+        title: 'Job Search',
         data: {
-          shellSubtitle: 'Search public job listings from the EURES portal.'
+          shellSubtitle: 'Search public job listings from EURES.'
         },
         loadComponent: () =>
-          import('./features/eures-jobs/pages/eures-jobs-page/eures-jobs-page.component').then(
-            (module) => module.EuresJobsPageComponent
+          import('./features/job-search/pages/job-search-page/job-search-page.component').then(
+            (module) => module.JobSearchPageComponent
           )
+      },
+      {
+        path: 'eures',
+        redirectTo: 'search?source=eures',
+        pathMatch: 'full'
       },
       {
         path: 'my-cv',

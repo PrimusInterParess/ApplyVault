@@ -1,0 +1,316 @@
+<main class="eures-page">
+  <section class="eures-page__hero">
+    @if (showSourceToggle) {
+      <app-job-search-source-toggle
+        [source]="facade.source()"
+        (sourceChange)="onSourceChange($event)" />
+    }
+
+    <h1>EURES job search</h1>
+    <p class="eures-page__intro">
+      Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
+    </p>
+  </section>
+
+  <section class="eures-page__filters" aria-label="Search filters">
+    @if (facade.keywords().length > 0) {
+      <div class="eures-page__selected-keywords" aria-label="Selected keywords">
+        @for (keyword of facade.keywords(); track keyword) {
+          <button
+            type="button"
+            class="eures-page__selected-keyword"
+            (click)="removeKeyword(keyword)"
+            [attr.aria-label]="'Remove keyword ' + keyword">
+            <span>{{ keyword }}</span>
+            <span class="eures-page__selected-keyword-remove" aria-hidden="true">×</span>
+          </button>
+        }
+        <button type="button" class="eures-page__clear-keywords" (click)="clearKeywords()">
+          Clear all
+        </button>
+      </div>
+    }
+
+    <div class="eures-page__filter-row">
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Keywords</span>
+        <div class="eures-page__filter-control">
+          <input
+            type="search"
+            [value]="draftKeyword()"
+            placeholder="software, Angular, dotnet"
+            (input)="updateDraftKeyword($event)"
+            (keydown.enter)="runSearchFromKeyboard($event)" />
+          @if (draftKeyword().length > 0) {
+            <button
+              type="button"
+              class="eures-page__filter-clear"
+              aria-label="Clear keyword draft"
+              (click)="clearDraftKeyword()">
+              ×
+            </button>
+          }
+        </div>
+      </label>
+
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Country</span>
+        <div class="eures-page__filter-control">
+          <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
+            @for (option of locationOptions; track option.code) {
+              <option [value]="option.code">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+      </label>
+
+      <label class="eures-page__filter">
+        <span class="eures-page__filter-label">Department</span>
+        <div class="eures-page__filter-control">
+          <select [value]="activeSuggestionGroup()" (change)="updateSuggestionGroup($event)">
+            <option value="">All areas</option>
+            @for (group of keywordSuggestionGroups; track group.label) {
+              <option [value]="group.label">{{ group.label }}</option>
+            }
+          </select>
+        </div>
+      </label>
+    </div>
+
+    <div class="eures-page__filter-actions">
+      <button
+        type="button"
+        class="eures-page__search-action"
+        (click)="runSearch()"
+        [disabled]="!canSearch()"
+        [attr.aria-describedby]="searchDisabledHint() ? 'job-search-hint' : null">
+        {{ searchActionLabel() }}
+      </button>
+    </div>
+
+    @if (searchDisabledHint(); as hint) {
+      <p id="job-search-hint" class="eures-page__search-hint">{{ hint }}</p>
+    }
+
+    @if (facade.locationInitWarning(); as locationWarning) {
+      <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
+    }
+
+    <div class="eures-page__suggestions" aria-label="Popular IT search terms">
+      <div class="eures-page__suggestions-header">
+        <p class="eures-page__suggestions-title">Popular IT searches</p>
+        <p class="eures-page__suggestions-hint">
+          Select multiple terms. Results must match at least one term in the listing.
+        </p>
+      </div>
+
+      @for (group of visibleSuggestionGroups(); track group.label) {
+        <div class="eures-page__suggestion-group">
+          <span class="eures-page__suggestion-label">{{ group.label }}</span>
+          <div class="eures-page__suggestion-chips">
+            @for (keyword of group.keywords; track keyword) {
+              <button
+                type="button"
+                class="eures-page__workflow-chip"
+                [class.eures-page__workflow-chip--active]="isActiveSuggestion(keyword)"
+                [attr.aria-pressed]="isActiveSuggestion(keyword)"
+                [disabled]="facade.loading()"
+                (click)="toggleSuggestion(keyword)">
+                {{ keyword }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (loadBannerMessage(); as bannerMessage) {
+    <div class="jobs-page__banner" role="status" aria-live="polite">
+      <p>{{ bannerMessage }}</p>
+      <button type="button" class="jobs-page__banner-dismiss" (click)="dismissLoadBanner()">Dismiss</button>
+    </div>
+  }
+
+  <p class="jobs-page__live-region" aria-live="polite">{{ facade.resultsSummary() }}</p>
+
+  @if (facade.saveError(); as saveErrorMessage) {
+    <div class="jobs-page__error-bar" role="alert">
+      <p>{{ saveErrorMessage }}</p>
+      <button type="button" class="jobs-page__secondary-action" (click)="saveSelectedJob()">Retry save</button>
+    </div>
+  }
+
+  @if (facade.initialLoading() && !facade.error()) {
+    <section
+      class="jobs-page__content"
+      aria-busy="true"
+      [attr.aria-label]="'Searching ' + facade.providerLabel() + ' listings'">
+      <aside class="jobs-page__list">
+        @for (index of skeletonListIndexes(); track index) {
+          <div class="jobs-page__skeleton-card">
+            <app-skeleton-block width="78%" height="1.1rem" />
+            <app-skeleton-block width="62%" height="0.95rem" />
+            <app-skeleton-block width="54%" height="0.9rem" />
+            <app-skeleton-block width="38%" height="0.8rem" />
+          </div>
+        }
+      </aside>
+
+      <section class="jobs-page__detail">
+        <div class="jobs-page__skeleton-detail">
+          <div class="jobs-page__skeleton-detail-header">
+            <div class="jobs-page__skeleton-detail-copy">
+              <app-skeleton-block width="34%" height="0.75rem" />
+              <app-skeleton-block width="68%" height="1.8rem" />
+              <app-skeleton-block width="52%" height="0.95rem" />
+            </div>
+            <div class="jobs-page__skeleton-actions">
+              <app-skeleton-block width="7.5rem" height="2.75rem" />
+              <app-skeleton-block width="9.5rem" height="2.75rem" />
+            </div>
+          </div>
+          <app-skeleton-block width="100%" height="12rem" />
+        </div>
+      </section>
+    </section>
+  } @else if (facade.error()) {
+    <section class="jobs-page__state jobs-page__state--error" aria-live="polite">
+      <h2>Search unavailable</h2>
+      <p>{{ facade.error() }}</p>
+      @if (canSearch()) {
+        <button type="button" class="jobs-page__primary-action" (click)="retrySearch()">Try again</button>
+      }
+    </section>
+  } @else if (facade.hasSearched() && facade.totalResults() === 0) {
+    <section class="jobs-page__state">
+      <h2 tabindex="-1">No matching listings</h2>
+      <p>
+        Nothing matched
+        @if (facade.keywordsLabel()) {
+          <strong>{{ facade.keywordsLabel() }}</strong>
+        }
+        in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
+      </p>
+      <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
+      <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
+    </section>
+  } @else if (facade.hasSearched()) {
+    <section class="eures-page__results-header">
+      <h2>Latest jobs</h2>
+      <p class="eures-page__results-summary">{{ facade.resultsSummary() }}</p>
+    </section>
+
+    <section class="jobs-page__controls">
+      <div class="jobs-page__controls-row">
+        <p class="jobs-page__filter-summary">{{ facade.resultsSummary() }}</p>
+        <div class="jobs-page__controls-actions">
+          @if (lastSearchedLabel(); as searchedLabel) {
+            <p class="jobs-page__last-updated">{{ searchedLabel }}</p>
+          }
+          <button type="button" class="jobs-page__refresh" (click)="retrySearch()">Refresh results</button>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="jobs-page__content"
+      [class.jobs-page__content--mobile-detail]="showMobileDetail()">
+      <aside
+        #listRegion
+        class="jobs-page__list"
+        tabindex="0"
+        [attr.aria-label]="facade.providerLabel() + ' search results'"
+        (scroll)="onListScroll()"
+        (keydown)="handleListKeydown($event)">
+        @if (facade.initialLoading()) {
+          @for (index of skeletonListIndexes(); track index) {
+            <div class="jobs-page__skeleton-card">
+              <app-skeleton-block width="78%" height="1.1rem" />
+              <app-skeleton-block width="62%" height="0.95rem" />
+              <app-skeleton-block width="54%" height="0.9rem" />
+              <app-skeleton-block width="38%" height="0.8rem" />
+            </div>
+          }
+        } @else {
+          @for (job of facade.results(); track job.id) {
+            <app-external-job-card
+              [job]="job"
+              [source]="facade.source()"
+              [selected]="facade.selectedJobId() === job.id"
+              [saved]="facade.isListingSaved(job.id)"
+              (choose)="selectJob($event)" />
+          }
+
+          @if (facade.loadingMore()) {
+            @for (index of loadMoreSkeletonIndexes; track index) {
+              <div class="jobs-page__skeleton-card">
+                <app-skeleton-block width="78%" height="1.1rem" />
+                <app-skeleton-block width="62%" height="0.95rem" />
+                <app-skeleton-block width="54%" height="0.9rem" />
+              </div>
+            }
+          }
+
+          @if (facade.loadMoreError(); as loadMoreErrorMessage) {
+            <div class="eures-page__load-more-error" role="alert">
+              <p>{{ loadMoreErrorMessage }}</p>
+              <button type="button" class="jobs-page__secondary-action" (click)="retryLoadMore()">
+                Try again
+              </button>
+            </div>
+          }
+        }
+
+        <footer class="eures-page__list-footer">
+          @if (facade.hasMoreResults()) {
+            <button
+              type="button"
+              class="jobs-page__secondary-action"
+              [disabled]="facade.loadingMore()"
+              (click)="loadMore()">
+              {{ facade.loadingMore() ? 'Loading more...' : 'Load more' }}
+            </button>
+          } @else if (facade.results().length > 0) {
+            <span class="eures-page__end-of-results">All results loaded</span>
+          }
+        </footer>
+      </aside>
+
+      <section class="jobs-page__detail">
+        @if (showMobileDetail()) {
+          <div class="jobs-page__mobile-back">
+            <button type="button" class="jobs-page__back-button" (click)="backToList()">← Back to list</button>
+            @if (facade.selectedJob(); as selected) {
+              <p class="jobs-page__mobile-title">{{ selected.title || 'Untitled listing' }}</p>
+            }
+          </div>
+        }
+
+        <app-external-job-detail
+          [job]="facade.selectedJob()"
+          [source]="facade.source()"
+          [detailLoading]="facade.detailLoading()"
+          [detailError]="facade.detailError()"
+          [saving]="facade.saving()"
+          [saveError]="null"
+          [savedJobId]="facade.savedJobId()"
+          [saveAlreadyExists]="facade.saveAlreadyExists()"
+          [detailUrl]="detailUrl()"
+          (save)="saveSelectedJob()"
+          (retryDetail)="retryDetail()" />
+      </section>
+    </section>
+  } @else {
+    <section class="jobs-page__state">
+      <h2>No results yet</h2>
+      <p>Run a search to load EURES listings, or try a popular IT search below.</p>
+      <ol class="jobs-page__onboarding-steps">
+        <li>Add keywords or select suggestion chips</li>
+        <li>Choose a country and search EURES</li>
+        <li>Select a listing to read details and save to ApplyVault</li>
+      </ol>
+      <a routerLink="/jobs" class="jobs-page__secondary-action">View saved jobs</a>
+    </section>
+  }
+</main>

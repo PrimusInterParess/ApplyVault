@@ -449,6 +449,118 @@
   margin-top: 1rem;
 }
 
+.my-cv-page__project-import {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
+}
+
+.my-cv-page__project-import-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.my-cv-page__project-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.my-cv-page__project-import-skeleton,
+.my-cv-page__project-summary-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.my-cv-page__project-summary-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+.my-cv-page__project-summary-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+
+.my-cv-page__project-summary-card--selected {
+  border-color: var(--app-accent);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.my-cv-page__project-summary-card--imported {
+  background: color-mix(in srgb, var(--app-accent) 6%, var(--app-surface));
+}
+
+.my-cv-page__project-summary-card:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.my-cv-page__project-summary-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.my-cv-page__project-summary-title,
+.my-cv-page__project-summary-source {
+  display: block;
+}
+
+.my-cv-page__project-summary-title {
+  font-weight: 800;
+}
+
+.my-cv-page__project-summary-source,
+.my-cv-page__project-summary-copy,
+.my-cv-page__project-summary-meta {
+  color: var(--app-text-muted);
+  line-height: 1.5;
+}
+
+.my-cv-page__project-summary-source,
+.my-cv-page__project-summary-meta {
+  font-size: 0.8rem;
+}
+
+.my-cv-page__project-summary-copy {
+  font-size: 0.86rem;
+}
+
+.my-cv-page__project-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
+.my-cv-page__project-summary-badge {
+  flex: 0 0 auto;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 35%, var(--app-border-strong));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-bg-soft));
+  color: var(--app-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .my-cv-page__preview-document {
   display: grid;
   gap: 0.55rem;

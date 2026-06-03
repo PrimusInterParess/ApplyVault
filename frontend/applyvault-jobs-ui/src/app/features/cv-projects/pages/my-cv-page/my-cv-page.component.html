@@ -427,6 +427,92 @@
         <div class="my-cv-page__alert" role="alert">{{ orderSaveError }}</div>
       }
 
+      @if (hasSections() && (cvProjects.loadingSummaries() || cvProjects.savedSummaries().length > 0)) {
+        <section class="my-cv-page__project-import" aria-labelledby="project-import-heading">
+          <div class="my-cv-page__project-import-header">
+            <div>
+              <p class="my-cv-page__label">Saved project summaries</p>
+              <h3 id="project-import-heading">Add projects to your CV</h3>
+              <p class="my-cv-page__muted">
+                Select saved project summaries and add them as entries in your Projects section.
+              </p>
+            </div>
+
+            <div class="my-cv-page__project-import-actions">
+              <button
+                type="button"
+                class="my-cv-page__secondary-action"
+                [disabled]="cvProjects.loadingSummaries()"
+                (click)="cvProjects.loadSummaries()">
+                {{ cvProjects.loadingSummaries() ? 'Refreshing...' : 'Refresh' }}
+              </button>
+              <button
+                type="button"
+                class="my-cv-page__primary-action"
+                [disabled]="!canImportSelectedProjectSummaries()"
+                (click)="importSelectedProjectSummaries()">
+                {{
+                  cvStructured.savingSectionId()
+                    ? 'Adding projects...'
+                    : selectedImportableProjectSummaries().length > 0
+                      ? 'Add selected to CV projects'
+                      : 'Select summaries to add'
+                }}
+              </button>
+            </div>
+          </div>
+
+          @if (!editingSectionId() && !hasPendingSectionReorder() && cvStructured.saveError(); as projectImportError) {
+            <div class="my-cv-page__alert" role="alert">{{ projectImportError }}</div>
+          }
+
+          @if (cvProjects.loadingSummaries()) {
+            <div class="my-cv-page__project-import-skeleton" aria-busy="true" aria-label="Loading saved project summaries">
+              <app-skeleton-block width="100%" height="4.75rem" />
+              <app-skeleton-block width="100%" height="4.75rem" />
+            </div>
+          } @else {
+            <div class="my-cv-page__project-summary-list" aria-label="Saved project summaries">
+              @for (summary of cvProjects.savedSummaries(); track summary.id) {
+                <button
+                  type="button"
+                  class="my-cv-page__project-summary-card"
+                  [class.my-cv-page__project-summary-card--selected]="isProjectSummarySelected(summary.id)"
+                  [class.my-cv-page__project-summary-card--imported]="isProjectSummaryImported(summary.id)"
+                  [disabled]="isProjectSummaryImported(summary.id) || !canToggleProjectSummarySelection()"
+                  [attr.aria-pressed]="isProjectSummarySelected(summary.id)"
+                  (click)="toggleProjectSummarySelection(summary.id)">
+                  <span class="my-cv-page__project-summary-card-top">
+                    <span>
+                      <span class="my-cv-page__project-summary-title">{{ summary.cvTitle }}</span>
+                      <span class="my-cv-page__project-summary-source">{{ summary.fullName }}</span>
+                    </span>
+                    @if (isProjectSummaryImported(summary.id)) {
+                      <span class="my-cv-page__project-summary-badge">Added</span>
+                    } @else if (isProjectSummarySelected(summary.id)) {
+                      <span class="my-cv-page__project-summary-badge">Selected</span>
+                    }
+                  </span>
+                  <span class="my-cv-page__project-summary-copy">{{ summary.cvSummary }}</span>
+                  <span class="my-cv-page__project-summary-meta">
+                    @if (summary.primaryLanguage) {
+                      <span>{{ summary.primaryLanguage }}</span>
+                    }
+                    <span>{{ summary.cvBullets.length }} bullets</span>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+
+          @if (editingSectionId()) {
+            <p class="my-cv-page__muted">Finish or cancel the current section edit before adding project summaries.</p>
+          } @else if (hasPendingSectionReorder()) {
+            <p class="my-cv-page__muted">Save or discard the section order before adding project summaries.</p>
+          }
+        </section>
+      }
+
       @if (cvStructured.error(); as structuredError) {
         <div class="my-cv-page__alert" role="alert">{{ structuredError }}</div>
       }

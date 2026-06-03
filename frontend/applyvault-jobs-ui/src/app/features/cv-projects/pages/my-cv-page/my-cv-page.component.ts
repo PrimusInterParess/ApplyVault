@@ -6,8 +6,14 @@ import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { CvStructuredSectionPanelComponent } from '../../components/cv-structured-section-panel/cv-structured-section-panel.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
+import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
-import { CvImprovementSuggestion, CvStructuredSection } from '../../models/cv-structured.model';
+import { CvProjectSummary } from '../../models/cv-project.model';
+import {
+  CvImprovementSuggestion,
+  CvStructuredEntry,
+  CvStructuredSection
+} from '../../models/cv-structured.model';
 import {
   CV_EXPORT_TEMPLATES,
   DEFAULT_CV_EXPORT_TEMPLATE_ID,
@@ -38,6 +44,7 @@ import { normalizeSectionForEditing } from '../../utils/cv-structured-edit-norma
 })
 export class MyCvPageComponent {
   protected readonly cvDocument = inject(CvDocumentFacade);
+  protected readonly cvProjects = inject(CvProjectsFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly cvExportTemplates = CV_EXPORT_TEMPLATES;
   protected readonly defaultCvExportTemplateId = DEFAULT_CV_EXPORT_TEMPLATE_ID;
@@ -49,6 +56,7 @@ export class MyCvPageComponent {
   protected readonly sectionEditFormKey = signal(0);
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
+  protected readonly selectedProjectSummaryIds = signal<string[]>([]);
   protected readonly selectedSuggestionIds = signal<string[]>([]);
   protected readonly sectionOrderDraft = signal<CvStructuredSection[] | null>(null);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
@@ -136,6 +144,43 @@ export class MyCvPageComponent {
     !this.editingSectionId()
   );
 
+  protected readonly importedProjectSummaryIds = computed(() => {
+    const ids = new Set<string>();
+
+    for (const section of this.sections()) {
+      for (const entry of section.entries) {
+        if (entry.sourceSummaryId) {
+          ids.add(entry.sourceSummaryId);
+        }
+      }
+    }
+
+    return ids;
+  });
+
+  protected readonly selectedImportableProjectSummaries = computed(() => {
+    const selectedIds = new Set(this.selectedProjectSummaryIds());
+    const importedIds = this.importedProjectSummaryIds();
+
+    return this.cvProjects
+      .savedSummaries()
+      .filter((summary) => selectedIds.has(summary.id) && !importedIds.has(summary.id));
+  });
+
+  protected readonly canImportSelectedProjectSummaries = computed(() =>
+    this.selectedImportableProjectSummaries().length > 0 &&
+    this.cvDocument.hasDocument() &&
+    this.hasSections() &&
+    !this.cvDocument.loading() &&
+    !this.cvStructured.loading() &&
+    !this.cvStructured.savingSectionId() &&
+    !this.cvStructured.savingSectionOrder() &&
+    !this.cvStructured.updatingWithAi() &&
+    !this.cvStructured.generatingSuggestions() &&
+    !this.editingSectionId() &&
+    !this.hasPendingSectionReorder()
+  );
+
   protected readonly selectedSuggestions = computed(() => {
     const selected = new Set(this.selectedSuggestionIds());
 
@@ -198,6 +243,7 @@ export class MyCvPageComponent {
   });
 
   private lastSavingSectionId: string | null = null;
+  private importingProjectSectionId: string | null = null;
   private wasSavingSectionOrder = false;
   private wasUpdatingWithAi = false;
 
@@ -230,6 +276,14 @@ export class MyCvPageComponent {
     effect(() => {
       const savingSectionId = this.cvStructured.savingSectionId();
       const saveError = this.cvStructured.saveError();
+
+      if (this.importingProjectSectionId && !savingSectionId) {
+        if (!saveError) {
+          this.selectedProjectSummaryIds.set([]);
+        }
+
+        this.importingProjectSectionId = null;
+      }
 
       if (this.lastSavingSectionId && !savingSectionId && !saveError) {
         this.cancelSectionEdit();
@@ -332,6 +386,102 @@ export class MyCvPageComponent {
 
   protected isSavingSection(sectionId: string): boolean {
     return this.cvStructured.savingSectionId() === sectionId;
+  }
+
+  protected isProjectSummaryImported(summaryId: string): boolean {
+    return this.importedProjectSummaryIds().has(summaryId);
+  }
+
+  protected isProjectSummarySelected(summaryId: string): boolean {
+    return this.selectedProjectSummaryIds().includes(summaryId);
+  }
+
+  protected toggleProjectSummarySelection(summaryId: string): void {
+    if (this.isProjectSummaryImported(summaryId) || !this.canToggleProjectSummarySelection()) {
+      return;
+    }
+
+    this.selectedProjectSummaryIds.update((selected) =>
+      selected.includes(summaryId)
+        ? selected.filter((id) => id !== summaryId)
+        : [...selected, summaryId]
+    );
+    this.cvStructured.clearSaveError();
+  }
+
+  protected importSelectedProjectSummaries(): void {
+    const summaries = this.selectedImportableProjectSummaries();
+
+    if (!this.canImportSelectedProjectSummaries() || summaries.length === 0) {
+      return;
+    }
+
+    const nextSections = this.sections().map((section) => cloneSectionForDraft(section));
+    const projectsSection = this.ensureProjectsSection(nextSections);
+    const nextEntries = [
+      ...projectsSection.entries.map((entry) => ({ ...entry, bullets: [...entry.bullets] })),
+      ...summaries.map((summary, index) =>
+        this.projectSummaryToEntry(summary, projectsSection.entries.length + index)
+      )
+    ];
+
+    projectsSection.entries = nextEntries.map((entry, index) => ({
+      ...entry,
+      sortOrder: index
+    }));
+
+    this.importingProjectSectionId = projectsSection.id;
+    this.cvStructured.clearSaveError();
+    this.cvStructured.save(nextSections, projectsSection.id);
+  }
+
+  protected canToggleProjectSummarySelection(): boolean {
+    return (
+      this.cvDocument.hasDocument() &&
+      this.hasSections() &&
+      !this.cvDocument.loading() &&
+      !this.cvStructured.loading() &&
+      !this.cvStructured.savingSectionId() &&
+      !this.cvStructured.savingSectionOrder() &&
+      !this.cvStructured.updatingWithAi() &&
+      !this.cvStructured.generatingSuggestions() &&
+      !this.editingSectionId() &&
+      !this.hasPendingSectionReorder()
+    );
+  }
+
+  private ensureProjectsSection(sections: CvStructuredSection[]): CvStructuredSection {
+    const existing = sections.find((section) => section.sectionType === 'Projects');
+
+    if (existing) {
+      return existing;
+    }
+
+    const section: CvStructuredSection = {
+      id: crypto.randomUUID(),
+      heading: 'Projects',
+      sectionType: 'Projects',
+      sortOrder: sections.length,
+      entries: []
+    };
+
+    sections.push(section);
+    return section;
+  }
+
+  private projectSummaryToEntry(summary: CvProjectSummary, sortOrder: number): CvStructuredEntry {
+    return {
+      id: crypto.randomUUID(),
+      title: summary.cvTitle,
+      subtitle: summary.fullName,
+      dateRange: null,
+      summary: summary.cvSummary,
+      bullets: [...summary.cvBullets],
+      techStack: summary.techStack,
+      source: 'Project summary',
+      sourceSummaryId: summary.id,
+      sortOrder
+    };
   }
 
   protected sectionSaveError(sectionId: string): string | null {

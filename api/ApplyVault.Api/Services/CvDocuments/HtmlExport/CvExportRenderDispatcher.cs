@@ -11,18 +11,19 @@ public sealed class CvExportRenderDispatcher(
     public Task<byte[]> RenderAsync(
         CvExportRenderRequest request,
         int templateId,
+        CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         if (templateId == 1 || !CvExportHtmlTemplateCatalog.UsesHtmlRenderer(templateId))
         {
-            return Task.FromResult(questPdfRenderer.Render(request));
+            return Task.FromResult(questPdfRenderer.Render(request, options));
         }
 
         if (!htmlExportOptions.Value.EnableHtmlTemplates)
         {
-            return Task.FromResult(questPdfRenderer.Render(request));
+            return Task.FromResult(questPdfRenderer.Render(request, options));
         }
 
-        return htmlCvPdfExporter.ExportAsync(request, templateId, cancellationToken);
+        return htmlCvPdfExporter.ExportAsync(request, templateId, options, cancellationToken);
     }
 }

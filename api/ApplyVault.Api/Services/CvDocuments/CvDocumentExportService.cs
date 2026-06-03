@@ -11,7 +11,7 @@ public interface ICvDocumentExportService
 {
     Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
-        int templateId = 1,
+        CvPdfExportOptions options,
         CancellationToken cancellationToken = default);
 }
 
@@ -20,12 +20,13 @@ public sealed class CvDocumentExportService(
     ICvDocumentService cvDocumentService,
     ICvExportAiClient exportAiClient,
     ICvExportRenderDispatcher exportRenderDispatcher,
+    ICvPdfPageCounter pdfPageCounter,
     IOptions<GoogleAiOptions> googleAiOptions,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
 {
     public async Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
-        int templateId = 1,
+        CvPdfExportOptions options,
         CancellationToken cancellationToken = default)
     {
         var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
@@ -80,8 +81,73 @@ public sealed class CvDocumentExportService(
             }
         }
 
-        var pdfBytes = await exportRenderDispatcher.RenderAsync(renderRequest, templateId, cancellationToken);
+        var (pdfBytes, pageCount, compactLevel) = await RenderWithinPageLimitAsync(
+            renderRequest,
+            options,
+            cancellationToken);
+        var exceedsMaxPages = options.MaxPages is int maxPages && pageCount > maxPages;
 
-        return new CvPdfExportResult(pdfBytes, usedAi, notice);
+        if (exceedsMaxPages)
+        {
+            notice = AppendNotice(
+                notice,
+                $"This export is {pageCount} pages after compacting; your limit is {options.MaxPages}.");
+        }
+        else if (compactLevel > 0)
+        {
+            notice = AppendNotice(
+                notice,
+                $"Layout was compacted to fit the selected {options.MaxPages}-page limit.");
+        }
+
+        return new CvPdfExportResult(
+            pdfBytes,
+            pageCount,
+            options.MaxPages,
+            exceedsMaxPages,
+            usedAi,
+            notice);
     }
+
+    private async Task<(byte[] PdfBytes, int PageCount, int CompactLevel)> RenderWithinPageLimitAsync(
+        CvExportRenderRequest renderRequest,
+        CvPdfExportOptions options,
+        CancellationToken cancellationToken)
+    {
+        byte[]? bestPdfBytes = null;
+        var bestPageCount = int.MaxValue;
+        var bestCompactLevel = 0;
+
+        var maxCompactLevel = options.MaxPages.HasValue ? CvPdfRenderOptions.MaxCompactLevel : 0;
+
+        for (var compactLevel = 0; compactLevel <= maxCompactLevel; compactLevel++)
+        {
+            var renderOptions = compactLevel == 0
+                ? CvPdfRenderOptions.Normal
+                : new CvPdfRenderOptions(compactLevel);
+            var pdfBytes = await exportRenderDispatcher
+                .RenderAsync(renderRequest, options.TemplateId, renderOptions, cancellationToken)
+                .ConfigureAwait(false);
+            var pageCount = pdfPageCounter.CountPages(pdfBytes);
+
+            if (pageCount < bestPageCount)
+            {
+                bestPdfBytes = pdfBytes;
+                bestPageCount = pageCount;
+                bestCompactLevel = compactLevel;
+            }
+
+            if (!options.MaxPages.HasValue || pageCount <= options.MaxPages.Value)
+            {
+                return (pdfBytes, pageCount, compactLevel);
+            }
+        }
+
+        return (bestPdfBytes!, bestPageCount, bestCompactLevel);
+    }
+
+    private static string AppendNotice(string? existingNotice, string notice) =>
+        string.IsNullOrWhiteSpace(existingNotice)
+            ? notice
+            : $"{existingNotice} {notice}";
 }

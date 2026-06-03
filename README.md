@@ -132,7 +132,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/cv-documents/current/structured/reimport`
 - `POST /api/cv-documents/current/structured/ai-update`
 - `POST /api/cv-documents/current/structured/ai-suggestions`
-- `GET /api/cv-documents/current/export/download?templateId=1` — export formatted PDF from structured content
+- `GET /api/cv-documents/current/export/download?templateId=1&maxPages=2` — export formatted PDF from structured content; optional `maxPages` compacts layout to fit when possible and returns `X-Cv-Export-*` page-count/warning headers
 - `GET /api/mail-connections`
 - `POST /api/mail-connections/gmail/start`
 - `GET /api/mail-connections/gmail/callback`
@@ -266,7 +266,7 @@ The My CV page (`/my-cv`) supports:
 - **Re-import from PDF** to refresh structured content from the stored upload
 - **AI update** panel for natural-language edits with optional focus sections (`POST /api/cv-documents/current/structured/ai-update`)
 - **Improvement suggestions** panel to generate, review, and apply AI suggestions (`POST /api/cv-documents/current/structured/ai-suggestions`)
-- **Download formatted CV** with template picker (Classic, Modern, Minimal ATS, Creative, Professional) via `GET /api/cv-documents/current/export/download`
+- **Preview/download formatted CV** with template picker, optional compact-fit page target, and page-count metadata via `GET /api/cv-documents/current/export/download`
 - **Replace CV** and **Delete CV** actions with a confirmation dialog before removal
 - loading skeletons and separate error banners for metadata load, upload, structured save, export, preview, and delete failures
 

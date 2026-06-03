@@ -282,6 +282,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
         services.AddScoped<ICvStructuredUpdateService, CvStructuredUpdateService>();
         services.AddScoped<ICvStructuredSuggestionsService, CvStructuredSuggestionsService>();
+        services.AddScoped<ICvPdfPageCounter, CvPdfPageCounter>();
         services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
         services.AddCvHtmlExport(configuration);
         services.AddScoped<ICvDocumentExportService, CvDocumentExportService>();

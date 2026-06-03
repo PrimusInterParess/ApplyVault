@@ -18,6 +18,8 @@ public sealed class CvDocumentsController(
     ICvStructuredSuggestionsService cvStructuredSuggestionsService,
     ICvDocumentExportService cvDocumentExportService) : ControllerBase
 {
+    private const int MaxExportPageLimit = 5;
+
     [HttpGet("current")]
     public async Task<ActionResult<CvDocumentDto>> GetCurrent(CancellationToken cancellationToken = default)
     {
@@ -125,6 +127,7 @@ public sealed class CvDocumentsController(
     [HttpGet("current/export/download")]
     public async Task<IActionResult> DownloadFormattedExport(
         [FromQuery] int templateId = 1,
+        [FromQuery] int? maxPages = null,
         CancellationToken cancellationToken = default)
     {
         if (!CvExportHtmlTemplateCatalog.IsValidTemplateId(templateId))
@@ -132,15 +135,25 @@ public sealed class CvDocumentsController(
             return BadRequest($"templateId must be between {CvExportHtmlTemplateCatalog.MinTemplateId} and {CvExportHtmlTemplateCatalog.MaxTemplateId}.");
         }
 
+        if (maxPages is < 1 or > MaxExportPageLimit)
+        {
+            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
+        }
+
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
 
         try
         {
-            var exportResult = await cvDocumentExportService.ExportPdfAsync(user, templateId, cancellationToken);
+            var exportResult = await cvDocumentExportService.ExportPdfAsync(
+                user,
+                new CvPdfExportOptions(templateId, maxPages),
+                cancellationToken);
             var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
             var fileName = document is null
                 ? "cv-export.pdf"
                 : $"{Path.GetFileNameWithoutExtension(document.OriginalFileName)}-export.pdf";
+
+            AppendExportMetadataHeaders(exportResult);
 
             return File(exportResult.PdfBytes, "application/pdf", fileName);
         }
@@ -155,6 +168,18 @@ public sealed class CvDocumentsController(
             }
 
             return BadRequest(message);
+        }
+    }
+
+    private void AppendExportMetadataHeaders(CvPdfExportResult exportResult)
+    {
+        Response.Headers["X-Cv-Export-Page-Count"] = exportResult.PageCount.ToString();
+        Response.Headers["X-Cv-Export-Max-Pages"] = exportResult.MaxPages?.ToString() ?? string.Empty;
+        Response.Headers["X-Cv-Export-Exceeds-Limit"] = exportResult.ExceedsMaxPages ? "true" : "false";
+
+        if (!string.IsNullOrWhiteSpace(exportResult.Notice))
+        {
+            Response.Headers["X-Cv-Export-Notice"] = Uri.EscapeDataString(exportResult.Notice);
         }
     }
 

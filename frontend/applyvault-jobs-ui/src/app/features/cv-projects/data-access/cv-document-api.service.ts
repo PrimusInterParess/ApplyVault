@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
 import { CvDocument, CvDocumentUploadResult, CvStructuredReimportResult } from '../models/cv-document.model';
@@ -11,6 +11,19 @@ import {
   SaveCvStructuredDocumentRequest,
   UpdateCvStructuredWithAiRequest
 } from '../models/cv-structured.model';
+
+export interface CvFormattedPdfRequest {
+  readonly templateId: number;
+  readonly maxPages?: number | null;
+}
+
+export interface CvFormattedPdfResult {
+  readonly blob: Blob;
+  readonly pageCount: number | null;
+  readonly maxPages: number | null;
+  readonly exceedsLimit: boolean;
+  readonly notice: string | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentApiService {
@@ -44,17 +57,30 @@ export class CvDocumentApiService {
     );
   }
 
-  downloadFormattedPdf(templateId = 1): Observable<Blob> {
+  downloadFormattedPdf(request: CvFormattedPdfRequest): Observable<CvFormattedPdfResult> {
     let params = new HttpParams();
 
-    if (templateId > 1) {
-      params = params.set('templateId', String(templateId));
+    if (request.templateId > 1) {
+      params = params.set('templateId', String(request.templateId));
+    }
+
+    if (request.maxPages) {
+      params = params.set('maxPages', String(request.maxPages));
     }
 
     return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/download`, {
       responseType: 'blob',
+      observe: 'response',
       params
-    });
+    }).pipe(
+      map((response) => ({
+        blob: response.body ?? new Blob([], { type: 'application/pdf' }),
+        pageCount: this.readNumberHeader(response.headers.get('X-Cv-Export-Page-Count')),
+        maxPages: this.readNumberHeader(response.headers.get('X-Cv-Export-Max-Pages')),
+        exceedsLimit: response.headers.get('X-Cv-Export-Exceeds-Limit') === 'true',
+        notice: this.readNoticeHeader(response.headers.get('X-Cv-Export-Notice'))
+      }))
+    );
   }
 
   delete(): Observable<void> {
@@ -111,5 +137,26 @@ export class CvDocumentApiService {
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-suggestions`,
       request
     );
+  }
+
+  private readNumberHeader(value: string | null): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+
+  private readNoticeHeader(value: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
   }
 }

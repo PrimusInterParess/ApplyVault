@@ -1,6 +1,6 @@
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
@@ -15,6 +15,7 @@ import {
   CvStructuredSection
 } from '../../models/cv-structured.model';
 import {
+  CV_EXPORT_MAX_PAGE_OPTIONS,
   CV_EXPORT_TEMPLATES,
   DEFAULT_CV_EXPORT_TEMPLATE_ID,
   MAX_CV_EXPORT_TEMPLATE_ID
@@ -42,11 +43,12 @@ import { normalizeSectionForEditing } from '../../utils/cv-structured-edit-norma
   templateUrl: './my-cv-page.component.html',
   styleUrl: './my-cv-page.component.scss'
 })
-export class MyCvPageComponent {
+export class MyCvPageComponent implements OnDestroy {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvProjects = inject(CvProjectsFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly cvExportTemplates = CV_EXPORT_TEMPLATES;
+  protected readonly cvExportMaxPageOptions = CV_EXPORT_MAX_PAGE_OPTIONS;
   protected readonly defaultCvExportTemplateId = DEFAULT_CV_EXPORT_TEMPLATE_ID;
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly aiPanelOpen = signal(false);
@@ -346,6 +348,27 @@ export class MyCvPageComponent {
     }
 
     this.cvDocument.setExportTemplateId(templateId);
+  }
+
+  protected onExportMaxPagesChange(event: Event): void {
+    const rawValue = readInputValue(event);
+
+    if (rawValue === '') {
+      this.cvDocument.setExportMaxPages(null);
+      return;
+    }
+
+    const maxPages = Number.parseInt(rawValue, 10);
+
+    if (!Number.isInteger(maxPages) || maxPages < 1) {
+      return;
+    }
+
+    this.cvDocument.setExportMaxPages(maxPages);
+  }
+
+  ngOnDestroy(): void {
+    this.cvDocument.closePreview();
   }
 
   protected updateAiInstructions(event: Event): void {

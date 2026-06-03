@@ -271,6 +271,18 @@
               }
             </select>
           </label>
+          <label class="my-cv-page__export-template">
+            <span class="my-cv-page__export-template-label">Target pages</span>
+            <select
+              class="my-cv-page__export-template-select"
+              [disabled]="!canDownloadFormatted()"
+              [value]="cvDocument.selectedExportMaxPages() ?? ''"
+              (change)="onExportMaxPagesChange($event)">
+              @for (option of cvExportMaxPageOptions; track option.value ?? 'none') {
+                <option [value]="option.value ?? ''">{{ option.label }}</option>
+              }
+            </select>
+          </label>
           <button
             type="button"
             class="my-cv-page__secondary-action"
@@ -279,7 +291,7 @@
             {{
               cvDocument.downloadingFormatted()
                 ? 'Generating PDF...'
-                : 'Download formatted PDF'
+                : 'Preview formatted PDF'
             }}
           </button>
           <button
@@ -628,6 +640,81 @@
             [disabled]="cvDocument.deleting()"
             (click)="confirmDeleteCv()">
             {{ cvDocument.deleting() ? 'Deleting...' : 'Delete CV' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (cvDocument.previewOpen()) {
+    <div
+      class="my-cv-page__dialog-backdrop"
+      role="presentation"
+      (click)="cvDocument.closePreview()">
+      <div
+        class="my-cv-page__dialog my-cv-page__dialog--preview"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cv-export-preview-dialog-title"
+        aria-describedby="cv-export-preview-dialog-description"
+        (click)="$event.stopPropagation()">
+        <h3 id="cv-export-preview-dialog-title">Preview formatted PDF</h3>
+        <p id="cv-export-preview-dialog-description">
+          Review the generated CV before downloading. If a page target is selected, ApplyVault compacts the layout first and warns if it still cannot fit.
+        </p>
+
+        @if (cvDocument.previewLoading()) {
+          <div class="my-cv-page__preview-loading" aria-busy="true">
+            Generating PDF preview...
+          </div>
+        } @else {
+          @if (cvDocument.previewError(); as previewError) {
+            <div class="my-cv-page__alert" role="alert">{{ previewError }}</div>
+          }
+
+          @if (cvDocument.previewExceedsLimit()) {
+            <div class="my-cv-page__alert" role="alert">
+              {{
+                cvDocument.previewNotice() ||
+                  'This export is over your selected page limit. You can still download it.'
+              }}
+            </div>
+          } @else {
+            @if (cvDocument.previewNotice(); as previewNotice) {
+              <div class="my-cv-page__helper">{{ previewNotice }}</div>
+            }
+          }
+
+          @if (cvDocument.previewPageCount(); as pageCount) {
+            <p class="my-cv-page__preview-summary">
+              Generated PDF: {{ pageCount }} {{ pageCount === 1 ? 'page' : 'pages' }}
+              @if (cvDocument.previewMaxPages(); as maxPages) {
+                / selected limit: {{ maxPages }}
+              }
+            </p>
+          }
+
+          @if (cvDocument.previewBlobUrl(); as previewBlobUrl) {
+            <iframe
+              class="my-cv-page__pdf-preview"
+              title="Formatted CV PDF preview"
+              [src]="previewBlobUrl"></iframe>
+          }
+        }
+
+        <div class="my-cv-page__dialog-actions">
+          <button
+            type="button"
+            class="my-cv-page__secondary-action"
+            (click)="cvDocument.closePreview()">
+            Close
+          </button>
+          <button
+            type="button"
+            class="my-cv-page__primary-action"
+            [disabled]="cvDocument.previewLoading() || !cvDocument.previewBlobUrl()"
+            (click)="cvDocument.downloadFormattedFromPreview()">
+            Download PDF
           </button>
         </div>
       </div>

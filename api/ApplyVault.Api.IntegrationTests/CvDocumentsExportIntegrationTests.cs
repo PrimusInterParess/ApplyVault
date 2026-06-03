@@ -72,6 +72,12 @@ public sealed class CvDocumentsExportIntegrationTests(ApplyVaultWebApplicationFa
 
         Assert.Equal(HttpStatusCode.OK, exportResponse.StatusCode);
         Assert.Equal("application/pdf", exportResponse.Content.Headers.ContentType?.MediaType);
+        Assert.True(exportResponse.Headers.TryGetValues("X-Cv-Export-Page-Count", out var pageCountHeaders));
+
+        var pageCountHeader = Assert.Single(pageCountHeaders);
+
+        Assert.True(int.TryParse(pageCountHeader, out var pageCount));
+        Assert.True(pageCount >= 1);
 
         var downloadedBytes = await exportResponse.Content.ReadAsByteArrayAsync();
         var extractedText = ExtractPdfText(downloadedBytes);

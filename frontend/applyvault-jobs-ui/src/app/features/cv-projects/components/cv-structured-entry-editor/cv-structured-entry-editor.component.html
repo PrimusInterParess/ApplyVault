@@ -67,16 +67,15 @@
         </button>
       </div>
     } @else if (isSkillsSection()) {
-      <label class="cv-entry-editor__plain-label">
-        Category / heading
-        <input
-          class="cv-entry-editor__input"
-          type="text"
-          [disabled]="disabled()"
-          [value]="entry().title"
-          placeholder="Programming Languages & Frameworks"
-          (input)="updateField('title', $event)" />
-      </label>
+      <app-cv-markdown-field
+        label="Category / heading"
+        previewMode="inline"
+        [rows]="2"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="entry().title"
+        placeholder="Programming Languages & Frameworks"
+        (valueChange)="entryChange.emit({ title: $event })" />
 
       <app-cv-markdown-field
         label="Description"
@@ -100,28 +99,28 @@
       </label>
       <p class="cv-entry-editor__hint">Separate skills with commas, semicolons, or pipes.</p>
     } @else if (isContactSection()) {
-      <label class="cv-entry-editor__plain-label">
-        Name / heading
-        <input
-          class="cv-entry-editor__input"
-          type="text"
-          [disabled]="disabled()"
-          [value]="entry().title"
-          placeholder="Your name"
-          (input)="updateField('title', $event)" />
-      </label>
+      <app-cv-markdown-field
+        label="Name / heading"
+        previewMode="inline"
+        [rows]="2"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="entry().title"
+        placeholder="Your name"
+        (valueChange)="entryChange.emit({ title: $event })" />
 
       <div class="cv-entry-editor__list">
         <p class="cv-entry-editor__plain-label">Contact lines</p>
         @for (line of entry().bullets; track $index) {
           <div class="cv-entry-editor__list-row">
-            <input
-              class="cv-entry-editor__input"
-              type="text"
+            <app-cv-markdown-field
+              previewMode="inline"
+              [rows]="2"
+              [fieldRevision]="fieldRevision()"
               [disabled]="disabled()"
               [value]="line"
               placeholder="email@example.com"
-              (input)="updateContactLine($index, $event)" />
+              (valueChange)="updateBullet($index, $event)" />
             <button
               type="button"
               class="cv-entry-editor__action"
@@ -141,16 +140,15 @@
         </button>
       </div>
     } @else {
-      <label class="cv-entry-editor__plain-label">
-        Title
-        <input
-          class="cv-entry-editor__input"
-          type="text"
-          [disabled]="disabled()"
-          [value]="entry().title"
-          placeholder="Job title, project, or degree"
-          (input)="updateField('title', $event)" />
-      </label>
+      <app-cv-markdown-field
+        label="Title"
+        previewMode="inline"
+        [rows]="2"
+        [fieldRevision]="fieldRevision()"
+        [disabled]="disabled()"
+        [value]="entry().title"
+        placeholder="Job title, project, or degree"
+        (valueChange)="entryChange.emit({ title: $event })" />
 
       <div class="cv-entry-editor__row">
         <label class="cv-entry-editor__plain-label">

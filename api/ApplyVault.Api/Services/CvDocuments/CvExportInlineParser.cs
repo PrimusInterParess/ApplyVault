@@ -168,11 +168,38 @@ internal static class CvExportInlineParser
             return null;
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        var normalized = NormalizeExternalUrl(url);
+
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
         {
             return null;
         }
 
         return uri.Scheme is "http" or "https" or "mailto" ? uri.ToString() : null;
     }
+
+    private static string NormalizeExternalUrl(string url)
+    {
+        var trimmed = url.Trim();
+
+        if (trimmed.StartsWith("//", StringComparison.Ordinal))
+        {
+            return $"https:{trimmed}";
+        }
+
+        if (IsEmailAddress(trimmed))
+        {
+            return $"mailto:{trimmed}";
+        }
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out _)
+            ? trimmed
+            : $"https://{trimmed}";
+    }
+
+    private static bool IsEmailAddress(string value) =>
+        value.Count((character) => character == '@') == 1
+        && !value.Any(char.IsWhiteSpace)
+        && value.Contains('.', StringComparison.Ordinal)
+        && !value.Contains("://", StringComparison.Ordinal);
 }

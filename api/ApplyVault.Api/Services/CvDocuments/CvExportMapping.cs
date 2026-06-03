@@ -32,20 +32,26 @@ internal static class CvExportMapping
 
         var sourceSections = sourceDocument.Sections.ToDictionary(
             (section) => section.Heading,
-            (section) => section.SortOrder,
+            (section) => section,
             StringComparer.OrdinalIgnoreCase);
 
         var sections = result.Sections
             .Select((section, index) =>
             {
-                var sortOrder = sourceSections.TryGetValue(section.Heading, out var order) ? order : index;
+                sourceSections.TryGetValue(section.Heading, out var sourceSection);
+                var sourceEntries = sourceSection?.Entries
+                    .OrderBy((entry) => entry.SortOrder)
+                    .ToArray() ?? [];
+                var sortOrder = sourceSection?.SortOrder ?? index;
 
                 return new CvExportSection(
                     CvExportTextNormalizer.Field(section.Heading),
                     CvSectionTypes.Normalize(section.SectionType),
                     sortOrder,
                     section.Entries
-                        .Select((entry, entryIndex) => FromImportEntry(entry, entryIndex))
+                        .Select((entry, entryIndex) => PreserveSourceEntryLinks(
+                            FromImportEntry(entry),
+                            sourceEntries.ElementAtOrDefault(entryIndex)))
                         .ToArray());
             })
             .OrderBy((section) => section.SortOrder)
@@ -73,7 +79,7 @@ internal static class CvExportMapping
             CvExportTextNormalizer.Bullets(entry.Bullets),
             CvExportTextNormalizer.Field(entry.TechStack));
 
-    private static CvExportEntry FromImportEntry(CvStructuredImportEntryResult entry, int sortOrder) =>
+    private static CvExportEntry FromImportEntry(CvStructuredImportEntryResult entry) =>
         new(
             CvExportTextNormalizer.Field(entry.Title),
             NullIfEmpty(entry.Subtitle),
@@ -81,6 +87,50 @@ internal static class CvExportMapping
             CvExportTextNormalizer.Field(entry.Summary),
             CvExportTextNormalizer.Bullets(entry.Bullets ?? []),
             CvExportTextNormalizer.Field(entry.TechStack));
+
+    private static CvExportEntry PreserveSourceEntryLinks(
+        CvExportEntry entry,
+        CvStructuredEntryDto? sourceEntry) =>
+        sourceEntry is null
+            ? entry
+            : entry with
+            {
+                Title = PreserveLinkMarkup(entry.Title, sourceEntry.Title),
+                Subtitle = PreserveOptionalLinkMarkup(entry.Subtitle, sourceEntry.Subtitle)
+            };
+
+    private static string? PreserveOptionalLinkMarkup(string? value, string? sourceValue) =>
+        value is null ? null : PreserveLinkMarkup(value, sourceValue);
+
+    private static string PreserveLinkMarkup(string value, string? sourceValue)
+    {
+        var source = CvExportTextNormalizer.Field(sourceValue);
+
+        if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(source))
+        {
+            return value;
+        }
+
+        var valueRuns = CvExportInlineParser.ParseRuns(value);
+
+        if (valueRuns.Any((run) => run.LinkUrl is not null))
+        {
+            return value;
+        }
+
+        var sourceRuns = CvExportInlineParser.ParseRuns(source);
+
+        if (!sourceRuns.Any((run) => run.LinkUrl is not null))
+        {
+            return value;
+        }
+
+        var sourcePlainText = string.Concat(sourceRuns.Select((run) => run.Text));
+
+        return string.Equals(value, sourcePlainText, StringComparison.OrdinalIgnoreCase)
+            ? source
+            : value;
+    }
 
     private static string? NullIfEmpty(string? value)
     {

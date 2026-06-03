@@ -1,4 +1,5 @@
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
 namespace ApplyVault.Api.Services;
@@ -17,7 +18,15 @@ internal static class CvExportInlinePdfRenderer
 
         foreach (var run in CvExportInlineParser.ParseRuns(value))
         {
-            var span = text.Span(run.Text);
+            var span = run.LinkUrl is null
+                ? text.Span(run.Text)
+                : text.Hyperlink(run.Text, run.LinkUrl);
+
+            if (run.LinkUrl is not null)
+            {
+                span.FontColor(Colors.Black).Underline(false);
+            }
+
             configureSpan(span);
 
             if (run.Bold)
@@ -29,6 +38,7 @@ internal static class CvExportInlinePdfRenderer
             {
                 span.Italic();
             }
+
         }
     }
 }

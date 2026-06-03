@@ -14,6 +14,11 @@ body {
   print-color-adjust: exact;
 }
 
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .cv-layout {
   width: 100%;
   border-collapse: collapse;

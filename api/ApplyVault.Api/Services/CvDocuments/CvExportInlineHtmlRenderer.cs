@@ -28,7 +28,7 @@ internal static class CvExportInlineHtmlRenderer
         {
             builder.Append("<a href=\"");
             builder.Append(WebUtility.HtmlEncode(run.LinkUrl));
-            builder.Append("\" rel=\"noopener noreferrer\">");
+            builder.Append("\" target=\"_blank\" rel=\"noopener noreferrer\">");
             AppendStyledText(builder, run.Text, run.Bold, run.Italic);
             builder.Append("</a>");
             return;

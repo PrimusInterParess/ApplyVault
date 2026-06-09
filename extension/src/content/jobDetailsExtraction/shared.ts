@@ -256,11 +256,14 @@ export function findSectionByHeading(documentRef: Document, headings: string[]):
   });
 }
 
-export function collectHeaderMetadataContainers(documentRef: Document): {
+export function collectHeaderMetadataContainers(
+  documentRef: Document,
+  titleSelectors: string[] = GENERIC_TITLE_SELECTORS
+): {
   titleElement?: Element;
   containers: Element[];
 } {
-  const titleElement = documentRef.querySelector(GENERIC_TITLE_SELECTORS.join(', '));
+  const titleElement = documentRef.querySelector(titleSelectors.join(', '));
 
   if (!titleElement) {
     return {

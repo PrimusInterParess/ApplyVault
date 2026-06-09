@@ -1,9 +1,69 @@
 import { field } from '../../domain/extraction/fieldResolver';
 import type { ExtractionContext } from '../../domain/extraction/types';
 import type { FieldExtraction } from '../../domain/extraction/types';
-import { getNormalizedText, getTextFromElement } from '../jobDetailsExtraction/shared';
-import { LINKEDIN_FEED_JOB_CARD_SELECTORS } from './linkedin.constants';
+import { isLikelyCompanyValue } from '../jobDetailsExtraction/metadata';
+import { getTextFromElement, splitMetadataText } from '../jobDetailsExtraction/shared';
+import {
+  LINKEDIN_ACTIVE_JOB_CARD_SELECTORS,
+  LINKEDIN_FEED_JOB_CARD_SELECTORS
+} from './linkedin.constants';
+import { resolveLinkedInLocationText } from './linkedInLocation';
 import type { SiteExtractor } from './types';
+
+function getJobCardAnchors(documentRef: Document): HTMLAnchorElement[] {
+  const activeCards = Array.from(
+    documentRef.querySelectorAll<HTMLAnchorElement>(LINKEDIN_ACTIVE_JOB_CARD_SELECTORS.join(', '))
+  );
+
+  if (activeCards.length > 0) {
+    return activeCards;
+  }
+
+  return Array.from(
+    documentRef.querySelectorAll<HTMLAnchorElement>(LINKEDIN_FEED_JOB_CARD_SELECTORS.join(', '))
+  );
+}
+
+function extractCardMetadata(
+  title: string,
+  paragraphTexts: string[]
+): { companyName?: string; location?: string } {
+  const metadataTexts = paragraphTexts.filter(
+    (value) => value !== title && !value.includes(title) && !title.includes(value)
+  );
+
+  let companyName: string | undefined;
+  let location: string | undefined;
+
+  for (const metadataText of metadataTexts) {
+    const parts = splitMetadataText(metadataText);
+
+    if (parts.length > 1) {
+      if (!companyName && isLikelyCompanyValue(parts[0])) {
+        companyName = parts[0];
+      }
+
+      for (const part of parts.slice(1)) {
+        if (!location) {
+          location = resolveLinkedInLocationText(part, companyName);
+        }
+      }
+
+      continue;
+    }
+
+    if (!companyName && isLikelyCompanyValue(metadataText)) {
+      companyName = metadataText;
+      continue;
+    }
+
+    if (!location) {
+      location = resolveLinkedInLocationText(metadataText, companyName);
+    }
+  }
+
+  return { companyName, location };
+}
 
 export const linkedInFeedExtractor: SiteExtractor = {
   id: 'linkedin-feed',
@@ -14,9 +74,7 @@ export const linkedInFeedExtractor: SiteExtractor = {
   },
 
   extract(ctx: ExtractionContext): FieldExtraction[] {
-    const candidates = Array.from(
-      ctx.document.querySelectorAll<HTMLAnchorElement>(LINKEDIN_FEED_JOB_CARD_SELECTORS.join(', '))
-    );
+    const candidates = getJobCardAnchors(ctx.document);
 
     for (const candidate of candidates) {
       const title =
@@ -31,27 +89,7 @@ export const linkedInFeedExtractor: SiteExtractor = {
         .map((paragraph) => getTextFromElement(paragraph))
         .filter((value): value is string => Boolean(value));
 
-      const metadataTexts = paragraphTexts.filter(
-        (value) => value !== title && !value.includes(title) && !title.includes(value)
-      );
-
-      let companyName: string | undefined;
-      let location: string | undefined;
-
-      for (const metadataText of metadataTexts) {
-        const parts = metadataText
-          .split('•')
-          .map((part) => getNormalizedText(part))
-          .filter((part): part is string => Boolean(part));
-
-        if (!companyName && parts[0]) {
-          companyName = parts[0];
-        }
-
-        if (!location && parts[1]) {
-          location = parts[1];
-        }
-      }
+      const { companyName, location } = extractCardMetadata(title, paragraphTexts);
 
       if (title || companyName || location) {
         return [

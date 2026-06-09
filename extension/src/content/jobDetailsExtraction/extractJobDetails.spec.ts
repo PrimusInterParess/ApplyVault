@@ -51,6 +51,39 @@ describe('extractJobDetails', () => {
     expect(details.location).toBe('Berlin, Germany');
   });
 
+  it('extracts LinkedIn feed card location from separate metadata lines', () => {
+    const details = extractWithText(
+      'linkedin-feed-separate-lines.html',
+      'https://www.linkedin.com/jobs/collections/recommended/'
+    );
+
+    expect(details.jobTitle).toBe('IT Infrastructure & Support Engineer');
+    expect(details.companyName).toBe('InCommodities');
+    expect(details.location).toBe('Aarhus Municipality, Central Denmark Region, Denmark (Hybrid)');
+  });
+
+  it('extracts LinkedIn job location from combined company and location metadata', () => {
+    const details = extractWithText(
+      'linkedin-job-combined-metadata.html',
+      'https://www.linkedin.com/jobs/view/1234567890/'
+    );
+
+    expect(details.detectedPageType).toBe('linkedin-job');
+    expect(details.jobTitle).toBe('IT Infrastructure & Support Engineer');
+    expect(details.location).toBe('Aarhus Municipality, Central Denmark Region, Denmark (Hybrid)');
+  });
+
+  it('does not use the company name as LinkedIn job location', () => {
+    const details = extractWithText(
+      'linkedin-job-separate-metadata.html',
+      'https://www.linkedin.com/jobs/view/1234567890/'
+    );
+
+    expect(details.companyName).toBe('InCommodities');
+    expect(details.location).toBe('Aarhus Municipality, Central Denmark Region, Denmark (Hybrid)');
+    expect(details.location).not.toBe(details.companyName);
+  });
+
   it('detects Teamtailor inactive listing without description fallback', () => {
     const details = extractWithText(
       'teamtailor-inactive.html',

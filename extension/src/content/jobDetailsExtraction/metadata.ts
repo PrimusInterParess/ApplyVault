@@ -22,6 +22,18 @@ export function isDisallowedMetadataValue(value: string): boolean {
   );
 }
 
+export function hasStrongLocationSignal(value: string): boolean {
+  return (
+    /,/.test(value) ||
+    /\b\d{4,5}\b/.test(value) ||
+    /\([^)]*(?:remote|hybrid|onsite|on-site)[^)]*\)/i.test(value) ||
+    /\b(?:remote|hybrid|onsite|on-site|denmark|danmark|sweden|norway|germany|europe|emea|apac|region|municipality|county|area|metropolitan)\b/i.test(
+      value
+    ) ||
+    /\b(?:street|st\.|road|rd\.|avenue|ave\.|vej|gade|plads|all[eé]|boulevard|blvd)\b/i.test(value)
+  );
+}
+
 export function isLikelyLocationValue(value: string): boolean {
   if (value.length < 2 || value.length > 140) {
     return false;
@@ -36,26 +48,14 @@ export function isLikelyLocationValue(value: string): boolean {
     return false;
   }
 
-  if (/\b(remote|hybrid|onsite|on-site|denmark|danmark|sweden|norway|germany|europe|emea|apac)\b/i.test(value)) {
-    return true;
-  }
-
-  if (/\b\d{4,5}\b/.test(value)) {
-    return true;
-  }
-
-  if (/,/.test(value)) {
-    return true;
-  }
-
-  if (/\b(?:street|st\.|road|rd\.|avenue|ave\.|vej|gade|plads|all[eé]|boulevard|blvd)\b/i.test(value)) {
+  if (hasStrongLocationSignal(value)) {
     return true;
   }
 
   const words = value.split(/\s+/);
 
   if (words.length === 1) {
-    return /^[A-ZÀ-Ý][A-Za-zÀ-ÿ'’-]+$/.test(words[0]);
+    return false;
   }
 
   if (words.length > 4 || !/^[A-Za-zÀ-ÿ0-9 .,'()/-]+$/.test(value)) {
@@ -180,9 +180,10 @@ export function scorePersonNameAgainstEmail(name: string, email: string): number
 
 export function collectHeaderMetadataCandidates(
   documentRef: Document,
-  titleValue: string | undefined
+  titleValue: string | undefined,
+  titleSelectors?: string[]
 ): FieldCandidate[] {
-  const { titleElement, containers } = collectHeaderMetadataContainers(documentRef);
+  const { titleElement, containers } = collectHeaderMetadataContainers(documentRef, titleSelectors);
 
   if (!titleElement) {
     return [];
@@ -227,6 +228,12 @@ export function collectHeaderMetadataCandidates(
 
       if ((element instanceof HTMLAnchorElement || element.querySelector('a')) && isLikelyCompanyValue(text)) {
         addFieldCandidate(candidates, text, 0.62, 'header-link-company', isLikelyCompanyValue);
+        continue;
+      }
+
+      if (isLikelyCompanyValue(text) && !hasStrongLocationSignal(text)) {
+        addFieldCandidate(candidates, text, 0.62, 'header-company', isLikelyCompanyValue);
+        continue;
       }
 
       addFieldCandidate(candidates, text, 0.56, 'header-short-location', isLikelyLocationValue);

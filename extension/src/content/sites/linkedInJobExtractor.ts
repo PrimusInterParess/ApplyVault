@@ -14,9 +14,9 @@ import { findSectionByHeading, getFirstMatchingText } from '../jobDetailsExtract
 import {
   LINKEDIN_COMPANY_SELECTORS,
   LINKEDIN_DESCRIPTION_SELECTORS,
-  LINKEDIN_JOB_TITLE_SELECTORS,
-  LINKEDIN_LOCATION_SELECTORS
+  LINKEDIN_JOB_TITLE_SELECTORS
 } from './linkedin.constants';
+import { extractLinkedInLocation } from './linkedInLocation';
 import type { SiteExtractor } from './types';
 
 export const linkedInJobExtractor: SiteExtractor = {
@@ -38,7 +38,7 @@ export const linkedInJobExtractor: SiteExtractor = {
     return [
       ...field(getFirstMatchingText(document, LINKEDIN_JOB_TITLE_SELECTORS), 'jobTitle', 0.97, 'linkedin-job'),
       ...field(getFirstMatchingText(document, LINKEDIN_COMPANY_SELECTORS), 'companyName', 0.96, 'linkedin-job'),
-      ...field(getFirstMatchingText(document, LINKEDIN_LOCATION_SELECTORS), 'location', 0.95, 'linkedin-job'),
+      ...field(extractLinkedInLocation(document, textLines), 'location', 0.95, 'linkedin-job'),
       ...field(jobDescription, 'jobDescription', 0.96, 'linkedin-job'),
       ...field(hiringManagerName, 'hiringManagerName', 0.9, 'linkedin-job')
     ];

@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <div class="job-detail__chips">
+    <div class="job-detail__status-row">
       @if (selectedJob.isRejected) {
         <span class="job-detail__chip job-detail__chip--rejected">Rejected</span>
       }
@@ -33,13 +33,16 @@
       }
       @if (selectedJob.statusSync; as statusSync) {
         @if (statusSync.source === 'gmail') {
-          <span class="job-detail__chip job-detail__chip--interview">
+          <span class="job-detail__chip job-detail__chip--sync">
             Gmail synced {{ statusSync.kind }}
           </span>
         }
       }
-      <span>{{ describeCaptureQualitySummary(selectedJob.captureQuality) }}</span>
-      <span>Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
+    </div>
+
+    <div class="job-detail__meta-row">
+      <span class="job-detail__meta">{{ describeCaptureQualitySummary(selectedJob.captureQuality) }}</span>
+      <span class="job-detail__meta">Saved {{ selectedJob.savedAt | date: 'MMM d, y, h:mm a' }}</span>
     </div>
 
     @if (captureReviewVisible()) {
@@ -331,9 +334,10 @@
     </article>
   </section>
 } @else {
-  <section class="job-detail job-detail--empty">
+  <section class="job-detail job-detail--empty" aria-label="No job selected">
+    <div class="job-detail__empty-icon" aria-hidden="true">◎</div>
     <h3>Select a saved job</h3>
     <p>Choose a result from the list to inspect captured details, fix low-confidence fields, and schedule interviews.</p>
-    <p class="job-detail__muted">Tip: use arrow keys while the list is focused, then Enter to open.</p>
+    <p class="job-detail__muted job-detail__empty-tip">Tip: use arrow keys while the list is focused, then Enter to open.</p>
   </section>
 }

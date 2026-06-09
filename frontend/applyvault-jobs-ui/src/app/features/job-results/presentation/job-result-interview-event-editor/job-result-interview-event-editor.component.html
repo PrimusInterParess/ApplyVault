@@ -1,13 +1,23 @@
-<div class="interview-event-editor__summary">
-  <button type="button" class="interview-event-editor__primary" [disabled]="updating()" (click)="beginEdit()">
-    {{ interviewEvent() ? 'Edit interview event' : 'Schedule interview event' }}
-  </button>
-
-  @if (interviewEvent()) {
-    <button type="button" class="interview-event-editor__secondary" [disabled]="updating()" (click)="clearEvent()">
-      Clear
+<div class="interview-event-editor">
+  <div class="interview-event-editor__summary">
+    <button
+      type="button"
+      class="interview-event-editor__primary"
+      [disabled]="updating()"
+      (click)="beginEdit()">
+      {{ interviewEvent() ? 'Edit interview event' : 'Schedule interview event' }}
     </button>
-  }
+
+    @if (interviewEvent()) {
+      <button
+        type="button"
+        class="interview-event-editor__secondary"
+        [disabled]="updating()"
+        (click)="clearEvent()">
+        Clear event
+      </button>
+    }
+  </div>
 </div>
 
 @if (editing()) {

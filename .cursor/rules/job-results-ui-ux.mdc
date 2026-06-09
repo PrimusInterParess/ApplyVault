@@ -1,0 +1,31 @@
+---
+description: Apply SaaS UI/UX transformation standards to the saved jobs workspace
+globs: frontend/applyvault-jobs-ui/src/app/features/job-results/**
+alwaysApply: false
+---
+
+# Job results page — UI/UX standards
+
+When editing any saved-jobs UI (`job-results-page`, `job-result-card`, `job-result-detail`, interview editors), follow the full transformation prompt in `.cursor/ui-ux/ui-ux.md`.
+
+## Scope
+
+- Preserve all facade bindings, event handlers, routes, and accessibility behavior.
+- Refactor structure, spacing, hierarchy, and styling only.
+- Use existing design tokens from `src/styles.scss` (`--app-*`).
+
+## Page structure (top → bottom)
+
+1. **Header** — title, short description, secondary refresh + last-updated metadata
+2. **Overview** — stats cards when no filters are active
+3. **Priority strip** — featured jobs needing review or with interviews
+4. **Toolbar** — search, source, sort, workflow chips, filter summary
+5. **Workspace** — list + detail split panel
+
+## Visual rules
+
+- One filled primary CTA per screen state (empty → search link; otherwise actions live in detail panel).
+- Refresh and filter actions are secondary (outline/ghost), not gradient-filled.
+- Increase whitespace; group controls in a single toolbar card.
+- Avoid duplicate filter summaries on the same view.
+- Prefer calm surfaces, subtle borders, and clear type hierarchy over dense admin-panel layouts.

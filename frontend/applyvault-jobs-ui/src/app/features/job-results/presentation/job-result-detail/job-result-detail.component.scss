@@ -51,9 +51,13 @@
 }
 
 .job-detail__header {
+  position: sticky;
+  top: calc(var(--app-header-height) + 0.75rem);
+  z-index: 2;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 
 .job-detail__header-content,
@@ -287,7 +291,12 @@ h3 {
 }
 
 .job-detail__grid article p {
-  line-height: 1.55;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.job-detail__grid article:first-child {
+  grid-column: 1 / -1;
 }
 
 .job-detail__grid ul {
@@ -394,9 +403,14 @@ h3 {
 
 .job-detail__description-body {
   max-width: 72ch;
-  font-size: 0.88rem;
-  line-height: 1.6;
+  padding: 1rem 1.1rem;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--app-text);
   overflow-wrap: anywhere;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-bg-soft);
 }
 
 .job-detail__editor textarea {

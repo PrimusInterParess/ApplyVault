@@ -457,6 +457,7 @@ h2 {
   min-width: 0;
   position: sticky;
   top: 1rem;
+  align-self: start;
 }
 
 .jobs-page__mobile-back {
@@ -631,7 +632,12 @@ h2 {
   .jobs-page__mobile-back {
     display: grid;
     gap: 0.35rem;
+    position: sticky;
+    top: 0;
+    z-index: 3;
     margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    background: var(--app-bg);
   }
 
   .jobs-page__back-button {
@@ -650,7 +656,8 @@ h2 {
     margin: 0;
     font-size: 0.92rem;
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
   }
 }
 

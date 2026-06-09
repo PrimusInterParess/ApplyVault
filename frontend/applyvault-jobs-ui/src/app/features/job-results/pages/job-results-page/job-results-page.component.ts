@@ -78,11 +78,13 @@ export class JobResultsPageComponent implements OnInit {
   protected readonly readInputValue = readInputValue;
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
 
+  protected readonly attentionPanelOpen = signal(false);
+  protected readonly toolbarPanelOpen = signal(false);
+
   protected readonly featuredJobs = computed(() =>
     this.facade
       .results()
       .filter((job) => job.captureQuality.needsReview || job.interviewEvent !== null)
-      .slice(0, 2)
   );
 
   private readonly route = inject(ActivatedRoute);
@@ -141,18 +143,16 @@ export class JobResultsPageComponent implements OnInit {
     });
   }
 
-  protected lastLoadedLabel(): string | null {
-    const loadedAt = this.facade.lastLoadedAt();
-
-    if (!loadedAt) {
-      return null;
-    }
-
-    return `Last updated ${loadedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-  }
-
   protected dismissLoadBanner(): void {
     this.loadBannerMessage.set('');
+  }
+
+  protected toggleAttentionPanel(): void {
+    this.attentionPanelOpen.update((open) => !open);
+  }
+
+  protected toggleToolbarPanel(): void {
+    this.toolbarPanelOpen.update((open) => !open);
   }
 
   protected isWorkflowFilterActive(value: JobWorkflowFilter): boolean {

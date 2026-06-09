@@ -5,7 +5,7 @@ import { catchError, EMPTY, exhaustMap, map, of, Subject } from 'rxjs';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import { JobResultViewModel, JobResultsStats } from '../models/job-result-view.model';
+import { JobResultViewModel } from '../models/job-result-view.model';
 import {
   CalendarEventLink,
   SavedJobResult,
@@ -102,20 +102,6 @@ export class JobResultsFacade {
   });
 
   readonly selectedResultId = computed(() => this.selectedResult()?.id ?? null);
-
-  readonly stats = computed<JobResultsStats>(() => {
-    const results = this.results();
-    const companyCount = new Set(results.map((result) => result.company)).size;
-    const sourceCount = new Set(results.map((result) => result.sourceHostname)).size;
-    const rejectedCount = results.filter((result) => result.isRejected).length;
-
-    return {
-      totalResults: results.length,
-      companies: companyCount,
-      sources: sourceCount,
-      rejected: rejectedCount
-    };
-  });
 
   constructor() {
     const destroyRef = inject(DestroyRef);

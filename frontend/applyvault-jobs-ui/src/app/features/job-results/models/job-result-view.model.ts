@@ -31,11 +31,4 @@ export interface JobResultViewModel {
   readonly searchText: string;
 }
 
-export interface JobResultsStats {
-  readonly totalResults: number;
-  readonly companies: number;
-  readonly sources: number;
-  readonly rejected: number;
-}
-
 export type { JobWorkflowFilter, JobResultsSortOption } from '../utils/job-result-status.util';

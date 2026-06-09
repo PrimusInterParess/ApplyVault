@@ -17,10 +17,9 @@ When editing any saved-jobs UI (`job-results-page`, `job-result-card`, `job-resu
 ## Page structure (top → bottom)
 
 1. **Header** — title, short description, secondary refresh + last-updated metadata
-2. **Overview** — stats cards when no filters are active
-3. **Priority strip** — featured jobs needing review or with interviews
-4. **Toolbar** — search, source, sort, workflow chips, filter summary
-5. **Workspace** — list + detail split panel
+2. **Attention panel** — collapsible notification for jobs needing review or with interviews
+3. **Toolbar** — search, source, sort, workflow chips, filter summary
+4. **Workspace** — list + detail split panel
 
 ## Visual rules
 

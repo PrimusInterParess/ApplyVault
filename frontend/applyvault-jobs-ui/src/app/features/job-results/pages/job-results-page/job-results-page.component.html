@@ -1,22 +1,6 @@
 <!-- cspell:words eures EURES ApplyVault -->
 <main class="jobs-page">
-  <header class="jobs-page__header">
-    <div class="jobs-page__header-copy">
-      <h1>Saved jobs</h1>
-      <p class="jobs-page__intro">
-        Triage captures, fix low-confidence fields, and schedule interviews in one workspace.
-      </p>
-    </div>
-
-    @if (!facade.loading() && !facade.error()) {
-      <div class="jobs-page__header-actions">
-        @if (lastLoadedLabel(); as loadedLabel) {
-          <p class="jobs-page__last-updated">{{ loadedLabel }}</p>
-        }
-        <button type="button" class="jobs-page__secondary-action" (click)="facade.load()">Refresh</button>
-      </div>
-    }
-  </header>
+  <h1 class="jobs-page__title">Saved jobs</h1>
 
   @if (loadBannerMessage(); as bannerMessage) {
     <div class="jobs-page__banner" role="status" aria-live="polite">
@@ -89,111 +73,131 @@
       <button type="button" class="jobs-page__primary-action" (click)="facade.load()">Try again</button>
     </section>
   } @else {
-    @if (!facade.hasActiveFilters() && facade.stats(); as stats) {
-      <section class="jobs-page__overview" aria-label="Workspace overview">
-        <div class="jobs-page__stats">
-          <article>
-            <span>Total results</span>
-            <strong>{{ stats.totalResults }}</strong>
-          </article>
-          <article>
-            <span>Companies</span>
-            <strong>{{ stats.companies }}</strong>
-          </article>
-          <article>
-            <span>Sources</span>
-            <strong>{{ stats.sources }}</strong>
-          </article>
-          <article>
-            <span>Rejected</span>
-            <strong>{{ stats.rejected }}</strong>
-          </article>
-        </div>
-      </section>
-    }
-
     @if (featuredJobs().length > 0) {
-      <section class="jobs-page__featured" aria-label="Priority jobs">
-        <div class="jobs-page__featured-header">
-          <h2>Needs attention</h2>
-          <p class="jobs-page__featured-hint">Roles awaiting review or with upcoming interviews</p>
-        </div>
-        <div class="jobs-page__featured-grid">
-          @for (job of featuredJobs(); track job.id) {
-            <app-job-result-card
-              class="jobs-page__featured-card"
-              [job]="job"
-              [selected]="facade.selectedResultId() === job.id"
-              (choose)="selectResult($event)" />
-          }
-        </div>
+      <section
+        class="jobs-page__attention"
+        [class.jobs-page__attention--open]="attentionPanelOpen()"
+        aria-label="Priority jobs">
+        <button
+          type="button"
+          class="jobs-page__attention-trigger"
+          [attr.aria-expanded]="attentionPanelOpen()"
+          aria-controls="jobs-page-attention-panel"
+          (click)="toggleAttentionPanel()">
+          <span class="jobs-page__attention-badge" aria-hidden="true">{{ featuredJobs().length }}</span>
+          <span class="jobs-page__attention-copy">
+            <span class="jobs-page__attention-title">Needs attention</span>
+            <span class="jobs-page__attention-hint">
+              Roles awaiting review or with upcoming interviews
+            </span>
+          </span>
+          <span class="jobs-page__attention-chevron" aria-hidden="true">
+            {{ attentionPanelOpen() ? '−' : '+' }}
+          </span>
+        </button>
+
+        @if (attentionPanelOpen()) {
+          <div id="jobs-page-attention-panel" class="jobs-page__attention-body">
+            @for (job of featuredJobs(); track job.id) {
+              <app-job-result-card
+                class="jobs-page__attention-card"
+                [job]="job"
+                [selected]="facade.selectedResultId() === job.id"
+                (choose)="selectResult($event)" />
+            }
+          </div>
+        }
       </section>
     }
 
-    <section class="jobs-page__toolbar" aria-label="Filter and sort saved jobs">
-      <div class="jobs-page__toolbar-filters">
-        <label class="jobs-page__field jobs-page__field--search">
-          <span>Search</span>
-          <div class="jobs-page__search-wrap">
-            <input
-              type="search"
-              [value]="facade.searchTermInput()"
-              placeholder="Title, company, location..."
-              (input)="facade.updateSearchTerm(readInputValue($event))" />
-            @if (facade.searchTermInput().length > 0) {
+    <section
+      class="jobs-page__toolbar"
+      [class.jobs-page__toolbar--open]="toolbarPanelOpen()"
+      aria-label="Filter and sort saved jobs">
+      <button
+        type="button"
+        class="jobs-page__toolbar-trigger"
+        [attr.aria-expanded]="toolbarPanelOpen()"
+        aria-controls="jobs-page-toolbar-panel"
+        (click)="toggleToolbarPanel()">
+        @if (facade.hasActiveFilters()) {
+          <span class="jobs-page__toolbar-badge" aria-hidden="true">On</span>
+        }
+        <span class="jobs-page__toolbar-copy">
+          <span class="jobs-page__toolbar-title">Search &amp; filters</span>
+          <span class="jobs-page__toolbar-hint" aria-live="polite">{{ facade.filterSummary() }}</span>
+        </span>
+        <span class="jobs-page__toolbar-chevron" aria-hidden="true">
+          {{ toolbarPanelOpen() ? '−' : '+' }}
+        </span>
+      </button>
+
+      @if (toolbarPanelOpen()) {
+        <div id="jobs-page-toolbar-panel" class="jobs-page__toolbar-body">
+          <div class="jobs-page__toolbar-filters">
+            <label class="jobs-page__field jobs-page__field--search">
+              <span>Search</span>
+              <div class="jobs-page__search-wrap">
+                <input
+                  type="search"
+                  [value]="facade.searchTermInput()"
+                  placeholder="Title, company, location..."
+                  (input)="facade.updateSearchTerm(readInputValue($event))" />
+                @if (facade.searchTermInput().length > 0) {
+                  <button
+                    type="button"
+                    class="jobs-page__search-clear"
+                    aria-label="Clear search"
+                    (click)="clearSearch()">
+                    ×
+                  </button>
+                }
+              </div>
+            </label>
+
+            <label class="jobs-page__field">
+              <span>Source</span>
+              <select [value]="facade.selectedSource()" (change)="facade.updateSource(readInputValue($event))">
+                <option value="all">All sources</option>
+                @for (source of facade.availableSources(); track source) {
+                  <option [value]="source">{{ source }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="jobs-page__field">
+              <span>Sort</span>
+              <select [value]="facade.sortOption()" (change)="setSortOption(readInputValue($event))">
+                @for (option of sortOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <div class="jobs-page__workflow-filters" role="group" aria-label="Filter saved jobs by status">
+            @for (option of workflowFilterOptions; track option.value) {
               <button
                 type="button"
-                class="jobs-page__search-clear"
-                aria-label="Clear search"
-                (click)="clearSearch()">
-                ×
+                class="jobs-page__workflow-chip"
+                [class.jobs-page__workflow-chip--active]="isWorkflowFilterActive(option.value)"
+                [attr.aria-pressed]="isWorkflowFilterActive(option.value)"
+                (click)="setWorkflowFilter(option.value)">
+                {{ option.label }}
               </button>
             }
           </div>
-        </label>
 
-        <label class="jobs-page__field">
-          <span>Source</span>
-          <select [value]="facade.selectedSource()" (change)="facade.updateSource(readInputValue($event))">
-            <option value="all">All sources</option>
-            @for (source of facade.availableSources(); track source) {
-              <option [value]="source">{{ source }}</option>
+          <div class="jobs-page__toolbar-meta">
+            @if (facade.hasActiveFilters()) {
+              <button type="button" class="jobs-page__text-action" (click)="clearAllFilters()">Clear filters</button>
             }
-          </select>
-        </label>
-
-        <label class="jobs-page__field">
-          <span>Sort</span>
-          <select [value]="facade.sortOption()" (change)="setSortOption(readInputValue($event))">
-            @for (option of sortOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </label>
-      </div>
-
-      <div class="jobs-page__workflow-filters" role="group" aria-label="Filter saved jobs by status">
-        @for (option of workflowFilterOptions; track option.value) {
-          <button
-            type="button"
-            class="jobs-page__workflow-chip"
-            [class.jobs-page__workflow-chip--active]="isWorkflowFilterActive(option.value)"
-            [attr.aria-pressed]="isWorkflowFilterActive(option.value)"
-            (click)="setWorkflowFilter(option.value)">
-            {{ option.label }}
-          </button>
-        }
-      </div>
-
-      <div class="jobs-page__toolbar-meta">
-        <p class="jobs-page__filter-summary" aria-live="polite">{{ facade.filterSummary() }}</p>
-        @if (facade.hasActiveFilters()) {
-          <button type="button" class="jobs-page__text-action" (click)="clearAllFilters()">Clear filters</button>
-        }
-      </div>
+          </div>
+        </div>
+      }
 
       @if (facade.selectionChangedNotice()) {
-        <div class="jobs-page__notice" role="status">
+        <div class="jobs-page__notice jobs-page__notice--toolbar" role="status">
           <p>Selection changed — showing the next matching result.</p>
           <button type="button" class="jobs-page__text-action" (click)="facade.dismissSelectionChangedNotice()">
             Dismiss

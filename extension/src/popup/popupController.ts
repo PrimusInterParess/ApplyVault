@@ -6,7 +6,6 @@ import {
   type ExtensionAuthState
 } from '../infrastructure/auth/supabaseAuth';
 import type { ScrapeResult } from '../shared/models/scrapeResult';
-import { clearPopupDraft, loadPopupDraft, savePopupDraft } from './popupDraftStorage';
 import {
   clearRenderedResult,
   populateStructuredDetails,
@@ -16,21 +15,18 @@ import {
   setResultPanelsVisibility,
   syncActionButtons
 } from './popupResultRenderer';
-import { getActiveTabUrl, sendSaveRequest, sendScrapeRequest } from './popupScrapeClient';
+import { sendSaveRequest, sendScrapeRequest } from './popupScrapeClient';
 import {
   DEFAULT_AUTH_STATUS,
   DEFAULT_READY_STATUS,
-  DRAFT_SAVE_DELAY_MS,
   EMAIL_SIGN_IN_CODE_PATTERN,
   UNAUTHENTICATED_STATUS,
   type AuthStatusTone,
-  type EditableControl,
   type PopupDetailsElements,
-  type PopupDraft,
   type PopupMode,
   type PopupResultPanels
 } from './popupTypes';
-import { buildScrapeResultForSave, buildScrapeStatusMessage } from './popupViewModel';
+import { buildScrapeStatusMessage } from './popupViewModel';
 
 export function initPopup(): void {
   const authEmailElement = document.getElementById('auth-email');
@@ -123,7 +119,6 @@ export function initPopup(): void {
 
   let popupMode: PopupMode = 'scrape';
   let lastScrapeResult: ScrapeResult | null = null;
-  let draftSaveTimeoutId: number | null = null;
   let workflowStatusMessage = DEFAULT_READY_STATUS;
   let authState: ExtensionAuthState = { session: null, currentUser: null, apiError: null };
   let authPending = false;
@@ -135,13 +130,6 @@ export function initPopup(): void {
   const setWorkflowStatus = (message: string) => {
     workflowStatusMessage = message;
     statusElement.textContent = message;
-  };
-
-  const clearDraftSaveTimeout = () => {
-    if (draftSaveTimeoutId !== null) {
-      window.clearTimeout(draftSaveTimeoutId);
-      draftSaveTimeoutId = null;
-    }
   };
 
   const setAuthStatus = (message: string | null, tone: AuthStatusTone = 'default') => {
@@ -206,7 +194,6 @@ export function initPopup(): void {
   const clearExtractionState = (statusMessage = DEFAULT_READY_STATUS) => {
     popupMode = 'scrape';
     lastScrapeResult = null;
-    clearDraftSaveTimeout();
     clearRenderedResult(scrapedTextArea, jobDescriptionArea, details);
     setResultPanelsVisibility(resultPanels, false);
     setButtonMode(primaryButton, popupMode);
@@ -230,66 +217,6 @@ export function initPopup(): void {
     setWorkflowStatus(statusMessage);
   };
 
-  const buildCurrentDraft = (): PopupDraft | null => {
-    if (!lastScrapeResult) {
-      return null;
-    }
-
-    const updatedResult = buildScrapeResultForSave(
-      lastScrapeResult,
-      details,
-      scrapedTextArea,
-      jobDescriptionArea
-    );
-    lastScrapeResult = updatedResult;
-
-    return {
-      mode: 'save',
-      result: updatedResult,
-      statusMessage: statusElement.textContent?.trim() || DEFAULT_READY_STATUS
-    };
-  };
-
-  const scheduleDraftSave = () => {
-    if (!lastScrapeResult) {
-      return;
-    }
-
-    clearDraftSaveTimeout();
-    draftSaveTimeoutId = window.setTimeout(() => {
-      const draft = buildCurrentDraft();
-      if (draft) {
-        void savePopupDraft(draft);
-      }
-    }, DRAFT_SAVE_DELAY_MS);
-  };
-
-  const restoreDraftIfAvailable = async () => {
-    if (!isAuthenticated()) {
-      resetPopupState(UNAUTHENTICATED_STATUS);
-      return;
-    }
-
-    const [activeTabUrl, savedDraft] = await Promise.all([getActiveTabUrl(), loadPopupDraft()]);
-
-    if (!savedDraft) {
-      resetPopupState();
-      return;
-    }
-
-    if (activeTabUrl && savedDraft.result.url !== activeTabUrl) {
-      resetPopupState();
-      return;
-    }
-
-    renderResult(
-      savedDraft.result,
-      savedDraft.statusMessage
-        ? `Restored saved draft for this page. ${savedDraft.statusMessage}`
-        : 'Restored saved draft for this page.'
-    );
-  };
-
   const runScrape = async () => {
     if (!isAuthenticated()) {
       renderPopupState();
@@ -297,8 +224,6 @@ export function initPopup(): void {
       return;
     }
 
-    clearDraftSaveTimeout();
-    const previousDraft = buildCurrentDraft();
     clearRenderedResult(scrapedTextArea, jobDescriptionArea, details);
     setPendingState(
       primaryButton,
@@ -313,12 +238,6 @@ export function initPopup(): void {
       const response = await sendScrapeRequest();
 
       if (!response.success) {
-        if (previousDraft) {
-          renderResult(previousDraft.result, response.error);
-          await savePopupDraft({ ...previousDraft, statusMessage: response.error });
-          return;
-        }
-
         popupMode = 'scrape';
         lastScrapeResult = null;
         renderPopupState();
@@ -328,15 +247,8 @@ export function initPopup(): void {
 
       const statusMessage = buildScrapeStatusMessage(response.data);
       renderResult(response.data, statusMessage);
-      await savePopupDraft({ mode: 'save', result: response.data, statusMessage });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'The extraction request failed.';
-
-      if (previousDraft) {
-        renderResult(previousDraft.result, errorMessage);
-        await savePopupDraft({ ...previousDraft, statusMessage: errorMessage });
-        return;
-      }
 
       popupMode = 'scrape';
       lastScrapeResult = null;
@@ -349,26 +261,6 @@ export function initPopup(): void {
     authState = await getAuthState();
     renderPopupState();
   };
-
-  const editableControls: EditableControl[] = [
-    scrapedTextArea,
-    jobDescriptionArea,
-    details.scrapedAt,
-    details.sourceHostname,
-    details.pageType,
-    details.jobTitle,
-    details.companyName,
-    details.jobLocation,
-    details.hiringManager,
-    details.positionSummary,
-    details.contacts
-  ];
-
-  for (const control of editableControls) {
-    control.addEventListener('input', () => {
-      scheduleDraftSave();
-    });
-  }
 
   setButtonMode(primaryButton, popupMode);
   resetStructuredDetails(details);
@@ -384,8 +276,6 @@ export function initPopup(): void {
       authFeedbackTone = 'error';
       renderPopupState();
     }
-
-    await restoreDraftIfAvailable();
   })();
 
   sendCodeButtonElement.addEventListener('click', () => {
@@ -447,7 +337,7 @@ export function initPopup(): void {
         await refreshAuthState();
 
         if (popupMode === 'save' && lastScrapeResult) {
-          setWorkflowStatus('Signed in. Review the extracted fields, then save them to ApplyVault.');
+          setWorkflowStatus('Signed in. Save the captured page to ApplyVault when you are ready.');
         } else {
           setWorkflowStatus(DEFAULT_READY_STATUS);
         }
@@ -474,7 +364,6 @@ export function initPopup(): void {
         authFeedbackMessage = null;
         await refreshAuthState();
         resetPopupState(UNAUTHENTICATED_STATUS);
-        await clearPopupDraft();
       } catch (error) {
         authFeedbackMessage = error instanceof Error ? error.message : 'Sign out failed.';
         authFeedbackTone = 'error';
@@ -493,7 +382,6 @@ export function initPopup(): void {
 
     if (!lastScrapeResult) {
       resetPopupState('Extract a page before saving.');
-      await clearPopupDraft();
       return;
     }
 
@@ -503,17 +391,7 @@ export function initPopup(): void {
       return;
     }
 
-    clearDraftSaveTimeout();
-    const draft = buildCurrentDraft();
-
-    if (!draft) {
-      resetPopupState('Extract a page before saving.');
-      await clearPopupDraft();
-      return;
-    }
-
     popupMode = 'save';
-    lastScrapeResult = draft.result;
     setPendingState(
       primaryButton,
       renewScrapeButton,
@@ -524,36 +402,24 @@ export function initPopup(): void {
     );
 
     try {
-      const response = await sendSaveRequest(draft.result);
+      const response = await sendSaveRequest(lastScrapeResult);
 
       if (!response.success) {
         renderPopupState();
         setWorkflowStatus(response.error);
-        await savePopupDraft({ ...draft, statusMessage: response.error });
         return;
       }
 
       const successMessage = `Saved to the ASP.NET API at ${response.data.savedAt}. Record id: ${response.data.id}.`;
       resetPopupState(`${successMessage} Ready to extract the current page.`);
-      await clearPopupDraft();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Saving the extracted result failed.';
       renderPopupState();
       setWorkflowStatus(errorMessage);
-      await savePopupDraft({ ...draft, statusMessage: errorMessage });
     }
   });
 
-  renewScrapeButton.addEventListener('click', async () => {
-    resetPopupState('Draft cleared. Extract the current page when you are ready.');
-    await clearPopupDraft();
-  });
-
-  window.addEventListener('beforeunload', () => {
-    clearDraftSaveTimeout();
-    const draft = buildCurrentDraft();
-    if (draft) {
-      void savePopupDraft(draft);
-    }
+  renewScrapeButton.addEventListener('click', () => {
+    resetPopupState('Capture cleared. Extract the current page when you are ready.');
   });
 }

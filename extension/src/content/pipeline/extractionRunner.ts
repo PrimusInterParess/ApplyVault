@@ -3,7 +3,7 @@ import { evaluateScrapeResult, getScrapeResultScore } from '../../shared/utils/s
 import { waitForExtractionSignals } from './domWait';
 import { runScrapePipeline } from './scrapePipeline';
 
-const EXTRACTION_DELAYS_MS = [0, 400, 1200, 2500];
+const CAPTURE_RETRY_DELAYS_MS = [0, 400, 1200, 2500];
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -24,14 +24,14 @@ function withAttemptsOnly(result: ScrapeResult, attempts: number): ScrapeResult 
   };
 }
 
-export async function extractVisibleTextWithRetries(documentRef: Document = document): Promise<ScrapeResult> {
+export async function capturePageWithReadinessRetries(documentRef: Document = document): Promise<ScrapeResult> {
   await waitForExtractionSignals(documentRef);
 
   let bestResult: ScrapeResult | null = null;
   let lastError: Error | null = null;
 
-  for (let index = 0; index < EXTRACTION_DELAYS_MS.length; index += 1) {
-    const delayMs = EXTRACTION_DELAYS_MS[index];
+  for (let index = 0; index < CAPTURE_RETRY_DELAYS_MS.length; index += 1) {
+    const delayMs = CAPTURE_RETRY_DELAYS_MS[index];
 
     if (delayMs > 0) {
       await delay(delayMs);
@@ -54,7 +54,7 @@ export async function extractVisibleTextWithRetries(documentRef: Document = docu
   }
 
   if (bestResult) {
-    return withAttemptsOnly(bestResult, EXTRACTION_DELAYS_MS.length);
+    return withAttemptsOnly(bestResult, CAPTURE_RETRY_DELAYS_MS.length);
   }
 
   throw lastError ?? new Error('Text extraction failed.');

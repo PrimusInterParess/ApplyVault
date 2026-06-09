@@ -2,6 +2,7 @@ import type { SaveScrapeResultData } from '../../shared/contracts/messages';
 import type { ScrapeResult } from '../../shared/models/scrapeResult';
 import { getStoredAccessToken } from '../auth/sessionStorage';
 import { API_BASE_URL } from './apiConfig';
+import { toApiScrapeResultPayload } from './scrapeResultPayload';
 
 const SCRAPE_RESULTS_ENDPOINT = `${API_BASE_URL}/scrape-results`;
 
@@ -36,7 +37,7 @@ export class AspNetApiClient implements ScrapeResultGateway {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`
       },
-      body: JSON.stringify(result)
+      body: JSON.stringify(toApiScrapeResultPayload(result))
     });
 
     if (!response.ok) {

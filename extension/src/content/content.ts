@@ -3,7 +3,7 @@ import {
   type ExtensionRequest,
   type ExtractPageTextResponse
 } from '../shared/contracts/messages';
-import { extractVisibleTextWithRetries } from './pipeline/extractionRunner';
+import { capturePageWithReadinessRetries } from './pipeline/extractionRunner';
 
 function createErrorResponse(message: string): ExtractPageTextResponse {
   return {
@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
-    void extractVisibleTextWithRetries(document)
+    void capturePageWithReadinessRetries(document)
       .then((result) => {
         sendResponse({
           success: true,

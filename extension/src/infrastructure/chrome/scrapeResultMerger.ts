@@ -93,7 +93,7 @@ export function mergeScrapeResults(primary: ScrapeResult, fallback?: ScrapeResul
   return mergedResult;
 }
 
-export function applyActiveTabContext(result: ScrapeResult, activeTab: chrome.tabs.Tab): ScrapeResult {
+function applyActiveTabContext(result: ScrapeResult, activeTab: chrome.tabs.Tab): ScrapeResult {
   const activeTabUrl = activeTab.url ?? result.url;
   const sourceHostname = getHostname(activeTabUrl) ?? result.jobDetails.sourceHostname;
   const contextualizedResult: ScrapeResult = {
@@ -114,7 +114,7 @@ export function applyActiveTabContext(result: ScrapeResult, activeTab: chrome.ta
   };
 }
 
-export function pickBestFrameResult(
+export function selectBestFrameExtractionResult(
   responses: Array<{ frame: TabFrame; response: ExtractPageTextResponse }>,
   activeTab: chrome.tabs.Tab
 ): ExtractPageTextResponse {

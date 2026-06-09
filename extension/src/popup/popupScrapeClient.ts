@@ -67,11 +67,3 @@ export function sendSaveRequest(payload: ScrapeResult): Promise<SaveScrapeResult
     });
   });
 }
-
-export function getActiveTabUrl(): Promise<string | undefined> {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      resolve(tabs[0]?.url);
-    });
-  });
-}

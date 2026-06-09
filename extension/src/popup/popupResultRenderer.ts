@@ -1,4 +1,4 @@
-import type { HiringManagerContact, JobDetails, ScrapeResult } from '../shared/models/scrapeResult';
+import type { HiringManagerContact, JobDetails } from '../shared/models/scrapeResult';
 import { formatPageType, setFieldValue } from './popupViewModel';
 import type { PopupDetailsElements, PopupMode, PopupResultPanels } from './popupTypes';
 
@@ -97,24 +97,4 @@ export function setPendingState(
 ): void {
   syncActionButtons(primaryButton, renewButton, popupMode, true, isAuthenticated);
   status.textContent = pendingMessage;
-}
-
-export function renderScrapeResult(
-  result: ScrapeResult,
-  statusMessage: string,
-  panels: {
-    scrapedTextArea: HTMLTextAreaElement;
-    jobDescriptionArea: HTMLTextAreaElement;
-    details: PopupDetailsElements;
-    resultPanels: PopupResultPanels;
-    primaryButton: HTMLButtonElement;
-    statusElement: HTMLElement;
-  }
-): void {
-  panels.scrapedTextArea.value = result.text;
-  panels.jobDescriptionArea.value = result.jobDetails.jobDescription ?? '';
-  populateStructuredDetails(panels.details, result.jobDetails, result.extractedAt);
-  setResultPanelsVisibility(panels.resultPanels, true);
-  setButtonMode(panels.primaryButton, 'save');
-  panels.statusElement.textContent = statusMessage;
 }

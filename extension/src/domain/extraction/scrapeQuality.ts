@@ -14,6 +14,9 @@ const GENERIC_TITLE_PATTERNS = [
   /^careers?$/i
 ];
 
+// Client-side quality is only used to choose the best capture attempt/frame and
+// to explain popup status. The API owns persisted capture quality after save.
+
 function normalizeOptionalValue(value: string | undefined): string | undefined {
   if (!value) {
     return undefined;

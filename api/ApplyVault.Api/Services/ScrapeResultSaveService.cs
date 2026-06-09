@@ -12,11 +12,12 @@ public sealed class ScrapeResultSaveService(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var initialAssessment = captureQualityService.Assess(request);
+        var initialCapture = captureQualityService.Assess(request);
         var enrichedRequest = await enrichmentService.EnrichLowConfidenceFieldsAsync(
-            initialAssessment,
+            initialCapture,
             cancellationToken);
-        var finalAssessment = captureQualityService.Assess(enrichedRequest);
-        return await store.SaveAsync(finalAssessment, userId, cancellationToken);
+        var finalCapture = captureQualityService.Assess(enrichedRequest);
+
+        return await store.SaveAsync(finalCapture, userId, cancellationToken);
     }
 }

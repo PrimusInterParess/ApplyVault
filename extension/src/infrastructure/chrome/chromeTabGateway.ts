@@ -2,7 +2,7 @@ import type { TabExtractionGateway } from '../../application/ports/tabExtraction
 import type { ExtractPageTextResponse } from '../../shared/contracts/messages';
 import { getActiveTab, isRestrictedUrl } from './chromeMessagingAdapter';
 import { collectFrameExtractionResponses } from './frameExtractionCoordinator';
-import { pickBestFrameResult } from './scrapeResultMerger';
+import { selectBestFrameExtractionResult } from './scrapeResultMerger';
 
 export class ChromeTabGateway implements TabExtractionGateway {
   async extractActiveTab(): Promise<ExtractPageTextResponse> {
@@ -24,7 +24,7 @@ export class ChromeTabGateway implements TabExtractionGateway {
 
     try {
       const responses = await collectFrameExtractionResponses(activeTab.id);
-      return pickBestFrameResult(responses, activeTab);
+      return selectBestFrameExtractionResult(responses, activeTab);
     } catch (error) {
       return {
         success: false,

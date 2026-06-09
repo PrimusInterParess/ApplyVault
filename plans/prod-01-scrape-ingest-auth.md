@@ -36,7 +36,7 @@ isProject: false
 ## Prerequisites
 
 - Supabase JWT validation in [Program.cs](../api/ApplyVault.Api/Program.cs) (done — see [hosted_auth_plan.md](hosted_auth_plan.md)).
-- Extension sends `Authorization: Bearer` in [aspNetApiClient.ts](../src/infrastructure/api/aspNetApiClient.ts) (done).
+- Extension sends `Authorization: Bearer` in [aspNetApiClient.ts](../extension/src/infrastructure/api/aspNetApiClient.ts) (done).
 
 ## SOLID design
 

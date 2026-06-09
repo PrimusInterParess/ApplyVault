@@ -31,8 +31,8 @@ isProject: false
 
 The Chrome extension targets local development:
 
-- [`aspNetApiClient.ts`](../../src/infrastructure/api/aspNetApiClient.ts) posts scrapes to localhost API
-- Supabase auth in [`supabaseAuth.ts`](../../src/infrastructure/auth/supabaseAuth.ts) must match production project
+- [`aspNetApiClient.ts`](../../extension/src/infrastructure/api/aspNetApiClient.ts) posts scrapes to localhost API
+- Supabase auth in [`supabaseAuth.ts`](../../extension/src/infrastructure/auth/supabaseAuth.ts) must match production project
 
 Unpacked `dist/` loading is fine for dev; production users need a build aimed at the hosted API.
 
@@ -54,9 +54,9 @@ Unpacked `dist/` loading is fine for dev; production users need a build aimed at
 
 | Path | Purpose |
 |------|---------|
-| [`src/infrastructure/api/aspNetApiClient.ts`](../../src/infrastructure/api/aspNetApiClient.ts) | Scrape ingest HTTP |
-| [`src/infrastructure/auth/supabaseAuth.ts`](../../src/infrastructure/auth/supabaseAuth.ts) | Extension sign-in |
-| [`manifest.json`](../../manifest.json) / build output | Permissions |
+| [`extension/src/infrastructure/api/aspNetApiClient.ts`](../../extension/src/infrastructure/api/aspNetApiClient.ts) | Scrape ingest HTTP |
+| [`extension/src/infrastructure/auth/supabaseAuth.ts`](../../extension/src/infrastructure/auth/supabaseAuth.ts) | Extension sign-in |
+| [`extension/manifest.json`](../../extension/manifest.json) / build output | Permissions |
 
 ## Implementation tasks
 

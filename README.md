@@ -45,8 +45,8 @@ ApplyVault is a job-capture workspace built from three connected parts:
 
 ## Repository Layout
 
-- `src/`
-  Chrome extension source, including popup UI, background service worker, content scripts, and shared contracts.
+- `extension/`
+  Chrome extension package (`package.json`, manifests, build scripts) and source under `extension/src/` — popup UI, background service worker, content scripts, and shared contracts.
 - `api/ApplyVault.Api/`
   ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export.
 - `api/ApplyVault.Api.Tests/`
@@ -64,19 +64,21 @@ ApplyVault is a job-capture workspace built from three connected parts:
 
 ## Extension Architecture
 
-- `src/popup`
+Paths below are under `extension/src/`:
+
+- `popup/`
   UI for triggering a scrape, reviewing extracted fields, editing the payload, and saving it.
-- `src/background`
+- `background/`
   Service worker that coordinates scrape and save flows.
-- `src/content`
+- `content/`
   Content script plus DOM extraction logic.
-- `src/content/jobDetailsExtraction`
+- `content/jobDetailsExtraction`
   Modular extraction pipeline for descriptions, contacts, metadata, JSON-LD, page-type detection, and shared helpers.
-- `src/application`
+- `application/`
   Use-case orchestration layer.
-- `src/infrastructure`
+- `infrastructure/`
   Chrome API gateway and ASP.NET API adapter.
-- `src/shared`
+- `shared/`
   Shared contracts, models, and utilities.
 
 ## Getting Started
@@ -84,11 +86,12 @@ ApplyVault is a job-capture workspace built from three connected parts:
 ### 1. Build the Chrome extension
 
 ```bash
+cd extension
 npm install
 npm run build
 ```
 
-The unpacked extension output is generated in `dist/`. For staging or production API targets, see [`plans/production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) (`npm run build:staging`, `npm run build:production`).
+The unpacked extension output is generated in `extension/dist/`. For staging or production API targets, see [`plans/production-readiness/EXTENSION.md`](plans/production-readiness/EXTENSION.md) (`npm run build:staging`, `npm run build:production`).
 
 ### 2. Run the ASP.NET API
 
@@ -148,7 +151,7 @@ Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_t
 
 `POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../github/callback`, `GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
 
-Extension saves must be signed in; the popup sends the access token from [`aspNetApiClient.ts`](src/infrastructure/api/aspNetApiClient.ts). The Angular dashboard attaches the same Supabase access token through [`auth.interceptor.ts`](frontend/applyvault-jobs-ui/src/app/core/auth/auth.interceptor.ts) and loads the local app user from `GET /api/auth/session`.
+Extension saves must be signed in; the popup sends the access token from [`aspNetApiClient.ts`](extension/src/infrastructure/api/aspNetApiClient.ts). The Angular dashboard attaches the same Supabase access token through [`auth.interceptor.ts`](frontend/applyvault-jobs-ui/src/app/core/auth/auth.interceptor.ts) and loads the local app user from `GET /api/auth/session`.
 
 #### Supabase JWT validation on the API
 

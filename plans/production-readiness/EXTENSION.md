@@ -6,9 +6,9 @@ Implements [prod-09-extension-production-config.md](prod-09-extension-production
 
 | File | Used when |
 |------|-----------|
-| `src/environments/environment.ts` | `npm run build`, `npm run watch` (local API) |
-| `src/environments/environment.staging.ts` | `npm run build:staging` |
-| `src/environments/environment.production.ts` | `npm run build:production` |
+| `extension/src/environments/environment.ts` | `npm run build`, `npm run watch` (local API) |
+| `extension/src/environments/environment.staging.ts` | `npm run build:staging` |
+| `extension/src/environments/environment.production.ts` | `npm run build:production` |
 
 Before a hosted build, edit the staging or production file (or copy values from your deploy host):
 
@@ -20,36 +20,37 @@ Also update the matching manifest so `host_permissions` include the API origin a
 
 | Manifest | Used when |
 |----------|-----------|
-| `manifest.json` | development (`localhost:5173` + local Supabase) |
-| `manifest.staging.json` | `npm run build:staging` |
-| `manifest.production.json` | `npm run build:production` (no localhost) |
+| `extension/manifest.json` | development (`localhost:5173` + local Supabase) |
+| `extension/manifest.staging.json` | `npm run build:staging` |
+| `extension/manifest.production.json` | `npm run build:production` (no localhost) |
 
 Extension, dashboard, and API must share the same Supabase project. Email OTP template must include `{{ .Token }}` (see root [README.md](../../README.md)).
 
 ## Build commands
 
-From the repository root:
+From the extension package:
 
 ```bash
+cd extension
 npm ci
-npm run build              # dist/ — local API (localhost:5173)
-npm run build:staging      # dist/ — staging API + manifest.staging.json
-npm run build:production   # dist/ — production API + manifest.production.json
+npm run build              # extension/dist/ — local API (localhost:5173)
+npm run build:staging      # extension/dist/ — staging API + manifest.staging.json
+npm run build:production   # extension/dist/ — production API + manifest.production.json
 ```
 
-`aspNetApiClient.ts` and `supabaseAuth.ts` read URLs from `apiConfig.ts` / `supabaseConfig.ts`, which resolve the active environment file at build time via `scripts/build.mjs`.
+`aspNetApiClient.ts` and `supabaseAuth.ts` read URLs from `apiConfig.ts` / `supabaseConfig.ts`, which resolve the active environment file at build time via `extension/scripts/build.mjs`.
 
 ## Load unpacked (dev / internal)
 
-1. Run `npm run build` (or `npm run watch`).
-2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, select the `dist/` folder.
+1. Run `npm run build` (or `npm run watch`) from `extension/`.
+2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, select the `extension/dist/` folder.
 
 ## Release / store publish
 
-1. Set `environment.production.ts` and `manifest.production.json` to your real API and Supabase origins.
-2. Bump `version` in `package.json` and the manifest used for the release build.
-3. Run `npm run build:production`.
-4. Zip the contents of `dist/` (not the folder itself) for [Chrome Web Store](https://chrome.google.com/webstore/devconsole) upload, or distribute the zip to testers.
+1. Set `extension/src/environments/environment.production.ts` and `extension/manifest.production.json` to your real API and Supabase origins.
+2. Bump `version` in `extension/package.json` and the manifest used for the release build.
+3. Run `npm run build:production` from `extension/`.
+4. Zip the contents of `extension/dist/` (not the folder itself) for [Chrome Web Store](https://chrome.google.com/webstore/devconsole) upload, or distribute the zip to testers.
 
 ### Chrome Web Store checklist (public listing)
 
@@ -64,8 +65,8 @@ Consider a separate unpacked **dev** extension ID (development build) vs store *
 
 ## Verification
 
-1. After `npm run build:production`, inspect bundled `dist/background/background.js` — API URL should be your HTTPS origin, not localhost.
-2. Load `dist/` in Chrome, sign in with the same Supabase account as the dashboard.
+1. After `npm run build:production`, inspect bundled `extension/dist/background/background.js` — API URL should be your HTTPS origin, not localhost.
+2. Load `extension/dist/` in Chrome, sign in with the same Supabase account as the dashboard.
 3. Scrape a job page and save; `POST /api/scrape-results` should return **201** and the job appears in the dashboard for that user.
 4. Sign out and confirm save is blocked with a clear message.
 

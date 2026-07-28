@@ -60,4 +60,14 @@ export class CvStructuredPreviewComponent {
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
   }
+
+  protected skillItems(entry: CvStructuredEntry): readonly string[] {
+    const techItems = this.techStackItems(entry);
+
+    if (techItems.length > 0) {
+      return techItems;
+    }
+
+    return entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
+  }
 }

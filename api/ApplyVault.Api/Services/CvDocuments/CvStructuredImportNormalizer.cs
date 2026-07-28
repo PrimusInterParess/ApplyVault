@@ -113,12 +113,24 @@ internal static class CvStructuredImportNormalizer
 
         (title, subtitle, dateRange) = RelocateEmbeddedDates(title, subtitle, dateRange);
 
-        if (sectionType == CvSectionTypes.Skills
-            && bullets.Count == 0
-            && !string.IsNullOrWhiteSpace(summary))
+        if (sectionType == CvSectionTypes.Skills)
         {
-            bullets = PromoteSummaryToSkillBullets(summary);
-            summary = string.Empty;
+            if (bullets.Count == 0 && !string.IsNullOrWhiteSpace(summary))
+            {
+                bullets = PromoteSummaryToSkillBullets(summary);
+                summary = string.Empty;
+            }
+
+            // Skills are comma-separated in techStack — never keep them as bullet lists.
+            if (bullets.Count > 0)
+            {
+                if (string.IsNullOrWhiteSpace(techStack))
+                {
+                    techStack = string.Join(", ", bullets);
+                }
+
+                bullets = [];
+            }
         }
 
         return entry with

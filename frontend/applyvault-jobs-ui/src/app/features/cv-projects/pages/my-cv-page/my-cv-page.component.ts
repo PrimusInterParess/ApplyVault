@@ -62,6 +62,7 @@ export class MyCvPageComponent implements OnDestroy {
   protected readonly selectedSuggestionIds = signal<string[]>([]);
   protected readonly sectionOrderDraft = signal<CvStructuredSection[] | null>(null);
   protected readonly cvFileInput = viewChild<ElementRef<HTMLInputElement>>('cvFileInput');
+  protected readonly profilePhotoFileInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoFileInput');
 
   protected readonly extractionStatus = computed(() => this.cvDocument.importSummary());
 
@@ -337,6 +338,23 @@ export class MyCvPageComponent implements OnDestroy {
     }
 
     this.cvDocument.upload(file);
+  }
+
+  protected openProfilePhotoFilePicker(): void {
+    this.profilePhotoFileInput()?.nativeElement.click();
+  }
+
+  protected onProfilePhotoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.cvDocument.uploadProfilePhoto(file);
   }
 
   protected onExportTemplateChange(event: Event): void {

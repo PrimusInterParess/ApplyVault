@@ -25,26 +25,52 @@ internal static class CvStructuredUpdateNormalizer
                 section.Entries
                     .Where(EntryHasContent)
                     .OrderBy((entry) => entry.SortOrder)
-                    .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
-                        ParseGuid(entry.Id),
-                        entry.Title.Trim(),
-                        string.IsNullOrWhiteSpace(entry.Subtitle) ? null : entry.Subtitle.Trim(),
-                        string.IsNullOrWhiteSpace(entry.DateRange) ? null : entry.DateRange.Trim(),
-                        entry.Summary?.Trim() ?? string.Empty,
-                        entry.Bullets
-                            .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
-                            .Select((bullet) => bullet.Trim().TrimStart('-', '*', '•').Trim())
-                            .Where((bullet) => bullet.Length > 0)
-                            .ToArray(),
-                        entry.TechStack?.Trim() ?? string.Empty,
-                        string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source.Trim(),
-                        ParseKnownSourceSummaryId(entry.SourceSummaryId, knownSourceSummaryIds),
-                        entryIndex))
+                    .Select((entry, entryIndex) => NormalizeEntry(
+                        section.SectionType,
+                        entry,
+                        entryIndex,
+                        knownSourceSummaryIds))
                     .ToArray()))
             .Where((section) => section.Entries.Count > 0)
             .ToArray();
 
         return new SaveCvStructuredDocumentRequest(sections);
+    }
+
+    private static CvStructuredEntryWriteDto NormalizeEntry(
+        string sectionType,
+        CvStructuredUpdateAiEntry entry,
+        int entryIndex,
+        HashSet<Guid> knownSourceSummaryIds)
+    {
+        var bullets = entry.Bullets
+            .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
+            .Select((bullet) => bullet.Trim().TrimStart('-', '*', '•').Trim())
+            .Where((bullet) => bullet.Length > 0)
+            .ToArray();
+        var techStack = entry.TechStack?.Trim() ?? string.Empty;
+
+        if (CvSectionTypes.Normalize(sectionType) == CvSectionTypes.Skills && bullets.Length > 0)
+        {
+            if (string.IsNullOrWhiteSpace(techStack))
+            {
+                techStack = string.Join(", ", bullets);
+            }
+
+            bullets = [];
+        }
+
+        return new CvStructuredEntryWriteDto(
+            ParseGuid(entry.Id),
+            entry.Title.Trim(),
+            string.IsNullOrWhiteSpace(entry.Subtitle) ? null : entry.Subtitle.Trim(),
+            string.IsNullOrWhiteSpace(entry.DateRange) ? null : entry.DateRange.Trim(),
+            entry.Summary?.Trim() ?? string.Empty,
+            bullets,
+            techStack,
+            string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source.Trim(),
+            ParseKnownSourceSummaryId(entry.SourceSummaryId, knownSourceSummaryIds),
+            entryIndex);
     }
 
     private static Guid? ParseGuid(string? value) =>

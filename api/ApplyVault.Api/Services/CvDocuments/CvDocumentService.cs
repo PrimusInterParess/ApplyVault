@@ -21,6 +21,13 @@ public interface ICvDocumentService
 
     Task<CvDocumentContent?> OpenProfilePhotoAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
+    Task<CvDocumentDto> UploadProfilePhotoAsync(
+        AppUserEntity user,
+        IFormFile file,
+        CancellationToken cancellationToken = default);
+
+    Task<CvDocumentDto?> DeleteProfilePhotoAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
     Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 }
 
@@ -36,6 +43,7 @@ public sealed class CvDocumentService(
     IOptions<CvDocumentStorageOptions> storageOptions) : ICvDocumentService
 {
     private const string PdfContentType = "application/pdf";
+    private const long MaxProfilePhotoBytes = 3 * 1024 * 1024;
 
     public async Task<CvDocumentDto?> GetCurrentAsync(AppUserEntity user, CancellationToken cancellationToken = default)
     {
@@ -176,9 +184,80 @@ public sealed class CvDocumentService(
         var contentType = string.IsNullOrWhiteSpace(document.ProfilePhotoContentType)
             ? "image/jpeg"
             : document.ProfilePhotoContentType;
-        var extension = string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+        var extension = contentType.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
 
         return new CvDocumentContent(content, contentType, $"profile-photo{extension}");
+    }
+
+    public async Task<CvDocumentDto> UploadProfilePhotoAsync(
+        AppUserEntity user,
+        IFormFile file,
+        CancellationToken cancellationToken = default)
+    {
+        var (contentType, extension) = ValidateProfilePhotoUpload(file);
+
+        var document = await dbContext.UserCvDocuments
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null)
+        {
+            throw new InvalidOperationException("Upload a CV before adding a profile photo.");
+        }
+
+        var previousPhotoKey = document.ProfilePhotoStorageKey;
+        var photoStorageKey = BuildPhotoStorageKey(user.Id, document.Id, extension);
+
+        await using (var uploadStream = file.OpenReadStream())
+        {
+            await cvDocumentStorage.SaveAsync(photoStorageKey, uploadStream, cancellationToken);
+        }
+
+        document.ProfilePhotoStorageKey = photoStorageKey;
+        document.ProfilePhotoContentType = contentType;
+        document.UpdatedAt = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(previousPhotoKey)
+            && !string.Equals(previousPhotoKey, photoStorageKey, StringComparison.Ordinal))
+        {
+            await cvDocumentStorage.DeleteAsync(previousPhotoKey, cancellationToken);
+        }
+
+        return MapDocument(document);
+    }
+
+    public async Task<CvDocumentDto?> DeleteProfilePhotoAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await dbContext.UserCvDocuments
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null)
+        {
+            return null;
+        }
+
+        var previousPhotoKey = document.ProfilePhotoStorageKey;
+
+        if (string.IsNullOrWhiteSpace(previousPhotoKey))
+        {
+            return MapDocument(document);
+        }
+
+        document.ProfilePhotoStorageKey = null;
+        document.ProfilePhotoContentType = null;
+        document.UpdatedAt = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await cvDocumentStorage.DeleteAsync(previousPhotoKey, cancellationToken);
+
+        return MapDocument(document);
     }
 
     public async Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default)
@@ -253,10 +332,100 @@ public sealed class CvDocumentService(
         }
     }
 
+    private static (string ContentType, string Extension) ValidateProfilePhotoUpload(IFormFile file)
+    {
+        if (file.Length <= 0)
+        {
+            throw new InvalidOperationException("Upload an image file before saving.");
+        }
+
+        if (file.Length > MaxProfilePhotoBytes)
+        {
+            throw new InvalidOperationException("Profile photos must be 3 MB or smaller.");
+        }
+
+        var contentType = (file.ContentType ?? string.Empty).Trim().ToLowerInvariant();
+        var extension = Path.GetExtension(file.FileName);
+
+        var resolved = contentType switch
+        {
+            "image/jpeg" => (ContentType: "image/jpeg", Extension: ".jpg"),
+            "image/png" => (ContentType: "image/png", Extension: ".png"),
+            "image/webp" => (ContentType: "image/webp", Extension: ".webp"),
+            _ => (ContentType: (string?)null, Extension: (string?)null)
+        };
+
+        if (resolved.ContentType is null || resolved.Extension is null)
+        {
+            throw new InvalidOperationException("Only JPEG, PNG, or WebP images are supported.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(extension)
+            && !string.Equals(extension, resolved.Extension, StringComparison.OrdinalIgnoreCase)
+            && !(string.Equals(resolved.ContentType, "image/jpeg", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Only JPEG, PNG, or WebP images are supported.");
+        }
+
+        using var stream = file.OpenReadStream();
+        Span<byte> header = stackalloc byte[12];
+        var bytesRead = stream.Read(header);
+
+        if (!LooksLikeImage(header[..bytesRead], resolved.ContentType))
+        {
+            throw new InvalidOperationException("The uploaded file is not a valid image.");
+        }
+
+        return (resolved.ContentType, resolved.Extension);
+    }
+
+    private static bool LooksLikeImage(ReadOnlySpan<byte> header, string contentType)
+    {
+        if (string.Equals(contentType, "image/jpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            return header.Length >= 3
+                && header[0] == 0xFF
+                && header[1] == 0xD8
+                && header[2] == 0xFF;
+        }
+
+        if (string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase))
+        {
+            return header.Length >= 8
+                && header[0] == 0x89
+                && header[1] == (byte)'P'
+                && header[2] == (byte)'N'
+                && header[3] == (byte)'G'
+                && header[4] == 0x0D
+                && header[5] == 0x0A
+                && header[6] == 0x1A
+                && header[7] == 0x0A;
+        }
+
+        if (string.Equals(contentType, "image/webp", StringComparison.OrdinalIgnoreCase))
+        {
+            return header.Length >= 12
+                && header[0] == (byte)'R'
+                && header[1] == (byte)'I'
+                && header[2] == (byte)'F'
+                && header[3] == (byte)'F'
+                && header[8] == (byte)'W'
+                && header[9] == (byte)'E'
+                && header[10] == (byte)'B'
+                && header[11] == (byte)'P';
+        }
+
+        return false;
+    }
+
     private static string BuildStorageKey(Guid userId, Guid documentId)
     {
         return $"{userId:D}/{documentId:D}.pdf";
     }
+
+    private static string BuildPhotoStorageKey(Guid userId, Guid documentId, string extension) =>
+        $"{userId:D}/{documentId:D}-photo{extension}";
 
     internal static CvDocumentDto MapDocument(UserCvDocumentEntity document)
     {

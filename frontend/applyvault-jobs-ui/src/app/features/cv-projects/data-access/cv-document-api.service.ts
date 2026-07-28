@@ -50,6 +50,22 @@ export class CvDocumentApiService {
     });
   }
 
+  uploadProfilePhoto(file: File): Observable<CvDocument> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    return this.httpClient.put<CvDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/profile-photo`,
+      formData
+    );
+  }
+
+  deleteProfilePhoto(): Observable<CvDocument> {
+    return this.httpClient.delete<CvDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/profile-photo`
+    );
+  }
+
   downloadOriginalContent(): Observable<Blob> {
     return this.httpClient.get(
       `${this.apiConfig.baseUrl}/cv-documents/current/content/original/download`,

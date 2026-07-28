@@ -1088,6 +1088,28 @@
   box-shadow: var(--app-shadow-sm);
 }
 
+.my-cv-page__profile-photo--empty {
+  box-shadow: none;
+}
+
+.my-cv-page__profile-photo-skeleton {
+  width: 5rem;
+  height: 5rem;
+}
+
+.my-cv-page__profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  min-width: min(16rem, 100%);
+}
+
+.my-cv-page__profile-hint {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+
 .my-cv-page__profile-copy {
   margin: 0;
   max-width: 36rem;

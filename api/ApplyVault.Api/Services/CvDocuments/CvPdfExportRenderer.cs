@@ -83,6 +83,22 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
         {
             column.Item().Row((row) =>
             {
+                if (photoBytes is { Length: > 0 })
+                {
+                    row.ConstantItem(layout.PhotoSize).Height(layout.PhotoSize).Element((photoContainer) =>
+                    {
+                        photoContainer
+                            .Border(1)
+                            .BorderColor(RuleColor)
+                            .Background(Colors.White)
+                            .Padding(2)
+                            .Image(photoBytes)
+                            .FitArea();
+                    });
+
+                    row.ConstantItem(14);
+                }
+
                 row.RelativeItem().Column((textColumn) =>
                 {
                     textColumn.Spacing(layout.HeaderTextSpacing);
@@ -99,20 +115,6 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
                         }
                     }
                 });
-
-                if (photoBytes is { Length: > 0 })
-                {
-                    row.ConstantItem(layout.PhotoSize).Height(layout.PhotoSize).Element((photoContainer) =>
-                    {
-                        photoContainer
-                            .Border(1)
-                            .BorderColor(RuleColor)
-                            .Background(Colors.White)
-                            .Padding(2)
-                            .Image(photoBytes)
-                            .FitArea();
-                    });
-                }
             });
 
             column.Item().PaddingTop(layout.RulePaddingTop).LineHorizontal(1.25f).LineColor(AccentColor);
@@ -280,40 +282,50 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
                 });
             }
 
-            var bullets = GetDisplayBullets(entry, sectionType);
-
-            if (bullets.Count > 0)
+            if (sectionType == CvSectionTypes.Skills)
             {
-                column.Item().PaddingLeft(layout.BulletPaddingLeft).Column((bulletColumn) =>
-                {
-                    bulletColumn.Spacing(layout.BulletSpacing);
+                var skillItems = GetSkillItems(entry);
 
-                    foreach (var bullet in bullets)
-                    {
-                        bulletColumn.Item().Row((row) =>
-                        {
-                            row.ConstantItem(layout.BulletMarkerWidth).Text("•").FontSize(layout.BodyFontSize);
-                            row.RelativeItem().Text(text =>
-                            {
-                                CvExportInlinePdfRenderer.AppendRuns(
-                                    text,
-                                    bullet,
-                                    (span) => span.FontSize(layout.BodyFontSize));
-                            });
-                        });
-                    }
-                });
+                if (skillItems.Count > 0)
+                {
+                    column.Item().Text(string.Join(", ", skillItems)).FontSize(layout.BodyFontSize);
+                }
             }
-
-            var techItems = CvExportTextNormalizer.TechItems(entry.TechStack);
-
-            if (techItems.Count > 0 && sectionType != CvSectionTypes.Skills)
+            else
             {
-                column.Item().Text(text =>
+                if (entry.Bullets.Count > 0)
                 {
-                    text.Span("Technologies: ").FontSize(layout.SmallFontSize).SemiBold().FontColor(MutedColor);
-                    text.Span(string.Join(", ", techItems)).FontSize(layout.SmallFontSize).FontColor(MutedColor);
-                });
+                    column.Item().PaddingLeft(layout.BulletPaddingLeft).Column((bulletColumn) =>
+                    {
+                        bulletColumn.Spacing(layout.BulletSpacing);
+
+                        foreach (var bullet in entry.Bullets)
+                        {
+                            bulletColumn.Item().Row((row) =>
+                            {
+                                row.ConstantItem(layout.BulletMarkerWidth).Text("•").FontSize(layout.BodyFontSize);
+                                row.RelativeItem().Text(text =>
+                                {
+                                    CvExportInlinePdfRenderer.AppendRuns(
+                                        text,
+                                        bullet,
+                                        (span) => span.FontSize(layout.BodyFontSize));
+                                });
+                            });
+                        }
+                    });
+                }
+
+                var techItems = CvExportTextNormalizer.TechItems(entry.TechStack);
+
+                if (techItems.Count > 0)
+                {
+                    column.Item().Text(text =>
+                    {
+                        text.Span("Technologies: ").FontSize(layout.SmallFontSize).SemiBold().FontColor(MutedColor);
+                        text.Span(string.Join(", ", techItems)).FontSize(layout.SmallFontSize).FontColor(MutedColor);
+                    });
+                }
             }
 
             if (showSeparator)
@@ -323,16 +335,16 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
         });
     }
 
-    private static IReadOnlyList<string> GetDisplayBullets(CvExportEntry entry, string sectionType)
+    private static IReadOnlyList<string> GetSkillItems(CvExportEntry entry)
     {
-        if (entry.Bullets.Count > 0)
+        var fromTechStack = CvExportTextNormalizer.TechItems(entry.TechStack);
+
+        if (fromTechStack.Count > 0)
         {
-            return entry.Bullets;
+            return fromTechStack;
         }
 
-        return sectionType == CvSectionTypes.Skills
-            ? CvExportTextNormalizer.TechItems(entry.TechStack)
-            : [];
+        return entry.Bullets;
     }
 
     private static bool IsHeaderSection(CvExportSection section) =>
@@ -390,11 +402,11 @@ public sealed class CvPdfExportRenderer : ICvPdfExportRenderer
 
             return compactLevel switch
             {
-                1 => new CvPdfClassicLayout(0.94f, 32f, 26f, 1.16f, 72f),
-                2 => new CvPdfClassicLayout(0.88f, 28f, 22f, 1.1f, 64f),
-                3 => new CvPdfClassicLayout(0.82f, 24f, 18f, 1.04f, 56f),
-                4 => new CvPdfClassicLayout(0.76f, 20f, 14f, 1.0f, 48f),
-                _ => new CvPdfClassicLayout(1f, 36f, 32f, 1.22f, 80f)
+                1 => new CvPdfClassicLayout(0.94f, 32f, 26f, 1.16f, 92f),
+                2 => new CvPdfClassicLayout(0.88f, 28f, 22f, 1.1f, 84f),
+                3 => new CvPdfClassicLayout(0.82f, 24f, 18f, 1.04f, 72f),
+                4 => new CvPdfClassicLayout(0.76f, 20f, 14f, 1.0f, 60f),
+                _ => new CvPdfClassicLayout(1f, 36f, 32f, 1.22f, 100f)
             };
         }
     }

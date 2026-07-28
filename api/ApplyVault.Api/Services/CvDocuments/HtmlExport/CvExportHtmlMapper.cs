@@ -169,29 +169,7 @@ internal static class CvExportHtmlMapper
             builder.Append($"""<p class="entry-summary">{RenderInline(entry.Summary)}</p>""");
         }
 
-        var bullets = GetDisplayBullets(entry, sectionType);
-
-        if (bullets.Count > 0)
-        {
-            builder.Append("""<ul class="entry-bullets">""");
-
-            foreach (var bullet in bullets)
-            {
-                builder.Append($"""<li>{RenderInline(bullet)}</li>""");
-            }
-
-            builder.Append("</ul>");
-        }
-
-        var techItems = sectionType == CvSectionTypes.Skills
-            ? []
-            : CvExportTextNormalizer.TechItems(entry.TechStack);
-
-        if (techItems.Count > 0)
-        {
-            builder.Append($"""<p class="entry-tech"><strong>Technologies:</strong> {Encode(string.Join(", ", techItems))}</p>""");
-        }
-
+        AppendEntryBodyContent(builder, entry, sectionType);
         builder.Append("</div>");
     }
 
@@ -268,13 +246,32 @@ internal static class CvExportHtmlMapper
             builder.Append($"""<{tag} class="entry-summary">{RenderInline(entry.Summary)}</{tag}>""");
         }
 
-        var bullets = GetDisplayBullets(entry, sectionType);
+        AppendEntryBodyContent(builder, entry, sectionType);
+        builder.Append("</div>");
+    }
 
-        if (bullets.Count > 0)
+    private static void AppendEntryBodyContent(
+        StringBuilder builder,
+        CvExportEntry entry,
+        string sectionType)
+    {
+        if (sectionType == CvSectionTypes.Skills)
+        {
+            var skillItems = GetSkillItems(entry);
+
+            if (skillItems.Count > 0)
+            {
+                builder.Append($"""<p class="entry-tech">{Encode(string.Join(", ", skillItems))}</p>""");
+            }
+
+            return;
+        }
+
+        if (entry.Bullets.Count > 0)
         {
             builder.Append("""<ul class="entry-bullets">""");
 
-            foreach (var bullet in bullets)
+            foreach (var bullet in entry.Bullets)
             {
                 builder.Append($"""<li>{RenderInline(bullet)}</li>""");
             }
@@ -282,28 +279,24 @@ internal static class CvExportHtmlMapper
             builder.Append("</ul>");
         }
 
-        var techItems = sectionType == CvSectionTypes.Skills
-            ? []
-            : CvExportTextNormalizer.TechItems(entry.TechStack);
+        var techItems = CvExportTextNormalizer.TechItems(entry.TechStack);
 
         if (techItems.Count > 0)
         {
             builder.Append($"""<p class="entry-tech"><strong>Technologies:</strong> {Encode(string.Join(", ", techItems))}</p>""");
         }
-
-        builder.Append("</div>");
     }
 
-    private static IReadOnlyList<string> GetDisplayBullets(CvExportEntry entry, string sectionType)
+    private static IReadOnlyList<string> GetSkillItems(CvExportEntry entry)
     {
-        if (entry.Bullets.Count > 0)
+        var fromTechStack = CvExportTextNormalizer.TechItems(entry.TechStack);
+
+        if (fromTechStack.Count > 0)
         {
-            return entry.Bullets;
+            return fromTechStack;
         }
 
-        return sectionType == CvSectionTypes.Skills
-            ? CvExportTextNormalizer.TechItems(entry.TechStack)
-            : [];
+        return entry.Bullets;
     }
 
     private static bool IsContactSection(CvExportSection section) =>

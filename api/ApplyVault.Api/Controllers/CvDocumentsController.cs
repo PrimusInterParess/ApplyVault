@@ -108,6 +108,38 @@ public sealed class CvDocumentsController(
         };
     }
 
+    [HttpPut("current/profile-photo")]
+    [RequestSizeLimit(4 * 1024 * 1024)]
+    public async Task<ActionResult<CvDocumentDto>> UploadProfilePhoto(
+        IFormFile? file,
+        CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length <= 0)
+        {
+            return BadRequest("Upload an image file before saving.");
+        }
+
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvDocumentService.UploadProfilePhotoAsync(user, file, cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpDelete("current/profile-photo")]
+    public async Task<ActionResult<CvDocumentDto>> DeleteProfilePhoto(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var document = await cvDocumentService.DeleteProfilePhotoAsync(user, cancellationToken);
+
+        return document is null ? NotFound() : Ok(document);
+    }
+
     [HttpDelete("current")]
     public async Task<IActionResult> DeleteCurrent(CancellationToken cancellationToken = default)
     {

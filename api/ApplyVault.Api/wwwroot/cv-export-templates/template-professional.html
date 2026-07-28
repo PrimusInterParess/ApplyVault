@@ -14,20 +14,22 @@
       line-height: 1.45;
     }
     .cv-header {
-      margin-bottom: 14px;
-      position: relative;
-    }
-    .cv-header::after {
-      content: '';
-      display: table;
-      clear: both;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
     }
     .cv-photo {
-      width: 84px;
-      height: 84px;
+      flex: 0 0 auto;
+      width: 108px;
+      height: 108px;
       object-fit: cover;
-      float: right;
-      margin: 0 0 8px 14px;
+      border: 1px solid #ddd;
+    }
+    .cv-header-copy {
+      flex: 1 1 auto;
+      min-width: 0;
     }
     .cv-name {
       margin: 0;
@@ -80,7 +82,9 @@
 <body>
   <div class="cv-header">
     {{ProfilePhotoHtml}}
-    {{HeaderHtml}}
+    <div class="cv-header-copy">
+      {{HeaderHtml}}
+    </div>
   </div>
   <div class="cv-body">
     {{MainHtml}}

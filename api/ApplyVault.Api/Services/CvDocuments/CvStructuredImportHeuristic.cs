@@ -184,18 +184,7 @@ internal static class CvStructuredImportHeuristic
 
                 if (values.Length > 0)
                 {
-                    groupedEntries.Add(new CvStructuredEntryWriteDto(
-                        null,
-                        title,
-                        null,
-                        null,
-                        string.Empty,
-                        values,
-                        string.Empty,
-                        CvEntrySources.Import,
-                        null,
-                        groupedEntries.Count));
-
+                    groupedEntries.Add(CreateSkillsEntry(title, values, groupedEntries.Count));
                     continue;
                 }
             }
@@ -205,33 +194,9 @@ internal static class CvStructuredImportHeuristic
                 .Where((value) => !string.IsNullOrWhiteSpace(value))
                 .ToArray();
 
-            if (inlineValues.Length > 1)
+            if (inlineValues.Length >= 1)
             {
-                groupedEntries.Add(new CvStructuredEntryWriteDto(
-                    null,
-                    "Skills",
-                    null,
-                    null,
-                    string.Empty,
-                    inlineValues,
-                    string.Empty,
-                    CvEntrySources.Import,
-                    null,
-                    groupedEntries.Count));
-            }
-            else if (inlineValues.Length == 1)
-            {
-                groupedEntries.Add(new CvStructuredEntryWriteDto(
-                    null,
-                    "Skills",
-                    null,
-                    null,
-                    string.Empty,
-                    inlineValues,
-                    string.Empty,
-                    CvEntrySources.Import,
-                    null,
-                    groupedEntries.Count));
+                groupedEntries.Add(CreateSkillsEntry("Skills", inlineValues, groupedEntries.Count));
             }
         }
 
@@ -250,21 +215,24 @@ internal static class CvStructuredImportHeuristic
             return [];
         }
 
-        return
-        [
-            new CvStructuredEntryWriteDto(
-                null,
-                "Skills",
-                null,
-                null,
-                string.Empty,
-                fallbackValues,
-                string.Empty,
-                CvEntrySources.Import,
-                null,
-                0)
-        ];
+        return [CreateSkillsEntry("Skills", fallbackValues, 0)];
     }
+
+    private static CvStructuredEntryWriteDto CreateSkillsEntry(
+        string title,
+        IReadOnlyList<string> values,
+        int sortOrder) =>
+        new(
+            null,
+            title,
+            null,
+            null,
+            string.Empty,
+            [],
+            string.Join(", ", values),
+            CvEntrySources.Import,
+            null,
+            sortOrder);
 
     private static string[] SplitIntoEntryChunks(string[] lines)
     {

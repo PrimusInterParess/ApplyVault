@@ -57,7 +57,7 @@ function normalizeSkillsEntry(entry: CvStructuredEntry): CvStructuredEntry {
   const bullets = entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
 
   if (techStack) {
-    return entry;
+    return bullets.length === 0 ? entry : { ...entry, bullets: [] };
   }
 
   if (bullets.length === 0) {
@@ -66,7 +66,8 @@ function normalizeSkillsEntry(entry: CvStructuredEntry): CvStructuredEntry {
 
   return {
     ...entry,
-    techStack: bullets.join(', ')
+    techStack: bullets.join(', '),
+    bullets: []
   };
 }
 

@@ -75,12 +75,7 @@ export class CvStructuredEntryEditorComponent {
 
   protected updateTechStack(event: Event): void {
     const value = readInputValue(event);
-    const items = value
-      .split(/[,;|]/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
-
-    this.entryChange.emit({ techStack: value, bullets: items });
+    this.entryChange.emit({ techStack: value, bullets: [] });
   }
 
   protected summaryFieldText(): string {

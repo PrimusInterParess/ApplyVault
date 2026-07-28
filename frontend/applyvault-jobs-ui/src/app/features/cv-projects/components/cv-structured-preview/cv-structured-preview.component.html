@@ -59,7 +59,7 @@
                 <p class="cv-structured-preview__entry-summary">{{ entry.summary }}</p>
               }
 
-              @if (entry.bullets.length > 0) {
+              @if (entry.bullets.length > 0 && !isSkillsSection(section.sectionType)) {
                 <ul class="cv-structured-preview__entry-bullets">
                   @for (bullet of entry.bullets; track bullet) {
                     <li>{{ bullet }}</li>
@@ -67,10 +67,10 @@
                 </ul>
               }
 
-              @if (hasTechStack(entry)) {
+              @if (hasTechStack(entry) || (isSkillsSection(section.sectionType) && entry.bullets.length > 0)) {
                 @if (isSkillsSection(section.sectionType)) {
                   <div class="cv-structured-preview__tech-chips" aria-label="Skills">
-                    @for (item of techStackItems(entry); track item) {
+                    @for (item of skillItems(entry); track item) {
                       <span class="cv-structured-preview__tech-chip">{{ item }}</span>
                     }
                   </div>

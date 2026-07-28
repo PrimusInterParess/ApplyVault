@@ -29,6 +29,8 @@ export class CvDocumentFacade {
   private downloadOriginalSubscription: Subscription | null = null;
   private downloadFormattedSubscription: Subscription | null = null;
   private profilePhotoSubscription: Subscription | null = null;
+  private profilePhotoUploadSubscription: Subscription | null = null;
+  private profilePhotoDeleteSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private profilePhotoObjectUrl: string | null = null;
   private previewObjectUrl: string | null = null;
@@ -42,6 +44,8 @@ export class CvDocumentFacade {
   readonly downloadingFormatted = signal(false);
   readonly previewLoading = signal(false);
   readonly loadingProfilePhoto = signal(false);
+  readonly uploadingProfilePhoto = signal(false);
+  readonly deletingProfilePhoto = signal(false);
   readonly document = signal<CvDocument | null>(null);
   readonly importSummary = signal<CvStructuredImportSummary | null>(null);
   readonly error = signal<string | null>(null);
@@ -333,6 +337,62 @@ export class CvDocumentFacade {
     this.clearFormattedPreview();
   }
 
+  uploadProfilePhoto(file: File): void {
+    if (!this.document()) {
+      return;
+    }
+
+    this.cancelProfilePhotoUpload();
+    this.uploadingProfilePhoto.set(true);
+    this.profilePhotoError.set(null);
+    this.clearFormattedPreview();
+
+    this.profilePhotoUploadSubscription = this.apiService.uploadProfilePhoto(file).subscribe({
+      next: (document) => {
+        this.uploadingProfilePhoto.set(false);
+        this.document.set(document);
+        this.loadProfilePhoto(document);
+      },
+      error: (error) => {
+        this.uploadingProfilePhoto.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.profilePhotoError.set(this.readErrorMessage(error, 'Could not upload your profile photo.'));
+      }
+    });
+  }
+
+  deleteProfilePhoto(): void {
+    if (!this.document()?.hasProfilePhoto) {
+      return;
+    }
+
+    this.cancelProfilePhotoDelete();
+    this.deletingProfilePhoto.set(true);
+    this.profilePhotoError.set(null);
+    this.clearFormattedPreview();
+
+    this.profilePhotoDeleteSubscription = this.apiService.deleteProfilePhoto().subscribe({
+      next: (document) => {
+        this.deletingProfilePhoto.set(false);
+        this.document.set(document);
+        this.clearProfilePhoto();
+      },
+      error: (error) => {
+        this.deletingProfilePhoto.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.profilePhotoError.set(this.readErrorMessage(error, 'Could not remove your profile photo.'));
+      }
+    });
+  }
+
   private loadProfilePhoto(document: CvDocument): void {
     this.cancelProfilePhoto();
 
@@ -418,6 +478,8 @@ export class CvDocumentFacade {
     this.cancelDelete();
     this.cancelDownloadOriginal();
     this.cancelDownloadFormatted();
+    this.cancelProfilePhotoUpload();
+    this.cancelProfilePhotoDelete();
     this.clearFormattedPreview();
     this.clearProfilePhoto();
     this.loading.set(false);
@@ -427,6 +489,8 @@ export class CvDocumentFacade {
     this.downloadingOriginal.set(false);
     this.downloadingFormatted.set(false);
     this.previewLoading.set(false);
+    this.uploadingProfilePhoto.set(false);
+    this.deletingProfilePhoto.set(false);
     this.document.set(null);
     this.importSummary.set(null);
     this.error.set(null);
@@ -471,6 +535,16 @@ export class CvDocumentFacade {
   private cancelProfilePhoto(): void {
     this.profilePhotoSubscription?.unsubscribe();
     this.profilePhotoSubscription = null;
+  }
+
+  private cancelProfilePhotoUpload(): void {
+    this.profilePhotoUploadSubscription?.unsubscribe();
+    this.profilePhotoUploadSubscription = null;
+  }
+
+  private cancelProfilePhotoDelete(): void {
+    this.profilePhotoDeleteSubscription?.unsubscribe();
+    this.profilePhotoDeleteSubscription = null;
   }
 
   private triggerDownload(blob: Blob, fileName: string): void {

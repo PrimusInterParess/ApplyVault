@@ -32,14 +32,14 @@ public sealed class CvImportAiOptions
           - subtitle: employer, institution, or context (optional)
           - dateRange: plain text dates such as "Jan 2020 – Present" (optional)
           - summary: short prose paragraph(s); use a single string, not markdown
-          - bullets: achievement or skill bullets as plain strings without leading "-" or "*"
-          - techStack: comma-separated technologies when relevant; empty string otherwise
+          - bullets: achievement bullets as plain strings without leading "-" or "*"; leave empty for Skills
+          - techStack: comma-separated technologies or skills when relevant; empty string otherwise
 
         Decisive rules:
         - One entry per job, project, or degree — never merge multiple roles into one entry
         - Put dates only in dateRange, never in title or subtitle
         - Put bullet-like lines in bullets, not in summary
-        - For Skills sections, put individual skills in bullets; use title for skill groups only
+        - For Skills sections, put skills in techStack as a comma-separated string; use title for skill groups only; leave bullets empty
         - For Summary sections, use a single entry with prose in summary; title may be empty or "Summary"
         - Do not use markdown, HTML, or bold markers in any field
         - Preserve contact details (email, phone, LinkedIn, GitHub, website, location) in a Custom section with heading "Contact"

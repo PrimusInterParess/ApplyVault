@@ -540,14 +540,66 @@
         }
 
         <div class="my-cv-page__preview-document">
-          @if (cvDocument.profilePhotoUrl()) {
-            <div class="my-cv-page__profile-row">
+          <div class="my-cv-page__profile-row">
+            <input
+              #profilePhotoFileInput
+              type="file"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              class="my-cv-page__file-input"
+              (change)="onProfilePhotoFileSelected($event)" />
+
+            @if (cvDocument.loadingProfilePhoto()) {
+              <div
+                class="my-cv-page__profile-photo-skeleton"
+                aria-busy="true"
+                aria-label="Loading profile photo">
+                <app-skeleton-block width="5rem" height="5rem" [rounded]="true" />
+              </div>
+            } @else if (cvDocument.profilePhotoUrl()) {
               <img
                 class="my-cv-page__profile-photo"
                 [src]="cvDocument.profilePhotoUrl()"
                 alt="Profile photo from your CV" />
+            } @else {
+              <div class="my-cv-page__profile-photo my-cv-page__profile-photo--empty" aria-hidden="true"></div>
+            }
+
+            <div class="my-cv-page__profile-actions">
+              <button
+                type="button"
+                class="my-cv-page__secondary-action"
+                [disabled]="
+                  cvDocument.uploadingProfilePhoto() ||
+                  cvDocument.deletingProfilePhoto() ||
+                  cvDocument.extracting()
+                "
+                (click)="openProfilePhotoFilePicker()">
+                {{
+                  cvDocument.uploadingProfilePhoto()
+                    ? 'Uploading photo...'
+                    : cvDocument.document()?.hasProfilePhoto
+                      ? 'Replace photo'
+                      : 'Upload photo'
+                }}
+              </button>
+              @if (cvDocument.document()?.hasProfilePhoto) {
+                <button
+                  type="button"
+                  class="my-cv-page__secondary-action"
+                  [disabled]="
+                    cvDocument.uploadingProfilePhoto() ||
+                    cvDocument.deletingProfilePhoto() ||
+                    cvDocument.extracting()
+                  "
+                  (click)="cvDocument.deleteProfilePhoto()">
+                  {{ cvDocument.deletingProfilePhoto() ? 'Removing...' : 'Remove photo' }}
+                </button>
+              }
+              <p class="my-cv-page__muted my-cv-page__profile-hint">
+                JPEG, PNG, or WebP up to 3 MB. Shown on exported PDF templates.
+              </p>
             </div>
-          }
+          </div>
 
           @if (!hasSections()) {
             <div class="my-cv-page__preview-empty">

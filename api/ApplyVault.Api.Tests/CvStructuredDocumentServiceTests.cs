@@ -1,6 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Tests;
@@ -58,7 +59,7 @@ public sealed class CvStructuredDocumentServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        var service = new CvStructuredDocumentService(dbContext);
+        var service = new CvStructuredDocumentService(dbContext, CvSectionCatalogProvider.LoadFromDefaultPath());
         var saved = await service.SaveStructuredAsync(
             user,
             new SaveCvStructuredDocumentRequest(

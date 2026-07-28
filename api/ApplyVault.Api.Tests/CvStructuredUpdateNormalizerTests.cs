@@ -27,6 +27,7 @@ public sealed class CvStructuredUpdateNormalizerTests
                             "Built services.",
                             [],
                             ".NET",
+                            new Dictionary<string, object?>(),
                             CvEntrySources.GitHubSummary,
                             knownSourceSummaryId,
                             0)

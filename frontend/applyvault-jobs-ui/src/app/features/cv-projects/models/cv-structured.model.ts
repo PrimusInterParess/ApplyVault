@@ -4,7 +4,29 @@ export type CvSectionType =
   | 'Education'
   | 'Skills'
   | 'Summary'
+  | 'Contact'
   | 'Custom';
+
+export type CvEntryFieldKind = 'string' | 'text' | 'stringList';
+
+export interface CvSectionFieldCatalog {
+  readonly id: string;
+  readonly label: string;
+  readonly kind: CvEntryFieldKind;
+}
+
+export interface CvSectionTypeCatalog {
+  readonly id: CvSectionType;
+  readonly defaultHeading: string;
+  readonly headingAliases: readonly string[];
+  readonly entryFields: readonly CvSectionFieldCatalog[];
+  readonly importHints?: string | null;
+}
+
+export interface CvSectionCatalogDocument {
+  readonly version: number;
+  readonly sectionTypes: readonly CvSectionTypeCatalog[];
+}
 
 export interface CvStructuredEntry {
   readonly id: string;
@@ -14,6 +36,7 @@ export interface CvStructuredEntry {
   summary: string;
   bullets: string[];
   techStack: string;
+  fields: Record<string, unknown>;
   source: string;
   sourceSummaryId: string | null;
   sortOrder: number;

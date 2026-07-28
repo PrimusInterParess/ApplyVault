@@ -1,21 +1,34 @@
+import { LowerCasePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
-import { CvSectionType, CvStructuredEntry } from '../../models/cv-structured.model';
-import { entryBodySourceText } from '../../utils/cv-structured-edit-normalizer.util';
+import {
+  CvSectionFieldCatalog,
+  CvSectionType,
+  CvStructuredEntry
+} from '../../models/cv-structured.model';
+import {
+  fieldPlaceholder,
+  patchEntryStringField,
+  patchEntryStringListField,
+  readEntryStringField,
+  readEntryStringListField,
+  shouldRenderFieldsInRow,
+  stringListUsesCommaInput
+} from '../../utils/cv-entry-fields.util';
 import { CvMarkdownFieldComponent } from '../cv-markdown-field/cv-markdown-field.component';
 
 @Component({
   selector: 'app-cv-structured-entry-editor',
   standalone: true,
-  imports: [CvMarkdownFieldComponent],
+  imports: [CvMarkdownFieldComponent, LowerCasePipe],
   templateUrl: './cv-structured-entry-editor.component.html',
   styleUrl: './cv-structured-entry-editor.component.scss'
 })
 export class CvStructuredEntryEditorComponent {
   readonly entry = input.required<CvStructuredEntry>();
   readonly sectionType = input.required<CvSectionType>();
-  readonly isContactSection = input(false);
+  readonly entryFields = input.required<readonly CvSectionFieldCatalog[]>();
   readonly disabled = input(false);
   readonly canMoveUp = input(false);
   readonly canMoveDown = input(false);
@@ -27,74 +40,62 @@ export class CvStructuredEntryEditorComponent {
   readonly moveDown = output<void>();
   readonly remove = output<void>();
 
-  protected isSummarySection(): boolean {
-    return this.sectionType() === 'Summary';
+  protected readonly shouldRenderFieldsInRow = shouldRenderFieldsInRow;
+  protected readonly fieldPlaceholder = fieldPlaceholder;
+  protected readonly stringListUsesCommaInput = stringListUsesCommaInput;
+
+  protected readString(entry: CvStructuredEntry, field: CvSectionFieldCatalog): string {
+    return readEntryStringField(entry, this.sectionType(), field);
   }
 
-  protected isSkillsSection(): boolean {
-    return this.sectionType() === 'Skills';
+  protected readStringList(entry: CvStructuredEntry, field: CvSectionFieldCatalog): readonly string[] {
+    return readEntryStringListField(entry, field);
   }
 
-  protected updateField(
-    field: 'title' | 'subtitle' | 'dateRange' | 'summary' | 'techStack',
-    event: Event
-  ): void {
-    this.entryChange.emit({ [field]: readInputValue(event) });
+  protected updateString(field: CvSectionFieldCatalog, value: string): void {
+    this.entryChange.emit(patchEntryStringField(this.sectionType(), field, value));
   }
 
-  protected updateSummary(value: string): void {
-    this.entryChange.emit({ summary: value });
+  protected updateStringInput(field: CvSectionFieldCatalog, event: Event): void {
+    this.updateString(field, readInputValue(event));
   }
 
-  protected updateBullet(index: number, value: string): void {
-    const bullets = [...this.entry().bullets];
-    bullets[index] = value;
-    this.entryChange.emit({ bullets });
+  protected updateStringListItem(field: CvSectionFieldCatalog, index: number, value: string): void {
+    const values = [...readEntryStringListField(this.entry(), field)];
+    values[index] = value;
+    this.entryChange.emit(patchEntryStringListField(field, values));
   }
 
-  protected addBullet(): void {
-    this.entryChange.emit({ bullets: [...this.entry().bullets, ''] });
+  protected addStringListItem(field: CvSectionFieldCatalog): void {
+    const values = [...readEntryStringListField(this.entry(), field), ''];
+    this.entryChange.emit(patchEntryStringListField(field, values));
   }
 
-  protected removeBullet(index: number): void {
-    const bullets = this.entry().bullets.filter((_, bulletIndex) => bulletIndex !== index);
-    this.entryChange.emit({ bullets });
+  protected removeStringListItem(field: CvSectionFieldCatalog, index: number): void {
+    const values = readEntryStringListField(this.entry(), field).filter((_, itemIndex) => itemIndex !== index);
+    this.entryChange.emit(patchEntryStringListField(field, values));
   }
 
-  protected updateContactLine(index: number, event: Event): void {
-    this.updateBullet(index, readInputValue(event));
+  protected updateCommaSeparatedList(field: CvSectionFieldCatalog, event: Event): void {
+    this.updateString(field, readInputValue(event));
   }
 
-  protected addContactLine(): void {
-    this.addBullet();
+  protected usesMarkdownInline(field: CvSectionFieldCatalog): boolean {
+    return field.kind === 'string' && (field.id === 'title' || field.id === 'groupTitle');
   }
 
-  protected removeContactLine(index: number): void {
-    this.removeBullet(index);
+  protected usesPlainStringInput(field: CvSectionFieldCatalog): boolean {
+    return field.kind === 'string'
+      && field.id !== 'title'
+      && field.id !== 'groupTitle'
+      && field.id !== 'skills';
   }
 
-  protected updateTechStack(event: Event): void {
-    const value = readInputValue(event);
-    this.entryChange.emit({ techStack: value, bullets: [] });
+  protected shouldSkipField(field: CvSectionFieldCatalog, index: number, fields: readonly CvSectionFieldCatalog[]): boolean {
+    return field.id === 'dateRange' && index > 0 && fields[index - 1]?.id === 'subtitle';
   }
 
-  protected summaryFieldText(): string {
-    return entryBodySourceText(this.entry(), this.sectionType());
-  }
-
-  protected skillsFieldText(): string {
-    const techStack = this.entry().techStack.trim();
-
-    if (techStack) {
-      return this.entry().techStack;
-    }
-
-    const bullets = this.entry().bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
-
-    if (bullets.length > 0) {
-      return bullets.join(', ');
-    }
-
-    return this.entry().techStack;
+  protected dateRangeField(fields: readonly CvSectionFieldCatalog[]): CvSectionFieldCatalog | undefined {
+    return fields.find((field) => field.id === 'dateRange');
   }
 }

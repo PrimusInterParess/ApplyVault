@@ -30,195 +30,112 @@
   </header>
 
   <div class="cv-entry-editor__fields">
-    @if (isSummarySection()) {
-      <app-cv-markdown-field
-        label="Summary"
-        previewMode="block"
-        [rows]="6"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="summaryFieldText()"
-        placeholder="Write your professional summary"
-        (valueChange)="updateSummary($event)" />
-
-      <div class="cv-entry-editor__list">
-        <p class="cv-entry-editor__plain-label">Additional points</p>
-        @for (bullet of entry().bullets; track $index) {
-          <div class="cv-entry-editor__bullet">
-            <app-cv-markdown-field
-              [rows]="2"
-              [fieldRevision]="fieldRevision()"
-              [disabled]="disabled()"
-              [value]="bullet"
-              placeholder="Supporting detail"
-              (valueChange)="updateBullet($index, $event)" />
-            <button
-              type="button"
-              class="cv-entry-editor__action"
-              [disabled]="disabled()"
-              aria-label="Remove point"
-              (click)="removeBullet($index)">
-              ×
-            </button>
+    @for (field of entryFields(); track field.id; let index = $index) {
+      @if (!shouldSkipField(field, index, entryFields())) {
+        @if (shouldRenderFieldsInRow(field, entryFields()[index + 1])) {
+          <div class="cv-entry-editor__row">
+            <label class="cv-entry-editor__plain-label">
+              {{ field.label }}
+              <input
+                class="cv-entry-editor__input"
+                type="text"
+                [disabled]="disabled()"
+                [value]="readString(entry(), field)"
+                [attr.placeholder]="fieldPlaceholder(field)"
+                (input)="updateStringInput(field, $event)" />
+            </label>
+            @if (dateRangeField(entryFields()); as dateField) {
+              <label class="cv-entry-editor__plain-label">
+                {{ dateField.label }}
+                <input
+                  class="cv-entry-editor__input"
+                  type="text"
+                  [disabled]="disabled()"
+                  [value]="readString(entry(), dateField)"
+                  [attr.placeholder]="fieldPlaceholder(dateField)"
+                  (input)="updateStringInput(dateField, $event)" />
+              </label>
+            }
           </div>
-        }
-        <button type="button" class="cv-entry-editor__add" [disabled]="disabled()" (click)="addBullet()">
-          Add point
-        </button>
-      </div>
-    } @else if (isSkillsSection()) {
-      <app-cv-markdown-field
-        label="Category / heading"
-        previewMode="inline"
-        [rows]="2"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="entry().title"
-        placeholder="Programming Languages & Frameworks"
-        (valueChange)="entryChange.emit({ title: $event })" />
-
-      <app-cv-markdown-field
-        label="Description"
-        previewMode="block"
-        [rows]="4"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="summaryFieldText()"
-        placeholder="Brief overview of this skill group"
-        (valueChange)="updateSummary($event)" />
-
-      <label class="cv-entry-editor__plain-label">
-        Skills
-        <input
-          class="cv-entry-editor__input"
-          type="text"
-          [disabled]="disabled()"
-          [value]="skillsFieldText()"
-          placeholder="React, TypeScript, Node.js"
-          (input)="updateTechStack($event)" />
-      </label>
-      <p class="cv-entry-editor__hint">Separate skills with commas, semicolons, or pipes.</p>
-    } @else if (isContactSection()) {
-      <app-cv-markdown-field
-        label="Name / heading"
-        previewMode="inline"
-        [rows]="2"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="entry().title"
-        placeholder="Your name"
-        (valueChange)="entryChange.emit({ title: $event })" />
-
-      <div class="cv-entry-editor__list">
-        <p class="cv-entry-editor__plain-label">Contact lines</p>
-        @for (line of entry().bullets; track $index) {
-          <div class="cv-entry-editor__list-row">
-            <app-cv-markdown-field
-              previewMode="inline"
-              [rows]="2"
-              [fieldRevision]="fieldRevision()"
-              [disabled]="disabled()"
-              [value]="line"
-              placeholder="email@example.com"
-              (valueChange)="updateBullet($index, $event)" />
-            <button
-              type="button"
-              class="cv-entry-editor__action"
-              [disabled]="disabled()"
-              aria-label="Remove contact line"
-              (click)="removeContactLine($index)">
-              ×
-            </button>
-          </div>
-        }
-        <button
-          type="button"
-          class="cv-entry-editor__add"
-          [disabled]="disabled()"
-          (click)="addContactLine()">
-          Add contact line
-        </button>
-      </div>
-    } @else {
-      <app-cv-markdown-field
-        label="Title"
-        previewMode="inline"
-        [rows]="2"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="entry().title"
-        placeholder="Job title, project, or degree"
-        (valueChange)="entryChange.emit({ title: $event })" />
-
-      <div class="cv-entry-editor__row">
-        <label class="cv-entry-editor__plain-label">
-          Subtitle
-          <input
-            class="cv-entry-editor__input"
-            type="text"
+        } @else if (field.kind === 'text') {
+          <app-cv-markdown-field
+            [label]="field.label"
+            previewMode="block"
+            [rows]="field.id === 'body' ? 6 : 4"
+            [fieldRevision]="fieldRevision()"
             [disabled]="disabled()"
-            [value]="entry().subtitle ?? ''"
-            placeholder="Company or institution"
-            (input)="updateField('subtitle', $event)" />
-        </label>
-        <label class="cv-entry-editor__plain-label">
-          Dates
-          <input
-            class="cv-entry-editor__input"
-            type="text"
+            [value]="readString(entry(), field)"
+            [placeholder]="fieldPlaceholder(field)"
+            (valueChange)="updateString(field, $event)" />
+        } @else if (usesMarkdownInline(field)) {
+          <app-cv-markdown-field
+            [label]="field.label"
+            previewMode="inline"
+            [rows]="2"
+            [fieldRevision]="fieldRevision()"
             [disabled]="disabled()"
-            [value]="entry().dateRange ?? ''"
-            placeholder="Jan 2020 – Present"
-            (input)="updateField('dateRange', $event)" />
-        </label>
-      </div>
-
-      <app-cv-markdown-field
-        label="Summary"
-        previewMode="block"
-        [rows]="4"
-        [fieldRevision]="fieldRevision()"
-        [disabled]="disabled()"
-        [value]="summaryFieldText()"
-        placeholder="Short description of the role or project"
-        (valueChange)="updateSummary($event)" />
-
-      <div class="cv-entry-editor__list">
-        <p class="cv-entry-editor__plain-label">Bullets</p>
-        @for (bullet of entry().bullets; track $index) {
-          <div class="cv-entry-editor__bullet">
-            <app-cv-markdown-field
-              [rows]="2"
-              [fieldRevision]="fieldRevision()"
+            [value]="readString(entry(), field)"
+            [placeholder]="fieldPlaceholder(field)"
+            (valueChange)="updateString(field, $event)" />
+        } @else if (usesPlainStringInput(field)) {
+          <label class="cv-entry-editor__plain-label">
+            {{ field.label }}
+            <input
+              class="cv-entry-editor__input"
+              type="text"
               [disabled]="disabled()"
-              [value]="bullet"
-              placeholder="Achievement or responsibility"
-              (valueChange)="updateBullet($index, $event)" />
+              [value]="readString(entry(), field)"
+              [attr.placeholder]="fieldPlaceholder(field)"
+              (input)="updateStringInput(field, $event)" />
+          </label>
+          @if (field.id === 'techStack') {
+            <p class="cv-entry-editor__hint">Separate items with commas when listing technologies.</p>
+          }
+        } @else if (field.kind === 'stringList' && stringListUsesCommaInput(field)) {
+          <label class="cv-entry-editor__plain-label">
+            {{ field.label }}
+            <input
+              class="cv-entry-editor__input"
+              type="text"
+              [disabled]="disabled()"
+              [value]="readString(entry(), field)"
+              [attr.placeholder]="fieldPlaceholder(field)"
+              (input)="updateCommaSeparatedList(field, $event)" />
+          </label>
+          <p class="cv-entry-editor__hint">Separate skills with commas, semicolons, or pipes.</p>
+        } @else if (field.kind === 'stringList') {
+          <div class="cv-entry-editor__list">
+            <p class="cv-entry-editor__plain-label">{{ field.label }}</p>
+            @for (line of readStringList(entry(), field); track $index) {
+              <div class="cv-entry-editor__list-row">
+                <app-cv-markdown-field
+                  previewMode="inline"
+                  [rows]="2"
+                  [fieldRevision]="fieldRevision()"
+                  [disabled]="disabled()"
+                  [value]="line"
+                  [placeholder]="fieldPlaceholder(field)"
+                  (valueChange)="updateStringListItem(field, $index, $event)" />
+                <button
+                  type="button"
+                  class="cv-entry-editor__action"
+                  [disabled]="disabled()"
+                  [attr.aria-label]="'Remove ' + field.label"
+                  (click)="removeStringListItem(field, $index)">
+                  ×
+                </button>
+              </div>
+            }
             <button
               type="button"
-              class="cv-entry-editor__action"
+              class="cv-entry-editor__add"
               [disabled]="disabled()"
-              aria-label="Remove bullet"
-              (click)="removeBullet($index)">
-              ×
+              (click)="addStringListItem(field)">
+              Add {{ field.label | lowercase }}
             </button>
           </div>
         }
-        <button type="button" class="cv-entry-editor__add" [disabled]="disabled()" (click)="addBullet()">
-          Add bullet
-        </button>
-      </div>
-
-      <label class="cv-entry-editor__plain-label">
-        Technologies
-        <input
-          class="cv-entry-editor__input"
-          type="text"
-          [disabled]="disabled()"
-          [value]="entry().techStack"
-          placeholder="React, PostgreSQL, Azure"
-          (input)="updateField('techStack', $event)" />
-      </label>
+      }
     }
   </div>
 </article>

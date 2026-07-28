@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ApplyVault.Api.Options;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
@@ -9,7 +10,8 @@ namespace ApplyVault.Api.Services;
 public sealed class GoogleAiCvExportClient(
     HttpClient httpClient,
     IOptions<GoogleAiOptions> googleAiOptions,
-    IOptions<CvExportAiOptions> exportAiOptions) : ICvExportAiClient
+    IOptions<CvExportAiOptions> exportAiOptions,
+    ICvSectionCatalog sectionCatalog) : ICvExportAiClient
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -106,7 +108,7 @@ public sealed class GoogleAiCvExportClient(
                     }
                 }
             },
-            generationConfig = GoogleAiCvSectionsResponseSchema.Create()
+            generationConfig = GoogleAiCvSectionsResponseSchema.Create(sectionCatalog)
         };
     }
 

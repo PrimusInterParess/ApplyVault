@@ -1,12 +1,26 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
 
 import {
+  CvStructuredDocument,
   CvStructuredEntry,
   CvStructuredSection,
   CvStructuredEntryWrite,
   CvStructuredSectionWrite,
   SaveCvStructuredDocumentRequest
 } from '../models/cv-structured.model';
+
+export function hydrateStructuredDocument(document: CvStructuredDocument): CvStructuredDocument {
+  return {
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      entries: section.entries.map((entry) => ({
+        ...entry,
+        fields: entry.fields ?? {}
+      }))
+    }))
+  };
+}
 
 export function cloneSectionsForDraft(
   sections: readonly CvStructuredSection[]
@@ -19,7 +33,8 @@ export function cloneSectionForDraft(section: CvStructuredSection): CvStructured
     ...section,
     entries: section.entries.map((entry) => ({
       ...entry,
-      bullets: [...entry.bullets]
+      bullets: [...entry.bullets],
+      fields: { ...entry.fields }
     }))
   };
 }
@@ -136,6 +151,7 @@ export function createEmptyEntry(sortOrder: number): CvStructuredEntry {
     summary: '',
     bullets: [],
     techStack: '',
+    fields: {},
     source: 'Manual',
     sourceSummaryId: null,
     sortOrder

@@ -8,7 +8,7 @@ import {
   CvStructuredDocument,
   CvStructuredSection
 } from '../models/cv-structured.model';
-import { toSaveRequest } from '../utils/cv-structured-draft.util';
+import { toSaveRequest, hydrateStructuredDocument } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -39,7 +39,7 @@ export class CvStructuredFacade {
     this.loadSubscription = this.apiService.getStructured().subscribe({
       next: (document) => {
         this.loading.set(false);
-        this.structured.set(document);
+        this.structured.set(hydrateStructuredDocument(document));
       },
       error: (error) => {
         this.loading.set(false);
@@ -67,7 +67,7 @@ export class CvStructuredFacade {
     this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
       next: (document) => {
         this.savingSectionId.set(null);
-        this.structured.set(document);
+        this.structured.set(hydrateStructuredDocument(document));
       },
       error: (error) => {
         this.savingSectionId.set(null);
@@ -90,7 +90,7 @@ export class CvStructuredFacade {
     this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
       next: (document) => {
         this.savingSectionOrder.set(false);
-        this.structured.set(document);
+        this.structured.set(hydrateStructuredDocument(document));
       },
       error: (error) => {
         this.savingSectionOrder.set(false);
@@ -120,7 +120,7 @@ export class CvStructuredFacade {
       .subscribe({
         next: (document) => {
           this.updatingWithAi.set(false);
-          this.structured.set(document);
+          this.structured.set(hydrateStructuredDocument(document));
         },
         error: (error) => {
           this.updatingWithAi.set(false);
@@ -184,7 +184,7 @@ export class CvStructuredFacade {
   }
 
   setStructured(document: CvStructuredDocument): void {
-    this.structured.set(document);
+    this.structured.set(hydrateStructuredDocument(document));
   }
 
   private cancelLoad(): void {

@@ -1,4 +1,5 @@
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
@@ -15,7 +16,7 @@ public sealed class CvPdfSectionDetectorTests
         var pdfBytes = CreatePdfWithLines(["Experience", "Company A — Developer", "Projects", "ApplyVault"]);
 
         using var stream = new MemoryStream(pdfBytes);
-        var detector = new CvPdfSectionDetector();
+        var detector = new CvPdfSectionDetector(CvSectionCatalogProvider.LoadFromDefaultPath());
         var sections = detector.DetectSections(stream);
 
         Assert.Contains(sections, (section) =>

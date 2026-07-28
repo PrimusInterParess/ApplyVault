@@ -277,6 +277,7 @@ public sealed record CvStructuredEntryDto(
     string Summary,
     IReadOnlyList<string> Bullets,
     string TechStack,
+    IReadOnlyDictionary<string, object?> Fields,
     string Source,
     Guid? SourceSummaryId,
     int SortOrder

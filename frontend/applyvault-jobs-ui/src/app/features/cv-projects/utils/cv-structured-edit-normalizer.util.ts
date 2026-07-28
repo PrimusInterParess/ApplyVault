@@ -1,7 +1,8 @@
 import { CvSectionType, CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
 
 export function normalizeSectionForEditing(section: CvStructuredSection): CvStructuredSection {
-  const isContact = section.heading.trim().toLowerCase() === 'contact';
+  const isContact =
+    section.sectionType === 'Contact' || section.heading.trim().toLowerCase() === 'contact';
 
   return {
     ...section,
@@ -18,7 +19,8 @@ export function normalizeEntryForEditing(
 ): CvStructuredEntry {
   const base: CvStructuredEntry = {
     ...entry,
-    bullets: [...entry.bullets]
+    bullets: [...entry.bullets],
+    fields: { ...(entry.fields ?? {}) }
   };
 
   if (isContactSection) {

@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ApplyVault.Api.Options;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
@@ -9,7 +10,8 @@ namespace ApplyVault.Api.Services;
 public sealed class GoogleAiCvStructuredImportClient(
     HttpClient httpClient,
     IOptions<GoogleAiOptions> googleAiOptions,
-    IOptions<CvImportAiOptions> importAiOptions) : ICvStructuredImportAiClient
+    IOptions<CvImportAiOptions> importAiOptions,
+    ICvSectionCatalog sectionCatalog) : ICvStructuredImportAiClient
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -58,7 +60,7 @@ public sealed class GoogleAiCvStructuredImportClient(
                 .Where((section) => !string.IsNullOrWhiteSpace(section.Heading))
                 .Select((section) => section with
                 {
-                    SectionType = CvSectionTypes.Normalize(section.SectionType),
+                    SectionType = sectionCatalog.Normalize(section.SectionType),
                     Entries = section.Entries?
                         .Where(CvStructuredImportEntrySupport.EntryHasContent)
                         .Select((entry) => entry with
@@ -76,12 +78,13 @@ public sealed class GoogleAiCvStructuredImportClient(
     {
         var prompts = importAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(sections, SerializerOptions);
+        var systemPrompt = sectionCatalog.BuildImportSystemPrompt();
 
         return new
         {
             systemInstruction = new
             {
-                parts = new[] { new { text = prompts.SystemPrompt } }
+                parts = new[] { new { text = systemPrompt } }
             },
             contents = new[]
             {
@@ -99,7 +102,7 @@ public sealed class GoogleAiCvStructuredImportClient(
                     }
                 }
             },
-            generationConfig = GoogleAiCvSectionsResponseSchema.Create()
+            generationConfig = GoogleAiCvSectionsResponseSchema.Create(sectionCatalog)
         };
     }
 

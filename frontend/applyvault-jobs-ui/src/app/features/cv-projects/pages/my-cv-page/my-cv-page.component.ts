@@ -519,6 +519,7 @@ export class MyCvPageComponent implements OnDestroy {
       summary: summary.cvSummary,
       bullets: [...summary.cvBullets],
       techStack: summary.techStack,
+      fields: {},
       source: 'Project summary',
       sourceSummaryId: summary.id,
       sortOrder

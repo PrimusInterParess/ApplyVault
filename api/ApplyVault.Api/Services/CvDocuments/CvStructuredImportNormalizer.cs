@@ -91,6 +91,13 @@ internal static class CvStructuredImportNormalizer
     {
         var normalizedType = CvSectionTypes.Normalize(sectionType);
         var normalizedHeading = CvPdfSectionDetector.NormalizeHeading(heading);
+        var headingType = CvStructuredImportSectionTypeMapping.MapSectionType(normalizedHeading);
+
+        if (headingType == CvSectionTypes.Contact
+            || string.Equals(normalizedHeading, "contact", StringComparison.OrdinalIgnoreCase))
+        {
+            return CvSectionTypes.Contact;
+        }
 
         if (sourceHints.TryGetValue(normalizedHeading, out var hintedType)
             && normalizedType == CvSectionTypes.Custom

@@ -70,7 +70,7 @@
             [entryIndex]="index"
             [fieldRevision]="editFormKey()"
             [sectionType]="activeSection().sectionType"
-            [isContactSection]="isContactSection(activeSection())"
+            [entryFields]="entryFieldDefinitions()"
             [disabled]="saving() || disabled()"
             [canMoveUp]="index > 0"
             [canMoveDown]="index < sortedEntries().length - 1"

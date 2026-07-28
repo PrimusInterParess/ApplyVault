@@ -1,5 +1,6 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,8 @@ public sealed class CvDocumentsController(
     ICvStructuredImportService cvStructuredImportService,
     ICvStructuredUpdateService cvStructuredUpdateService,
     ICvStructuredSuggestionsService cvStructuredSuggestionsService,
-    ICvDocumentExportService cvDocumentExportService) : ControllerBase
+    ICvDocumentExportService cvDocumentExportService,
+    ICvSectionCatalog sectionCatalog) : ControllerBase
 {
     private const int MaxExportPageLimit = 5;
 
@@ -147,6 +149,10 @@ public sealed class CvDocumentsController(
         var deleted = await cvDocumentService.DeleteAsync(user, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
+
+    [HttpGet("section-catalog")]
+    [AllowAnonymous]
+    public ActionResult<CvSectionCatalogDto> GetSectionCatalog() => Ok(sectionCatalog.ToApiDto());
 
     [HttpGet("current/structured")]
     public async Task<ActionResult<CvStructuredDocumentDto>> GetStructured(CancellationToken cancellationToken = default)

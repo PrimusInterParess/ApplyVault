@@ -128,7 +128,7 @@ internal static class CvStructuredImportEntrySupport
         return new CvStructuredSectionWriteDto(
             null,
             "Contact",
-            CvSectionTypes.Custom,
+            CvSectionTypes.Contact,
             sortOrder,
             [
                 new CvStructuredEntryWriteDto(

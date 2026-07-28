@@ -10,6 +10,7 @@ describe('cv-structured-edit-normalizer.util', () => {
     summary: '',
     bullets: [],
     techStack: '',
+    fields: {},
     source: 'Manual',
     sourceSummaryId: null,
     sortOrder: 0

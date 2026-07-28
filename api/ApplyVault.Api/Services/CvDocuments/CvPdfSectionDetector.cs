@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
@@ -15,41 +16,9 @@ public interface ICvPdfSectionDetector
     IReadOnlyList<CvPdfDetectedSection> DetectSections(Stream pdfStream);
 }
 
-public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
+public sealed class CvPdfSectionDetector(ICvSectionCatalog sectionCatalog) : ICvPdfSectionDetector
 {
-    private static readonly string[] KnownSectionPatterns =
-    [
-        "professional experience",
-        "employment history",
-        "work experience",
-        "personal projects",
-        "side projects",
-        "selected projects",
-        "technical skills",
-        "core competencies",
-        "career history",
-        "work history",
-        "certifications",
-        "publications",
-        "qualifications",
-        "achievements",
-        "employment",
-        "experience",
-        "about me",
-        "volunteer",
-        "education",
-        "languages",
-        "references",
-        "objective",
-        "projects",
-        "honors",
-        "awards",
-        "contact information",
-        "contact",
-        "summary",
-        "profile",
-        "skills"
-    ];
+    private static readonly Lazy<ICvSectionCatalog> DefaultCatalog = new(CvSectionCatalogProvider.LoadFromDefaultPath);
 
     public IReadOnlyList<CvPdfDetectedSection> DetectSections(Stream pdfStream)
     {
@@ -69,7 +38,7 @@ public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
 
             foreach (var line in lines)
             {
-                if (!TryMatchSectionHeading(line.Text, out var normalizedKey))
+                if (!TryMatchSectionHeadingInstance(line.Text, out var normalizedKey))
                 {
                     continue;
                 }
@@ -90,45 +59,14 @@ public sealed class CvPdfSectionDetector : ICvPdfSectionDetector
             .ToArray();
     }
 
-    internal static bool TryMatchSectionHeading(string text, out string normalizedKey)
-    {
-        normalizedKey = string.Empty;
+    internal static bool TryMatchSectionHeading(string text, out string normalizedKey) =>
+        DefaultCatalog.Value.TryMatchSectionHeading(text, out normalizedKey);
 
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
+    private bool TryMatchSectionHeadingInstance(string text, out string normalizedKey) =>
+        sectionCatalog.TryMatchSectionHeading(text, out normalizedKey);
 
-        var trimmed = NormalizeHeading(text);
-
-        if (trimmed.Length > 64)
-        {
-            return false;
-        }
-
-        foreach (var pattern in KnownSectionPatterns)
-        {
-            if (trimmed.Equals(pattern, StringComparison.OrdinalIgnoreCase)
-                || trimmed.StartsWith($"{pattern} ", StringComparison.OrdinalIgnoreCase))
-            {
-                normalizedKey = pattern;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    internal static string NormalizeHeading(string text)
-    {
-        var trimmed = text.Trim();
-        trimmed = Regex.Replace(trimmed, @"\s+", " ");
-        trimmed = trimmed.Trim(':', '.', '-', '–', '—', '•', '·', '|', ' ');
-        trimmed = Regex.Replace(trimmed, @"^[|\-–—•·\s]+", string.Empty);
-        trimmed = Regex.Replace(trimmed, @"[|\-–—•·\s]+$", string.Empty);
-
-        return trimmed.Trim();
-    }
+    internal static string NormalizeHeading(string text) =>
+        CvSectionHeadingNormalizer.Normalize(text);
 
     private static IEnumerable<(string Text, double YPoints)> ExtractLines(Page page)
     {

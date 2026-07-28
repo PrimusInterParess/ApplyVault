@@ -175,6 +175,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((entry) => entry.Summary).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((entry) => entry.BulletsJson).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((entry) => entry.TechStack).IsRequired().HasMaxLength(512);
+            entity.Property((entry) => entry.FieldsJson).HasColumnType("nvarchar(max)");
             entity.Property((entry) => entry.Source).IsRequired().HasMaxLength(32);
             entity.HasIndex((entry) => new { entry.SectionId, entry.SortOrder });
             entity.HasOne((entry) => entry.SourceSummary)

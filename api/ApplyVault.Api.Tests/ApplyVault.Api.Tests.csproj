@@ -30,4 +30,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\shared\cv-section-catalog\cv-section-catalog.json" Link="CvSectionCatalog\cv-section-catalog.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

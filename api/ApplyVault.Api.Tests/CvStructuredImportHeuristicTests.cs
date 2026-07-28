@@ -98,9 +98,9 @@ public sealed class CvStructuredImportHeuristicTests
         Assert.Equal(CvSectionTypes.Skills, skills.SectionType);
         Assert.Equal(2, skills.Entries.Count);
         Assert.Equal("Languages", skills.Entries[0].Title);
-        Assert.Equal(["English", "Danish"], skills.Entries[0].Bullets);
+        Assert.Equal("English, Danish", skills.Entries[0].TechStack);
         Assert.Equal("Frameworks", skills.Entries[1].Title);
-        Assert.Equal([".NET", "Angular"], skills.Entries[1].Bullets);
+        Assert.Equal(".NET, Angular", skills.Entries[1].TechStack);
     }
 
     [Fact]

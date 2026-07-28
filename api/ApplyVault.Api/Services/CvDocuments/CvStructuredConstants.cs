@@ -7,10 +7,11 @@ public static class CvSectionTypes
     public const string Education = "Education";
     public const string Skills = "Skills";
     public const string Summary = "Summary";
+    public const string Contact = "Contact";
     public const string Custom = "Custom";
 
     public static bool IsKnown(string? value) =>
-        value is Experience or Projects or Education or Skills or Summary or Custom;
+        value is Experience or Projects or Education or Skills or Summary or Contact or Custom;
 
     public static string Normalize(string? value) =>
         IsKnown(value) ? value! : Custom;

@@ -1,4 +1,6 @@
-import { Component, computed, input, model, output } from '@angular/core';
+import { LowerCasePipe } from '@angular/common';
+import { Component, computed, inject, input, model, output } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
@@ -18,6 +20,8 @@ import {
 import { entryBodySourceText } from '../../utils/cv-structured-edit-normalizer.util';
 import { renderInlineMarkdown, renderMarkdown } from '../../../../core/markdown/markdown.util';
 import { CvStructuredEntryEditorComponent } from '../cv-structured-entry-editor/cv-structured-entry-editor.component';
+import { CvSectionCatalogService } from '../../data-access/cv-section-catalog.service';
+import { CvSectionFieldCatalog } from '../../models/cv-structured.model';
 
 @Component({
   selector: 'app-cv-structured-section-panel',
@@ -31,6 +35,11 @@ import { CvStructuredEntryEditorComponent } from '../cv-structured-entry-editor/
   }
 })
 export class CvStructuredSectionPanelComponent {
+  private readonly sectionCatalogService = inject(CvSectionCatalogService);
+  private readonly catalogDocument = toSignal(this.sectionCatalogService.loadCatalog(), {
+    initialValue: null
+  });
+
   readonly section = input.required<CvStructuredSection>();
   readonly editing = input(false);
   readonly saving = input(false);
@@ -67,6 +76,19 @@ export class CvStructuredSectionPanelComponent {
 
   protected readonly hasEntries = computed(() => this.sortedEntries().length > 0);
 
+  protected readonly entryFieldDefinitions = computed((): readonly CvSectionFieldCatalog[] => {
+    const catalog = this.catalogDocument();
+    const sectionType = this.activeSection().sectionType;
+
+    if (!catalog) {
+      return [];
+    }
+
+    return (
+      catalog.sectionTypes.find((type) => type.id === sectionType)?.entryFields ?? []
+    );
+  });
+
   protected isSummarySection(sectionType: CvSectionType): boolean {
     return sectionType === 'Summary';
   }
@@ -76,7 +98,7 @@ export class CvStructuredSectionPanelComponent {
   }
 
   protected isContactSection(section: CvStructuredSection): boolean {
-    return section.heading.trim().toLowerCase() === 'contact';
+    return section.sectionType === 'Contact' || section.heading.trim().toLowerCase() === 'contact';
   }
 
   protected entryMeta(entry: CvStructuredEntry): string {

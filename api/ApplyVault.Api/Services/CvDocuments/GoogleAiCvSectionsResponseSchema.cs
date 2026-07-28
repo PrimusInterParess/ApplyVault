@@ -1,9 +1,28 @@
+using ApplyVault.Api.Services.CvSectionCatalog;
+
 namespace ApplyVault.Api.Services;
 
 internal static class GoogleAiCvSectionsResponseSchema
 {
-    public static object Create() =>
-        new
+    private static readonly string[] WireImportKeys =
+    [
+        "title",
+        "subtitle",
+        "dateRange",
+        "summary",
+        "bullets",
+        "techStack"
+    ];
+
+    public static object Create(ICvSectionCatalog? catalog = null)
+    {
+        var sectionTypeIds = (catalog?.SectionTypes ?? [])
+            .Select((type) => type.Id)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy((id) => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new
         {
             responseMimeType = "application/json",
             responseSchema = new
@@ -22,7 +41,7 @@ internal static class GoogleAiCvSectionsResponseSchema
                             properties = new
                             {
                                 heading = new { type = "STRING" },
-                                sectionType = new { type = "STRING" },
+                                sectionType = BuildSectionTypeSchema(sectionTypeIds),
                                 entries = new
                                 {
                                     type = "ARRAY",
@@ -30,19 +49,7 @@ internal static class GoogleAiCvSectionsResponseSchema
                                     {
                                         type = "OBJECT",
                                         required = new[] { "title", "summary", "bullets", "techStack" },
-                                        properties = new
-                                        {
-                                            title = new { type = "STRING" },
-                                            subtitle = new { type = "STRING" },
-                                            dateRange = new { type = "STRING" },
-                                            summary = new { type = "STRING" },
-                                            bullets = new
-                                            {
-                                                type = "ARRAY",
-                                                items = new { type = "STRING" }
-                                            },
-                                            techStack = new { type = "STRING" }
-                                        }
+                                        properties = BuildEntryWireProperties()
                                     }
                                 }
                             }
@@ -51,4 +58,30 @@ internal static class GoogleAiCvSectionsResponseSchema
                 }
             }
         };
+    }
+
+    private static Dictionary<string, object> BuildEntryWireProperties()
+    {
+        var properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in WireImportKeys)
+        {
+            properties[key] = key switch
+            {
+                "bullets" => new
+                {
+                    type = "ARRAY",
+                    items = new { type = "STRING" }
+                },
+                _ => new { type = "STRING" }
+            };
+        }
+
+        return properties;
+    }
+
+    private static object BuildSectionTypeSchema(IReadOnlyList<string> sectionTypeIds) =>
+        sectionTypeIds.Count > 0
+            ? new { type = "STRING", @enum = sectionTypeIds }
+            : (object)new { type = "STRING" };
 }

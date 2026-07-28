@@ -93,8 +93,9 @@ public sealed class CvStructuredImportNormalizerTests
 
         var entry = Assert.Single(Assert.Single(sections).Entries);
 
-        Assert.Equal(["C#", ".NET", "Angular"], entry.Bullets);
+        Assert.Equal("C#, .NET, Angular", entry.TechStack);
         Assert.Equal(string.Empty, entry.Summary);
+        Assert.Empty(entry.Bullets);
     }
 
     [Fact]

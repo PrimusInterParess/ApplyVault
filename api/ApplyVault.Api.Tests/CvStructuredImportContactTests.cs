@@ -24,7 +24,7 @@ public sealed class CvStructuredImportContactTests
         var contactSection = sections.First((section) =>
             section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
 
-        Assert.Equal(CvSectionTypes.Custom, contactSection.SectionType);
+        Assert.Equal(CvSectionTypes.Contact, contactSection.SectionType);
         Assert.Contains("jane@example.com", contactSection.Entries[0].Bullets, StringComparer.OrdinalIgnoreCase);
 
         var summarySection = sections.Single((section) => section.SectionType == CvSectionTypes.Summary);

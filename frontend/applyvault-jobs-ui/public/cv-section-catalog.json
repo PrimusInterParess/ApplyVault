@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "sectionTypes": [
+    {
+      "id": "Experience",
+      "defaultHeading": "Experience",
+      "headingAliases": [
+        "experience",
+        "employment",
+        "employment history",
+        "professional experience",
+        "work experience",
+        "career history",
+        "work history"
+      ],
+      "entryFields": [
+        { "id": "title", "label": "Role", "kind": "string", "importKey": "title" },
+        { "id": "subtitle", "label": "Employer", "kind": "string", "importKey": "subtitle" },
+        { "id": "dateRange", "label": "Dates", "kind": "string", "importKey": "dateRange" },
+        { "id": "summary", "label": "Summary", "kind": "text", "importKey": "summary" },
+        { "id": "bullets", "label": "Achievements", "kind": "stringList", "importKey": "bullets" },
+        { "id": "techStack", "label": "Technologies", "kind": "string", "importKey": "techStack" }
+      ]
+    },
+    {
+      "id": "Projects",
+      "defaultHeading": "Projects",
+      "headingAliases": [
+        "projects",
+        "personal projects",
+        "side projects",
+        "selected projects"
+      ],
+      "entryFields": [
+        { "id": "title", "label": "Project", "kind": "string", "importKey": "title" },
+        { "id": "subtitle", "label": "Context", "kind": "string", "importKey": "subtitle" },
+        { "id": "dateRange", "label": "Dates", "kind": "string", "importKey": "dateRange" },
+        { "id": "summary", "label": "Summary", "kind": "text", "importKey": "summary" },
+        { "id": "bullets", "label": "Highlights", "kind": "stringList", "importKey": "bullets" },
+        { "id": "techStack", "label": "Technologies", "kind": "string", "importKey": "techStack" }
+      ]
+    },
+    {
+      "id": "Education",
+      "defaultHeading": "Education",
+      "headingAliases": ["education", "degrees", "qualifications"],
+      "entryFields": [
+        { "id": "title", "label": "Degree / program", "kind": "string", "importKey": "title" },
+        { "id": "subtitle", "label": "Institution", "kind": "string", "importKey": "subtitle" },
+        { "id": "dateRange", "label": "Dates", "kind": "string", "importKey": "dateRange" },
+        { "id": "summary", "label": "Details", "kind": "text", "importKey": "summary" },
+        { "id": "bullets", "label": "Highlights", "kind": "stringList", "importKey": "bullets" }
+      ]
+    },
+    {
+      "id": "Skills",
+      "defaultHeading": "Skills",
+      "headingAliases": ["skills", "technical skills", "core competencies"],
+      "entryFields": [
+        { "id": "groupTitle", "label": "Group", "kind": "string", "importKey": "title" },
+        { "id": "skills", "label": "Skills", "kind": "stringList", "importKey": "skills" }
+      ],
+      "importHints": "Put comma-separated skills in import techStack; use title for group name. Bullets may list skills when techStack is empty."
+    },
+    {
+      "id": "Summary",
+      "defaultHeading": "Summary",
+      "headingAliases": ["summary", "profile", "about me", "objective"],
+      "entryFields": [
+        { "id": "body", "label": "Summary", "kind": "text", "importKey": "summary" }
+      ],
+      "importHints": "Use a single entry; put prose in summary import field; title may be empty."
+    },
+    {
+      "id": "Contact",
+      "defaultHeading": "Contact",
+      "headingAliases": ["contact", "contact information"],
+      "entryFields": [
+        { "id": "lines", "label": "Contact lines", "kind": "stringList", "importKey": "bullets" }
+      ],
+      "importHints": "One entry with every email, phone, link, and location line in bullets/lines. No invented details."
+    },
+    {
+      "id": "Custom",
+      "defaultHeading": "Custom",
+      "headingAliases": [
+        "certifications",
+        "publications",
+        "volunteer",
+        "languages",
+        "references",
+        "honors",
+        "awards",
+        "achievements"
+      ],
+      "entryFields": [
+        { "id": "title", "label": "Title", "kind": "string", "importKey": "title" },
+        { "id": "subtitle", "label": "Subtitle", "kind": "string", "importKey": "subtitle" },
+        { "id": "dateRange", "label": "Dates", "kind": "string", "importKey": "dateRange" },
+        { "id": "summary", "label": "Summary", "kind": "text", "importKey": "summary" },
+        { "id": "bullets", "label": "Bullets", "kind": "stringList", "importKey": "bullets" },
+        { "id": "techStack", "label": "Tags", "kind": "string", "importKey": "techStack" }
+      ]
+    }
+  ]
+}

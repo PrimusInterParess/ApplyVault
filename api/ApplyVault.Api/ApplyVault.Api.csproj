@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-v5pm-xwqc-g5wc" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="ApplyVault.Api.Tests" />
     <InternalsVisibleTo Include="ApplyVault.Api.IntegrationTests" />
   </ItemGroup>
@@ -17,7 +21,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -34,6 +38,12 @@
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="PuppeteerSharp" Version="20.2.5" />
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\shared\cv-section-catalog\cv-section-catalog.json" Link="CvSectionCatalog\cv-section-catalog.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

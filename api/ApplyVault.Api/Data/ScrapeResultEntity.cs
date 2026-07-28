@@ -265,6 +265,8 @@ public sealed class UserCvEntryEntity
 
     public required string TechStack { get; set; }
 
+    public string? FieldsJson { get; set; }
+
     public required string Source { get; set; }
 
     public Guid? SourceSummaryId { get; set; }

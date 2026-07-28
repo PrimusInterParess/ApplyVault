@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
+using ApplyVault.Api.Services.CvSectionCatalog;
+
 namespace ApplyVault.Api.Infrastructure;
 
 public static class ServiceCollectionExtensions
@@ -275,6 +277,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGitHubAccountResolver, GitHubAccountResolver>();
         services.AddScoped<IGitHubProjectSummaryService, GitHubProjectSummaryService>();
         services.AddScoped<ICvDocumentService, CvDocumentService>();
+        services.AddSingleton<ICvSectionCatalog>(_ => CvSectionCatalogProvider.LoadFromDefaultPath());
         services.AddScoped<ICvPdfSectionDetector, CvPdfSectionDetector>();
         services.AddScoped<ICvPdfFullTextExtractor, CvPdfFullTextExtractor>();
         services.AddScoped<ICvPdfProfilePhotoExtractor, CvPdfProfilePhotoExtractor>();

@@ -1,5 +1,6 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Services;
@@ -17,7 +18,9 @@ public interface ICvStructuredDocumentService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) : ICvStructuredDocumentService
+public sealed class CvStructuredDocumentService(
+    ApplyVaultDbContext dbContext,
+    ICvSectionCatalog sectionCatalog) : ICvStructuredDocumentService
 {
     public async Task<CvStructuredDocumentDto?> GetStructuredAsync(
         AppUserEntity user,
@@ -56,8 +59,6 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
             dbContext.UserCvEntries.RemoveRange(existingSections.SelectMany((section) => section.Entries));
             dbContext.UserCvSections.RemoveRange(existingSections);
 
-            // Commit deletes before re-adding rows with the same primary keys. EF Core otherwise
-            // merges Remove+Add into a single UPDATE that can affect zero rows.
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
@@ -65,13 +66,14 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
 
         foreach (var sectionWrite in request.Sections.OrderBy((section) => section.SortOrder))
         {
+            var sectionType = sectionCatalog.Normalize(sectionWrite.SectionType);
             var sectionEntity = new UserCvSectionEntity
             {
                 Id = sectionWrite.Id ?? Guid.NewGuid(),
                 UserId = user.Id,
                 UserCvDocumentId = document.Id,
                 Heading = sectionWrite.Heading.Trim(),
-                SectionType = CvSectionTypes.Normalize(sectionWrite.SectionType),
+                SectionType = sectionType,
                 SortOrder = sectionWrite.SortOrder
             };
 
@@ -79,17 +81,25 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
 
             foreach (var entryWrite in sectionWrite.Entries.OrderBy((entry) => entry.SortOrder))
             {
+                var fields = CvEntryFieldsCodec.FromWriteDto(sectionCatalog, sectionType, entryWrite);
+                var projected = CvEntryFieldsCodec.ToWriteDto(
+                    sectionCatalog,
+                    sectionType,
+                    fields,
+                    entryWrite);
+
                 dbContext.UserCvEntries.Add(new UserCvEntryEntity
                 {
                     Id = entryWrite.Id ?? Guid.NewGuid(),
                     UserId = user.Id,
                     SectionId = sectionEntity.Id,
-                    Title = entryWrite.Title.Trim(),
-                    Subtitle = string.IsNullOrWhiteSpace(entryWrite.Subtitle) ? null : entryWrite.Subtitle.Trim(),
-                    DateRange = string.IsNullOrWhiteSpace(entryWrite.DateRange) ? null : entryWrite.DateRange.Trim(),
-                    Summary = entryWrite.Summary?.Trim() ?? string.Empty,
-                    BulletsJson = CvStructuredJson.SerializeBullets(entryWrite.Bullets),
-                    TechStack = entryWrite.TechStack?.Trim() ?? string.Empty,
+                    Title = projected.Title.Trim(),
+                    Subtitle = string.IsNullOrWhiteSpace(projected.Subtitle) ? null : projected.Subtitle.Trim(),
+                    DateRange = string.IsNullOrWhiteSpace(projected.DateRange) ? null : projected.DateRange.Trim(),
+                    Summary = projected.Summary?.Trim() ?? string.Empty,
+                    BulletsJson = CvStructuredJson.SerializeBullets(projected.Bullets),
+                    TechStack = projected.TechStack?.Trim() ?? string.Empty,
+                    FieldsJson = CvEntryFieldsCodec.SerializeFields(fields),
                     Source = string.IsNullOrWhiteSpace(entryWrite.Source)
                         ? CvEntrySources.Manual
                         : entryWrite.Source,
@@ -113,7 +123,7 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
         return (await GetStructuredAsync(user, cancellationToken))!;
     }
 
-    internal static CvStructuredDocumentDto MapDocument(UserCvDocumentEntity document) =>
+    internal CvStructuredDocumentDto MapDocument(UserCvDocumentEntity document) =>
         new(
             document.Id,
             document.StructuredImportedAt,
@@ -122,7 +132,7 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
                 .Select(MapSection)
                 .ToArray());
 
-    private static CvStructuredSectionDto MapSection(UserCvSectionEntity section) =>
+    private CvStructuredSectionDto MapSection(UserCvSectionEntity section) =>
         new(
             section.Id,
             section.Heading,
@@ -130,19 +140,27 @@ public sealed class CvStructuredDocumentService(ApplyVaultDbContext dbContext) :
             section.SortOrder,
             section.Entries
                 .OrderBy((entry) => entry.SortOrder)
-                .Select(MapEntry)
+                .Select((entry) => MapEntry(section.SectionType, entry))
                 .ToArray());
 
-    private static CvStructuredEntryDto MapEntry(UserCvEntryEntity entry) =>
-        new(
+    private CvStructuredEntryDto MapEntry(string sectionType, UserCvEntryEntity entry)
+    {
+        var fields = CvEntryFieldsCodec.DeserializeFields(entry.FieldsJson);
+        var readDto = CvEntryFieldsCodec.ToReadDto(
+            sectionCatalog,
+            sectionType,
             entry.Id,
+            entry.FieldsJson,
             entry.Title,
             entry.Subtitle,
             entry.DateRange,
             entry.Summary,
-            CvStructuredJson.DeserializeBullets(entry.BulletsJson),
+            entry.BulletsJson,
             entry.TechStack,
             entry.Source,
             entry.SourceSummaryId,
             entry.SortOrder);
+
+        return readDto;
+    }
 }

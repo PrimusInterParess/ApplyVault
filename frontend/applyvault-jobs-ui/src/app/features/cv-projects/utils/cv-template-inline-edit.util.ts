@@ -6,10 +6,16 @@ import {
 import {
   cloneSectionForDraft,
   normalizeEntrySortOrders,
-  removeEntryFromSection
+  removeEntryFromSection,
+  removeSectionById,
+  reorderSections
 } from './cv-structured-draft.util';
-import { addStarterEntryToSection, createStarterEntryForSection } from './cv-starter-entry.util';
-import { CvStructuredSection } from '../models/cv-structured.model';
+import {
+  addStarterEntryToSection,
+  appendSectionOfType,
+  createStarterEntryForSection
+} from './cv-starter-entry.util';
+import { CvSectionType, CvStructuredSection } from '../models/cv-structured.model';
 
 export type CvTemplateInlineEdit =
   | { kind: 'sectionHeading'; sectionId: string; value: string }
@@ -23,7 +29,10 @@ export type CvTemplateInlineEdit =
   | { kind: 'bullet'; sectionId: string; entryId: string; index: number; value: string }
   | { kind: 'skillsLine'; sectionId: string; entryId: string; value: string }
   | { kind: 'addEntry'; sectionId: string }
-  | { kind: 'removeEntry'; sectionId: string; entryId: string };
+  | { kind: 'removeEntry'; sectionId: string; entryId: string }
+  | { kind: 'addSection'; sectionType: CvSectionType }
+  | { kind: 'removeSection'; sectionId: string }
+  | { kind: 'reorderSections'; fromIndex: number; toIndex: number };
 
 const MULTI_ENTRY_SECTION_TYPES = new Set([
   'Experience',
@@ -33,6 +42,19 @@ const MULTI_ENTRY_SECTION_TYPES = new Set([
   'Custom',
   'Contact'
 ]);
+
+/** Catalog section types offered when adding a Section (Contact only when missing). */
+export const ADDABLE_SECTION_TYPES: readonly CvSectionType[] = [
+  'Contact',
+  'Summary',
+  'Experience',
+  'Projects',
+  'Education',
+  'Skills',
+  'Custom'
+] as const;
+
+const UNIQUE_SECTION_TYPES = new Set<CvSectionType>(['Contact', 'Summary']);
 
 export function sectionAllowsMultipleEntries(sectionType: string): boolean {
   return MULTI_ENTRY_SECTION_TYPES.has(sectionType);
@@ -55,10 +77,53 @@ export function addEntryLabelForSection(sectionType: string): string {
   }
 }
 
+export function canAddSectionType(
+  sections: readonly CvStructuredSection[],
+  sectionType: CvSectionType
+): boolean {
+  if (!UNIQUE_SECTION_TYPES.has(sectionType)) {
+    return true;
+  }
+
+  return !sections.some((section) => section.sectionType === sectionType);
+}
+
+export function addableSectionTypes(
+  sections: readonly CvStructuredSection[]
+): readonly CvSectionType[] {
+  return ADDABLE_SECTION_TYPES.filter((sectionType) => canAddSectionType(sections, sectionType));
+}
+
 export function applyCvTemplateInlineEdit(
   sections: readonly CvStructuredSection[],
   edit: CvTemplateInlineEdit
 ): CvStructuredSection[] {
+  if (edit.kind === 'addSection') {
+    if (!canAddSectionType(sections, edit.sectionType)) {
+      return sections.map((section) => cloneSectionForDraft(section));
+    }
+
+    return appendSectionOfType(sections, edit.sectionType);
+  }
+
+  if (edit.kind === 'removeSection') {
+    return removeSectionById(sections, edit.sectionId);
+  }
+
+  if (edit.kind === 'reorderSections') {
+    if (
+      edit.fromIndex === edit.toIndex ||
+      edit.fromIndex < 0 ||
+      edit.toIndex < 0 ||
+      edit.fromIndex >= sections.length ||
+      edit.toIndex >= sections.length
+    ) {
+      return sections.map((section) => cloneSectionForDraft(section));
+    }
+
+    return reorderSections(sections, edit.fromIndex, edit.toIndex);
+  }
+
   return sections.map((section) => {
     if (section.id !== edit.sectionId) {
       return cloneSectionForDraft(section);

@@ -5,7 +5,9 @@ import {
 } from './cv-contact-channels.util';
 import {
   createEmptyEntry,
-  normalizeEntrySortOrders
+  createEmptySection,
+  normalizeEntrySortOrders,
+  normalizeSectionSortOrders
 } from './cv-structured-draft.util';
 
 export { createStarterContactEntries };
@@ -15,6 +17,16 @@ const BULLET_SLOT_SECTION_TYPES = new Set<CvSectionType>([
   'Education',
   'Projects'
 ]);
+
+const DEFAULT_SECTION_HEADINGS: Record<CvSectionType, string> = {
+  Contact: 'Contact',
+  Summary: 'Summary',
+  Experience: 'Experience',
+  Education: 'Education',
+  Skills: 'Skills',
+  Projects: 'Projects',
+  Custom: 'Custom'
+};
 
 /**
  * Starter Entry for a Section type — shared by Blank CV start and later add Entry.
@@ -51,4 +63,38 @@ export function addStarterEntryToSection(section: CvStructuredSection): CvStruct
     ...section,
     entries: nextEntries
   };
+}
+
+/** New typed Section with a Starter Entry (Contact uses labeled channel starters). */
+export function createSectionOfType(
+  sectionType: CvSectionType,
+  sortOrder: number
+): CvStructuredSection {
+  const section = createEmptySection(sortOrder);
+
+  return {
+    ...section,
+    heading: DEFAULT_SECTION_HEADINGS[sectionType] ?? sectionType,
+    sectionType,
+    entries:
+      sectionType === 'Contact'
+        ? createStarterContactEntries()
+        : [createStarterEntryForSection(sectionType, 0)]
+  };
+}
+
+export function appendSectionOfType(
+  sections: readonly CvStructuredSection[],
+  sectionType: CvSectionType
+): CvStructuredSection[] {
+  const next = [
+    ...sections.map((section) => ({
+      ...section,
+      entries: section.entries.map((entry) => ({ ...entry, bullets: [...entry.bullets] }))
+    })),
+    createSectionOfType(sectionType, sections.length)
+  ];
+
+  normalizeSectionSortOrders(next);
+  return next;
 }

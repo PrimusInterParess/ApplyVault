@@ -1,0 +1,55 @@
+schema_version: "1.0.0"
+envelope:
+  task_id: "cv-builder-phase2a-structure-2026-07-29"
+  parent_request: >-
+    /operate C — next milestone after Phase 1: ADR-0002 Phase 2 structure ops
+    on CV builder (add/remove/reorder Sections). Do NOT retire /my-cv yet.
+  assigned_agent: frontend-engineer
+  objective: >-
+    Give the CV builder full Section structure editing so users can reshape a
+    Structured CV without /my-cv: add typed Sections, remove Sections, reorder
+    Sections; persist via existing CvStructuredFacade save / saveSectionOrder.
+  scope:
+    include_paths:
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-template-preview/
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-template-inline-edit.util.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-structured-draft.util.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-starter-entry.util.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-structured.facade.ts
+      - shared/cv-section-catalog/ (read-only reference for section types)
+    exclude_paths:
+      - api/
+      - extension/
+      - CONTEXT.md
+      - docs/adr/
+      - "**/*.spec.ts"
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/my-cv-page/
+  contracts:
+    must_respect:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - docs/adr/0001-cv-section-schema-catalog.md
+      - CONTEXT.md vocabulary (Section, Entry, Section type, Template)
+      - Existing save(sections, anchorSectionId) and saveSectionOrder(sections)
+  constraints:
+    - User authorized /operate C implementation
+    - No secrets; no claimed tests without evidence
+    - No new/modified test files; no builds/installs unless asked
+    - Do not overwrite CONTEXT.md or ADRs
+    - Do NOT redirect/remove /my-cv in this task (Phase 2b after Architect review)
+    - Do not port profile-photo or project-summary import in this task
+    - Prefer existing draft utils: createEmptySection, removeSectionById, reorderSections, createStarterEntryForSection
+    - Preserve WYSIWYG document feel; avoid dumping a full my-cv form panel unless necessary
+    - Reuse app tokens (--app-*) and existing cv-builder classes
+  definition_of_done:
+    - From builder edit mode, user can add a new Section choosing a catalog section type (or Custom), with a Starter Entry where appropriate
+    - User can remove a Section (confirm if section has content)
+    - User can reorder Sections and persist order (saveSectionOrder or full save — match existing patterns)
+    - Existing addEntry/removeEntry/inline field edit continue to work and autosave
+    - Structure changes update inlineDraft and persist like other edits
+    - /my-cv page left intact
+    - Handoff YAML written for Architect
+  dependencies:
+    - "cv-builder-phase1-2026-07-29 COMPLETED"
+  handoff_required: true
+  approval_gates: []

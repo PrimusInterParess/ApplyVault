@@ -2,6 +2,13 @@
   class="cv-builder"
   [class.cv-builder--pick]="step() === 'pick'"
   [class.cv-builder--edit]="step() === 'edit'">
+  <input
+    #pdfFileInput
+    type="file"
+    accept="application/pdf,.pdf"
+    class="cv-builder__file-input"
+    (change)="onPdfSelected($event)" />
+
   @if (step() === 'pick') {
     <section class="cv-builder__studio">
       <header class="cv-builder__studio-intro">
@@ -10,7 +17,7 @@
         <p class="cv-builder__lead">
           Choose a layout. You’ll edit text directly on the page — like a document, not a form.
         </p>
-        @if (hasSections() && cvDocument.hasDocument()) {
+        @if (hasStructuredCv()) {
           <button type="button" class="cv-builder__text-btn" (click)="continueEditing()">
             Continue with current CV →
           </button>
@@ -62,14 +69,38 @@
                 }
               </select>
             </label>
-            <button
-              type="button"
-              class="cv-builder__cta"
-              [disabled]="cvDocument.startingBlank()"
-              (click)="beginCreateCv()">
-              {{ cvDocument.startingBlank() ? 'Setting up…' : 'Use this template' }}
-            </button>
+
+            <div class="cv-builder__cta-row">
+              @if (hasStructuredCv()) {
+                <button
+                  type="button"
+                  class="cv-builder__cta"
+                  (click)="continueWithTemplate()">
+                  Continue editing
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="cv-builder__cta"
+                  [disabled]="cvDocument.startingBlank() || cvDocument.uploading()"
+                  (click)="startBlank()">
+                  {{ cvDocument.startingBlank() ? 'Setting up…' : 'Start blank' }}
+                </button>
+              }
+
+              <button
+                type="button"
+                class="cv-builder__ghost-btn cv-builder__ghost-btn--block"
+                [disabled]="cvDocument.uploading() || cvDocument.startingBlank()"
+                (click)="openPdfPicker()">
+                {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
+              </button>
+            </div>
+
             @if (cvDocument.startBlankError(); as error) {
+              <p class="cv-builder__error" role="alert">{{ error }}</p>
+            }
+            @if (cvDocument.uploadError(); as error) {
               <p class="cv-builder__error" role="alert">{{ error }}</p>
             }
           </div>
@@ -109,8 +140,98 @@
             <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
             <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">+</button>
           </div>
+          <div class="cv-builder__structure">
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [attr.aria-expanded]="structureOpen()"
+              aria-controls="cv-builder-structure-panel"
+              (click)="toggleStructure()">
+              Structure
+            </button>
+            @if (structureOpen()) {
+              <div
+                id="cv-builder-structure-panel"
+                class="cv-builder__structure-panel"
+                role="dialog"
+                aria-label="CV section structure">
+                <div class="cv-builder__structure-head">
+                  <p class="cv-builder__structure-title">Sections</p>
+                  <button type="button" class="cv-builder__icon-btn" (click)="closeStructure()" aria-label="Close structure">
+                    ×
+                  </button>
+                </div>
+                @if (sections().length === 0) {
+                  <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
+                } @else {
+                  <ul class="cv-builder__structure-list">
+                    @for (section of sections(); track section.id) {
+                      <li class="cv-builder__structure-item">
+                        <span class="cv-builder__structure-label">
+                          <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
+                          <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
+                        </span>
+                        <span class="cv-builder__structure-actions">
+                          <button
+                            type="button"
+                            class="cv-builder__icon-btn"
+                            [disabled]="!canMoveSectionUp(section.id)"
+                            aria-label="Move section up"
+                            (click)="moveSection(section.id, -1)">
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            class="cv-builder__icon-btn"
+                            [disabled]="!canMoveSectionDown(section.id)"
+                            aria-label="Move section down"
+                            (click)="moveSection(section.id, 1)">
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            class="cv-builder__structure-remove"
+                            aria-label="Remove section"
+                            (click)="removeSection(section.id)">
+                            Remove
+                          </button>
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                }
+                <div class="cv-builder__structure-add">
+                  <label class="cv-builder__structure-add-field">
+                    <span class="cv-builder__sr-only">Section type</span>
+                    <select
+                      class="cv-builder__structure-select"
+                      [value]="pendingAddSectionType()"
+                      [disabled]="structureSectionTypes().length === 0"
+                      (change)="onPendingAddSectionTypeChange($event)">
+                      @for (sectionType of structureSectionTypes(); track sectionType) {
+                        <option [value]="sectionType">{{ sectionType }}</option>
+                      }
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    class="cv-builder__structure-add-btn"
+                    [disabled]="structureSectionTypes().length === 0"
+                    (click)="addSectionFromStructure()">
+                    Add section
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
           <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
-          <a routerLink="/my-cv" class="cv-builder__ghost-btn">Upload PDF</a>
+          <button
+            type="button"
+            class="cv-builder__ghost-btn"
+            [disabled]="cvDocument.uploading()"
+            (click)="openPdfPicker()">
+            {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
+          </button>
           <button
             type="button"
             class="cv-builder__cta cv-builder__cta--compact"
@@ -118,11 +239,17 @@
             (click)="exportPdf()">
             {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
           </button>
+          @if (cvDocument.uploadError(); as error) {
+            <p class="cv-builder__error" role="alert">{{ error }}</p>
+          }
+          @if (cvDocument.downloadFormattedError(); as error) {
+            <p class="cv-builder__error" role="alert">{{ error }}</p>
+          }
         </div>
       </header>
 
       <div class="cv-builder__desk-scroll">
-        <p class="cv-builder__desk-hint">Click any text to edit · autosaves</p>
+        <p class="cv-builder__desk-hint">Click any text to edit · Structure to add or reorder sections · autosaves</p>
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">
             <app-cv-export-template-preview
@@ -150,11 +277,11 @@
     <div class="cv-builder__modal-backdrop" role="presentation" (click)="cancelReplaceConfirm()"></div>
     <div class="cv-builder__modal" role="alertdialog" aria-labelledby="cv-builder-replace-title">
       <h2 id="cv-builder-replace-title">Replace current CV?</h2>
-      <p>This replaces your current CV and all structured sections.</p>
+      <p>Uploading a PDF replaces your current CV and all structured sections.</p>
       <div class="cv-builder__modal-actions">
         <button type="button" class="cv-builder__ghost-btn" (click)="cancelReplaceConfirm()">Cancel</button>
-        <button type="button" class="cv-builder__cta cv-builder__cta--compact" (click)="confirmReplaceAndCreate()">
-          Replace and create
+        <button type="button" class="cv-builder__cta cv-builder__cta--compact" (click)="confirmReplaceAndUpload()">
+          Replace and upload
         </button>
       </div>
     </div>

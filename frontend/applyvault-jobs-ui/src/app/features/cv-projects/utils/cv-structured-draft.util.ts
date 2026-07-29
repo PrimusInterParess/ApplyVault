@@ -142,6 +142,28 @@ export function entryHasContent(entry: CvStructuredEntry): boolean {
   );
 }
 
+/** True when a Section has user-facing content (Contact labels alone do not count). */
+export function sectionHasContent(section: CvStructuredSection): boolean {
+  const isContact =
+    section.sectionType === 'Contact' || section.heading.trim().toLowerCase() === 'contact';
+
+  if (isContact) {
+    return section.entries.some((entry) => {
+      const isName = entry.title.trim().toLowerCase() === 'name';
+
+      if (isName) {
+        return (entry.subtitle?.trim().length ?? 0) > 0;
+      }
+
+      return (
+        entry.bullets.some((bullet) => bullet.trim().length > 0) || entry.summary.trim().length > 0
+      );
+    });
+  }
+
+  return section.entries.some(entryHasContent);
+}
+
 export function createEmptyEntry(sortOrder: number): CvStructuredEntry {
   return {
     id: crypto.randomUUID(),

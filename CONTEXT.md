@@ -9,8 +9,16 @@ The canonical, sectioned representation of a person's CV stored against a CV doc
 _Avoid_: Parsed CV, JSON CV
 
 **Blank CV**:
-A Structured CV created without PDF import, from starter Sections the user fills in.
+A Structured CV created without PDF import, from starter Sections the user fills in. Offered only when the user has no Structured CV yet—not as a wipe of existing content.
 _Avoid_: Empty CV, new CV from scratch, template CV (when meaning the structured content, not the export layout)
+
+**Template**:
+The export layout applied when previewing or downloading a Structured CV—not the Structured CV content itself. Choosing a Template with an existing Structured CV keeps that content and only changes presentation.
+_Avoid_: Theme (when meaning layout), resume design (when meaning Structured CV content)
+
+**PDF import**:
+Creating or replacing the Structured CV by uploading a PDF into the user's CV document. A later upload replaces the existing Structured CV after explicit confirmation.
+_Avoid_: Parse CV, OCR CV (when meaning the product action)
 
 **Starter Entry**:
 An Entry shaped for filling (including labeled Contact field slots with empty values)—not sample prose saved as content.

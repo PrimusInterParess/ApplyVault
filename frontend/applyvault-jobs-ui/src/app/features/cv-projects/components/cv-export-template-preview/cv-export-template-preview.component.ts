@@ -2,7 +2,7 @@ import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 
 import { InlineEditableTextDirective } from '../../directives/inline-editable-text.directive';
-import { CvStructuredEntry, CvStructuredSection } from '../../models/cv-structured.model';
+import { CvSectionType, CvStructuredEntry, CvStructuredSection } from '../../models/cv-structured.model';
 import {
   contactDisplayLine,
   contactEntryValue,
@@ -20,6 +20,7 @@ import {
 import {
   CvTemplateInlineEdit,
   addEntryLabelForSection,
+  addableSectionTypes,
   resolveContactDisplayName,
   sectionAllowsMultipleEntries
 } from '../../utils/cv-template-inline-edit.util';
@@ -67,6 +68,8 @@ export class CvExportTemplatePreviewComponent {
   protected readonly templateClass = computed(
     () => `cv-export-preview--template-${this.templateId()}`
   );
+
+  protected readonly addableTypes = computed(() => addableSectionTypes(this.effectiveSections()));
 
   private readonly effectiveSections = computed(() => {
     if (this.sampleMode()) {
@@ -235,5 +238,41 @@ export class CvExportTemplatePreviewComponent {
 
   protected emitRemoveEntry(sectionId: string, entryId: string): void {
     this.inlineEdit.emit({ kind: 'removeEntry', sectionId, entryId });
+  }
+
+  protected sectionIndex(sectionId: string): number {
+    return this.effectiveSections().findIndex((section) => section.id === sectionId);
+  }
+
+  protected canMoveSectionUp(sectionId: string): boolean {
+    return this.sectionIndex(sectionId) > 0;
+  }
+
+  protected canMoveSectionDown(sectionId: string): boolean {
+    const index = this.sectionIndex(sectionId);
+    return index >= 0 && index < this.effectiveSections().length - 1;
+  }
+
+  protected emitMoveSection(sectionId: string, direction: -1 | 1): void {
+    const fromIndex = this.sectionIndex(sectionId);
+    const toIndex = fromIndex + direction;
+
+    if (fromIndex < 0 || toIndex < 0 || toIndex >= this.effectiveSections().length) {
+      return;
+    }
+
+    this.inlineEdit.emit({ kind: 'reorderSections', fromIndex, toIndex });
+  }
+
+  protected emitRemoveSection(sectionId: string): void {
+    this.inlineEdit.emit({ kind: 'removeSection', sectionId });
+  }
+
+  protected emitAddSection(sectionType: string): void {
+    if (!this.addableTypes().includes(sectionType as CvSectionType)) {
+      return;
+    }
+
+    this.inlineEdit.emit({ kind: 'addSection', sectionType: sectionType as CvSectionType });
   }
 }

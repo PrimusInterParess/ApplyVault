@@ -105,10 +105,10 @@
               [innerHTML]="renderInlineMarkdown(entry.title) | safeHtml"></h4>
           }
 
-          @if (isContactSection(activeSection()) && entry.bullets.length > 0) {
+          @if (isContactSection(activeSection()) && contactValueLines(entry).length > 0) {
             <p class="cv-section__contact-lines">
-              @for (bullet of entry.bullets; track $index) {
-                @if ($index > 0) {
+              @for (bullet of contactValueLines(entry); track $index; let first = $first) {
+                @if (!first) {
                   <span class="cv-section__contact-separator" aria-hidden="true">|</span>
                 }
                 <span [innerHTML]="renderInlineMarkdown(bullet) | safeHtml"></span>

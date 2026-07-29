@@ -29,6 +29,29 @@ export function contactFieldEntries(section: CvStructuredSection): readonly CvSt
     .filter((entry) => !isContactNameEntry(entry));
 }
 
+export function contactFieldHasValue(entry: CvStructuredEntry): boolean {
+  return contactEntryValue(entry).length > 0;
+}
+
+/** Preview/export: omit labeled Contact channels with empty values. */
+export function contactFieldsWithValues(section: CvStructuredSection): readonly CvStructuredEntry[] {
+  return contactFieldEntries(section).filter(contactFieldHasValue);
+}
+
+/** Light-touch ghost hint for an empty Contact value slot. */
+export function contactValuePlaceholder(entry: CvStructuredEntry): string {
+  switch (entry.title.trim().toLowerCase()) {
+    case 'email':
+      return 'name@example.com';
+    case 'phone':
+      return 'Phone number';
+    case 'linkedin':
+      return 'linkedin.com/in/…';
+    default:
+      return 'email, phone, link…';
+  }
+}
+
 /** @deprecated Prefer contactFieldEntries */
 export function contactChannelEntries(section: CvStructuredSection): readonly CvStructuredEntry[] {
   return contactFieldEntries(section);
@@ -60,7 +83,12 @@ export function createContactChannelEntry(label: string, sortOrder: number): CvS
 }
 
 export function createStarterContactEntries(): CvStructuredEntry[] {
-  return [createContactNameEntry(0), createContactFieldEntry(1)];
+  return [
+    createContactNameEntry(0),
+    createContactFieldEntry(1, 'Email'),
+    createContactFieldEntry(2, 'Phone'),
+    createContactFieldEntry(3, 'LinkedIn')
+  ];
 }
 
 /** One entry with multiple contact bullets — import / pre-multi-entry shape. */
@@ -84,7 +112,7 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
   const sorted = [...section.entries].sort((left, right) => left.sortOrder - right.sortOrder);
 
   if (sorted.length === 0) {
-    section.entries = [createContactNameEntry(0), createContactFieldEntry(1)];
+    section.entries = createStarterContactEntries();
     return section;
   }
 

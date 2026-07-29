@@ -41,7 +41,7 @@
                 type="text"
                 [disabled]="disabled()"
                 [value]="readString(entry(), field)"
-                [attr.placeholder]="fieldPlaceholder(field)"
+                [attr.placeholder]="fieldPlaceholderFor(field)"
                 (input)="updateStringInput(field, $event)" />
             </label>
             @if (dateRangeField(entryFields()); as dateField) {
@@ -52,7 +52,7 @@
                   type="text"
                   [disabled]="disabled()"
                   [value]="readString(entry(), dateField)"
-                  [attr.placeholder]="fieldPlaceholder(dateField)"
+                  [attr.placeholder]="fieldPlaceholderFor(dateField)"
                   (input)="updateStringInput(dateField, $event)" />
               </label>
             }
@@ -65,7 +65,7 @@
             [fieldRevision]="fieldRevision()"
             [disabled]="disabled()"
             [value]="readString(entry(), field)"
-            [placeholder]="fieldPlaceholder(field)"
+            [placeholder]="fieldPlaceholderFor(field)"
             (valueChange)="updateString(field, $event)" />
         } @else if (usesMarkdownInline(field)) {
           <app-cv-markdown-field
@@ -75,7 +75,7 @@
             [fieldRevision]="fieldRevision()"
             [disabled]="disabled()"
             [value]="readString(entry(), field)"
-            [placeholder]="fieldPlaceholder(field)"
+            [placeholder]="fieldPlaceholderFor(field)"
             (valueChange)="updateString(field, $event)" />
         } @else if (usesPlainStringInput(field)) {
           <label class="cv-entry-editor__plain-label">
@@ -85,7 +85,7 @@
               type="text"
               [disabled]="disabled()"
               [value]="readString(entry(), field)"
-              [attr.placeholder]="fieldPlaceholder(field)"
+              [attr.placeholder]="fieldPlaceholderFor(field)"
               (input)="updateStringInput(field, $event)" />
           </label>
           @if (field.id === 'techStack') {
@@ -99,7 +99,7 @@
               type="text"
               [disabled]="disabled()"
               [value]="readString(entry(), field)"
-              [attr.placeholder]="fieldPlaceholder(field)"
+              [attr.placeholder]="fieldPlaceholderFor(field)"
               (input)="updateCommaSeparatedList(field, $event)" />
           </label>
           <p class="cv-entry-editor__hint">Separate skills with commas, semicolons, or pipes.</p>
@@ -114,7 +114,7 @@
                   [fieldRevision]="fieldRevision()"
                   [disabled]="disabled()"
                   [value]="line"
-                  [placeholder]="fieldPlaceholder(field)"
+                  [placeholder]="fieldPlaceholderFor(field)"
                   (valueChange)="updateStringListItem(field, $index, $event)" />
                 <button
                   type="button"

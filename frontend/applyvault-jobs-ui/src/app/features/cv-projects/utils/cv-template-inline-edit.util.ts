@@ -1,15 +1,14 @@
 import {
-  createContactFieldEntry,
   ensureModernContactShape,
   findContactNameEntry,
   isContactNameEntry
 } from './cv-contact-channels.util';
 import {
-  addEntryToSection,
   cloneSectionForDraft,
   normalizeEntrySortOrders,
   removeEntryFromSection
 } from './cv-structured-draft.util';
+import { addStarterEntryToSection, createStarterEntryForSection } from './cv-starter-entry.util';
 import { CvStructuredSection } from '../models/cv-structured.model';
 
 export type CvTemplateInlineEdit =
@@ -84,7 +83,7 @@ export function applyCvTemplateInlineEdit(
         return addContactFieldToSection(draft);
       }
 
-      return addEntryToSection(draft);
+      return addStarterEntryToSection(draft);
     }
 
     if (edit.kind === 'removeEntry') {
@@ -138,7 +137,7 @@ export function applyCvTemplateInlineEdit(
 function addContactFieldToSection(section: CvStructuredSection): CvStructuredSection {
   const draft = cloneSectionForDraft(section);
   ensureModernContactShape(draft);
-  const next = createContactFieldEntry(draft.entries.length);
+  const next = createStarterEntryForSection('Contact', draft.entries.length);
   draft.entries = [...draft.entries, next];
   normalizeEntrySortOrders(draft.entries);
   return draft;

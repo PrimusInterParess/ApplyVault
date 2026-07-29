@@ -21,13 +21,13 @@ import {
   MAX_CV_EXPORT_TEMPLATE_ID
 } from '../../models/cv-export-template.model';
 import {
-  addEntryToSection,
   cloneSectionForDraft,
   mergeSection,
   reorderSections,
   sectionEquals,
   sectionsAreEqual
 } from '../../utils/cv-structured-draft.util';
+import { addStarterEntryToSection } from '../../utils/cv-starter-entry.util';
 import { normalizeSectionForEditing } from '../../utils/cv-structured-edit-normalizer.util';
 
 @Component({
@@ -550,7 +550,7 @@ export class MyCvPageComponent implements OnDestroy {
     let draft = normalizeSectionForEditing(cloneSectionForDraft(source));
 
     if (draft.entries.length === 0) {
-      draft = addEntryToSection(draft);
+      draft = addStarterEntryToSection(draft);
     }
 
     this.sectionDraft.set(draft);

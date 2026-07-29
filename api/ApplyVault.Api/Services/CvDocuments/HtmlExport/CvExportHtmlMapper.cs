@@ -96,7 +96,7 @@ internal static class CvExportHtmlMapper
 
     private static void AppendContactHeader(StringBuilder builder, CvExportSection section)
     {
-        foreach (var entry in section.Entries.Where(EntryHasContent))
+        foreach (var entry in section.Entries.Where((entry) => EntryHasContent(section, entry)))
         {
             if (!string.IsNullOrWhiteSpace(entry.Title))
             {
@@ -137,7 +137,7 @@ internal static class CvExportHtmlMapper
             builder.Append($"""<h2 class="section-title">{Encode(section.Heading)}</h2>""");
         }
 
-        foreach (var entry in section.Entries.Where(EntryHasContent))
+        foreach (var entry in section.Entries.Where((entry) => EntryHasContent(section, entry)))
         {
             AppendProfessionalEntry(builder, entry, section.SectionType);
         }
@@ -202,7 +202,7 @@ internal static class CvExportHtmlMapper
             builder.Append($"""<h2 class="section-title">{Encode(section.Heading)}</h2>""");
         }
 
-        foreach (var entry in section.Entries.Where(EntryHasContent))
+        foreach (var entry in section.Entries.Where((entry) => EntryHasContent(section, entry)))
         {
             AppendEntry(builder, entry, section.SectionType, compact);
         }
@@ -300,7 +300,11 @@ internal static class CvExportHtmlMapper
     }
 
     private static bool IsContactSection(CvExportSection section) =>
-        section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase);
+        section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase)
+        || section.SectionType == CvSectionTypes.Contact;
+
+    private static bool IsContactNameEntry(CvExportEntry entry) =>
+        entry.Title.Equals("Name", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSidebarSection(CvExportSection section) =>
         section.SectionType == CvSectionTypes.Skills
@@ -308,9 +312,31 @@ internal static class CvExportHtmlMapper
         || IsContactSection(section);
 
     private static bool SectionHasContent(CvExportSection section) =>
-        section.Entries.Any(EntryHasContent) || !string.IsNullOrWhiteSpace(section.Heading);
+        IsContactSection(section)
+            ? section.Entries.Any((entry) => ContactEntryHasContent(entry))
+            : section.Entries.Any((entry) => EntryHasContent(section, entry))
+                || !string.IsNullOrWhiteSpace(section.Heading);
 
-    private static bool EntryHasContent(CvExportEntry entry) =>
+    private static bool EntryHasContent(CvExportSection section, CvExportEntry entry) =>
+        IsContactSection(section)
+            ? ContactEntryHasContent(entry)
+            : GenericEntryHasContent(entry);
+
+    private static bool ContactEntryHasContent(CvExportEntry entry)
+    {
+        if (IsContactNameEntry(entry))
+        {
+            return !string.IsNullOrWhiteSpace(entry.Subtitle);
+        }
+
+        return !string.IsNullOrWhiteSpace(entry.Subtitle)
+            || !string.IsNullOrWhiteSpace(entry.DateRange)
+            || !string.IsNullOrWhiteSpace(entry.Summary)
+            || entry.Bullets.Any((bullet) => !string.IsNullOrWhiteSpace(bullet))
+            || !string.IsNullOrWhiteSpace(entry.TechStack);
+    }
+
+    private static bool GenericEntryHasContent(CvExportEntry entry) =>
         !string.IsNullOrWhiteSpace(entry.Title)
         || !string.IsNullOrWhiteSpace(entry.Subtitle)
         || !string.IsNullOrWhiteSpace(entry.DateRange)

@@ -7,7 +7,9 @@ import {
   contactDisplayLine,
   contactEntryValue,
   contactFieldEntries,
+  contactFieldsWithValues,
   contactSectionForDisplay,
+  contactValuePlaceholder,
   findContactNameEntry,
   isContactNameEntry
 } from '../../utils/cv-contact-channels.util';
@@ -113,18 +115,34 @@ export class CvExportTemplatePreviewComponent {
     }
 
     const view = contactSectionForDisplay(section);
-    const fields = contactFieldEntries(view);
+    const fields = this.editable()
+      ? contactFieldEntries(view)
+      : contactFieldsWithValues(view);
 
     if (!this.showContactNameInSection(section)) {
       return fields;
     }
 
     const name = findContactNameEntry(view);
-    return name ? [name, ...fields] : fields;
+
+    if (!name) {
+      return fields;
+    }
+
+    // Preview/export: hide empty Name; editable keeps the Starter Entry slot for filling.
+    if (!this.editable() && !(name.subtitle?.trim())) {
+      return fields;
+    }
+
+    return [name, ...fields];
   }
 
   protected contactValue(entry: CvStructuredEntry): string {
     return contactEntryValue(entry);
+  }
+
+  protected contactPlaceholder(entry: CvStructuredEntry): string {
+    return contactValuePlaceholder(entry);
   }
 
   protected isNameEntry(entry: CvStructuredEntry): boolean {
@@ -154,7 +172,7 @@ export class CvExportTemplatePreviewComponent {
 
   protected contactLines(section: CvStructuredSection): readonly string[] {
     const view = contactSectionForDisplay(section);
-    const fields = contactFieldEntries(view)
+    const fields = contactFieldsWithValues(view)
       .map((entry) => contactDisplayLine(entry))
       .filter((line) => line.length > 0);
 

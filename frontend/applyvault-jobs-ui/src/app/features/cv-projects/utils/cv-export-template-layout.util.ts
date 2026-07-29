@@ -1,4 +1,8 @@
 import { CvSectionType, CvStructuredSection } from '../models/cv-structured.model';
+import {
+  contactEntryValue,
+  isContactNameEntry
+} from './cv-contact-channels.util';
 
 export type CvExportPreviewZone = 'header' | 'sidebar' | 'main';
 
@@ -28,7 +32,22 @@ function sortSections(sections: readonly CvStructuredSection[]): CvStructuredSec
   return [...sections].sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
+/** Contact export/preview: labels alone do not count as content. */
+export function contactSectionHasRenderableContent(section: CvStructuredSection): boolean {
+  return section.entries.some((entry) => {
+    if (isContactNameEntry(entry)) {
+      return (entry.subtitle?.trim().length ?? 0) > 0;
+    }
+
+    return contactEntryValue(entry).length > 0;
+  });
+}
+
 function sectionHasRenderableContent(section: CvStructuredSection): boolean {
+  if (isContactSection(section)) {
+    return contactSectionHasRenderableContent(section);
+  }
+
   return section.entries.some(
     (entry) =>
       entry.title.trim().length > 0 ||

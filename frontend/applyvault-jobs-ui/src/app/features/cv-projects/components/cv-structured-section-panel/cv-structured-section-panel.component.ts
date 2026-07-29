@@ -10,13 +10,13 @@ import {
   CvStructuredSection
 } from '../../models/cv-structured.model';
 import {
-  addEntryToSection,
   entryHasContent,
   moveEntryInSection,
   removeEntryFromSection,
   updateEntryField,
   updateSectionHeading
 } from '../../utils/cv-structured-draft.util';
+import { addStarterEntryToSection } from '../../utils/cv-starter-entry.util';
 import { entryBodySourceText } from '../../utils/cv-structured-edit-normalizer.util';
 import { renderInlineMarkdown, renderMarkdown } from '../../../../core/markdown/markdown.util';
 import { CvStructuredEntryEditorComponent } from '../cv-structured-entry-editor/cv-structured-entry-editor.component';
@@ -128,6 +128,10 @@ export class CvStructuredSectionPanelComponent {
     return entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
   }
 
+  protected contactValueLines(entry: CvStructuredEntry): readonly string[] {
+    return entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
+  }
+
   protected readonly entryBodySourceText = entryBodySourceText;
 
   protected updateHeading(event: Event): void {
@@ -157,7 +161,7 @@ export class CvStructuredSectionPanelComponent {
       return;
     }
 
-    this.draft.set(addEntryToSection(draft));
+    this.draft.set(addStarterEntryToSection(draft));
   }
 
   protected removeEntry(entry: CvStructuredEntry): void {

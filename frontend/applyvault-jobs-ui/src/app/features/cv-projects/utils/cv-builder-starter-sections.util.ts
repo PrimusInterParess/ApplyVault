@@ -1,6 +1,6 @@
 import { CvSectionType, CvStructuredSection } from '../models/cv-structured.model';
-import { createStarterContactEntries } from './cv-contact-channels.util';
-import { createEmptyEntry, createEmptySection, normalizeSectionSortOrders } from './cv-structured-draft.util';
+import { createStarterContactEntries, createStarterEntryForSection } from './cv-starter-entry.util';
+import { createEmptySection, normalizeSectionSortOrders } from './cv-structured-draft.util';
 
 const STARTER_SECTION_TYPES: readonly CvSectionType[] = [
   'Contact',
@@ -27,7 +27,9 @@ export function createBuilderStarterSections(): CvStructuredSection[] {
       heading: DEFAULT_HEADINGS[sectionType],
       sectionType,
       entries:
-        sectionType === 'Contact' ? createStarterContactEntries() : [createEmptyEntry(0)]
+        sectionType === 'Contact'
+          ? createStarterContactEntries()
+          : [createStarterEntryForSection(sectionType, 0)]
     };
   });
 

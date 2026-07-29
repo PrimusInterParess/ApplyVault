@@ -88,7 +88,8 @@ export function fieldPlaceholder(field: CvSectionFieldCatalog): string {
     summary: 'Short description',
     body: 'Write your professional summary',
     techStack: 'React, PostgreSQL, Azure',
-    skills: 'React, TypeScript, Node.js'
+    skills: 'React, TypeScript, Node.js',
+    lines: 'email, phone, link…'
   };
 
   return placeholders[field.id] ?? '';

@@ -16,6 +16,7 @@ import {
   shouldRenderFieldsInRow,
   stringListUsesCommaInput
 } from '../../utils/cv-entry-fields.util';
+import { contactValuePlaceholder } from '../../utils/cv-contact-channels.util';
 import { CvMarkdownFieldComponent } from '../cv-markdown-field/cv-markdown-field.component';
 
 @Component({
@@ -41,8 +42,15 @@ export class CvStructuredEntryEditorComponent {
   readonly remove = output<void>();
 
   protected readonly shouldRenderFieldsInRow = shouldRenderFieldsInRow;
-  protected readonly fieldPlaceholder = fieldPlaceholder;
   protected readonly stringListUsesCommaInput = stringListUsesCommaInput;
+
+  protected fieldPlaceholderFor(field: CvSectionFieldCatalog): string {
+    if (this.sectionType() === 'Contact' && field.id === 'lines') {
+      return contactValuePlaceholder(this.entry());
+    }
+
+    return fieldPlaceholder(field);
+  }
 
   protected readString(entry: CvStructuredEntry, field: CvSectionFieldCatalog): string {
     return readEntryStringField(entry, this.sectionType(), field);

@@ -35,7 +35,7 @@
                           class="cv-export-preview__editable cv-export-preview__editable--inline"
                           [appInlineEditableText]="contactValue(entry)"
                           [enabled]="true"
-                          data-placeholder="email, phone, link…"
+                          [attr.data-placeholder]="contactPlaceholder(entry)"
                           (textChange)="emitBullet(section.id, entry.id, 0, $event)"></span>
                         @if (canRemoveEntry(section, entry)) {
                           <button
@@ -161,7 +161,7 @@
                     class="cv-export-preview__editable"
                     [appInlineEditableText]="contactValue(entry)"
                     [enabled]="true"
-                    data-placeholder="email, phone, link…"
+                    [attr.data-placeholder]="contactPlaceholder(entry)"
                     (textChange)="emitBullet(section.id, entry.id, 0, $event)"></span>
                   @if (canRemoveEntry(section, entry)) {
                     <button

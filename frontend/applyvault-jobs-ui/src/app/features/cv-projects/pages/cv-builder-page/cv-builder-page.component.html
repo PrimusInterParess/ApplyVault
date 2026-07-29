@@ -1,0 +1,178 @@
+<main
+  class="cv-builder"
+  [class.cv-builder--pick]="step() === 'pick'"
+  [class.cv-builder--edit]="step() === 'edit'">
+  @if (step() === 'pick') {
+    <section class="cv-builder__studio">
+      <header class="cv-builder__studio-intro">
+        <p class="cv-builder__eyebrow">Templates</p>
+        <h1 class="cv-builder__title">Design your CV</h1>
+        <p class="cv-builder__lead">
+          Choose a layout. You’ll edit text directly on the page — like a document, not a form.
+        </p>
+        @if (hasSections() && cvDocument.hasDocument()) {
+          <button type="button" class="cv-builder__text-btn" (click)="continueEditing()">
+            Continue with current CV →
+          </button>
+        }
+      </header>
+
+      <div class="cv-builder__studio-body">
+        <div class="cv-builder__gallery-wrap">
+          <div class="cv-builder__gallery" role="listbox" aria-label="CV templates">
+            @for (template of templates; track template.id) {
+              <button
+                type="button"
+                role="option"
+                class="cv-builder__template-card"
+                [class.cv-builder__template-card--active]="selectedTemplateId() === template.id"
+                [attr.aria-selected]="selectedTemplateId() === template.id"
+                (click)="selectTemplate(template.id)">
+                <span class="cv-builder__template-thumb">
+                  <app-cv-export-template-preview
+                    [templateId]="template.id"
+                    [sampleMode]="true"
+                    [compact]="true" />
+                </span>
+                <span class="cv-builder__template-meta">
+                  <span class="cv-builder__template-label">{{ template.label }}</span>
+                  <span class="cv-builder__template-desc">{{ template.description }}</span>
+                </span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <aside class="cv-builder__stage">
+          <div class="cv-builder__paper cv-builder__paper--stage">
+            <app-cv-export-template-preview
+              [templateId]="selectedTemplateId()"
+              [sampleMode]="true" />
+          </div>
+
+          <div class="cv-builder__stage-panel">
+            <p class="cv-builder__stage-name">
+              {{ selectedTemplateLabel() }}
+            </p>
+            <label class="cv-builder__field">
+              <span>Page target</span>
+              <select (change)="onMaxPagesChange($event)">
+                @for (option of maxPageOptions; track option.label) {
+                  <option [value]="option.value ?? ''">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+            <button
+              type="button"
+              class="cv-builder__cta"
+              [disabled]="cvDocument.startingBlank()"
+              (click)="beginCreateCv()">
+              {{ cvDocument.startingBlank() ? 'Setting up…' : 'Use this template' }}
+            </button>
+            @if (cvDocument.startBlankError(); as error) {
+              <p class="cv-builder__error" role="alert">{{ error }}</p>
+            }
+          </div>
+        </aside>
+      </div>
+    </section>
+  } @else {
+    <div class="cv-builder__desk">
+      <header class="cv-builder__topbar">
+        <div class="cv-builder__topbar-left">
+          <button type="button" class="cv-builder__chip" (click)="backToTemplates()">
+            Templates
+          </button>
+          <label class="cv-builder__select-wrap">
+            <span class="cv-builder__sr-only">Template</span>
+            <select
+              class="cv-builder__select"
+              [value]="selectedTemplateId()"
+              (change)="onTemplateSelectChange($event)">
+              @for (template of templates; track template.id) {
+                <option [value]="template.id">{{ template.label }}</option>
+              }
+            </select>
+          </label>
+          <span
+            class="cv-builder__sync"
+            [class.cv-builder__sync--busy]="saveStatus() !== 'Saved'"
+            aria-live="polite">
+            <span class="cv-builder__sync-dot" aria-hidden="true"></span>
+            {{ saveStatus() }}
+          </span>
+        </div>
+
+        <div class="cv-builder__topbar-right">
+          <div class="cv-builder__zoom" role="group" aria-label="Zoom">
+            <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">−</button>
+            <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
+            <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">+</button>
+          </div>
+          <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
+          <a routerLink="/my-cv" class="cv-builder__ghost-btn">Upload PDF</a>
+          <button
+            type="button"
+            class="cv-builder__cta cv-builder__cta--compact"
+            [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
+            (click)="exportPdf()">
+            {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="cv-builder__desk-scroll">
+        <p class="cv-builder__desk-hint">Click any text to edit · autosaves</p>
+        <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
+          <div class="cv-builder__paper cv-builder__paper--editor">
+            <app-cv-export-template-preview
+              [templateId]="selectedTemplateId()"
+              [sections]="sections()"
+              [editable]="true"
+              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
+              (inlineEdit)="onInlineEdit($event)" />
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="cv-builder__fab"
+        [class.cv-builder__fab--hidden]="assistOpen()"
+        (click)="openAssist()"
+        aria-label="Open AI assist">
+        AI
+      </button>
+    </div>
+  }
+
+  @if (replaceConfirmOpen()) {
+    <div class="cv-builder__modal-backdrop" role="presentation" (click)="cancelReplaceConfirm()"></div>
+    <div class="cv-builder__modal" role="alertdialog" aria-labelledby="cv-builder-replace-title">
+      <h2 id="cv-builder-replace-title">Replace current CV?</h2>
+      <p>This replaces your current CV and all structured sections.</p>
+      <div class="cv-builder__modal-actions">
+        <button type="button" class="cv-builder__ghost-btn" (click)="cancelReplaceConfirm()">Cancel</button>
+        <button type="button" class="cv-builder__cta cv-builder__cta--compact" (click)="confirmReplaceAndCreate()">
+          Replace and create
+        </button>
+      </div>
+    </div>
+  }
+
+  <app-cv-builder-assist-panel
+    [open]="assistOpen()"
+    [sections]="sections()"
+    [aiUpdateSectionIds]="aiUpdateSectionIds()"
+    [aiUpdateInstructions]="aiUpdateInstructions()"
+    [selectedSuggestionIds]="selectedSuggestionIds()"
+    [suggestions]="cvStructured.suggestions()"
+    [disabled]="assistDisabled()"
+    (closePanel)="closeAssist()"
+    (aiInstructionsChange)="updateAiInstructions($event)"
+    (toggleAiSection)="toggleAiUpdateSection($event)"
+    (updateWithAi)="updateStructuredWithAi()"
+    (generateSuggestions)="generateSuggestions()"
+    (toggleSuggestion)="toggleSuggestion($event)"
+    (applySuggestions)="applySelectedSuggestions()" />
+</main>

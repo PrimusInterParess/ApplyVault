@@ -11,6 +11,7 @@ export interface CvDocument {
   readonly hasStructuredContent: boolean;
   readonly structuredImportedAt: string | null;
   readonly hasProfilePhoto: boolean;
+  readonly hasOriginalUpload: boolean;
 }
 
 export interface CvStructuredImportSummary {

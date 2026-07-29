@@ -29,6 +29,8 @@ public interface ICvDocumentService
     Task<CvDocumentDto?> DeleteProfilePhotoAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
+    Task<CvDocumentDto> StartBlankAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 }
 
 public sealed record CvDocumentContent(
@@ -44,6 +46,7 @@ public sealed class CvDocumentService(
 {
     private const string PdfContentType = "application/pdf";
     private const long MaxProfilePhotoBytes = 3 * 1024 * 1024;
+    internal const string BuiltCvFileName = "built-cv.pdf";
 
     public async Task<CvDocumentDto?> GetCurrentAsync(AppUserEntity user, CancellationToken cancellationToken = default)
     {
@@ -296,6 +299,42 @@ public sealed class CvDocumentService(
         return true;
     }
 
+    public async Task<CvDocumentDto> StartBlankAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken = default)
+    {
+        await DeleteAsync(user, cancellationToken);
+
+        var documentId = Guid.NewGuid();
+        var storageKey = BuildStorageKey(user.Id, documentId);
+        var pdfBytes = CvBlankPdfDocument.Bytes;
+        var now = DateTimeOffset.UtcNow;
+
+        await using (var uploadStream = new MemoryStream(pdfBytes))
+        {
+            await cvDocumentStorage.SaveAsync(storageKey, uploadStream, cancellationToken);
+        }
+
+        var document = new UserCvDocumentEntity
+        {
+            Id = documentId,
+            UserId = user.Id,
+            OriginalFileName = BuiltCvFileName,
+            ContentType = PdfContentType,
+            StorageKey = storageKey,
+            BaseStorageKey = storageKey,
+            FileSizeBytes = pdfBytes.Length,
+            OriginalFileSizeBytes = pdfBytes.Length,
+            UploadedAt = now,
+            UpdatedAt = now
+        };
+
+        dbContext.UserCvDocuments.Add(document);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return MapDocument(document);
+    }
+
     private void ValidateUpload(IFormFile file)
     {
         if (file.Length <= 0)
@@ -438,6 +477,11 @@ public sealed class CvDocumentService(
             ? document.OriginalFileSizeBytes
             : document.FileSizeBytes;
 
+        var hasOriginalUpload = !string.Equals(
+            document.OriginalFileName,
+            BuiltCvFileName,
+            StringComparison.OrdinalIgnoreCase);
+
         return new CvDocumentDto(
             document.Id,
             document.OriginalFileName,
@@ -448,6 +492,7 @@ public sealed class CvDocumentService(
             hasExportedPdf,
             hasStructuredContent,
             document.StructuredImportedAt,
-            !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey));
+            !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey),
+            hasOriginalUpload);
     }
 }

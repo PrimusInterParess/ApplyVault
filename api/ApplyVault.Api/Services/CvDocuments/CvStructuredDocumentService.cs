@@ -47,7 +47,7 @@ public sealed class CvStructuredDocumentService(
 
         var document = await dbContext.UserCvDocuments
             .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken)
-            ?? throw new InvalidOperationException("Upload a CV PDF before saving structured content.");
+            ?? throw new InvalidOperationException("Create or upload a CV before saving structured content.");
 
         var existingSections = await dbContext.UserCvSections
             .Where((section) => section.UserCvDocumentId == document.Id)

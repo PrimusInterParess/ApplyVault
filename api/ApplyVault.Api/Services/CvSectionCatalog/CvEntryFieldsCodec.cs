@@ -208,8 +208,8 @@ public static class CvEntryFieldsCodec
                 [],
                 string.Empty),
             CvSectionTypes.Contact => new FlatProjection(
-                string.Empty,
-                null,
+                GetString(fields, "title"),
+                GetNullableString(fields, "subtitle"),
                 null,
                 string.Empty,
                 GetStringList(fields, "lines"),

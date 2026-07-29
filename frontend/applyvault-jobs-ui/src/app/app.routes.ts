@@ -67,6 +67,17 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'cv-builder',
+        title: 'CV Builder',
+        data: {
+          shellSubtitle: 'Pick a template and build your CV from scratch with AI assist.'
+        },
+        loadComponent: () =>
+          import('./features/cv-projects/pages/cv-builder-page/cv-builder-page.component').then(
+            (module) => module.CvBuilderPageComponent
+          )
+      },
+      {
         path: 'cv-projects',
         title: 'Projects',
         data: {

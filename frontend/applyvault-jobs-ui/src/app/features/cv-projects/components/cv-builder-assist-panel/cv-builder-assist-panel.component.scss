@@ -1,0 +1,225 @@
+:host {
+  display: contents;
+}
+
+.cv-builder-assist-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgb(28 35 48 / 35%);
+}
+
+.cv-builder-assist {
+  position: fixed;
+  top: var(--app-header-height, 4.25rem);
+  right: 0;
+  bottom: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  width: min(24rem, 100vw);
+  max-width: 100vw;
+  background: #fff;
+  border-left: 1px solid rgb(28 35 48 / 10%);
+  box-shadow: -18px 0 50px rgb(15 23 42 / 18%);
+  animation: cv-assist-in 0.2s ease;
+}
+
+@keyframes cv-assist-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.cv-builder-assist__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.9rem 1.15rem;
+  border-bottom: 1px solid rgb(28 35 48 / 8%);
+  background: #fff;
+}
+
+.cv-builder-assist__heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cv-builder-assist__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #5b6575;
+  font-weight: 700;
+}
+
+.cv-builder-assist__title {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: #1c2330;
+  line-height: 1.25;
+}
+
+.cv-builder-assist__close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -0.2rem -0.15rem 0 0;
+  border: 1px solid rgb(28 35 48 / 14%);
+  background: #f4f6f8;
+  color: #1c2330;
+  cursor: pointer;
+  border-radius: 999px;
+  font-size: 1.65rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.cv-builder-assist__close:hover {
+  background: #e8ebf0;
+}
+
+.cv-builder-assist__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.15rem 1.5rem;
+  display: grid;
+  gap: 1.35rem;
+  align-content: start;
+}
+
+.cv-builder-assist__block {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cv-builder-assist__block-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #1c2330;
+}
+
+.cv-builder-assist__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cv-builder-assist__chip {
+  border: 1px solid rgb(28 35 48 / 12%);
+  background: #f4f6f8;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.cv-builder-assist__chip--active {
+  border-color: #1f6f5b;
+  background: rgb(31 111 91 / 10%);
+  color: #185a4a;
+}
+
+.cv-builder-assist__field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #5b6575;
+}
+
+.cv-builder-assist__field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(28 35 48 / 12%);
+  font: inherit;
+  resize: vertical;
+  background: #fafbfc;
+}
+
+.cv-builder-assist__field textarea:focus {
+  outline: none;
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 3px rgb(47 111 237 / 15%);
+  background: #fff;
+}
+
+.cv-builder-assist__primary,
+.cv-builder-assist__secondary {
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cv-builder-assist__primary {
+  border: none;
+  background: #1f6f5b;
+  color: #fff;
+}
+
+.cv-builder-assist__primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cv-builder-assist__secondary {
+  border: 1px solid rgb(28 35 48 / 12%);
+  background: #fff;
+}
+
+.cv-builder-assist__error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.cv-builder-assist__suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cv-builder-assist__suggestion {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgb(28 35 48 / 10%);
+  background: #fafbfc;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cv-builder-assist__suggestion strong {
+  font-size: 0.88rem;
+  color: #1c2330;
+}
+
+.cv-builder-assist__suggestion span {
+  font-size: 0.82rem;
+  color: #5b6575;
+}
+
+.cv-builder-assist__suggestion--active {
+  border-color: #1f6f5b;
+  background: rgb(31 111 91 / 8%);
+}

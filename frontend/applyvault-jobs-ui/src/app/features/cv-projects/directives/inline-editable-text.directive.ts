@@ -1,6 +1,7 @@
 import {
   Directive,
   ElementRef,
+  HostBinding,
   HostListener,
   inject,
   input,
@@ -19,6 +20,11 @@ export class InlineEditableTextDirective implements OnChanges {
   readonly enabled = input(false);
   readonly textChange = output<string>();
 
+  @HostBinding('attr.contenteditable')
+  protected get contentEditableAttr(): string | null {
+    return this.enabled() ? 'true' : null;
+  }
+
   ngOnChanges(): void {
     const element = this.element.nativeElement;
 
@@ -35,7 +41,13 @@ export class InlineEditableTextDirective implements OnChanges {
       return;
     }
 
-    this.textChange.emit(this.element.nativeElement.textContent?.trim() ?? '');
+    const next = this.element.nativeElement.textContent?.trim() ?? '';
+
+    if (next === this.text().trim()) {
+      return;
+    }
+
+    this.textChange.emit(next);
   }
 
   @HostListener('keydown.enter', ['$event'])

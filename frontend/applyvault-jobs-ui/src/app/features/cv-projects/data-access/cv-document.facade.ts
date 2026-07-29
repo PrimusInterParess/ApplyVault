@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
@@ -15,6 +16,8 @@ import {
 } from '../models/cv-export-template.model';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
+import { createBuilderStarterSections } from '../utils/cv-builder-starter-sections.util';
+import { hydrateStructuredDocument, toSaveRequest } from '../utils/cv-structured-draft.util';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentFacade {
@@ -26,6 +29,7 @@ export class CvDocumentFacade {
   private uploadSubscription: Subscription | null = null;
   private reimportSubscription: Subscription | null = null;
   private deleteSubscription: Subscription | null = null;
+  private startBlankSubscription: Subscription | null = null;
   private downloadOriginalSubscription: Subscription | null = null;
   private downloadFormattedSubscription: Subscription | null = null;
   private profilePhotoSubscription: Subscription | null = null;
@@ -40,6 +44,7 @@ export class CvDocumentFacade {
   readonly uploading = signal(false);
   readonly reimporting = signal(false);
   readonly deleting = signal(false);
+  readonly startingBlank = signal(false);
   readonly downloadingOriginal = signal(false);
   readonly downloadingFormatted = signal(false);
   readonly previewLoading = signal(false);
@@ -52,6 +57,7 @@ export class CvDocumentFacade {
   readonly uploadError = signal<string | null>(null);
   readonly reimportError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
+  readonly startBlankError = signal<string | null>(null);
   readonly downloadOriginalError = signal<string | null>(null);
   readonly downloadFormattedError = signal<string | null>(null);
   readonly previewError = signal<string | null>(null);
@@ -211,6 +217,71 @@ export class CvDocumentFacade {
         this.deleteError.set(this.readErrorMessage(error, 'Could not delete your CV.'));
       }
     });
+  }
+
+  startBlank(): void {
+    this.cancelStartBlank();
+    this.startingBlank.set(true);
+    this.startBlankError.set(null);
+    this.importSummary.set(null);
+    this.clearFormattedPreview();
+    this.clearProfilePhoto();
+
+    this.startBlankSubscription = this.apiService.startBlank().subscribe({
+      next: (document) => {
+        this.startingBlank.set(false);
+        this.document.set(document);
+        this.cvStructured.setStructured({
+          documentId: document.id,
+          structuredImportedAt: null,
+          sections: []
+        });
+      },
+      error: (error) => {
+        this.startingBlank.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.startBlankError.set(this.readErrorMessage(error, 'Could not start a new CV.'));
+      }
+    });
+  }
+
+  startBlankWithStarterSections(onComplete?: () => void): void {
+    this.cancelStartBlank();
+    this.startingBlank.set(true);
+    this.startBlankError.set(null);
+    this.importSummary.set(null);
+    this.clearFormattedPreview();
+    this.clearProfilePhoto();
+
+    this.startBlankSubscription = this.apiService
+      .startBlank()
+      .pipe(
+        switchMap((document) => {
+          this.document.set(document);
+          return this.apiService.saveStructured(toSaveRequest(createBuilderStarterSections()));
+        })
+      )
+      .subscribe({
+        next: (structured) => {
+          this.startingBlank.set(false);
+          this.cvStructured.setStructured(hydrateStructuredDocument(structured));
+          this.load();
+          onComplete?.();
+        },
+        error: (error) => {
+          this.startingBlank.set(false);
+
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          this.startBlankError.set(this.readErrorMessage(error, 'Could not start a new CV.'));
+        }
+      });
   }
 
   downloadOriginal(): void {
@@ -476,6 +547,7 @@ export class CvDocumentFacade {
     this.cancelUpload();
     this.cancelReimport();
     this.cancelDelete();
+    this.cancelStartBlank();
     this.cancelDownloadOriginal();
     this.cancelDownloadFormatted();
     this.cancelProfilePhotoUpload();
@@ -486,6 +558,7 @@ export class CvDocumentFacade {
     this.uploading.set(false);
     this.reimporting.set(false);
     this.deleting.set(false);
+    this.startingBlank.set(false);
     this.downloadingOriginal.set(false);
     this.downloadingFormatted.set(false);
     this.previewLoading.set(false);
@@ -497,6 +570,7 @@ export class CvDocumentFacade {
     this.uploadError.set(null);
     this.reimportError.set(null);
     this.deleteError.set(null);
+    this.startBlankError.set(null);
     this.downloadOriginalError.set(null);
     this.downloadFormattedError.set(null);
     this.previewError.set(null);
@@ -520,6 +594,11 @@ export class CvDocumentFacade {
   private cancelDelete(): void {
     this.deleteSubscription?.unsubscribe();
     this.deleteSubscription = null;
+  }
+
+  private cancelStartBlank(): void {
+    this.startBlankSubscription?.unsubscribe();
+    this.startBlankSubscription = null;
   }
 
   private cancelDownloadOriginal(): void {

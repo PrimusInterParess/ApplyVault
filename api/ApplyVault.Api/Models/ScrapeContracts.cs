@@ -239,7 +239,8 @@ public sealed record CvDocumentDto(
     bool HasMergedProjects,
     bool HasStructuredContent,
     DateTimeOffset? StructuredImportedAt,
-    bool HasProfilePhoto
+    bool HasProfilePhoto,
+    bool HasOriginalUpload
 );
 
 public sealed record CvStructuredImportSummaryDto(

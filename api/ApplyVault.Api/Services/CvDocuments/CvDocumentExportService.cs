@@ -30,7 +30,7 @@ public sealed class CvDocumentExportService(
         CancellationToken cancellationToken = default)
     {
         var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
-            ?? throw new InvalidOperationException("Upload a CV PDF before exporting structured content.");
+            ?? throw new InvalidOperationException("Create or upload a CV before exporting structured content.");
 
         if (structured.Sections.Count == 0)
         {

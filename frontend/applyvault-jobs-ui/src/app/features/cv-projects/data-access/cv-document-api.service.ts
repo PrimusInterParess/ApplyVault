@@ -103,6 +103,10 @@ export class CvDocumentApiService {
     return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/cv-documents/current`);
   }
 
+  startBlank(): Observable<CvDocument> {
+    return this.httpClient.post<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current/start-blank`, {});
+  }
+
   getStructured(): Observable<CvStructuredDocument> {
     return this.httpClient.get<CvStructuredDocument>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured`

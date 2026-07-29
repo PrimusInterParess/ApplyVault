@@ -76,9 +76,11 @@
       "defaultHeading": "Contact",
       "headingAliases": ["contact", "contact information"],
       "entryFields": [
-        { "id": "lines", "label": "Contact lines", "kind": "stringList", "importKey": "bullets" }
+        { "id": "title", "label": "Label", "kind": "string", "importKey": "title" },
+        { "id": "subtitle", "label": "Name", "kind": "string", "importKey": "subtitle" },
+        { "id": "lines", "label": "Value", "kind": "stringList", "importKey": "bullets" }
       ],
-      "importHints": "One entry with every email, phone, link, and location line in bullets/lines. No invented details."
+      "importHints": "Prefer one entry per contact detail (optional label in title, value in bullets). Legacy imports may use one entry with all lines in bullets. Use title Name + subtitle for the display name."
     },
     {
       "id": "Custom",

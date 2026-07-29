@@ -150,6 +150,13 @@ public sealed class CvDocumentsController(
         return deleted ? NoContent() : NotFound();
     }
 
+    [HttpPost("current/start-blank")]
+    public async Task<ActionResult<CvDocumentDto>> StartBlank(CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        return Ok(await cvDocumentService.StartBlankAsync(user, cancellationToken));
+    }
+
     [HttpGet("section-catalog")]
     [AllowAnonymous]
     public ActionResult<CvSectionCatalogDto> GetSectionCatalog() => Ok(sectionCatalog.ToApiDto());

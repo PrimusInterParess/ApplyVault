@@ -32,7 +32,7 @@ ApplyVault is an existing job-capture workspace: a Chrome MV3 extension scrapes 
 
 - Chrome extension scrape/save flows
 - ASP.NET Core API (jobs, CV, search, integrations, auth session)
-- Angular dashboard (jobs, search, My CV / CV Builder / CV Projects, settings)
+- Angular dashboard (jobs, search, CV Builder / CV Projects, settings)
 - Structured CV catalog, import/export, GitHub CV summaries
 - Gmail sync, calendar interview events, GitHub OAuth
 - EURES and Jobnet search/cache
@@ -209,7 +209,7 @@ Monorepo layout (verified):
 
 ## 20. Client Applications and User Experience
 
-- Angular 19 SPA: Jobs, Search, My CV, CV Builder, CV Projects, Settings, OAuth callbacks.
+- Angular 19 SPA: Jobs, Search, CV Builder, CV Projects, Settings, OAuth callbacks.
 - Chrome MV3 extension popup + content scripts for major ATS/job sites.
 - Existing Cursor UI rule for job-results: `.cursor/rules/job-results-ui-ux.mdc`.
 

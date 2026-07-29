@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CvBuilderAssistPanelComponent } from '../../components/cv-builder-assist-panel/cv-builder-assist-panel.component';
 import { CvExportTemplatePreviewComponent } from '../../components/cv-export-template-preview/cv-export-template-preview.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
+import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import {
   CV_EXPORT_MAX_PAGE_OPTIONS,
@@ -25,20 +26,29 @@ import {
   applyCvTemplateInlineEdit,
   CvTemplateInlineEdit
 } from '../../utils/cv-template-inline-edit.util';
-import { sectionHasContent, sectionsAreEqual } from '../../utils/cv-structured-draft.util';
+import {
+  appendProjectSummariesToSections,
+  collectImportedProjectSummaryIds
+} from '../../utils/cv-project-summary-import.util';
+import {
+  cloneSectionsForDraft,
+  sectionHasContent,
+  sectionsAreEqual
+} from '../../utils/cv-structured-draft.util';
 
 type BuilderStep = 'pick' | 'edit';
 
 @Component({
   selector: 'app-cv-builder-page',
   standalone: true,
-  imports: [CommonModule, CvExportTemplatePreviewComponent, CvBuilderAssistPanelComponent],
+  imports: [CommonModule, RouterLink, CvExportTemplatePreviewComponent, CvBuilderAssistPanelComponent],
   templateUrl: './cv-builder-page.component.html',
   styleUrl: './cv-builder-page.component.scss'
 })
 export class CvBuilderPageComponent implements OnDestroy {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
+  protected readonly cvProjects = inject(CvProjectsFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -54,10 +64,13 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly pendingPdfFile = signal<File | null>(null);
   protected readonly assistOpen = signal(false);
   protected readonly structureOpen = signal(false);
+  protected readonly projectsOpen = signal(false);
   protected readonly pendingAddSectionType = signal<CvSectionType>('Experience');
   protected readonly zoom = signal(1);
 
   protected readonly inlineDraft = signal<CvStructuredSection[] | null>(null);
+  protected readonly selectedProjectSummaryIds = signal<string[]>([]);
+  protected readonly importingProjectsBusy = signal(false);
 
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
@@ -78,6 +91,30 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly hasSections = computed(() => this.sections().length > 0);
 
   protected readonly structureSectionTypes = computed(() => addableSectionTypes(this.sections()));
+
+  protected readonly importedProjectSummaryIds = computed(() =>
+    collectImportedProjectSummaryIds(this.sections())
+  );
+
+  protected readonly selectedImportableProjectSummaries = computed(() => {
+    const selectedIds = new Set(this.selectedProjectSummaryIds());
+    const importedIds = this.importedProjectSummaryIds();
+
+    return this.cvProjects
+      .savedSummaries()
+      .filter((summary) => selectedIds.has(summary.id) && !importedIds.has(summary.id));
+  });
+
+  protected readonly canImportSelectedProjectSummaries = computed(
+    () =>
+      this.selectedImportableProjectSummaries().length > 0 &&
+      this.cvDocument.hasDocument() &&
+      !this.cvDocument.loading() &&
+      !this.cvStructured.loading() &&
+      !this.cvStructured.savingSectionId() &&
+      !this.cvStructured.savingSectionOrder() &&
+      !this.cvStructured.updatingWithAi()
+  );
 
   /** True when a Structured CV already exists (document + structured content/sections). */
   protected readonly hasStructuredCv = computed(() => {
@@ -118,6 +155,7 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   private wasUpdatingWithAi = false;
   private wasSavingSection = false;
+  private importingProjectSectionId: string | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -157,8 +195,19 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     effect(() => {
       const savingId = this.cvStructured.savingSectionId();
+      const saveError = this.cvStructured.saveError();
+      const finishedSave = this.wasSavingSection && !savingId;
 
-      if (this.wasSavingSection && !savingId && !this.cvStructured.saveError()) {
+      if (this.importingProjectSectionId && finishedSave) {
+        if (!saveError) {
+          this.selectedProjectSummaryIds.set([]);
+        }
+
+        this.importingProjectSectionId = null;
+        this.importingProjectsBusy.set(false);
+      }
+
+      if (finishedSave && !saveError) {
         const draft = this.inlineDraft();
 
         if (!draft || sectionsAreEqual(draft, this.serverSections())) {
@@ -279,6 +328,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected openAssist(): void {
     this.assistOpen.set(true);
     this.structureOpen.set(false);
+    this.projectsOpen.set(false);
   }
 
   protected closeAssist(): void {
@@ -290,6 +340,7 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     if (this.structureOpen()) {
       this.assistOpen.set(false);
+      this.projectsOpen.set(false);
       const available = this.structureSectionTypes();
       const pending = this.pendingAddSectionType();
 
@@ -301,6 +352,74 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected closeStructure(): void {
     this.structureOpen.set(false);
+  }
+
+  protected toggleProjects(): void {
+    this.projectsOpen.update((open) => !open);
+
+    if (this.projectsOpen()) {
+      this.assistOpen.set(false);
+      this.structureOpen.set(false);
+      this.cvProjects.loadSummaries();
+    }
+  }
+
+  protected closeProjects(): void {
+    this.projectsOpen.set(false);
+  }
+
+  protected isProjectSummaryImported(summaryId: string): boolean {
+    return this.importedProjectSummaryIds().has(summaryId);
+  }
+
+  protected isProjectSummarySelected(summaryId: string): boolean {
+    return this.selectedProjectSummaryIds().includes(summaryId);
+  }
+
+  protected canToggleProjectSummarySelection(): boolean {
+    return (
+      this.cvDocument.hasDocument() &&
+      !this.cvDocument.loading() &&
+      !this.cvStructured.loading() &&
+      !this.cvStructured.savingSectionId() &&
+      !this.cvStructured.savingSectionOrder() &&
+      !this.cvStructured.updatingWithAi()
+    );
+  }
+
+  protected toggleProjectSummarySelection(summaryId: string): void {
+    if (this.isProjectSummaryImported(summaryId) || !this.canToggleProjectSummarySelection()) {
+      return;
+    }
+
+    this.selectedProjectSummaryIds.update((selected) =>
+      selected.includes(summaryId)
+        ? selected.filter((id) => id !== summaryId)
+        : [...selected, summaryId]
+    );
+    this.cvStructured.clearSaveError();
+  }
+
+  protected importSelectedProjectSummaries(): void {
+    const summaries = this.selectedImportableProjectSummaries();
+
+    if (!this.canImportSelectedProjectSummaries() || summaries.length === 0) {
+      return;
+    }
+
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+
+    const nextSections = cloneSectionsForDraft(this.sections());
+    const projectsSection = appendProjectSummariesToSections(nextSections, summaries);
+
+    this.inlineDraft.set(nextSections);
+    this.importingProjectSectionId = projectsSection.id;
+    this.importingProjectsBusy.set(true);
+    this.cvStructured.clearSaveError();
+    this.cvStructured.save(nextSections, projectsSection.id);
   }
 
   protected onPendingAddSectionTypeChange(event: Event): void {

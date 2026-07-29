@@ -1,8 +1,16 @@
 # ApplyVault — CV structuring
 
-ApplyVault turns a CV document—whether started blank or imported from PDF—into an editable Structured CV the user can refine and export.
+ApplyVault turns a CV document—whether started blank or imported from PDF—into an editable Structured CV the user refines and exports in the CV builder.
 
 ## Language
+
+**CV document**:
+The single per-user container for the original PDF (when uploaded), Structured CV, and profile photo.
+_Avoid_: Resume file (when meaning the whole product record), My CV (as a separate product surface)
+
+**CV builder**:
+The sole product surface for creating, editing, structuring, and exporting a Structured CV—including Template choice, Blank CV, PDF import, AI assist, profile photo, and project-summary import.
+_Avoid_: My CV, CV editor page (legacy surfaces)
 
 **Structured CV**:
 The canonical, sectioned representation of a person's CV stored against a CV document—not the raw PDF bytes.
@@ -43,3 +51,7 @@ _Avoid_: Columns, properties bag
 **Section schema catalog**:
 The single versioned definition of section types and their entry fields, maintained as declarative data in the repository—not duplicated in prompts or UI code.
 _Avoid_: Hardcoded section rules, prompt-only schema
+
+**Project summary import**:
+Adding saved project summaries from the Projects surface into the Structured CV as Projects Entries, tracked by source summary identity so the same summary is not imported twice.
+_Avoid_: Merge projects, paste README (when meaning this product action)

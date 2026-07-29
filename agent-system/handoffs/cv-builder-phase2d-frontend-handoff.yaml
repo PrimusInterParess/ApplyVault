@@ -1,0 +1,37 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: "cv-builder-phase2d-remove-mycv-page-2026-07-29"
+  from_agent: frontend-engineer
+  to_agent: principal-software-architect
+  status: COMPLETED
+  summary: >-
+    Phase 2d cleanup complete: deleted unused my-cv-page sources and orphaned
+    cv-structured-section-panel (sole consumer was my-cv). /my-cv → /cv-builder
+    redirect preserved in app.routes.ts; no MyCvPage imports remain. Nav already
+    points at /cv-builder. Facades, export preview, assist panel, skeleton-block,
+    and shared CV utils left intact.
+  evidence:
+    files_touched:
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/my-cv-page/ (deleted)
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-structured-section-panel/ (deleted)
+      - agent-system/handoffs/cv-builder-phase2d-frontend-handoff.yaml
+    files_verified_unchanged:
+      - frontend/applyvault-jobs-ui/src/app/app.routes.ts
+        # path: 'my-cv', redirectTo: 'cv-builder', pathMatch: 'full' retained
+      - frontend/applyvault-jobs-ui/src/app/shared/layout/app-shell.component.html
+        # sole CV nav entry: routerLink="/cv-builder"
+    tests_run: []
+    contracts_affected:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - Legacy /my-cv URL compatibility via redirect (unchanged)
+  residual_risks:
+    - >-
+      Comment-only "my-cv parity" note remains in
+      cv-project-summary-import.util.ts — intentional behavior note, not a code
+      reference.
+    - >-
+      No automated tests or builds run per /operate C authorization.
+  open_questions: []
+  next_recommended_action: >-
+    Architect review; optional qa smoke that /my-cv redirects to CV Builder and
+    builder still edits/exports structured CV.

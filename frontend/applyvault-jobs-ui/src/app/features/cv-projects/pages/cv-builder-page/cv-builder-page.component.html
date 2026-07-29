@@ -230,6 +230,105 @@
               </div>
             }
           </div>
+          <div class="cv-builder__projects">
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [attr.aria-expanded]="projectsOpen()"
+              aria-controls="cv-builder-projects-panel"
+              (click)="toggleProjects()">
+              Projects
+            </button>
+            @if (projectsOpen()) {
+              <div
+                id="cv-builder-projects-panel"
+                class="cv-builder__projects-panel"
+                role="dialog"
+                aria-label="Add project summaries">
+                <div class="cv-builder__structure-head">
+                  <p class="cv-builder__structure-title">Add projects</p>
+                  <button type="button" class="cv-builder__icon-btn" (click)="closeProjects()" aria-label="Close projects">
+                    ×
+                  </button>
+                </div>
+                <p class="cv-builder__projects-hint">
+                  Select saved summaries to add as Projects entries.
+                </p>
+                <div class="cv-builder__projects-actions">
+                  <button
+                    type="button"
+                    class="cv-builder__projects-secondary"
+                    [disabled]="cvProjects.loadingSummaries()"
+                    (click)="cvProjects.loadSummaries()">
+                    {{ cvProjects.loadingSummaries() ? 'Refreshing…' : 'Refresh' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="cv-builder__structure-add-btn"
+                    [disabled]="!canImportSelectedProjectSummaries()"
+                    (click)="importSelectedProjectSummaries()">
+                    {{
+                      importingProjectsBusy()
+                        ? 'Adding…'
+                        : selectedImportableProjectSummaries().length > 0
+                          ? `Add selected (${selectedImportableProjectSummaries().length})`
+                          : 'Add selected'
+                    }}
+                  </button>
+                </div>
+                @if (cvStructured.saveError(); as projectImportError) {
+                  <p class="cv-builder__error" role="alert">{{ projectImportError }}</p>
+                }
+                @if (cvProjects.summariesError(); as summariesError) {
+                  <p class="cv-builder__error" role="alert">{{ summariesError }}</p>
+                }
+                @if (cvProjects.loadingSummaries() && cvProjects.savedSummaries().length === 0) {
+                  <p class="cv-builder__structure-empty" aria-busy="true">Loading summaries…</p>
+                } @else if (cvProjects.savedSummaries().length === 0) {
+                  <p class="cv-builder__structure-empty">
+                    No saved summaries yet.
+                    <a routerLink="/cv-projects" class="cv-builder__projects-link">Generate on Projects</a>
+                  </p>
+                } @else {
+                  <ul class="cv-builder__projects-list" aria-label="Saved project summaries">
+                    @for (summary of cvProjects.savedSummaries(); track summary.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="cv-builder__projects-item"
+                          [class.cv-builder__projects-item--selected]="isProjectSummarySelected(summary.id)"
+                          [class.cv-builder__projects-item--imported]="isProjectSummaryImported(summary.id)"
+                          [disabled]="isProjectSummaryImported(summary.id) || !canToggleProjectSummarySelection()"
+                          [attr.aria-pressed]="isProjectSummarySelected(summary.id)"
+                          (click)="toggleProjectSummarySelection(summary.id)">
+                          <span class="cv-builder__projects-item-top">
+                            <span class="cv-builder__projects-item-copy">
+                              <span class="cv-builder__projects-item-title">{{ summary.cvTitle }}</span>
+                              <span class="cv-builder__projects-item-source">{{ summary.fullName }}</span>
+                            </span>
+                            @if (isProjectSummaryImported(summary.id)) {
+                              <span class="cv-builder__projects-badge">Added</span>
+                            } @else if (isProjectSummarySelected(summary.id)) {
+                              <span class="cv-builder__projects-badge">Selected</span>
+                            }
+                          </span>
+                          <span class="cv-builder__projects-item-meta">
+                            @if (summary.primaryLanguage) {
+                              <span>{{ summary.primaryLanguage }}</span>
+                            }
+                            <span>{{ summary.cvBullets.length }} bullets</span>
+                          </span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  <a routerLink="/cv-projects" class="cv-builder__projects-link cv-builder__projects-link--footer">
+                    Manage on Projects
+                  </a>
+                }
+              </div>
+            }
+          </div>
           <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
           <button
             type="button"
@@ -288,7 +387,7 @@
       </header>
 
       <div class="cv-builder__desk-scroll">
-        <p class="cv-builder__desk-hint">Click any text to edit · Structure to add or reorder sections · autosaves</p>
+        <p class="cv-builder__desk-hint">Click any text to edit · Structure to add or reorder · Projects to import summaries · autosaves</p>
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">
             <app-cv-export-template-preview

@@ -1,0 +1,39 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: "cv-builder-phase2c-project-import-2026-07-29"
+  from_agent: frontend-engineer
+  to_agent: principal-software-architect
+  status: COMPLETED
+  summary: >-
+    Phase 2c UI complete: CV builder edit topbar gains a compact Projects panel
+    (Structure density) that loads/refreshes CvProjectsFacade summaries, selects
+    non-imported items, and adds them as Projects entries via sourceSummaryId
+    parity with my-cv. Shared util extracted under utils/; my-cv untouched.
+    After import: inlineDraft updated, cvStructured.save(sections, projectsSection.id)
+    called; selection cleared on successful save.
+  evidence:
+    files_touched:
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-project-summary-import.util.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.scss
+      - agent-system/handoffs/cv-builder-phase2c-frontend-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - Entry.sourceSummaryId (Projects import tracking)
+      - CvProjectsFacade.savedSummaries / loadSummaries / loadingSummaries / summariesError (consumed, unchanged)
+      - CvStructuredFacade.save (WYSIWYG persist path after import)
+  residual_risks:
+    - >-
+      my-cv-page still holds duplicate import UI/logic (dead route); optional
+      cleanup or util rewire later — not in scope.
+    - >-
+      Panel shows any cvStructured.saveError while open (may include non-import
+      save failures from concurrent autosave).
+    - >-
+      No automated tests or builds run per /operate C authorization.
+  open_questions: []
+  next_recommended_action: >-
+    Architect review; optional ui-ux density pass on Projects topbar panel;
+    optional qa smoke of select → Add selected → Projects section + Added badge.

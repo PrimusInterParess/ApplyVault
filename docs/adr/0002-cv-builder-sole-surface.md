@@ -2,20 +2,21 @@
 
 ## Status
 
-Accepted
+Accepted (implemented)
 
 ## Context
 
-We needed one clear home for creating and editing a Structured CV. Blank starters, PDF import, and export Templates were easy to confuse, and `/my-cv` vs `/cv-builder` split the same domain across two UIs.
+Blank starters, PDF import, and export Templates were easy to confuse, and `/my-cv` vs `/cv-builder` split the same Structured CV across two UIs.
 
 ## Decision
 
-- The **CV builder** is the sole end-state CV surface (Templates, Blank/PDF entry, edit, export, AI, structure). `/my-cv` redirects or is removed once structure ops live on the builder.
+- The **CV builder** (`/cv-builder`) is the sole CV surface: Templates, Blank CV / PDF import entry, WYSIWYG edit, Structure ops, AI assist, profile photo, project-summary import, and export.
 - A **Template** is export layout only. Choosing one with an existing Structured CV changes presentation, not content.
 - **Content sources:** Blank CV (starter Sections) only when no Structured CV exists; **PDF import** creates or replaces the Structured CV (replace requires confirmation). One CV document per user.
-- **Ship in phases:** Phase 1 — PDF upload + Template-fills-saved-data + returning users open edit — while `/my-cv` keeps structure ops. Phase 2 — structure on builder, then retire `/my-cv`.
+- Legacy `/my-cv` redirects to `/cv-builder`; the My CV page was removed after structure, photo, and project import landed on the builder.
 
 ## Consequences
 
-- Nav and deep links should treat the builder as primary; do not add a second “start blank” wipe path once a Structured CV exists.
-- Retiring `/my-cv` before structure-on-builder would leave users unable to reshape Sections/Entries.
+- Primary nav exposes CV Builder only; do not reintroduce a parallel My CV edit surface.
+- Do not offer Start blank as a wipe once a Structured CV exists—only Template layout changes or confirmed PDF replace.
+- Project summaries are generated on `/cv-projects` and imported into the builder Projects section via `sourceSummaryId`.

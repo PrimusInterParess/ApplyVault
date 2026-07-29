@@ -32,8 +32,8 @@ envelope:
     - User authorized /operate C
     - No secrets; no tests; no builds unless asked
     - Do not overwrite CONTEXT.md or ADRs
-    - Do not edit my-cv-page (dead route); optional extract of shared util from my-cv logic by re-implementing in utils — do not require changing my-cv
-    - Prefer a compact Projects import panel in builder edit (similar density to Structure), not a full my-cv clone
+    - Do not edit my-cv-page (dead route); reimplement shared util from my-cv logic without modifying my-cv
+    - Prefer a compact Projects import panel in builder edit (similar density to Structure)
     - Link to /cv-projects when no summaries / for generating new ones
     - Preserve WYSIWYG autosave path after import (cvStructured.save)
   definition_of_done:

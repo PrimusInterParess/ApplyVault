@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/capability-matrix.schema.json",
+  "title": "CapabilityAndProviderMatrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rows"],
+  "properties": {
+    "rows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/matrixRow" }
+    }
+  },
+  "$defs": {
+    "providerDecisionState": {
+      "type": "string",
+      "enum": [
+        "VERIFIED_EXISTING",
+        "USER_REQUIRED",
+        "ORGANIZATION_REQUIRED",
+        "USER_PREFERRED",
+        "ARCHITECT_PROPOSED",
+        "UNDECIDED",
+        "NOT_APPLICABLE",
+        "MIGRATION_PLANNED"
+      ]
+    },
+    "requiredFlag": {
+      "type": "string",
+      "enum": ["YES", "NO", "UNDECIDED", "UNKNOWN"]
+    },
+    "matrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability",
+        "required",
+        "current_implementation",
+        "preferred_provider_or_technology",
+        "decision_status",
+        "evidence",
+        "source_of_truth",
+        "owner_candidate"
+      ],
+      "properties": {
+        "capability": { "type": "string", "minLength": 1 },
+        "required": { "$ref": "#/$defs/requiredFlag" },
+        "current_implementation": { "type": "string" },
+        "preferred_provider_or_technology": { "type": "string" },
+        "decision_status": { "$ref": "#/$defs/providerDecisionState" },
+        "evidence": { "type": "string" },
+        "source_of_truth": { "type": "string" },
+        "owner_candidate": { "type": "string" }
+      }
+    }
+  }
+}

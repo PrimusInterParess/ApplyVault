@@ -1,0 +1,23 @@
+schema_version: "1.0.0"
+envelope:
+  task_id: ""
+  parent_request: ""
+  assigned_agent: ""
+  objective: ""
+  scope:
+    include_paths: []
+    exclude_paths: []
+  contracts:
+    must_respect: []
+  constraints:
+    - Prefer project skills chain for implementation work
+    - No secrets in outputs
+    - Do not claim tests passed without evidence
+  definition_of_done: []
+  dependencies: []
+  handoff_required: true
+  approval_gates: []
+
+instructions: |
+  Fill one envelope per specialist Task. Inject agent purpose file + this envelope.
+  In Cursor, launch native Task subagents; do not role-play all agents in one turn.

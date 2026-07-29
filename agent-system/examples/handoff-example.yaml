@@ -1,0 +1,16 @@
+task_id: example-001
+from_agent: frontend-engineer
+to_agent: principal-software-architect
+status: COMPLETED
+summary: >-
+  Adjusted job-search URL state handling for source toggle; no API contract change.
+evidence:
+  files_touched:
+    - frontend/applyvault-jobs-ui/src/app/features/job-search/
+  tests_run:
+    - targeted frontend spec (authorized) — cite command if run
+  contracts_affected: []
+residual_risks:
+  - Full frontend suite not claimed green without CI evidence
+open_questions: []
+next_recommended_action: Integration review; optionally map related search API cache behavior if regressions appear

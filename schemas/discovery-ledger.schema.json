@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/discovery-ledger.schema.json",
+  "title": "DiscoveryLedger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entries"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ledgerEntry" }
+    }
+  },
+  "$defs": {
+    "classification": {
+      "type": "string",
+      "enum": [
+        "VERIFIED_PROJECT_FACT",
+        "USER_CONFIRMED_REQUIREMENT",
+        "USER_REPORTED_FACT",
+        "CONSTRAINT",
+        "PREFERENCE",
+        "APPROVED_DECISION",
+        "PROPOSED_DECISION",
+        "ASSUMPTION",
+        "RISK",
+        "OPEN_QUESTION",
+        "BLOCKER"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"]
+    },
+    "ledgerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "classification"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "classification": { "$ref": "#/$defs/classification" },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "impact": { "type": "string" },
+        "related_capability": { "type": "string" }
+      }
+    }
+  }
+}

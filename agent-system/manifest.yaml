@@ -1,0 +1,109 @@
+prompt_pack:
+  id: applyvault-agent-system-v1
+  name: ApplyVault Agent System
+  version: 1.0.0
+  project_mode: BROWNFIELD
+  specification_status: APPROVED
+  generated_at: "2026-07-29T00:00:00Z"
+  adaptation_mode: BRIDGE
+
+governance:
+  orchestrator: principal-software-architect
+  final_integration_owner: principal-software-architect
+  approval_authorities:
+    - human-operator
+    - principal-software-architect
+
+agents:
+  - id: principal-software-architect
+    title: Principal Software Architect
+    prompt_file: agents/00-principal-architect.md
+    type: ORCHESTRATOR
+    provider_scope: GENERIC
+    invocation: ALWAYS
+    status: ACTIVE
+  - id: product-manager
+    title: Product Manager
+    prompt_file: agents/product-manager.md
+    type: CORE
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: frontend-engineer
+    title: Frontend Engineer
+    prompt_file: agents/frontend-engineer.md
+    type: SPECIALIST
+    provider_scope: PROVIDER-SPECIALIZED
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: backend-engineer
+    title: Backend Engineer
+    prompt_file: agents/backend-engineer.md
+    type: SPECIALIST
+    provider_scope: PROVIDER-SPECIALIZED
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: browser-extension-engineer
+    title: Browser Extension Engineer
+    prompt_file: agents/browser-extension-engineer.md
+    type: SPECIALIST
+    provider_scope: PROVIDER-SPECIALIZED
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: ai-llm-engineer
+    title: AI / LLM Engineer
+    prompt_file: agents/ai-llm-engineer.md
+    type: SPECIALIST
+    provider_scope: PROVIDER-SPECIALIZED
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: ui-ux-designer
+    title: UI/UX Designer
+    prompt_file: agents/ui-ux-designer.md
+    type: SPECIALIST
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: qa-engineer
+    title: QA Engineer
+    prompt_file: agents/qa-engineer.md
+    type: REVIEWER
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: platform-engineer
+    title: Platform Engineer
+    prompt_file: agents/platform-engineer.md
+    type: SPECIALIST
+    provider_scope: PROVIDER-SPECIALIZED
+    invocation: CONDITIONAL
+    status: ACTIVE
+
+artifacts:
+  shared_context: governance/shared-context.yaml
+  agent_registry: governance/agent-registry.yaml
+  contract_registry: governance/contract-registry.yaml
+  ownership_matrix: governance/ownership-matrix.md
+  task_protocol: protocols/task-delegation.yaml
+  handoff_protocol: protocols/agent-handoff.yaml
+  execution_workflow: protocols/execution-workflow.md
+
+provider_decisions:
+  - capability: identity
+    provider: Supabase
+    status: VERIFIED_EXISTING
+  - capability: persistence
+    provider: EF Core SQL Server
+    status: VERIFIED_EXISTING
+  - capability: ai
+    provider: Google Gemini HTTP
+    status: VERIFIED_EXISTING
+  - capability: payments
+    provider: none
+    status: NOT_APPLICABLE
+
+assumptions:
+  - A-01 primary end user is individual job seeker
+  - A-02 GitHub Issues remain work tracker
+  - A-03 production-readiness tracker claims not live-revalidated
+  - A-04 dedicated extension specialist required

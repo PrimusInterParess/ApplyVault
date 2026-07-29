@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/requirements-spec.schema.json",
+  "title": "ProjectRequirementsAndCurrentStateSpecification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "executive_summary",
+    "project_mode",
+    "business_goals",
+    "scope",
+    "capability_and_provider_matrix",
+    "confirmed_decisions",
+    "assumptions",
+    "open_questions",
+    "risks",
+    "recommended_agent_fleet",
+    "excluded_agents",
+    "readiness_recommendation",
+    "approval_gate"
+  ],
+  "properties": {
+    "executive_summary": { "type": "string", "minLength": 1 },
+    "project_mode": {
+      "type": "string",
+      "enum": ["GREENFIELD", "BROWNFIELD", "HYBRID"]
+    },
+    "business_goals": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included", "excluded", "deferred"],
+      "properties": {
+        "included": { "type": "array", "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } },
+        "deferred": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "target_users": { "type": "array", "items": { "type": "string" } },
+    "user_roles": { "type": "array", "items": { "type": "string" } },
+    "core_user_journeys": { "type": "array", "items": { "type": "string" } },
+    "functional_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" }
+        }
+      }
+    },
+    "non_functional_requirements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "current_repository_and_system": { "type": "string" },
+    "current_technology_stack": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verified": { "type": "array", "items": { "type": "string" } },
+        "user_reported": { "type": "array", "items": { "type": "string" } },
+        "unknown": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "capability_and_provider_matrix": {
+      "$ref": "https://thearchitect.local/schemas/capability-matrix.schema.json"
+    },
+    "current_architecture": { "type": "string" },
+    "proposed_target_architecture": { "type": "string" },
+    "domain_and_data_requirements": { "type": "string" },
+    "api_and_event_contracts": { "type": "string" },
+    "identity_and_authorization": { "type": "string" },
+    "payments_and_billing": { "type": "string" },
+    "ai_and_automated_decisions": { "type": "string" },
+    "client_applications_and_ux": { "type": "string" },
+    "external_integrations": { "type": "array", "items": { "type": "string" } },
+    "hosting_infrastructure_networking": { "type": "string" },
+    "source_control_cicd_release": { "type": "string" },
+    "environment_secrets_configuration": { "type": "string" },
+    "security_privacy_compliance": { "type": "array", "items": { "type": "string" } },
+    "testing_and_quality": { "type": "string" },
+    "observability_and_operations": { "type": "string" },
+    "environments_and_deployment": { "type": "string" },
+    "confirmed_decisions": { "type": "array", "items": { "type": "string" } },
+    "proposed_decisions_requiring_approval": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "contradictions_detected": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "existing_agent_skills_documentation_procedures": {
+      "$ref": "#/$defs/existingOperatingProcedures"
+    },
+    "recommended_agent_fleet": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/agentCandidate" }
+    },
+    "excluded_agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent", "reason"],
+        "properties": {
+          "agent": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "preliminary_ownership_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["concern", "primary_owner", "supporting_agents", "approval_authority"],
+        "properties": {
+          "concern": { "type": "string" },
+          "primary_owner": { "type": "string" },
+          "supporting_agents": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "approval_authority": { "type": "string" }
+        }
+      }
+    },
+    "proposed_execution_order": { "type": "string" },
+    "evidence_index": { "type": "array", "items": { "type": "string" } },
+    "repository_access_limitations": { "type": "string" },
+    "readiness_recommendation": {
+      "type": "string",
+      "enum": [
+        "READY_FOR_PROMPT_PACK_GENERATION",
+        "READY_WITH_DOCUMENTED_ASSUMPTIONS",
+        "NOT_READY � BLOCKING_INFORMATION_REQUIRED"
+      ]
+    },
+    "approval_gate": {
+      "type": "string",
+      "const": "APPROVAL REQUIRED"
+    }
+  },
+  "$defs": {
+    "existingOperatingProcedures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detection_status", "adaptation_mode"],
+      "properties": {
+        "detection_status": {
+          "type": "string",
+          "enum": ["FOUND", "PARTIAL", "NOT_FOUND"]
+        },
+        "adaptation_mode": {
+          "type": "string",
+          "enum": ["FOLLOW", "COMPOSE", "BRIDGE", "NONE"]
+        },
+        "procedure_inventory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "path", "type", "purpose"],
+            "properties": {
+              "id": { "type": "string" },
+              "path": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "host-instructions",
+                  "skill",
+                  "command",
+                  "rule",
+                  "domain-memory",
+                  "adr",
+                  "agent-config",
+                  "tracker-binding",
+                  "prompt-pack",
+                  "other"
+                ]
+              },
+              "purpose": { "type": "string" },
+              "invocation": { "type": "string" },
+              "confidence": {
+                "type": "string",
+                "enum": ["HIGH", "MEDIUM", "LOW"]
+              }
+            }
+          }
+        },
+        "canonical_workflow_chain": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "domain_memory_locations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "work_tracking_binding": { "type": "string" },
+        "conflicts_with_architect_defaults": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "adoption_decisions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "agentCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "provider_scope",
+        "why_needed",
+        "primary_ownership",
+        "non_responsibilities",
+        "required_inputs",
+        "expected_outputs",
+        "collaborators",
+        "approval_authority"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "provider_scope": {
+          "type": "string",
+          "enum": ["GENERIC", "PROVIDER_SPECIALIZED"]
+        },
+        "why_needed": { "type": "string" },
+        "primary_ownership": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "non_responsibilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "repository_or_capability_scope": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "expected_outputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "collaborators": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "approval_authority": { "type": "string" }
+      }
+    }
+  }
+}

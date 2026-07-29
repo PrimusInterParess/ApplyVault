@@ -1,0 +1,9 @@
+# Tracked install policy — place at agent-system/architect-install.yaml
+# Schema: schemas/architect-install.schema.json
+#
+# Set library_root to wherever THIS project keeps The Architect checkout.
+# Paths are project-specific; do not copy example folder names blindly.
+
+install_style: junction   # submodule | standalone_clone | junction | copy_install
+library_root: <path-to-architect-checkout>
+write_app_root_stamp: false

@@ -1,0 +1,28 @@
+register_version: "1.0.0"
+project_id: applyvault
+risks:
+  - id: R-01
+    title: Dual agent systems conflict
+    severity: HIGH
+    status: OPEN
+    mitigation: BRIDGE mode; skills own delivery; Architect owns orchestration
+  - id: R-02
+    title: Root AGENTS.md vs Architect AGENTS expectations
+    severity: MEDIUM
+    status: OPEN
+    mitigation: Keep ApplyVault AGENTS.md; use core/ and slash commands for Architect
+  - id: R-03
+    title: Extension tests outside CI
+    severity: MEDIUM
+    status: OPEN
+    mitigation: qa-engineer flags residual risk; consider CI follow-up
+  - id: R-04
+    title: CV catalog drift from hardcoded section types
+    severity: HIGH
+    status: OPEN
+    mitigation: ADR-0001 + shared catalog mandatory for CV work
+  - id: R-05
+    title: AI/config misconfiguration
+    severity: MEDIUM
+    status: OPEN
+    mitigation: platform + ai-llm own config key hygiene; never log secrets

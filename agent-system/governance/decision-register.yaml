@@ -1,0 +1,28 @@
+register_version: "1.0.0"
+project_id: applyvault
+decisions:
+  - id: D-01
+    title: Brownfield full-product fleet
+    status: APPROVED
+    date: "2026-07-29"
+    detail: User approved specification with fleet focus A
+  - id: D-02
+    title: Adaptation mode BRIDGE
+    status: APPROVED
+    date: "2026-07-29"
+    detail: Matt Pocock skills + Architect orchestration
+  - id: D-03
+    title: Exclude payment-billing agent
+    status: APPROVED
+    date: "2026-07-29"
+    detail: Payments not applicable
+  - id: D-04
+    title: Preserve architecture; incremental evolution
+    status: APPROVED
+    date: "2026-07-29"
+    detail: No rewrite without new approval
+  - id: D-05
+    title: Keep Supabase identity
+    status: APPROVED
+    date: "2026-07-29"
+    detail: Verified existing; replacement needs new gate

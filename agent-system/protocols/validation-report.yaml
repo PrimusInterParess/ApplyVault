@@ -1,0 +1,13 @@
+schema_version: "1.0.0"
+project_id: applyvault
+last_validated_at: "2026-07-29"
+validator: scripts/validate-agent-system.ps1
+status: PASSED
+checks:
+  - required_files_present
+  - specification_approved
+  - agent_prompts_have_18_sections
+  - no_excluded_agents_generated
+notes:
+  - validate-agent-system.ps1 OK: 9 registered agents and all required files
+  - validated_at: "2026-07-29"

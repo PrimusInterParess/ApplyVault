@@ -1,0 +1,132 @@
+registry_version: "1.0.0"
+project_id: applyvault
+orchestrator: principal-software-architect
+
+agents:
+  - id: principal-software-architect
+    title: Principal Software Architect
+    prompt_file: agents/00-principal-architect.md
+    type: ORCHESTRATOR
+    status: ACTIVE
+    owns:
+      - orchestration
+      - integration-review
+      - procedure-bridge
+    collaborators:
+      - product-manager
+      - frontend-engineer
+      - backend-engineer
+      - browser-extension-engineer
+      - ai-llm-engineer
+      - ui-ux-designer
+      - qa-engineer
+      - platform-engineer
+
+  - id: product-manager
+    title: Product Manager
+    prompt_file: agents/product-manager.md
+    type: CORE
+    status: ACTIVE
+    owns:
+      - problem-framing
+      - prioritization
+      - issue-spec-quality
+    collaborators:
+      - principal-software-architect
+      - ui-ux-designer
+
+  - id: frontend-engineer
+    title: Frontend Engineer
+    prompt_file: agents/frontend-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - frontend/applyvault-jobs-ui/
+    collaborators:
+      - ui-ux-designer
+      - backend-engineer
+      - qa-engineer
+
+  - id: backend-engineer
+    title: Backend Engineer
+    prompt_file: agents/backend-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - api/ApplyVault.Api/
+      - shared/cv-section-catalog/ (with frontend/ai)
+    collaborators:
+      - ai-llm-engineer
+      - platform-engineer
+      - browser-extension-engineer
+      - qa-engineer
+
+  - id: browser-extension-engineer
+    title: Browser Extension Engineer
+    prompt_file: agents/browser-extension-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - extension/
+    collaborators:
+      - backend-engineer
+      - qa-engineer
+
+  - id: ai-llm-engineer
+    title: AI / LLM Engineer
+    prompt_file: agents/ai-llm-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - GoogleAi clients and AI option sections
+      - CV/scrape/GitHub AI prompt quality
+    collaborators:
+      - backend-engineer
+      - frontend-engineer
+
+  - id: ui-ux-designer
+    title: UI/UX Designer
+    prompt_file: agents/ui-ux-designer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - dashboard UX guidance
+      - job-results UI rule alignment
+    collaborators:
+      - frontend-engineer
+      - product-manager
+
+  - id: qa-engineer
+    title: QA Engineer
+    prompt_file: agents/qa-engineer.md
+    type: REVIEWER
+    status: ACTIVE
+    owns:
+      - test strategy
+      - quality gates evidence
+    collaborators:
+      - frontend-engineer
+      - backend-engineer
+      - browser-extension-engineer
+      - platform-engineer
+
+  - id: platform-engineer
+    title: Platform Engineer
+    prompt_file: agents/platform-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - .github/workflows/
+      - config/Redis/storage/health seams
+    collaborators:
+      - backend-engineer
+      - qa-engineer
+
+excluded_agents:
+  - payment-billing-engineer
+  - standalone-database-engineer
+  - standalone-identity-access-engineer
+  - standalone-cicd-engineer
+  - standalone-cloud-platform-engineer
+  - technical-writer
+  - standalone-security-engineer

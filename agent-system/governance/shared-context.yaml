@@ -1,0 +1,125 @@
+project:
+  id: applyvault
+  name: ApplyVault
+  mode: BROWNFIELD
+  description: >-
+    Job-capture workspace with Chrome MV3 extension, ASP.NET Core API, and
+    Angular dashboard for saved jobs, public search, structured CV, and integrations.
+  business_goal: >-
+    Evolve the full product across extension, API, and dashboard while preserving
+    existing agent delivery procedures.
+  phase: IMPLEMENTATION
+
+governance:
+  architect: principal-software-architect
+  approval_required_for:
+    - provider replacement
+    - architecture rewrite
+    - overwriting project skills or domain memory
+    - production secret changes
+    - payments capability introduction
+
+existing_operating_procedures:
+  detection_status: FOUND
+  adaptation_mode: BRIDGE
+  procedure_paths:
+    - AGENTS.md
+    - CLAUDE.md
+    - .agents/skills/
+    - docs/agents/issue-tracker.md
+    - docs/agents/triage-labels.md
+    - docs/agents/domain.md
+    - CONTEXT.md
+    - docs/adr/
+    - core/
+    - .cursor/commands/
+    - .cursor/rules/job-results-ui-ux.mdc
+  canonical_workflow_chain:
+    - clarify/grill/domain-modeling as needed
+    - to-spec → GitHub issue (ready-for-agent)
+    - to-tickets → tracer-bullet tickets
+    - implement with tdd where applicable
+    - code-review
+    - triage/qa as needed
+  domain_memory_locations:
+    - CONTEXT.md
+    - docs/adr/
+    - docs/agents/domain.md
+  work_tracking_binding: >-
+    GitHub Issues on PrimusInterParess/ApplyVault via gh CLI
+    (docs/agents/issue-tracker.md)
+  precedence_notes:
+    - User session directive wins
+    - Project AGENTS.md and skills bind delivery work
+    - Architect /operate orchestrates; does not replace Issues or skills chain
+    - Prefer CONTEXT.md and ADR-0001 vocabulary for CV work
+    - Never overwrite .agents/skills, CONTEXT.md, ADRs, or docs/agents/*
+
+capabilities:
+  identity:
+    required: YES
+    provider: Supabase
+    status: VERIFIED_EXISTING
+  payments:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+  ai:
+    required: YES
+    provider: Google Gemini (HTTP)
+    status: VERIFIED_EXISTING
+  persistence:
+    required: YES
+    provider: EF Core SQL Server / LocalDB
+    status: VERIFIED_EXISTING
+  hosting:
+    required: YES
+    provider: unverified-live-target
+    status: ASSUMPTION
+  job_scrape:
+    required: YES
+    provider: Chrome MV3 + ASP.NET API
+    status: VERIFIED_EXISTING
+  public_job_search:
+    required: YES
+    provider: EURES + Jobnet
+    status: VERIFIED_EXISTING
+  structured_cv:
+    required: YES
+    provider: catalog + EF + Angular
+    status: VERIFIED_EXISTING
+  mail_calendar_github:
+    required: YES
+    provider: Gmail / Google / Microsoft / GitHub
+    status: VERIFIED_EXISTING
+
+technology:
+  api: net10.0 ASP.NET Core
+  frontend: Angular 19
+  extension: Chrome Manifest V3
+  auth: Supabase JWT JWKS
+  cache: Redis optional / in-memory fallback
+  cv_storage: LocalFilesystem or Azure Blob
+  ci: GitHub Actions (.github/workflows/api-ci.yml)
+
+contracts:
+  approved:
+    - api REST under Controllers route prefixes api/*
+    - shared/cv-section-catalog/cv-section-catalog.json
+    - ADR-0001 CV section schema catalog
+  proposed: []
+
+constraints:
+  - read-only research does not authorize implementation
+  - no secrets in prompts or handoffs
+  - no fabricated test pass or deploy claims
+  - payments agents excluded
+  - preserve monorepo seams; no rewrite without approval
+
+repository_roots:
+  - extension/
+  - api/ApplyVault.Api/
+  - api/ApplyVault.Api.Tests/
+  - api/ApplyVault.Api.IntegrationTests/
+  - frontend/applyvault-jobs-ui/
+  - shared/cv-section-catalog/

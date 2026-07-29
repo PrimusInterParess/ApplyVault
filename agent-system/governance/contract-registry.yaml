@@ -1,0 +1,62 @@
+registry_version: "1.0.0"
+project_id: applyvault
+
+contracts:
+  - id: api-rest-controllers
+    status: APPROVED_EXISTING
+    description: ASP.NET Controllers under api/* route prefixes
+    owner: backend-engineer
+    evidence: api/ApplyVault.Api/Controllers/
+
+  - id: scrape-ingest
+    status: APPROVED_EXISTING
+    description: Extension POST scrape-results with Bearer JWT
+    owner: backend-engineer
+    secondary: browser-extension-engineer
+    evidence: ScrapeResultsController; extension aspNetApiClient
+
+  - id: supabase-jwt
+    status: APPROVED_EXISTING
+    description: Supabase JWKS JWT Bearer validation
+    owner: backend-engineer
+    evidence: ConfigureSupabaseJwtBearerOptions.cs
+
+  - id: cv-section-catalog
+    status: APPROVED_EXISTING
+    description: Declarative section schema catalog
+    owner: backend-engineer
+    secondary: frontend-engineer
+    evidence: shared/cv-section-catalog/cv-section-catalog.json; ADR-0001
+
+  - id: structured-cv-fields-json
+    status: APPROVED_EXISTING
+    description: Entry FieldsJson validated against catalog
+    owner: backend-engineer
+    evidence: ADR-0001
+
+  - id: eures-jobnet-search
+    status: APPROVED_EXISTING
+    description: Public job search APIs and ranked caches
+    owner: backend-engineer
+    evidence: Services/Eures; Services/Jobnet
+
+  - id: google-ai-gemini-http
+    status: APPROVED_EXISTING
+    description: Gemini generateContent HTTP clients and feature toggles
+    owner: ai-llm-engineer
+    evidence: GoogleAi* services; GoogleAi options
+
+  - id: oauth-integrations
+    status: APPROVED_EXISTING
+    description: Gmail, Google/Microsoft calendar, GitHub OAuth connections
+    owner: backend-engineer
+    evidence: Mail/Calendar/GitHub controllers and services
+
+  - id: health-endpoints
+    status: APPROVED_EXISTING
+    description: /health, /health/live, api/health
+    owner: platform-engineer
+    secondary: backend-engineer
+    evidence: WebApplicationExtensions; HealthController
+
+proposed_contracts: []

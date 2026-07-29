@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/architect-install.schema.json",
+  "title": "ArchitectInstall",
+  "description": "Optional tracked policy for how The Architect is installed in an application repo. Prefer this over creating an app-root .architect/ stamp for non-copy installs.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "install_style": {
+      "type": "string",
+      "enum": ["submodule", "standalone_clone", "junction", "copy_install"],
+      "description": "How the library is linked into this application."
+    },
+    "library_root": {
+      "type": "string",
+      "description": "Project-specific path (relative to app root, or absolute) to the Architect checkout. Required when the library is not the workspace root and core/ is not a resolvable link."
+    },
+    "write_app_root_stamp": {
+      "type": "boolean",
+      "default": false,
+      "description": "When false, install/update scripts and /upgrade-architect must not create .architect/ at the app root. Copy-install may set true."
+    }
+  }
+}

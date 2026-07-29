@@ -1,0 +1,18 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: ""
+  from_agent: ""
+  to_agent: principal-software-architect
+  status: "" # COMPLETED | BLOCKED | NEEDS_DECISION | PARTIAL
+  summary: ""
+  evidence:
+    files_touched: []
+    tests_run: []
+    contracts_affected: []
+  residual_risks: []
+  open_questions: []
+  next_recommended_action: ""
+
+instructions: |
+  Specialists return this package to the Principal Architect.
+  Never include secret values. Cite paths and command names only for evidence.

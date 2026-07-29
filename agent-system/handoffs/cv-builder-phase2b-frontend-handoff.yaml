@@ -1,0 +1,33 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: "cv-builder-phase2b-retire-mycv-2026-07-29"
+  from_agent: frontend-engineer
+  to_agent: principal-software-architect
+  status: COMPLETED
+  summary: >-
+    Phase 2b UI complete: /my-cv redirects to /cv-builder, My CV removed from
+    primary nav (CV Builder remains sole CV entry), and builder edit topbar
+    exposes minimal profile photo upload/replace/remove via existing
+    CvDocumentFacade signals. Project-summary import intentionally deferred.
+  evidence:
+    files_touched:
+      - frontend/applyvault-jobs-ui/src/app/app.routes.ts
+      - frontend/applyvault-jobs-ui/src/app/shared/layout/app-shell.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.ts
+      - agent-system/handoffs/cv-builder-phase2b-frontend-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - CvDocumentFacade.uploadProfilePhoto / deleteProfilePhoto / profilePhotoUrl (consumed, unchanged)
+  residual_risks:
+    - >-
+      Project-summary import UI remains only on my-cv-page (deferred by Architect);
+      builder users cannot import project summaries until a follow-up ports that flow.
+    - >-
+      my-cv-page sources remain in the tree (dead for routing); optional cleanup later
+      per envelope (do not delete in this task).
+  open_questions: []
+  next_recommended_action: >-
+    Architect review / optional ui-ux pass on photo topbar density; schedule
+    follow-up for project-summary import on builder when authorized.

@@ -1,0 +1,49 @@
+schema_version: "1.0.0"
+envelope:
+  task_id: "cv-builder-phase2c-project-import-2026-07-29"
+  parent_request: >-
+    /operate C — next milestone after Phase 2b: port saved project-summary
+    import onto CV builder (last deferred my-cv capability).
+  assigned_agent: frontend-engineer
+  objective: >-
+    Let users select saved CvProjectSummary items on the CV builder and add
+    them as Projects section Entries, matching my-cv behavior via
+    CvProjectsFacade + existing structured save.
+  scope:
+    include_paths:
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-projects.facade.ts
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/models/cv-project.model.ts
+    exclude_paths:
+      - api/
+      - extension/
+      - CONTEXT.md
+      - docs/adr/
+      - "**/*.spec.ts"
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/my-cv-page/
+  contracts:
+    must_respect:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - CONTEXT.md (Section, Entry, Projects)
+      - Entry.sourceSummaryId tracking for already-imported detection
+      - CvProjectsFacade.savedSummaries / loadSummaries
+  constraints:
+    - User authorized /operate C
+    - No secrets; no tests; no builds unless asked
+    - Do not overwrite CONTEXT.md or ADRs
+    - Do not edit my-cv-page (dead route); optional extract of shared util from my-cv logic by re-implementing in utils — do not require changing my-cv
+    - Prefer a compact Projects import panel in builder edit (similar density to Structure), not a full my-cv clone
+    - Link to /cv-projects when no summaries / for generating new ones
+    - Preserve WYSIWYG autosave path after import (cvStructured.save)
+  definition_of_done:
+    - Builder edit can load/refresh saved project summaries
+    - User can select summaries not already linked via sourceSummaryId and add them to Projects section (create Projects section if missing)
+    - Imported entries carry sourceSummaryId and content fields equivalent to my-cv projectSummaryToEntry
+    - Already-imported summaries shown as Added / not re-selectable
+    - Empty state points user to Projects page to generate summaries
+    - Handoff YAML for Architect
+  dependencies:
+    - "cv-builder-phase2b-retire-mycv-2026-07-29 COMPLETED"
+  handoff_required: true
+  approval_gates: []

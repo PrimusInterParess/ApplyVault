@@ -43,6 +43,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly pdfFileInput = viewChild<ElementRef<HTMLInputElement>>('pdfFileInput');
+  protected readonly profilePhotoFileInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoFileInput');
 
   protected readonly templates = CV_EXPORT_TEMPLATES;
   protected readonly maxPageOptions = CV_EXPORT_MAX_PAGE_OPTIONS;
@@ -205,6 +206,23 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected openPdfPicker(): void {
     this.pdfFileInput()?.nativeElement.click();
+  }
+
+  protected openProfilePhotoFilePicker(): void {
+    this.profilePhotoFileInput()?.nativeElement.click();
+  }
+
+  protected onProfilePhotoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.cvDocument.uploadProfilePhoto(file);
   }
 
   protected onPdfSelected(event: Event): void {

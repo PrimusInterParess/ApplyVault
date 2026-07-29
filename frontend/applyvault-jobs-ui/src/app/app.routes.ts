@@ -57,20 +57,14 @@ export const routes: Routes = [
       },
       {
         path: 'my-cv',
-        title: 'My CV',
-        data: {
-          shellSubtitle: 'Upload your CV PDF, extract sections automatically, and download the original file.'
-        },
-        loadComponent: () =>
-          import('./features/cv-projects/pages/my-cv-page/my-cv-page.component').then(
-            (module) => module.MyCvPageComponent
-          )
+        redirectTo: 'cv-builder',
+        pathMatch: 'full'
       },
       {
         path: 'cv-builder',
         title: 'CV Builder',
         data: {
-          shellSubtitle: 'Pick a template and build your CV from scratch with AI assist.'
+          shellSubtitle: 'Choose a template, edit your structured CV on the page, and export a PDF.'
         },
         loadComponent: () =>
           import('./features/cv-projects/pages/cv-builder-page/cv-builder-page.component').then(

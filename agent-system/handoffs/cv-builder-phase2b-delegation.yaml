@@ -1,0 +1,48 @@
+schema_version: "1.0.0"
+envelope:
+  task_id: "cv-builder-phase2b-retire-mycv-2026-07-29"
+  parent_request: >-
+    /operate C — Phase 2b after structure (2a): make CV builder the sole CV
+    nav surface; redirect /my-cv; add minimal profile photo on builder.
+  assigned_agent: frontend-engineer
+  objective: >-
+    Retire My CV as a user-facing surface: redirect /my-cv to /cv-builder,
+    remove My CV from primary nav, and expose profile photo upload/remove on
+    the builder so photo is not lost when my-cv is gone. Defer project-summary
+    import (document as residual risk).
+  scope:
+    include_paths:
+      - frontend/applyvault-jobs-ui/src/app/app.routes.ts
+      - frontend/applyvault-jobs-ui/src/app/shared/layout/app-shell.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-document.facade.ts
+    exclude_paths:
+      - api/
+      - extension/
+      - CONTEXT.md
+      - docs/adr/
+      - "**/*.spec.ts"
+      - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/my-cv-page/
+  contracts:
+    must_respect:
+      - docs/adr/0002-cv-builder-sole-surface.md
+      - CONTEXT.md
+      - Existing CvDocumentFacade.uploadProfilePhoto / deleteProfilePhoto / profilePhotoUrl
+  constraints:
+    - User authorized /operate C
+    - No secrets; no tests; no builds unless asked
+    - Do not overwrite CONTEXT.md or ADRs
+    - Do not delete my-cv-page files in this task (redirect only; dead code cleanup optional later)
+    - Do not port project-summary import in this task
+    - Keep nav label as "CV Builder" (single CV entry)
+    - Minimal photo UX in edit topbar or structure area; reuse existing facade signals
+  definition_of_done:
+    - Route /my-cv redirects to /cv-builder (no My CV page rendered for that path)
+    - App shell primary nav has CV Builder only (My CV link removed)
+    - Builder edit mode can upload and remove profile photo; errors shown; preview updates via existing profilePhotoUrl binding
+    - Deep links to /my-cv land on builder
+    - Handoff YAML for Architect listing residual risk: project import deferred
+  dependencies:
+    - "cv-builder-phase2a-structure-2026-07-29 COMPLETED"
+  handoff_required: true
+  approval_gates: []

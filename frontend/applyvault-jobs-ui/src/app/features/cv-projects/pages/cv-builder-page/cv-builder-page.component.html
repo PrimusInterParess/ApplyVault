@@ -8,6 +8,12 @@
     accept="application/pdf,.pdf"
     class="cv-builder__file-input"
     (change)="onPdfSelected($event)" />
+  <input
+    #profilePhotoFileInput
+    type="file"
+    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+    class="cv-builder__file-input"
+    (change)="onProfilePhotoFileSelected($event)" />
 
   @if (step() === 'pick') {
     <section class="cv-builder__studio">
@@ -228,6 +234,36 @@
           <button
             type="button"
             class="cv-builder__ghost-btn"
+            [disabled]="
+              cvDocument.uploadingProfilePhoto() ||
+              cvDocument.deletingProfilePhoto() ||
+              cvDocument.loadingProfilePhoto()
+            "
+            (click)="openProfilePhotoFilePicker()">
+            {{
+              cvDocument.uploadingProfilePhoto()
+                ? 'Uploading photo…'
+                : cvDocument.document()?.hasProfilePhoto
+                  ? 'Replace photo'
+                  : 'Upload photo'
+            }}
+          </button>
+          @if (cvDocument.document()?.hasProfilePhoto) {
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [disabled]="
+                cvDocument.uploadingProfilePhoto() ||
+                cvDocument.deletingProfilePhoto() ||
+                cvDocument.loadingProfilePhoto()
+              "
+              (click)="cvDocument.deleteProfilePhoto()">
+              {{ cvDocument.deletingProfilePhoto() ? 'Removing…' : 'Remove photo' }}
+            </button>
+          }
+          <button
+            type="button"
+            class="cv-builder__ghost-btn"
             [disabled]="cvDocument.uploading()"
             (click)="openPdfPicker()">
             {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
@@ -239,6 +275,9 @@
             (click)="exportPdf()">
             {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
           </button>
+          @if (cvDocument.profilePhotoError(); as error) {
+            <p class="cv-builder__error" role="alert">{{ error }}</p>
+          }
           @if (cvDocument.uploadError(); as error) {
             <p class="cv-builder__error" role="alert">{{ error }}</p>
           }

@@ -198,7 +198,7 @@ export class CvStructuredFacade {
 
   /**
    * Hydrate API payload and normalize edit slots (Summary/Skills/Contact),
-   * including Contact modern expand + absorb/dedupe so Classic/Minimal canvases
+   * including Contact modern expand + absorb/dedupe so Minimal/Modern canvases
    * never show unlabeled orphans beside empty Email/Phone/LinkedIn starters.
    */
   private hydrateForContentEditing(document: CvStructuredDocument): CvStructuredDocument {

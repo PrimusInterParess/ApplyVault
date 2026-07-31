@@ -174,8 +174,20 @@
   border-color: #1f6f5b;
 }
 
+/* Entry rhythm via list gap so newly added entries match existing ones. */
+.cv-export-preview__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cv-export-preview--editable .cv-export-preview__entries {
+  /* ~12pt export .entry margin-bottom */
+  gap: 0.75rem;
+}
+
 .cv-export-preview--editable .cv-export-preview__entry {
-  margin-bottom: 0.7rem;
+  margin-bottom: 0;
 }
 
 .cv-export-preview--editable .cv-export-preview__entry-title {
@@ -195,18 +207,11 @@
 .cv-export-preview--editable .cv-export-preview__main,
 .cv-export-preview--editable .cv-export-preview__sidebar,
 .cv-export-preview--editable .cv-export-preview__main--single,
-.cv-export-preview--editable .cv-export-preview__classic-header,
 .cv-export-preview--editable .cv-export-preview__pro-header {
   padding: 1.35rem 1.5rem;
 }
 
-/* Editable photo sizes mirror export baselines: Classic 120 / Modern 136 / Minimal 128. */
-.cv-export-preview--editable.cv-export-preview--template-1 .cv-export-preview__photo {
-  width: 7.5rem;
-  height: 7.5rem;
-  border-radius: 0;
-}
-
+/* Editable photo sizes mirror export baselines: Modern 136 / Minimal 168. */
 .cv-export-preview--editable.cv-export-preview--template-2 .cv-export-preview__photo {
   width: 8.5rem;
   height: 8.5rem;
@@ -215,19 +220,14 @@
 }
 
 .cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__photo {
-  width: 8rem;
-  height: 8rem;
+  width: 10.5rem;
+  height: 10.5rem;
   border-radius: 0.25rem;
-  margin-bottom: 0;
-}
-
-.cv-export-preview--editable .cv-export-preview__classic-header {
-  gap: 1rem;
-  align-items: center;
+  margin: 0 0.65rem 0 0;
 }
 
 .cv-export-preview--editable .cv-export-preview__minimal-header {
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 0.85rem;
 }
 
@@ -321,13 +321,6 @@
   box-sizing: border-box;
 }
 
-.cv-export-preview--template-1 .cv-export-preview__photo {
-  width: 2.45rem;
-  height: 2.45rem;
-  border-radius: 0;
-  margin-bottom: 0;
-}
-
 .cv-export-preview--template-2 .cv-export-preview__photo {
   width: 2.35rem;
   height: 2.35rem;
@@ -387,12 +380,12 @@
 }
 
 .cv-export-preview__entry {
-  margin-bottom: 0.3rem;
+  margin-bottom: 0;
 }
 
 .cv-export-preview--editable .cv-export-preview__entry--editable {
   position: relative;
-  padding: 0.35rem 0.2rem 0.45rem;
+  padding: 0.2rem 0.2rem 0.25rem;
   border-radius: 0.35rem;
 }
 
@@ -439,7 +432,8 @@
 .cv-export-preview__add-entry {
   display: inline-flex;
   align-items: center;
-  margin: 0.15rem 0 0.55rem;
+  /* Sit just below the entries gap — do not stack extra entry-like margin. */
+  margin: 0.75rem 0 0;
   border: 1px dashed rgb(28 35 48 / 22%);
   background: rgb(255 255 255 / 55%);
   color: #1f6f5b;
@@ -528,15 +522,6 @@
   opacity: 0.95;
 }
 
-.cv-export-preview__classic-header {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.85rem 0.9rem 0.45rem;
-  border-bottom: none;
-  box-sizing: border-box;
-}
-
 .cv-export-preview__minimal-header {
   display: flex;
   flex-direction: row;
@@ -557,15 +542,6 @@
   margin-bottom: 0.3rem;
 }
 
-.cv-export-preview--compact .cv-export-preview__classic-header {
-  padding: 0.55rem 0.6rem 0.35rem;
-}
-
-.cv-export-preview__classic-header-copy {
-  flex: 1;
-  min-width: 0;
-}
-
 .cv-export-preview__pro-header {
   display: flex;
   gap: 0.45rem;
@@ -583,7 +559,7 @@
   min-width: 0;
 }
 
-/* BE .cv-contact — stack valued lines vertically (classic/minimal PDF parity) */
+/* BE .cv-contact — stack valued lines vertically (minimal/modern PDF parity) */
 .cv-export-preview__contact {
   display: flex;
   flex-direction: column;
@@ -731,21 +707,6 @@
   opacity: 0.85;
 }
 
-/* Template 1 — template-classic.html */
-.cv-export-preview--template-1 {
-  --cv-preview-accent: #2f5d50;
-  --cv-preview-font: 'Segoe UI', Candara, Calibri, sans-serif;
-  --cv-preview-title-font: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-}
-
-.cv-export-preview--template-1 .cv-export-preview__main {
-  padding: 0.55rem 0.9rem 0.85rem;
-}
-
-.cv-export-preview--compact.cv-export-preview--template-1 .cv-export-preview__main {
-  padding: 0.55rem 0.6rem;
-}
-
 /* Template 2 — template-modern.html */
 .cv-export-preview--template-2 {
   --cv-preview-sidebar-bg: #eef2f0;
@@ -761,9 +722,40 @@
   --cv-preview-accent: #2f5d50;
 }
 
-.cv-export-preview--template-3 .cv-export-preview__main .cv-export-preview__section-title {
+/* Match Minimal PDF section rhythm (~28pt between sections). */
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__section {
+  margin-bottom: 1.75rem;
+}
+
+/* Match Minimal PDF entry rhythm (~12pt between entries). */
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__entries {
+  gap: 0.75rem;
+}
+
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__add-entry {
+  margin-top: 0.75rem;
+}
+
+/* Extra right inset so the Minimal photo sits a bit further left (matches PDF feel). */
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__main--single {
+  padding: 1.35rem 1.85rem 1.35rem 1.5rem;
+}
+
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__minimal-header {
+  margin-bottom: 1.15rem;
+}
+
+.cv-export-preview--template-3 .cv-export-preview__section-title {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   color: var(--cv-preview-accent);
   border-bottom-color: #d0d0d0;
+}
+
+/* Keep title underline text-width even inside the editable section-head flex row. */
+.cv-export-preview--template-3 .cv-export-preview__section-head .cv-export-preview__section-title {
+  flex: 0 1 auto;
 }
 
 .cv-export-preview--template-3 .cv-export-preview__name {
@@ -771,9 +763,12 @@
   letter-spacing: 0.01em;
 }
 
+.cv-export-preview--template-3 .cv-export-preview__name::after {
+  content: none;
+}
+
 /* Compact gallery: keep page clip for thumbs, but photo stays inside content box (no float). */
 .cv-export-preview--compact .cv-export-preview__minimal-header .cv-export-preview__photo,
-.cv-export-preview--compact .cv-export-preview__classic-header .cv-export-preview__photo,
 .cv-export-preview--compact .cv-export-preview__sidebar .cv-export-preview__photo {
   max-width: 100%;
 }

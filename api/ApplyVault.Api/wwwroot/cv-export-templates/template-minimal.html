@@ -7,6 +7,8 @@
     :root {
       --cv-page-pad-y: 18mm;
       --cv-page-pad-x: 20mm;
+      /* Slightly tighter than left pad; keeps photo on the right without hugging the edge. */
+      --cv-page-pad-right: 16mm;
       --cv-ink: #1a1a1a;
       --cv-muted: #5c5c5c;
       --cv-rule: #d0d0d0;
@@ -23,15 +25,15 @@
       line-height: 1.45;
     }
     .cv-body {
-      padding: var(--cv-page-pad-y) var(--cv-page-pad-x);
+      padding: var(--cv-page-pad-y) var(--cv-page-pad-right) var(--cv-page-pad-y) var(--cv-page-pad-x);
     }
     .cv-header {
       display: flex;
       flex-direction: row;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 16pt;
-      margin-bottom: 14pt;
+      gap: 12pt;
+      margin-bottom: 20pt;
     }
     .cv-header-copy {
       flex: 1 1 auto;
@@ -40,8 +42,8 @@
     .cv-photo {
       flex: 0 0 auto;
       flex-shrink: 0;
-      width: 128px;
-      height: 128px;
+      width: 168px;
+      height: 168px;
       max-width: 100%;
       object-fit: cover;
       object-position: center;
@@ -54,13 +56,6 @@
       line-height: 1.15;
       letter-spacing: 0.01em;
       color: var(--cv-ink);
-    }
-    .cv-name::after {
-      content: '';
-      display: block;
-      width: 3rem;
-      margin-top: 8pt;
-      border-bottom: 1px solid var(--cv-rule);
     }
     .cv-tagline {
       margin: 0 0 8pt;
@@ -79,8 +74,11 @@
       font-size: 9.5pt;
       color: var(--cv-muted);
     }
-    .section { margin-bottom: 14pt; margin-top: 4pt; }
+    .section { margin-bottom: 28pt; margin-top: 8pt; }
     .section-title {
+      display: inline-block;
+      width: fit-content;
+      max-width: 100%;
       font-size: 8.5pt;
       font-weight: 700;
       text-transform: uppercase;

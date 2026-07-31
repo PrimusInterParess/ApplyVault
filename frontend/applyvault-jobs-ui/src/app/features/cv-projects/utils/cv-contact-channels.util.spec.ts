@@ -219,7 +219,7 @@ describe('cv-contact-channels.util legacy Contact', () => {
     expect(contactFieldHasValue(linkedIn!)).toBeFalse();
   });
 
-  it('absorbs Name-bullet channels into empty Email/Phone/LinkedIn starters (no Classic dups)', () => {
+  it('absorbs Name-bullet channels into empty Email/Phone/LinkedIn starters (no contact dups)', () => {
     const starters = createStarterContactEntries();
     starters[0] = {
       ...starters[0],

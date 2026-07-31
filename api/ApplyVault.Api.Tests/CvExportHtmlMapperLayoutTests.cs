@@ -8,32 +8,6 @@ public sealed class CvExportHtmlMapperLayoutTests
     private const string Template = "{{ProfilePhotoHtml}}|H:{{HeaderHtml}}|S:{{SidebarHtml}}|M:{{MainHtml}}";
 
     [Fact]
-    public void ApplyTemplate_Classic_puts_Contact_and_Summary_in_Header()
-    {
-        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest(), templateId: 1);
-
-        Assert.Contains("|H:", html, StringComparison.Ordinal);
-        Assert.Contains("Jane Doe", html, StringComparison.Ordinal);
-        Assert.Contains("jane@example.com", html, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Experienced engineer.", html, StringComparison.Ordinal);
-
-        var header = Slice(html, "|H:", "|S:");
-        var sidebar = Slice(html, "|S:", "|M:");
-        var main = Slice(html, "|M:", null);
-
-        Assert.Contains("Jane Doe", header, StringComparison.Ordinal);
-        Assert.Contains("jane@example.com", header, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Experienced engineer.", header, StringComparison.Ordinal);
-        Assert.DoesNotContain("Acme Corp", header, StringComparison.Ordinal);
-
-        Assert.True(string.IsNullOrWhiteSpace(sidebar));
-        Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("Jane Doe", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("Experienced engineer.", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("""class="section-title">Contact</h2>""", header, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void ApplyTemplate_Modern_puts_Skills_Summary_Contact_in_Sidebar()
     {
         var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest(), templateId: 2);
@@ -48,7 +22,7 @@ public sealed class CvExportHtmlMapperLayoutTests
         Assert.Contains("C#", sidebar, StringComparison.Ordinal);
         Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
         Assert.DoesNotContain("Acme Corp", sidebar, StringComparison.Ordinal);
-        // Contact uses value lines (not Email/Phone entry titles), matching Classic/Minimal.
+        // Contact uses value lines (not Email/Phone entry titles), matching Minimal.
         Assert.Contains("""class="cv-contact-line">""", sidebar, StringComparison.Ordinal);
         Assert.Contains("jane@example.com", sidebar, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("""class="section-title">Contact</h2>""", sidebar, StringComparison.Ordinal);

@@ -1,6 +1,6 @@
 namespace ApplyVault.Api.Services;
 
-public sealed record CvPdfExportOptions(int TemplateId = 1, int? MaxPages = null);
+public sealed record CvPdfExportOptions(int TemplateId = 2, int? MaxPages = null);
 
 public sealed record CvPdfRenderOptions(int CompactLevel = 0)
 {

@@ -21,7 +21,7 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
     {
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=1");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=2");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -34,13 +34,12 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
         var deleteResponse = await client.DeleteAsync("/api/cv-documents/current");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=1");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=2");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     public async Task Preview_returns_html_for_each_template_id(int templateId)
@@ -62,7 +61,7 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
     }
 
     [Fact]
-    public async Task Preview_legacy_template_id_4_normalizes_to_Classic()
+    public async Task Preview_legacy_template_id_4_normalizes_to_Modern()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
         await UploadCvAsync(client);
@@ -71,10 +70,10 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.TryGetValues("X-Cv-Export-Template-Id", out var templateHeaders));
-        Assert.Equal("1", Assert.Single(templateHeaders));
+        Assert.Equal("2", Assert.Single(templateHeaders));
 
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains("cv-classic", html, StringComparison.Ordinal);
+        Assert.Contains("cv-layout", html, StringComparison.Ordinal);
         Assert.Contains("cv-name", html, StringComparison.Ordinal);
     }
 
@@ -94,7 +93,7 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
         Assert.True(response.Headers.TryGetValues("X-Cv-Export-Template-Id", out var templateHeaders));
 
-        var expectedResolved = templateId is 2 or 3 ? templateId : 1;
+        var expectedResolved = templateId is 2 or 3 ? templateId : 2;
         Assert.Equal(expectedResolved.ToString(), Assert.Single(templateHeaders));
 
         var bytes = await response.Content.ReadAsByteArrayAsync();

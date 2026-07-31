@@ -221,7 +221,7 @@ public sealed class UserCvDocumentEntity
 
     public string? ProfilePhotoContentType { get; set; }
 
-    public int TemplateId { get; set; } = 1;
+    public int TemplateId { get; set; } = 2;
 
     public int? MaxPages { get; set; }
 

@@ -43,7 +43,7 @@ internal static class CvExportHtmlMapper
     {
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
 
-        if (resolvedTemplateId == 1 || resolvedTemplateId == 3)
+        if (resolvedTemplateId == 3)
         {
             var header = new StringBuilder();
             var main = new StringBuilder();
@@ -83,7 +83,7 @@ internal static class CvExportHtmlMapper
         {
             if (IsSidebarSection(section))
             {
-                // Match Classic/Minimal contact emission: name + value lines (no Email/Phone labels).
+                // Match Minimal contact emission: name + value lines (no Email/Phone labels).
                 if (IsContactSection(section))
                 {
                     AccumulateClassicContactHeader(section, sidebarContactState);
@@ -222,7 +222,7 @@ internal static class CvExportHtmlMapper
     }
 
     /// <summary>
-    /// Resolves the person name for Classic/Minimal headers (FE <c>resolveContactDisplayName</c>
+    /// Resolves the person name for Minimal headers (FE <c>resolveContactDisplayName</c>
     /// + legacy title fill-the-gap parity). Prefer Name.subtitle; then legacy person-name Title.
     /// </summary>
     private static string? ResolveContactDisplayName(
@@ -277,7 +277,7 @@ internal static class CvExportHtmlMapper
 
     /// <summary>
     /// Expands import-legacy / multi-bullet Contact shapes into Name + one channel entry
-    /// per distinct valued bullet for Classic/Minimal header emission.
+    /// per distinct valued bullet for Minimal header emission.
     /// </summary>
     private static IReadOnlyList<CvExportEntry> NormalizeContactEntriesForExport(CvExportSection section)
     {

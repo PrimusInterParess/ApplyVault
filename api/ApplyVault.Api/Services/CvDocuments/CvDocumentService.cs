@@ -333,7 +333,7 @@ public sealed class CvDocumentService(
             OriginalFileSizeBytes = pdfBytes.Length,
             UploadedAt = now,
             UpdatedAt = now,
-            TemplateId = CvExportHtmlTemplateCatalog.ClassicTemplateId,
+            TemplateId = CvExportHtmlTemplateCatalog.DefaultTemplateId,
             MaxPages = 1
         };
 

@@ -16,7 +16,7 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCountsByLevel: new Dictionary<int, int>());
 
-        var result = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 1, MaxPages: null));
+        var result = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: null));
 
         Assert.Equal(0, result.CompactLevel);
         Assert.Equal(1, htmlBuilder.CallCount);
@@ -68,8 +68,8 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 1, MaxPages: 1));
-        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 1, MaxPages: 1));
+        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
+        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
 
         Assert.Equal(3, htmlResult.CompactLevel);
         Assert.Equal(3, htmlBuilder.LastOptions?.CompactLevel);
@@ -87,7 +87,7 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var result = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 1, MaxPages: null));
+        var result = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: null));
 
         Assert.Equal(1, dispatcher.CallCount);
         Assert.Equal(0, dispatcher.LastCompactLevel);

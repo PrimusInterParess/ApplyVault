@@ -216,10 +216,8 @@ public sealed class CvDocumentsController(
                 user,
                 new CvPdfExportOptions(resolved.TemplateId, resolved.MaxPages),
                 cancellationToken);
-            var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
-            var fileName = document is null
-                ? "cv-export.pdf"
-                : $"{Path.GetFileNameWithoutExtension(document.OriginalFileName)}-export.pdf";
+            var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
+            var fileName = CvExportDownloadFileName.BuildForExport(structured, resolved.TemplateId);
 
             AppendExportMetadataHeaders(exportResult);
             Response.Headers["X-Cv-Export-Template-Id"] = resolved.TemplateId.ToString();
@@ -296,7 +294,7 @@ public sealed class CvDocumentsController(
             : null;
 
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(
-            templateId ?? document?.TemplateId ?? CvExportHtmlTemplateCatalog.ClassicTemplateId);
+            templateId ?? document?.TemplateId ?? CvExportHtmlTemplateCatalog.DefaultTemplateId);
         var resolvedMaxPages = maxPages ?? document?.MaxPages;
 
         return (resolvedTemplateId, resolvedMaxPages);

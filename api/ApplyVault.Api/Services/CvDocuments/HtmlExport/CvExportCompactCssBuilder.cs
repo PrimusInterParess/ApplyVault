@@ -5,10 +5,10 @@ namespace ApplyVault.Api.Services.HtmlExport;
 /// <summary>
 /// Builds CompactLevel override CSS for HTML CV export (preview + PDF).
 /// Shrink priority is encoded in the ramp: bullets/entries/sections/pads/fonts before photo floors.
-/// Photo floors stay at or above 96px (preview-parity baselines: Classic 120 / Modern 136 / Minimal 128).
+/// Photo floors stay at or above 96px (preview-parity baselines: Modern 136 / Minimal 168).
 /// CompactLevel 0 leaves template baselines untouched (no override CSS).
-/// Levels 1–4 must shrink BELOW the denser Classic baseline (10pt / 14mm / 10pt sections)
-/// so MaxPages=1 can actually fit typical multi-section CVs.
+/// Levels 1–4 shrink denser than the Modern/Minimal baselines so MaxPages=1 can fit
+/// typical multi-section CVs.
 /// </summary>
 internal static class CvExportCompactCssBuilder
 {
@@ -28,6 +28,7 @@ internal static class CvExportCompactCssBuilder
 :root {
   --cv-page-pad-y: {{level.PadY}}mm !important;
   --cv-page-pad-x: {{level.PadX}}mm !important;
+  --cv-page-pad-right: {{level.MinimalPadRight}}mm !important;
   --cv-space: {{level.SpacePt}}pt !important;
   --cv-space-block: {{level.SpaceBlockPt}}pt !important;
   --cv-space-section: {{level.SpaceSectionPt}}pt !important;
@@ -64,12 +65,8 @@ html body {
   margin-top: 2px !important;
 }
 
-.cv-classic {
-  padding: var(--cv-page-pad-y) var(--cv-page-pad-x) !important;
-}
-
 .cv-body {
-  padding: {{level.MinimalPadY}}mm {{level.MinimalPadX}}mm !important;
+  padding: {{level.MinimalPadY}}mm {{level.MinimalPadRight}}mm {{level.MinimalPadY}}mm {{level.MinimalPadX}}mm !important;
 }
 
 .cv-layout .cv-sidebar {
@@ -88,13 +85,6 @@ html body {
 .cv-name {
   font-size: {{level.NameFontPt}}pt !important;
   margin-bottom: {{level.SpacePt}}pt !important;
-}
-
-.cv-classic .cv-photo {
-  width: {{level.ClassicPhotoPx}}px !important;
-  height: {{level.ClassicPhotoPx}}px !important;
-  max-width: 100% !important;
-  max-height: {{level.ClassicPhotoPx}}px !important;
 }
 
 .cv-layout .cv-sidebar .cv-photo {
@@ -127,6 +117,7 @@ html body {
                 PadX: 12,
                 MinimalPadY: 12,
                 MinimalPadX: 14,
+                MinimalPadRight: 12,
                 InnerGutterMm: 10,
                 MainInnerGutterMm: 11,
                 HeaderGapPt: 10,
@@ -134,9 +125,8 @@ html body {
                 SpaceBlockPt: 4,
                 SpaceSectionPt: 8,
                 NameFontPt: 18,
-                ClassicPhotoPx: 112,
                 ModernPhotoPx: 120,
-                MinimalPhotoPx: 112),
+                MinimalPhotoPx: 148),
             2 => new(
                 FontScale: 0.86m,
                 LineHeight: 1.18m,
@@ -148,6 +138,7 @@ html body {
                 PadX: 11,
                 MinimalPadY: 10,
                 MinimalPadX: 12,
+                MinimalPadRight: 11,
                 InnerGutterMm: 9,
                 MainInnerGutterMm: 10,
                 HeaderGapPt: 9,
@@ -155,9 +146,8 @@ html body {
                 SpaceBlockPt: 3,
                 SpaceSectionPt: 6,
                 NameFontPt: 17,
-                ClassicPhotoPx: 104,
                 ModernPhotoPx: 108,
-                MinimalPhotoPx: 104),
+                MinimalPhotoPx: 132),
             3 => new(
                 FontScale: 0.80m,
                 LineHeight: 1.12m,
@@ -169,6 +159,7 @@ html body {
                 PadX: 10,
                 MinimalPadY: 9,
                 MinimalPadX: 11,
+                MinimalPadRight: 10,
                 InnerGutterMm: 8,
                 MainInnerGutterMm: 9,
                 HeaderGapPt: 8,
@@ -176,9 +167,8 @@ html body {
                 SpaceBlockPt: 3,
                 SpaceSectionPt: 5,
                 NameFontPt: 16,
-                ClassicPhotoPx: 100,
                 ModernPhotoPx: 100,
-                MinimalPhotoPx: 96),
+                MinimalPhotoPx: 116),
             4 => new(
                 FontScale: 0.74m,
                 LineHeight: 1.05m,
@@ -190,6 +180,7 @@ html body {
                 PadX: 9,
                 MinimalPadY: 8,
                 MinimalPadX: 10,
+                MinimalPadRight: 10,
                 InnerGutterMm: 7,
                 MainInnerGutterMm: 8,
                 HeaderGapPt: 7,
@@ -198,9 +189,8 @@ html body {
                 SpaceSectionPt: 4,
                 NameFontPt: 15,
                 // Hard floor: do not shrink photos below 96px (preview-parity AC).
-                ClassicPhotoPx: 96,
                 ModernPhotoPx: 96,
-                MinimalPhotoPx: 96),
+                MinimalPhotoPx: 104),
             _ => new(
                 FontScale: 1m,
                 LineHeight: 1.4m,
@@ -212,6 +202,7 @@ html body {
                 PadX: 18,
                 MinimalPadY: 18,
                 MinimalPadX: 20,
+                MinimalPadRight: 16,
                 InnerGutterMm: 12,
                 MainInnerGutterMm: 14,
                 HeaderGapPt: 12,
@@ -219,9 +210,8 @@ html body {
                 SpaceBlockPt: 6,
                 SpaceSectionPt: 10,
                 NameFontPt: 20,
-                ClassicPhotoPx: 120,
                 ModernPhotoPx: 136,
-                MinimalPhotoPx: 128)
+                MinimalPhotoPx: 168)
         };
 
     private static string FormatPercent(decimal value) => $"{value * 100m:0.#}%";
@@ -237,6 +227,7 @@ html body {
         int PadX,
         int MinimalPadY,
         int MinimalPadX,
+        int MinimalPadRight,
         int InnerGutterMm,
         int MainInnerGutterMm,
         int HeaderGapPt,
@@ -244,7 +235,6 @@ html body {
         int SpaceBlockPt,
         int SpaceSectionPt,
         int NameFontPt,
-        int ClassicPhotoPx,
         int ModernPhotoPx,
         int MinimalPhotoPx);
 }

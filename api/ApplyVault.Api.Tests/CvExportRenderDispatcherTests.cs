@@ -6,11 +6,11 @@ namespace ApplyVault.Api.Tests;
 public sealed class CvExportRenderDispatcherTests
 {
     [Theory]
-    [InlineData(1, 1)]
+    [InlineData(1, 2)]
     [InlineData(2, 2)]
     [InlineData(3, 3)]
-    [InlineData(4, 1)]
-    [InlineData(5, 1)]
+    [InlineData(4, 2)]
+    [InlineData(5, 2)]
     public async Task RenderAsync_routes_all_v1_ids_through_html_exporter(int inputId, int expectedResolvedId)
     {
         var htmlExporter = new RecordingHtmlExporter();

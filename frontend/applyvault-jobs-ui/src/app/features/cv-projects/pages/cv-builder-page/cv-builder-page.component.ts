@@ -24,7 +24,6 @@ import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import {
   CV_EXPORT_MAX_PAGE_OPTIONS,
   CV_EXPORT_TEMPLATES,
-  MAX_CV_EXPORT_TEMPLATE_ID,
   normalizeCvExportTemplateId
 } from '../../models/cv-export-template.model';
 import {
@@ -77,7 +76,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly maxPageOptions = CV_EXPORT_MAX_PAGE_OPTIONS;
 
   protected readonly step = signal<BuilderStep>('pick');
-  /** Facade is the single source of truth for Classic/Modern/Minimal (ids 1–3). */
+  /** Facade is the single source of truth for Modern/Minimal (ids 2–3). */
   protected readonly selectedTemplateId = this.cvDocument.selectedExportTemplateId;
   protected readonly replaceConfirmOpen = signal(false);
   protected readonly pendingPdfFile = signal<File | null>(null);
@@ -701,7 +700,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected onTemplateSelectChange(event: Event): void {
     const templateId = Number.parseInt(readInputValue(event), 10);
 
-    if (Number.isInteger(templateId) && templateId >= 1 && templateId <= MAX_CV_EXPORT_TEMPLATE_ID) {
+    if (Number.isInteger(templateId) && (templateId === 2 || templateId === 3)) {
       this.selectTemplate(templateId);
     }
   }

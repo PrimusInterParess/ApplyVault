@@ -46,7 +46,7 @@ a {
 .section {
   break-inside: auto;
   page-break-inside: auto;
-  margin-bottom: 10pt;
+  /* Section vertical rhythm is owned by each template shell. */
 }
 
 .section-title {

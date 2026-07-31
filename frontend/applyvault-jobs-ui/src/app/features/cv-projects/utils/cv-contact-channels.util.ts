@@ -95,7 +95,7 @@ export function inferContactChannelLabelFromValue(value: string | null | undefin
 
 /**
  * Fold unlabeled valued Contact fields into empty labeled starter slots (Email/Phone/…)
- * when the value shape matches. Prevents Classic/Minimal edit canvas from showing both
+ * when the value shape matches. Prevents Minimal/Modern edit canvas from showing both
  * a filled orphan line and an empty Email/Phone/LinkedIn ghost for the same channel.
  */
 function absorbUnlabeledIntoEmptySlots(
@@ -182,7 +182,7 @@ export function dedupeContactEntries(entries: readonly CvStructuredEntry[]): CvS
 
   const result: CvStructuredEntry[] = [];
   // Seed with display name(s) so the person name never also appears as a contact channel
-  // (BE AppendClassicContactHeader parity — PDF / Classic canvas).
+  // (BE contact-header flush parity — PDF / Minimal canvas).
   const seenValues = new Set<string>();
   const seenEmptyLabels = new Set<string>();
   let keptName = false;
@@ -501,7 +501,7 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
 /**
  * Non-mutating view of Contact entries in the modern Name + fields shape.
  * Always runs ensureModernContactShape so absorb/dedupe applies even when the
- * draft still has starters + unlabeled orphans (Classic/Minimal edit canvas).
+ * draft still has starters + unlabeled orphans (Minimal/Modern edit canvas).
  */
 export function contactSectionForDisplay(section: CvStructuredSection): CvStructuredSection {
   const draft: CvStructuredSection = {

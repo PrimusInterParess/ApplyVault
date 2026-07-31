@@ -16,7 +16,7 @@ import { CvBuilderPageComponent } from './cv-builder-page.component';
   template: '<div class="stub-template-preview"></div>'
 })
 class StubCvExportTemplatePreviewComponent {
-  readonly templateId = input(1);
+  readonly templateId = input(2);
   readonly sections = input<CvStructuredSection[]>([]);
   readonly editable = input(false);
   readonly sampleMode = input(false);
@@ -93,7 +93,7 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
 
   beforeEach(async () => {
     refreshExportHtmlPreview = jasmine.createSpy('refreshExportHtmlPreview');
-    selectedExportTemplateId = signal(1);
+    selectedExportTemplateId = signal(2);
     setExportTemplateId = jasmine
       .createSpy('setExportTemplateId')
       .and.callFake((templateId: number) => selectedExportTemplateId.set(templateId));
@@ -265,7 +265,7 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(refreshExportHtmlPreview).toHaveBeenCalledTimes(1);
   });
 
-  it('updates edit canvas templateId when topbar Template select changes (1 → 2 → 3)', () => {
+  it('updates edit canvas templateId when topbar Template select changes (2 → 3)', () => {
     const select = (fixture.nativeElement as HTMLElement).querySelector(
       '.cv-builder__topbar select.cv-builder__select'
     ) as HTMLSelectElement;
@@ -275,9 +275,9 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(previewDe).not.toBeNull();
     const preview = previewDe.componentInstance as StubCvExportTemplatePreviewComponent;
 
-    expect(preview.templateId()).toBe(1);
+    expect(preview.templateId()).toBe(2);
 
-    for (const templateId of [2, 3, 1] as const) {
+    for (const templateId of [3, 2] as const) {
       select.value = String(templateId);
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();

@@ -1,4 +1,4 @@
-export type CvExportTemplateLayoutKind = 'classic' | 'twoColumn' | 'minimal';
+export type CvExportTemplateLayoutKind = 'twoColumn' | 'minimal';
 
 export interface CvExportTemplateOption {
   readonly id: number;
@@ -12,14 +12,8 @@ export interface CvExportMaxPageOption {
   readonly label: string;
 }
 
-/** M1 gallery: Classic, Modern, Minimal only (ids 1–3). */
+/** Gallery: Modern and Minimal (ids 2–3). Legacy Classic (1) remaps to Modern. */
 export const CV_EXPORT_TEMPLATES: readonly CvExportTemplateOption[] = [
-  {
-    id: 1,
-    label: 'Classic',
-    description: 'Balanced one-column layout with a calm header and generous margins.',
-    layoutKind: 'classic'
-  },
   {
     id: 2,
     label: 'Modern',
@@ -36,7 +30,7 @@ export const CV_EXPORT_TEMPLATES: readonly CvExportTemplateOption[] = [
 
 export const MAX_CV_EXPORT_TEMPLATE_ID = CV_EXPORT_TEMPLATES[CV_EXPORT_TEMPLATES.length - 1].id;
 
-export const DEFAULT_CV_EXPORT_TEMPLATE_ID = 1;
+export const DEFAULT_CV_EXPORT_TEMPLATE_ID = 2;
 
 export const CV_EXPORT_TEMPLATE_STORAGE_KEY = 'applyvault.cvExportTemplateId';
 
@@ -52,8 +46,8 @@ export const DEFAULT_CV_EXPORT_MAX_PAGES: number | null = 1;
 export const CV_EXPORT_MAX_PAGES_STORAGE_KEY = 'applyvault.cvExportMaxPages';
 
 /**
- * Normalize template ids to the M1 supported set.
- * Keep 2|3; map legacy 4/5 and any unknown → Classic (1).
+ * Normalize template ids to the supported set.
+ * Keep 2|3; map legacy Classic (1), 4/5, and any unknown → Modern (2).
  */
 export function normalizeCvExportTemplateId(templateId: number): number {
   return templateId === 2 || templateId === 3 ? templateId : DEFAULT_CV_EXPORT_TEMPLATE_ID;

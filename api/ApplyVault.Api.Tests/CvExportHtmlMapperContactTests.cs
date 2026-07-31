@@ -85,7 +85,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_emits_cv_name_heading_before_contact_lines(int templateId)
     {
@@ -114,7 +113,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_legacy_person_title_fills_cv_name_gap(int templateId)
     {
@@ -145,7 +143,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_display_name_is_not_repeated_as_contact_line(int templateId)
     {
@@ -172,7 +169,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     public void ApplyTemplate_display_name_not_repeated_via_separate_unlabeled_channel(int templateId)
@@ -202,7 +198,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     public void ApplyTemplate_multiple_Contact_typed_sections_emit_display_name_once(int templateId)
@@ -282,9 +277,8 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
-    public void ApplyTemplate_single_Phone_appears_once_in_Classic_and_Minimal_header(int templateId)
+    public void ApplyTemplate_single_Phone_appears_once_in_Minimal_header(int templateId)
     {
         const string phone = "+45 12 34 56 78";
         var request = new CvExportRenderRequest(
@@ -318,7 +312,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_dedupes_identical_Contact_channel_values_case_insensitive(int templateId)
     {
@@ -347,7 +340,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_import_legacy_Contact_emits_name_and_all_distinct_channels(int templateId)
     {
@@ -383,7 +375,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_multi_bullet_non_Name_entry_emits_one_line_per_distinct_bullet(int templateId)
     {
@@ -418,7 +409,6 @@ public sealed class CvExportHtmlMapperContactTests
     }
 
     [Theory]
-    [InlineData(1)]
     [InlineData(3)]
     public void ApplyTemplate_Name_entry_bullets_are_promoted_to_contact_lines(int templateId)
     {

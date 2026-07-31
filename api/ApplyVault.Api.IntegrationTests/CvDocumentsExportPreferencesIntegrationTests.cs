@@ -28,7 +28,7 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
         Assert.Equal(HttpStatusCode.OK, getBefore.StatusCode);
         var before = await getBefore.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(before);
-        Assert.Equal(1, before!.TemplateId);
+        Assert.Equal(2, before!.TemplateId);
         Assert.Null(before.MaxPages);
 
         var putResponse = await client.PutAsJsonAsync(
@@ -62,7 +62,7 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
 
         var putBody = await putResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(putBody);
-        Assert.Equal(1, putBody!.TemplateId);
+        Assert.Equal(2, putBody!.TemplateId);
         Assert.Null(putBody.MaxPages);
     }
 

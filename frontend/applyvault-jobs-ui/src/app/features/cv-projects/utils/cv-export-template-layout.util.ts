@@ -69,8 +69,8 @@ export function partitionSectionsForTemplate(
     (section) => includeEmpty || sectionHasRenderableContent(section) || section.entries.length > 0
   );
 
-  // Classic (1) and Minimal (3): Contact + Summary in header (match CvExportHtmlMapper).
-  if (templateId === 1 || templateId === 3) {
+  // Minimal (3): Contact + Summary in header (match CvExportHtmlMapper).
+  if (templateId === 3) {
     const header: CvStructuredSection[] = [];
     const main: CvStructuredSection[] = [];
 

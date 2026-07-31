@@ -18,6 +18,11 @@ import {
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
 import { createBuilderStarterSections } from '../utils/cv-builder-starter-sections.util';
+import {
+  buildCvExportDownloadFileName,
+  resolveCvExportPersonName,
+  resolveCvExportTemplateLabel
+} from '../utils/cv-export-download-file-name.util';
 import { hydrateStructuredDocument, toSaveRequest } from '../utils/cv-structured-draft.util';
 
 @Injectable({ providedIn: 'root' })
@@ -170,7 +175,7 @@ export class CvDocumentFacade {
       .upload(file)
       .pipe(
         switchMap((result) => {
-          // Keep optimistic gallery/edit Template selection; upload DTO may echo Classic.
+          // Keep optimistic gallery/edit Template selection; upload DTO may echo a stale id.
           this.setDocument(result.document, { applyExportPrefs: false });
           this.importSummary.set(result.import);
           this.loadProfilePhoto(result.document);
@@ -267,7 +272,7 @@ export class CvDocumentFacade {
     this.startBlankSubscription = this.apiService.startBlank().subscribe({
       next: (document) => {
         this.startingBlank.set(false);
-        // Keep optimistic gallery/edit Template selection; blank docs default to Classic.
+        // Keep optimistic gallery/edit Template selection; blank docs default to Modern.
         this.setDocument(document, { applyExportPrefs: false });
         this.cvStructured.setStructured({
           documentId: document.id,
@@ -300,7 +305,7 @@ export class CvDocumentFacade {
       .startBlank()
       .pipe(
         switchMap((document) => {
-          // Keep optimistic gallery/edit Template selection; blank docs default to Classic.
+          // Keep optimistic gallery/edit Template selection; blank docs default to Modern.
           this.setDocument(document, { applyExportPrefs: false });
           return this.apiService.saveStructured(toSaveRequest(createBuilderStarterSections()));
         })
@@ -322,7 +327,7 @@ export class CvDocumentFacade {
           }
 
           this.persistExportPrefs();
-          // Do not load() here — getCurrent would re-apply server TemplateId (often Classic)
+          // Do not load() here — getCurrent would re-apply server TemplateId (often Modern)
           // and snap the edit/gallery selection before persistExportPrefs completes.
           onComplete?.();
         },
@@ -560,7 +565,7 @@ export class CvDocumentFacade {
 
     const templateId = this.selectedExportTemplateId();
     const maxPages = this.selectedExportMaxPages();
-    const baseName = document!.originalFileName.replace(/\.pdf$/i, '');
+    const fileName = this.buildFormattedExportFileName(templateId);
 
     this.cancelDownloadFormattedFile();
     this.downloadingFormatted.set(true);
@@ -571,7 +576,7 @@ export class CvDocumentFacade {
       .subscribe({
         next: (result) => {
           this.downloadingFormatted.set(false);
-          this.triggerDownload(result.blob, `${baseName}-export.pdf`);
+          this.triggerDownload(result.blob, fileName);
         },
         error: (error) => {
           this.downloadingFormatted.set(false);
@@ -649,8 +654,7 @@ export class CvDocumentFacade {
       return;
     }
 
-    const baseName = document.originalFileName.replace(/\.pdf$/i, '');
-    this.triggerDownload(this.previewBlob, `${baseName}-export.pdf`);
+    this.triggerDownload(this.previewBlob, this.buildFormattedExportFileName(this.selectedExportTemplateId()));
   }
 
   closePreview(): void {
@@ -942,6 +946,12 @@ export class CvDocumentFacade {
     URL.revokeObjectURL(url);
   }
 
+  private buildFormattedExportFileName(templateId: number): string {
+    const personName = resolveCvExportPersonName(this.cvStructured.structured()?.sections);
+    const templateLabel = resolveCvExportTemplateLabel(templateId);
+    return buildCvExportDownloadFileName(personName, templateLabel);
+  }
+
   /**
    * Apply document metadata. Optionally sync export prefs from the DTO (load/upload/start-blank).
    * Photo and export-prefs echoes must not clobber an optimistic gallery selection.
@@ -961,7 +971,7 @@ export class CvDocumentFacade {
 
   private applyExportPrefsFromDocument(document: CvDocument): void {
     // In-flight persistExportPrefs owns Template selection — do not snap back from a
-    // stale getCurrent / start-blank / upload echo (Classic default is a common culprit).
+    // stale getCurrent / start-blank / upload echo (server default is a common culprit).
     const prefsWriteInFlight =
       this.exportPrefsSubscription !== null && !this.exportPrefsSubscription.closed;
 
@@ -1091,7 +1101,7 @@ export class CvDocumentFacade {
 
       const normalized = normalizeCvExportTemplateId(parsed);
 
-      // Persist remap so legacy ids 4/5 (and unknowns) become Classic in sessionStorage.
+      // Persist remap so legacy Classic/4/5 (and unknowns) become Modern in sessionStorage.
       if (normalized !== parsed) {
         this.writeTemplateCache(normalized);
       }

@@ -60,7 +60,7 @@ export class CvExportTemplatePreviewComponent {
     return contact ? findContactNameEntry(contact) : null;
   });
 
-  /** Coerce so stringy inputs never miss Classic/Minimal branches (`=== 1` / `=== 3`). */
+  /** Coerce so stringy inputs never miss Minimal (`=== 3`) vs Modern (`=== 2`). */
   protected readonly resolvedTemplateId = computed(() =>
     normalizeCvExportTemplateId(Number(this.templateId()))
   );
@@ -113,23 +113,31 @@ export class CvExportTemplatePreviewComponent {
     return this.allowsMultipleEntries(section) && section.entries.length > 1;
   }
 
-  protected showContactNameInSection(section: CvStructuredSection): boolean {
-    // Classic (1) and Minimal (3) already edit the name in the page header.
-    const templateId = this.resolvedTemplateId();
-
-    if (!this.isContactSection(section) || templateId === 1 || templateId === 3) {
+  /**
+   * Import often yields Contact + Profile both typed Contact — only the first
+   * owns name edit / add-channel chrome (BE contact-header flush parity).
+   */
+  protected isPrimaryContactSection(section: CvStructuredSection): boolean {
+    if (!this.isContactSection(section)) {
       return false;
     }
 
-    // Import often yields Contact + Profile both typed Contact — only the first
-    // owns the in-section name (BE AppendClassicContactHeader parity).
     const firstContact = this.effectiveSections().find((item) => this.isContactSection(item));
     return firstContact?.id === section.id;
   }
 
+  protected showContactNameInSection(section: CvStructuredSection): boolean {
+    // Minimal (3) already edits the name in the page header.
+    if (!this.isContactSection(section) || this.resolvedTemplateId() === 3) {
+      return false;
+    }
+
+    return this.isPrimaryContactSection(section);
+  }
+
   /**
-   * Match BE AppendClassicContactHeader for all templates: Contact has no section title
-   * (Classic/Minimal header + Modern sidebar all emit name + value lines only).
+   * Match BE contact header emission: Contact has no section title
+   * (Minimal header + Modern sidebar emit name + value lines only).
    */
   protected showSectionTitle(section: CvStructuredSection): boolean {
     return !this.isContactSection(section);
@@ -145,7 +153,65 @@ export class CvExportTemplatePreviewComponent {
     return this.editable() ? contactFieldEntries(view) : contactFieldsWithValues(view);
   }
 
-  /** Modern sidebar: Name lives in the Contact block (Classic/Minimal use page header). */
+  /**
+   * Skip empty secondary Contact sections (e.g. Profile that only repeats Name).
+   * Empty primary stays only when no sibling Contact already owns channels — otherwise
+   * Minimal shows a lone "+" under the header name (import Contact + Profile shape).
+   */
+  protected showContactBlock(section: CvStructuredSection): boolean {
+    if (!this.isContactSection(section)) {
+      return false;
+    }
+
+    if (this.visibleContactChannels(section).length > 0) {
+      return true;
+    }
+
+    if (!this.editable() || !this.isPrimaryContactSection(section)) {
+      return false;
+    }
+
+    return !this.effectiveSections().some(
+      (item) =>
+        item.id !== section.id &&
+        this.isContactSection(item) &&
+        this.visibleContactChannels(item).length > 0
+    );
+  }
+
+  /** One add control across Contact-typed sections (primary, else first with channels). */
+  protected showContactAddButton(section: CvStructuredSection): boolean {
+    if (!this.editable() || !this.isContactSection(section) || !this.showContactBlock(section)) {
+      return false;
+    }
+
+    if (this.isPrimaryContactSection(section)) {
+      return true;
+    }
+
+    const primary = this.effectiveSections().find((item) => this.isContactSection(item));
+
+    if (primary && this.showContactBlock(primary)) {
+      return false;
+    }
+
+    const firstWithChannels = this.effectiveSections().find(
+      (item) => this.isContactSection(item) && this.visibleContactChannels(item).length > 0
+    );
+
+    return firstWithChannels?.id === section.id;
+  }
+
+  /** Drop Contact shells that have nothing to render (avoids a lone "+" under Minimal). */
+  protected showContactSection(section: CvStructuredSection): boolean {
+    if (!this.isContactSection(section)) {
+      return true;
+    }
+
+    return this.showContactNameInSection(section) || this.showContactBlock(section);
+  }
+
+  /** Modern sidebar: Name lives in the Contact block (Minimal uses page header). */
   protected visibleContactName(section: CvStructuredSection): CvStructuredEntry | null {
     if (!this.showContactNameInSection(section)) {
       return null;

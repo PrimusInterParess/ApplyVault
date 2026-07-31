@@ -1,8 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { RouterLink } from '@angular/router';
 
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
@@ -102,17 +101,6 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
       imports: [CvBuilderPageComponent],
       providers: [
         {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: { queryParamMap: convertToParamMap({ step: 'edit' }) },
-            queryParamMap: of(convertToParamMap({ step: 'edit' }))
-          }
-        },
-        {
-          provide: Router,
-          useValue: { navigate: jasmine.createSpy('navigate').and.resolveTo(true) }
-        },
-        {
           provide: CvDocumentFacade,
           useValue: {
             loading: signal(false).asReadonly(),
@@ -123,7 +111,6 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             }).asReadonly(),
             hasDocument: signal(true).asReadonly(),
             selectedExportTemplateId,
-            selectedExportMaxPages: signal(null).asReadonly(),
             uploading: signal(false).asReadonly(),
             startingBlank: signal(false).asReadonly(),
             downloadingFormatted: signal(false).asReadonly(),
@@ -139,14 +126,8 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             exportHtmlPreviewLoading: signal(false).asReadonly(),
             exportHtmlPreviewError: signal<string | null>(null).asReadonly(),
             exportHtmlPreviewNotice: signal<string | null>('Compact notice').asReadonly(),
-            pickFidelityPreviewLoading: signal(false).asReadonly(),
-            pickFidelityPreviewError: signal<string | null>(null).asReadonly(),
-            pickFidelitySrcdoc: () => null,
-            pickFidelityNotice: () => null,
             setExportTemplateId,
-            setExportMaxPages: jasmine.createSpy('setExportMaxPages'),
             refreshExportHtmlPreview,
-            refreshPickFidelityPreviews: jasmine.createSpy('refreshPickFidelityPreviews'),
             downloadFormattedFile: jasmine.createSpy('downloadFormattedFile'),
             uploadProfilePhoto: jasmine.createSpy('uploadProfilePhoto'),
             deleteProfilePhoto: jasmine.createSpy('deleteProfilePhoto'),

@@ -1,7 +1,4 @@
-<main
-  class="cv-builder"
-  [class.cv-builder--pick]="step() === 'pick'"
-  [class.cv-builder--edit]="step() === 'edit'">
+<main class="cv-builder cv-builder--edit">
   <input
     #pdfFileInput
     type="file"
@@ -15,149 +12,24 @@
     class="cv-builder__file-input"
     (change)="onProfilePhotoFileSelected($event)" />
 
-  @if (step() === 'pick') {
-    <section class="cv-builder__studio">
-      <header class="cv-builder__studio-intro">
-        <p class="cv-builder__eyebrow">Templates</p>
-        <h1 class="cv-builder__title">Design your CV</h1>
-        <p class="cv-builder__lead">
-          Choose a layout. Gallery and stage show an export-faithful preview when you already have a CV. On the
-          edit desk you’ll edit the template layout directly.
-        </p>
-        @if (hasStructuredCv()) {
-          <button type="button" class="cv-builder__text-btn" (click)="continueEditing()">
-            Continue with current CV →
-          </button>
-        }
-      </header>
-
-      <div class="cv-builder__studio-body">
-        <div class="cv-builder__gallery-wrap">
-          <div class="cv-builder__gallery" role="listbox" aria-label="CV templates">
+  <div class="cv-builder__desk">
+    <header class="cv-builder__topbar">
+      <div class="cv-builder__topbar-left">
+        <label class="cv-builder__select-wrap">
+          <span class="cv-builder__sr-only">Template</span>
+          <select
+            class="cv-builder__select"
+            (change)="onTemplateSelectChange($event)">
             @for (template of templates; track template.id) {
-              <button
-                type="button"
-                role="option"
-                class="cv-builder__template-card"
-                [class.cv-builder__template-card--active]="selectedTemplateId() === template.id"
-                [attr.aria-selected]="selectedTemplateId() === template.id"
-                (click)="selectTemplate(template.id)">
-                <span class="cv-builder__template-thumb">
-                  @if (hasStructuredCv()) {
-                    <app-cv-export-html-preview
-                      [srcdoc]="pickFidelitySrcdoc(template.id)"
-                      [loading]="cvDocument.pickFidelityPreviewLoading() && !pickFidelitySrcdoc(template.id)"
-                      [error]="null"
-                      [emptyHint]="'Loading export preview…'"
-                      density="thumb" />
-                  } @else {
-                    <!-- Empty pick / no sample-preview API: illustrative Angular fallback only. -->
-                    <app-cv-export-template-preview
-                      [templateId]="template.id"
-                      [sampleMode]="true"
-                      [compact]="true" />
-                  }
-                </span>
-                <span class="cv-builder__template-meta">
-                  <span class="cv-builder__template-label">{{ template.label }}</span>
-                  <span class="cv-builder__template-desc">{{ template.description }}</span>
-                </span>
-              </button>
+              <option
+                [value]="'' + template.id"
+                [selected]="selectedTemplateId() === template.id">
+                {{ template.label }}
+              </option>
             }
-          </div>
-        </div>
-
-        <aside class="cv-builder__stage">
-          <div class="cv-builder__paper cv-builder__paper--stage cv-builder__paper--fidelity">
-            @if (hasStructuredCv()) {
-              <app-cv-export-html-preview
-                [srcdoc]="pickFidelitySrcdoc(selectedTemplateId())"
-                [loading]="cvDocument.pickFidelityPreviewLoading() && !pickFidelitySrcdoc(selectedTemplateId())"
-                [error]="cvDocument.pickFidelityPreviewError()"
-                [emptyHint]="'Export preview unavailable for this template.'"
-                density="stage" />
-            } @else {
-              <!-- Empty pick / no sample-preview API: illustrative Angular fallback only. -->
-              <app-cv-export-template-preview
-                [templateId]="selectedTemplateId()"
-                [sampleMode]="true" />
-            }
-          </div>
-
-          <div class="cv-builder__stage-panel">
-            <p class="cv-builder__stage-name">
-              {{ selectedTemplateLabel() }}
-            </p>
-            <label class="cv-builder__field">
-              <span>Page target</span>
-              <select (change)="onMaxPagesChange($event)">
-                @for (option of maxPageOptions; track option.label) {
-                  <option [value]="option.value ?? ''">{{ option.label }}</option>
-                }
-              </select>
-            </label>
-            @if (pickFidelityNotice(selectedTemplateId()); as notice) {
-              <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
-            }
-
-            <div class="cv-builder__cta-row">
-              @if (hasStructuredCv()) {
-                <button
-                  type="button"
-                  class="cv-builder__cta"
-                  (click)="continueWithTemplate()">
-                  Continue editing
-                </button>
-              } @else {
-                <button
-                  type="button"
-                  class="cv-builder__cta"
-                  [disabled]="cvDocument.startingBlank() || cvDocument.uploading()"
-                  (click)="startBlank()">
-                  {{ cvDocument.startingBlank() ? 'Setting up…' : 'Start blank' }}
-                </button>
-              }
-
-              <button
-                type="button"
-                class="cv-builder__ghost-btn cv-builder__ghost-btn--block"
-                [disabled]="cvDocument.uploading() || cvDocument.startingBlank()"
-                (click)="openPdfPicker()">
-                {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
-              </button>
-            </div>
-
-            @if (cvDocument.startBlankError(); as error) {
-              <p class="cv-builder__error" role="alert">{{ error }}</p>
-            }
-            @if (cvDocument.uploadError(); as error) {
-              <p class="cv-builder__error" role="alert">{{ error }}</p>
-            }
-          </div>
-        </aside>
-      </div>
-    </section>
-  } @else {
-    <div class="cv-builder__desk">
-      <header class="cv-builder__topbar">
-        <div class="cv-builder__topbar-left">
-          <button type="button" class="cv-builder__chip" (click)="backToTemplates()">
-            Templates
-          </button>
-          <label class="cv-builder__select-wrap">
-            <span class="cv-builder__sr-only">Template</span>
-            <select
-              class="cv-builder__select"
-              (change)="onTemplateSelectChange($event)">
-              @for (template of templates; track template.id) {
-                <option
-                  [value]="'' + template.id"
-                  [selected]="selectedTemplateId() === template.id">
-                  {{ template.label }}
-                </option>
-              }
-            </select>
-          </label>
+          </select>
+        </label>
+        @if (hasStructuredCv()) {
           <span
             class="cv-builder__sync"
             [class.cv-builder__sync--busy]="saveStatus() !== 'Saved'"
@@ -165,9 +37,11 @@
             <span class="cv-builder__sync-dot" aria-hidden="true"></span>
             {{ saveStatus() }}
           </span>
-        </div>
+        }
+      </div>
 
-        <div class="cv-builder__topbar-right">
+      <div class="cv-builder__topbar-right">
+        @if (hasStructuredCv()) {
           <div class="cv-builder__zoom" role="group" aria-label="Zoom">
             <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">−</button>
             <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
@@ -333,19 +207,52 @@
             (click)="exportPdf()">
             {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
           </button>
-          @if (cvDocument.profilePhotoError(); as error) {
+        }
+        @if (cvDocument.profilePhotoError(); as error) {
+          <p class="cv-builder__error" role="alert">{{ error }}</p>
+        }
+        @if (cvDocument.uploadError(); as error) {
+          <p class="cv-builder__error" role="alert">{{ error }}</p>
+        }
+        @if (cvDocument.downloadFormattedError(); as error) {
+          <p class="cv-builder__error" role="alert">{{ error }}</p>
+        }
+      </div>
+    </header>
+
+    <div class="cv-builder__desk-scroll">
+      @if (cvDocument.loading() || cvStructured.loading()) {
+        <p class="cv-builder__desk-hint" aria-busy="true">Loading your CV…</p>
+      } @else if (!hasStructuredCv()) {
+        <section class="cv-builder__empty" aria-labelledby="cv-builder-empty-title">
+          <h1 id="cv-builder-empty-title" class="cv-builder__empty-title">Start your CV</h1>
+          <p class="cv-builder__empty-lead">
+            Choose a template above, then start blank or upload a PDF. You’ll edit on the canvas.
+          </p>
+          <div class="cv-builder__empty-actions">
+            <button
+              type="button"
+              class="cv-builder__cta"
+              [disabled]="cvDocument.startingBlank() || cvDocument.uploading()"
+              (click)="startBlank()">
+              {{ cvDocument.startingBlank() ? 'Setting up…' : 'Start blank' }}
+            </button>
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [disabled]="cvDocument.uploading() || cvDocument.startingBlank()"
+              (click)="openPdfPicker()">
+              {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
+            </button>
+          </div>
+          @if (cvDocument.startBlankError(); as error) {
             <p class="cv-builder__error" role="alert">{{ error }}</p>
           }
           @if (cvDocument.uploadError(); as error) {
             <p class="cv-builder__error" role="alert">{{ error }}</p>
           }
-          @if (cvDocument.downloadFormattedError(); as error) {
-            <p class="cv-builder__error" role="alert">{{ error }}</p>
-          }
-        </div>
-      </header>
-
-      <div class="cv-builder__desk-scroll">
+        </section>
+      } @else {
         <p class="cv-builder__desk-hint">
           Edit on the canvas · Structure for sections · Projects to import · Check export / Download PDF for
           print fidelity · autosaves
@@ -360,8 +267,10 @@
               (inlineEdit)="onInlineEdit($event)" />
           </div>
         </div>
-      </div>
+      }
+    </div>
 
+    @if (hasStructuredCv()) {
       <button
         type="button"
         class="cv-builder__fab"
@@ -370,98 +279,97 @@
         aria-label="Open AI assist">
         AI
       </button>
+    }
 
-      @if (structureOpen()) {
-        <div
-          class="cv-builder__drawer-backdrop"
-          role="presentation"
-          (click)="closeStructure()"></div>
-        <aside
-          id="cv-builder-structure-panel"
-          class="cv-builder__drawer cv-builder__drawer--structure"
-          role="dialog"
-          aria-modal="true"
-          aria-label="CV section structure">
-          <header class="cv-builder__drawer-header">
-            <div class="cv-builder__drawer-heading">
-              <p class="cv-builder__drawer-eyebrow">Structure</p>
-              <h2 class="cv-builder__drawer-title">Sections</h2>
-            </div>
+    @if (structureOpen()) {
+      <div
+        class="cv-builder__drawer-backdrop"
+        role="presentation"
+        (click)="closeStructure()"></div>
+      <aside
+        id="cv-builder-structure-panel"
+        class="cv-builder__drawer cv-builder__drawer--structure"
+        role="dialog"
+        aria-modal="true"
+        aria-label="CV section structure">
+        <header class="cv-builder__drawer-header">
+          <div class="cv-builder__drawer-heading">
+            <p class="cv-builder__drawer-eyebrow">Structure</p>
+            <h2 class="cv-builder__drawer-title">Sections</h2>
+          </div>
+          <button
+            type="button"
+            class="cv-builder__drawer-close"
+            (click)="closeStructure()"
+            aria-label="Close structure">
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
+        <div class="cv-builder__drawer-body">
+          @if (sections().length === 0) {
+            <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
+          } @else {
+            <ul class="cv-builder__structure-list">
+              @for (section of sections(); track section.id) {
+                <li class="cv-builder__structure-item">
+                  <span class="cv-builder__structure-label">
+                    <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
+                    <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
+                  </span>
+                  <span class="cv-builder__structure-actions">
+                    <button
+                      type="button"
+                      class="cv-builder__icon-btn"
+                      [disabled]="!canMoveSectionUp(section.id)"
+                      aria-label="Move section up"
+                      (click)="moveSection(section.id, -1)">
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      class="cv-builder__icon-btn"
+                      [disabled]="!canMoveSectionDown(section.id)"
+                      aria-label="Move section down"
+                      (click)="moveSection(section.id, 1)">
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      class="cv-builder__structure-remove"
+                      aria-label="Remove section"
+                      (click)="removeSection(section.id)">
+                      Remove
+                    </button>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+          <div class="cv-builder__structure-add">
+            <label class="cv-builder__structure-add-field">
+              <span class="cv-builder__sr-only">Section type</span>
+              <select
+                class="cv-builder__structure-select"
+                [value]="pendingAddSectionType()"
+                [disabled]="structureSectionTypes().length === 0"
+                (change)="onPendingAddSectionTypeChange($event)">
+                @for (sectionType of structureSectionTypes(); track sectionType) {
+                  <option [value]="sectionType">{{ sectionType }}</option>
+                }
+              </select>
+            </label>
             <button
               type="button"
-              class="cv-builder__drawer-close"
-              (click)="closeStructure()"
-              aria-label="Close structure">
-              <span aria-hidden="true">×</span>
+              class="cv-builder__structure-add-btn"
+              [disabled]="structureSectionTypes().length === 0"
+              (click)="addSectionFromStructure()">
+              Add section
             </button>
-          </header>
-          <div class="cv-builder__drawer-body">
-            @if (sections().length === 0) {
-              <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
-            } @else {
-              <ul class="cv-builder__structure-list">
-                @for (section of sections(); track section.id) {
-                  <li class="cv-builder__structure-item">
-                    <span class="cv-builder__structure-label">
-                      <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
-                      <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
-                    </span>
-                    <span class="cv-builder__structure-actions">
-                      <button
-                        type="button"
-                        class="cv-builder__icon-btn"
-                        [disabled]="!canMoveSectionUp(section.id)"
-                        aria-label="Move section up"
-                        (click)="moveSection(section.id, -1)">
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        class="cv-builder__icon-btn"
-                        [disabled]="!canMoveSectionDown(section.id)"
-                        aria-label="Move section down"
-                        (click)="moveSection(section.id, 1)">
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        class="cv-builder__structure-remove"
-                        aria-label="Remove section"
-                        (click)="removeSection(section.id)">
-                        Remove
-                      </button>
-                    </span>
-                  </li>
-                }
-              </ul>
-            }
-            <div class="cv-builder__structure-add">
-              <label class="cv-builder__structure-add-field">
-                <span class="cv-builder__sr-only">Section type</span>
-                <select
-                  class="cv-builder__structure-select"
-                  [value]="pendingAddSectionType()"
-                  [disabled]="structureSectionTypes().length === 0"
-                  (change)="onPendingAddSectionTypeChange($event)">
-                  @for (sectionType of structureSectionTypes(); track sectionType) {
-                    <option [value]="sectionType">{{ sectionType }}</option>
-                  }
-                </select>
-              </label>
-              <button
-                type="button"
-                class="cv-builder__structure-add-btn"
-                [disabled]="structureSectionTypes().length === 0"
-                (click)="addSectionFromStructure()">
-                Add section
-              </button>
-            </div>
           </div>
-        </aside>
-      }
-
-    </div>
-  }
+        </div>
+      </aside>
+    }
+  </div>
 
   @if (checkExportOpen()) {
     <div class="cv-builder__modal-backdrop" role="presentation" (click)="closeCheckExport()"></div>

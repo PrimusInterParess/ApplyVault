@@ -10,26 +10,9 @@ namespace ApplyVault.Api.Tests;
 public sealed class CvDocumentExportServiceCompactParityTests
 {
     [Fact]
-    public async Task ExportHtmlAsync_unlimited_maxPages_builds_at_compact_level_0_without_pdf_search()
+    public async Task ExportHtmlAsync_and_ExportPdfAsync_use_same_compact_level_for_one_page_target()
     {
-        var htmlBuilder = new RecordingHtmlDocumentBuilder();
-        var dispatcher = new ScriptedRenderDispatcher();
-        var service = CreateService(htmlBuilder, dispatcher, pageCountsByLevel: new Dictionary<int, int>());
-
-        var result = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: null));
-
-        Assert.Equal(0, result.CompactLevel);
-        Assert.Equal(1, htmlBuilder.CallCount);
-        Assert.Equal(0, htmlBuilder.LastOptions?.CompactLevel ?? 0);
-        Assert.Equal(0, dispatcher.CallCount);
-        Assert.Equal("html-level-0", result.Html);
-        Assert.Null(result.Notice);
-    }
-
-    [Fact]
-    public async Task ExportHtmlAsync_with_maxPages_uses_same_compact_level_pdf_ramp_would_select()
-    {
-        // Level 0 → 3 pages, level 1 → 2 pages, level 2 → 1 page (fits maxPages=1).
+        // Level 0 → 3 pages, level 1 → 2 pages, level 2 → 1 page (fits one-page target).
         var pageCounts = new Dictionary<int, int>
         {
             [0] = 3,
@@ -40,8 +23,8 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
-        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
+        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
+        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
 
         Assert.Equal(2, htmlResult.CompactLevel);
         Assert.Equal(2, htmlBuilder.LastOptions?.CompactLevel);
@@ -53,9 +36,9 @@ public sealed class CvDocumentExportServiceCompactParityTests
     }
 
     [Fact]
-    public async Task ExportHtmlAsync_and_ExportPdfAsync_share_best_effort_level_when_limit_unreachable()
+    public async Task ExportHtmlAsync_and_ExportPdfAsync_share_best_effort_level_when_one_page_unreachable()
     {
-        // Never fits maxPages=1; best effort is lowest page count (level 3 → 2 pages).
+        // Never fits one page; best effort is lowest page count (level 3 → 2 pages).
         var pageCounts = new Dictionary<int, int>
         {
             [0] = 5,
@@ -68,8 +51,8 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
-        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: 1));
+        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
+        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
 
         Assert.Equal(3, htmlResult.CompactLevel);
         Assert.Equal(3, htmlBuilder.LastOptions?.CompactLevel);
@@ -80,20 +63,20 @@ public sealed class CvDocumentExportServiceCompactParityTests
     }
 
     [Fact]
-    public async Task ExportPdfAsync_unlimited_maxPages_renders_once_at_compact_level_0()
+    public async Task ExportPdfAsync_returns_level_0_when_already_one_page()
     {
-        var pageCounts = new Dictionary<int, int> { [0] = 4 };
+        var pageCounts = new Dictionary<int, int> { [0] = 1 };
         var htmlBuilder = new RecordingHtmlDocumentBuilder();
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var result = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2, MaxPages: null));
+        var result = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
 
         Assert.Equal(1, dispatcher.CallCount);
         Assert.Equal(0, dispatcher.LastCompactLevel);
-        Assert.Equal(4, result.PageCount);
-        Assert.Null(result.MaxPages);
+        Assert.Equal(1, result.PageCount);
         Assert.False(result.ExceedsMaxPages);
+        Assert.Null(result.Notice);
         Assert.Equal(0, htmlBuilder.CallCount);
     }
 

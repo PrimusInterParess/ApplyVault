@@ -7,7 +7,7 @@ namespace ApplyVault.Api.Services.HtmlExport;
 /// Shrink priority is encoded in the ramp: bullets/entries/sections/pads/fonts before photo floors.
 /// Photo floors stay at or above 96px (preview-parity baselines: Modern 136 / Minimal 168).
 /// CompactLevel 0 leaves template baselines untouched (no override CSS).
-/// Levels 1–4 shrink denser than the Modern/Minimal baselines so MaxPages=1 can fit
+/// Levels 1–4 shrink denser than the Modern/Minimal baselines so a one-page export can fit
 /// typical multi-section CVs.
 /// </summary>
 internal static class CvExportCompactCssBuilder

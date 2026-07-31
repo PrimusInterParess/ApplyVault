@@ -1,17 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
-import { forkJoin, of, Subscription } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { CvDocument, CvStructuredImportSummary } from '../models/cv-document.model';
 import {
-  CV_EXPORT_MAX_PAGES_STORAGE_KEY,
   CV_EXPORT_TEMPLATE_STORAGE_KEY,
-  CV_EXPORT_TEMPLATES,
-  DEFAULT_CV_EXPORT_MAX_PAGES,
   DEFAULT_CV_EXPORT_TEMPLATE_ID,
   normalizeCvExportTemplateId
 } from '../models/cv-export-template.model';
@@ -41,7 +38,6 @@ export class CvDocumentFacade {
   private downloadFormattedFileSubscription: Subscription | null = null;
   private exportHtmlPreviewSubscription: Subscription | null = null;
   private exportHtmlPreviewGeneration = 0;
-  private pickFidelityPreviewSubscription: Subscription | null = null;
   private exportPrefsSubscription: Subscription | null = null;
   /** Monotonic token so stale export-prefs HTTP responses cannot overwrite a newer selection. */
   private exportPrefsGeneration = 0;
@@ -62,7 +58,6 @@ export class CvDocumentFacade {
   readonly downloadingFormatted = signal(false);
   readonly previewLoading = signal(false);
   readonly exportHtmlPreviewLoading = signal(false);
-  readonly pickFidelityPreviewLoading = signal(false);
   readonly loadingProfilePhoto = signal(false);
   readonly uploadingProfilePhoto = signal(false);
   readonly deletingProfilePhoto = signal(false);
@@ -77,14 +72,11 @@ export class CvDocumentFacade {
   readonly downloadFormattedError = signal<string | null>(null);
   readonly previewError = signal<string | null>(null);
   readonly exportHtmlPreviewError = signal<string | null>(null);
-  readonly pickFidelityPreviewError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
   readonly selectedExportTemplateId = signal(this.readStoredExportTemplateId());
-  readonly selectedExportMaxPages = signal<number | null>(this.readStoredExportMaxPages());
   readonly previewOpen = signal(false);
   readonly previewPageCount = signal<number | null>(null);
-  readonly previewMaxPages = signal<number | null>(null);
   readonly previewExceedsLimit = signal(false);
   readonly previewNotice = signal<string | null>(null);
   readonly previewBlobUrl = signal<SafeResourceUrl | null>(null);
@@ -94,10 +86,6 @@ export class CvDocumentFacade {
   readonly exportHtmlPreviewNotice = signal<string | null>(null);
   /** Additive compact level from X-Cv-Export-Compact-Level (canvas). */
   readonly exportHtmlPreviewCompactLevel = signal<number | null>(null);
-  /** Pick gallery/stage: export HTML per templateId when a Structured CV exists. */
-  readonly pickFidelityPreviewSrcdocs = signal<ReadonlyMap<number, SafeHtml>>(new Map());
-  /** Pick stage: per-template notice from preview headers when present. */
-  readonly pickFidelityPreviewNotices = signal<ReadonlyMap<number, string>>(new Map());
 
   readonly hasDocument = computed(() => this.document() !== null);
 
@@ -126,11 +114,10 @@ export class CvDocumentFacade {
     });
 
     effect(() => {
-      // Structured updates invalidate PDF/pick caches; keep last export HTML until the
+      // Structured updates invalidate PDF cache; keep last export HTML until the
       // next preview response arrives (avoid blank canvas during save/refresh).
       this.cvStructured.structured();
       this.clearFormattedPreview();
-      this.clearPickFidelityPreviews();
     });
   }
 
@@ -321,8 +308,7 @@ export class CvDocumentFacade {
               ...current,
               hasStructuredContent: structured.sections.length > 0,
               structuredImportedAt: structured.structuredImportedAt,
-              templateId: this.selectedExportTemplateId(),
-              maxPages: this.selectedExportMaxPages()
+              templateId: this.selectedExportTemplateId()
             });
           }
 
@@ -382,110 +368,9 @@ export class CvDocumentFacade {
     this.persistExportPrefs();
   }
 
-  setExportMaxPages(maxPages: number | null): void {
-    const normalized = this.normalizeExportMaxPages(maxPages);
-    this.selectedExportMaxPages.set(normalized);
-    this.clearFormattedPreview();
-    this.clearPickFidelityPreviews();
-    // Keep last HTML srcdoc until refreshExportHtmlPreview replaces it.
-    this.writeMaxPagesCache(normalized);
-    this.persistExportPrefs();
-  }
-
-  /**
-   * Load export HTML for every gallery template (pick thumbs + stage).
-   * Uses the same preview endpoint as the edit canvas / PDF pipeline.
-   */
-  refreshPickFidelityPreviews(): void {
-    if (!this.canExportFormatted()) {
-      this.clearPickFidelityPreviews();
-      return;
-    }
-
-    const maxPages = this.selectedExportMaxPages();
-    const templateIds = CV_EXPORT_TEMPLATES.map((template) => template.id);
-
-    this.cancelPickFidelityPreviews();
-    this.pickFidelityPreviewLoading.set(true);
-    this.pickFidelityPreviewError.set(null);
-
-    this.pickFidelityPreviewSubscription = forkJoin(
-      templateIds.map((templateId) =>
-        this.apiService.getExportPreviewHtml({ templateId, maxPages }).pipe(
-          map((preview) => ({
-            templateId,
-            srcdoc: this.sanitizer.bypassSecurityTrustHtml(preview.html) as SafeHtml,
-            notice: preview.notice
-          })),
-          catchError((error) => {
-            if (!isRequestAborted(error)) {
-              this.pickFidelityPreviewError.set(
-                this.readErrorMessage(error, 'Could not load template export previews.')
-              );
-            }
-
-            return of({
-              templateId,
-              srcdoc: null as SafeHtml | null,
-              notice: null as string | null
-            });
-          })
-        )
-      )
-    ).subscribe({
-      next: (results) => {
-        const next = new Map<number, SafeHtml>();
-        const notices = new Map<number, string>();
-
-        for (const result of results) {
-          if (result.srcdoc) {
-            next.set(result.templateId, result.srcdoc);
-          }
-
-          if (result.notice) {
-            notices.set(result.templateId, result.notice);
-          }
-        }
-
-        this.pickFidelityPreviewSrcdocs.set(next);
-        this.pickFidelityPreviewNotices.set(notices);
-        this.pickFidelityPreviewLoading.set(false);
-      },
-      error: (error) => {
-        this.pickFidelityPreviewLoading.set(false);
-        this.pickFidelityPreviewSrcdocs.set(new Map());
-        this.pickFidelityPreviewNotices.set(new Map());
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.pickFidelityPreviewError.set(
-          this.readErrorMessage(error, 'Could not load template export previews.')
-        );
-      }
-    });
-  }
-
-  pickFidelitySrcdoc(templateId: number): SafeHtml | null {
-    return this.pickFidelityPreviewSrcdocs().get(normalizeCvExportTemplateId(templateId)) ?? null;
-  }
-
-  pickFidelityNotice(templateId: number): string | null {
-    return this.pickFidelityPreviewNotices().get(normalizeCvExportTemplateId(templateId)) ?? null;
-  }
-
-  clearPickFidelityPreviews(): void {
-    this.cancelPickFidelityPreviews();
-    this.pickFidelityPreviewLoading.set(false);
-    this.pickFidelityPreviewError.set(null);
-    this.pickFidelityPreviewSrcdocs.set(new Map());
-    this.pickFidelityPreviewNotices.set(new Map());
-  }
-
   /**
    * Load server HTML for the sandboxed fidelity iframe.
-   * Same templateId + maxPages as PDF download so BE compact CSS matches export.
+   * Same templateId as PDF download so BE compact CSS matches export.
    */
   refreshExportHtmlPreview(): void {
     if (!this.canExportFormatted()) {
@@ -499,7 +384,6 @@ export class CvDocumentFacade {
     }
 
     const templateId = this.selectedExportTemplateId();
-    const maxPages = this.selectedExportMaxPages();
 
     const previewGeneration = ++this.exportHtmlPreviewGeneration;
     this.cancelExportHtmlPreview();
@@ -508,7 +392,7 @@ export class CvDocumentFacade {
     // Keep last srcdoc/notice/compact until the next successful response (no blank canvas).
 
     this.exportHtmlPreviewSubscription = this.apiService
-      .getExportPreviewHtml({ templateId, maxPages })
+      .getExportPreviewHtml({ templateId })
       .subscribe({
         next: (preview) => {
           if (previewGeneration !== this.exportHtmlPreviewGeneration) {
@@ -564,7 +448,6 @@ export class CvDocumentFacade {
     }
 
     const templateId = this.selectedExportTemplateId();
-    const maxPages = this.selectedExportMaxPages();
     const fileName = this.buildFormattedExportFileName(templateId);
 
     this.cancelDownloadFormattedFile();
@@ -572,7 +455,7 @@ export class CvDocumentFacade {
     this.downloadFormattedError.set(null);
 
     this.downloadFormattedFileSubscription = this.apiService
-      .downloadFormattedPdf({ templateId, maxPages })
+      .downloadFormattedPdf({ templateId })
       .subscribe({
         next: (result) => {
           this.downloadingFormatted.set(false);
@@ -606,7 +489,6 @@ export class CvDocumentFacade {
     }
 
     const templateId = this.selectedExportTemplateId();
-    const maxPages = this.selectedExportMaxPages();
 
     this.cancelDownloadFormatted();
     this.clearFormattedPreviewBlob();
@@ -616,18 +498,16 @@ export class CvDocumentFacade {
     this.downloadFormattedError.set(null);
     this.previewError.set(null);
     this.previewPageCount.set(null);
-    this.previewMaxPages.set(maxPages);
     this.previewExceedsLimit.set(false);
     this.previewNotice.set(null);
 
     this.downloadFormattedSubscription = this.apiService
-      .downloadFormattedPdf({ templateId, maxPages })
+      .downloadFormattedPdf({ templateId })
       .subscribe({
         next: (result) => {
           this.previewLoading.set(false);
           this.downloadingFormatted.set(false);
           this.previewPageCount.set(result.pageCount);
-          this.previewMaxPages.set(result.maxPages);
           this.previewExceedsLimit.set(result.exceedsLimit);
           this.previewNotice.set(result.notice);
           this.setFormattedPreviewBlob(result.blob);
@@ -797,7 +677,6 @@ export class CvDocumentFacade {
     this.previewLoading.set(false);
     this.previewError.set(null);
     this.previewPageCount.set(null);
-    this.previewMaxPages.set(null);
     this.previewExceedsLimit.set(false);
     this.previewNotice.set(null);
     this.clearFormattedPreviewBlob();
@@ -811,11 +690,6 @@ export class CvDocumentFacade {
     this.exportHtmlPreviewSrcdoc.set(null);
     this.exportHtmlPreviewNotice.set(null);
     this.exportHtmlPreviewCompactLevel.set(null);
-  }
-
-  private cancelPickFidelityPreviews(): void {
-    this.pickFidelityPreviewSubscription?.unsubscribe();
-    this.pickFidelityPreviewSubscription = null;
   }
 
   private clearFormattedPreviewBlob(): void {
@@ -838,13 +712,11 @@ export class CvDocumentFacade {
     this.cancelDownloadFormatted();
     this.cancelDownloadFormattedFile();
     this.cancelExportHtmlPreview();
-    this.cancelPickFidelityPreviews();
     this.cancelExportPrefs();
     this.cancelProfilePhotoUpload();
     this.cancelProfilePhotoDelete();
     this.clearFormattedPreview();
     this.clearExportHtmlPreview();
-    this.clearPickFidelityPreviews();
     this.clearProfilePhoto();
     this.loading.set(false);
     this.uploading.set(false);
@@ -855,7 +727,6 @@ export class CvDocumentFacade {
     this.downloadingFormatted.set(false);
     this.previewLoading.set(false);
     this.exportHtmlPreviewLoading.set(false);
-    this.pickFidelityPreviewLoading.set(false);
     this.uploadingProfilePhoto.set(false);
     this.deletingProfilePhoto.set(false);
     this.document.set(null);
@@ -869,7 +740,6 @@ export class CvDocumentFacade {
     this.downloadFormattedError.set(null);
     this.previewError.set(null);
     this.exportHtmlPreviewError.set(null);
-    this.pickFidelityPreviewError.set(null);
   }
 
   private cancelLoad(): void {
@@ -984,28 +854,6 @@ export class CvDocumentFacade {
       this.selectedExportTemplateId.set(normalized);
       this.writeTemplateCache(normalized);
     }
-
-    // Server value wins over session cache. Legacy null (unset) → 1-page default.
-    // Explicit "No limit" is preserved via session sentinel `none` when DB is still null.
-    if (document.maxPages !== undefined) {
-      let normalized: number | null;
-
-      if (document.maxPages === null) {
-        try {
-          normalized =
-            sessionStorage.getItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY) === 'none'
-              ? null
-              : DEFAULT_CV_EXPORT_MAX_PAGES;
-        } catch {
-          normalized = DEFAULT_CV_EXPORT_MAX_PAGES;
-        }
-      } else {
-        normalized = this.normalizeExportMaxPages(document.maxPages);
-      }
-
-      this.selectedExportMaxPages.set(normalized);
-      this.writeMaxPagesCache(normalized);
-    }
   }
 
   /** Persist current selection to API when a document exists; sessionStorage remains cache. */
@@ -1015,12 +863,11 @@ export class CvDocumentFacade {
     }
 
     const templateId = this.selectedExportTemplateId();
-    const maxPages = this.selectedExportMaxPages();
     const generation = ++this.exportPrefsGeneration;
 
     this.cancelExportPrefs();
     this.exportPrefsSubscription = this.apiService
-      .updateExportPrefs({ templateId, maxPages })
+      .updateExportPrefs({ templateId })
       .subscribe({
         next: (document) => {
           // Ignore superseded responses (rapid template switching / cancelled request races).
@@ -1033,8 +880,7 @@ export class CvDocumentFacade {
           // echo lagged or differed from the latest local selection.
           this.document.set({
             ...document,
-            templateId: this.selectedExportTemplateId(),
-            maxPages: this.selectedExportMaxPages()
+            templateId: this.selectedExportTemplateId()
           });
         },
         error: (error) => {
@@ -1063,28 +909,6 @@ export class CvDocumentFacade {
     }
   }
 
-  private writeMaxPagesCache(maxPages: number | null): void {
-    try {
-      // Sentinel so explicit "No limit" is distinct from unset → default (1 page).
-      sessionStorage.setItem(
-        CV_EXPORT_MAX_PAGES_STORAGE_KEY,
-        maxPages === null ? 'none' : String(maxPages)
-      );
-    } catch {
-      // Ignore storage failures (private mode, quota, etc.).
-    }
-  }
-
-  private normalizeExportMaxPages(maxPages: number | null): number | null {
-    if (maxPages === null) {
-      return null;
-    }
-
-    return Number.isInteger(maxPages) && maxPages >= 1 && maxPages <= 2
-      ? maxPages
-      : DEFAULT_CV_EXPORT_MAX_PAGES;
-  }
-
   private readStoredExportTemplateId(): number {
     try {
       const stored = sessionStorage.getItem(CV_EXPORT_TEMPLATE_STORAGE_KEY);
@@ -1109,25 +933,6 @@ export class CvDocumentFacade {
       return normalized;
     } catch {
       return DEFAULT_CV_EXPORT_TEMPLATE_ID;
-    }
-  }
-
-  private readStoredExportMaxPages(): number | null {
-    try {
-      const stored = sessionStorage.getItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY);
-
-      if (!stored) {
-        return DEFAULT_CV_EXPORT_MAX_PAGES;
-      }
-
-      if (stored === 'none') {
-        return null;
-      }
-
-      const parsed = Number.parseInt(stored, 10);
-      return this.normalizeExportMaxPages(Number.isInteger(parsed) ? parsed : DEFAULT_CV_EXPORT_MAX_PAGES);
-    } catch {
-      return DEFAULT_CV_EXPORT_MAX_PAGES;
     }
   }
 

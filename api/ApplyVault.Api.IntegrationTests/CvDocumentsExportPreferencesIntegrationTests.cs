@@ -29,24 +29,21 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
         var before = await getBefore.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(before);
         Assert.Equal(2, before!.TemplateId);
-        Assert.Null(before.MaxPages);
 
         var putResponse = await client.PutAsJsonAsync(
             "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(2, 3));
+            new CvExportPreferencesDto(3));
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
 
         var putBody = await putResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(putBody);
-        Assert.Equal(2, putBody!.TemplateId);
-        Assert.Equal(3, putBody.MaxPages);
+        Assert.Equal(3, putBody!.TemplateId);
 
         var getAfter = await client.GetAsync("/api/cv-documents/current");
         Assert.Equal(HttpStatusCode.OK, getAfter.StatusCode);
         var after = await getAfter.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(after);
-        Assert.Equal(2, after!.TemplateId);
-        Assert.Equal(3, after.MaxPages);
+        Assert.Equal(3, after!.TemplateId);
     }
 
     [Fact]
@@ -57,26 +54,12 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
 
         var putResponse = await client.PutAsJsonAsync(
             "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(4, null));
+            new CvExportPreferencesDto(4));
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
 
         var putBody = await putResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
         Assert.NotNull(putBody);
         Assert.Equal(2, putBody!.TemplateId);
-        Assert.Null(putBody.MaxPages);
-    }
-
-    [Fact]
-    public async Task Export_preferences_reject_invalid_max_pages()
-    {
-        using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
-        await UploadCvAsync(client);
-
-        var putResponse = await client.PutAsJsonAsync(
-            "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(2, 9));
-
-        Assert.Equal(HttpStatusCode.BadRequest, putResponse.StatusCode);
     }
 
     [Fact]
@@ -89,12 +72,12 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
 
         var putA = await clientA.PutAsJsonAsync(
             "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(3, 2));
+            new CvExportPreferencesDto(3));
         Assert.Equal(HttpStatusCode.OK, putA.StatusCode);
 
         var putB = await clientB.PutAsJsonAsync(
             "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(2, 4));
+            new CvExportPreferencesDto(2));
         Assert.Equal(HttpStatusCode.OK, putB.StatusCode);
 
         var getA = await clientA.GetFromJsonAsync<CvDocumentDto>("/api/cv-documents/current");
@@ -103,9 +86,7 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
         Assert.NotNull(getA);
         Assert.NotNull(getB);
         Assert.Equal(3, getA!.TemplateId);
-        Assert.Equal(2, getA.MaxPages);
         Assert.Equal(2, getB!.TemplateId);
-        Assert.Equal(4, getB.MaxPages);
     }
 
     [Fact]
@@ -116,7 +97,7 @@ public sealed class CvDocumentsExportPreferencesIntegrationTests(ApplyVaultWebAp
 
         var putResponse = await client.PutAsJsonAsync(
             "/api/cv-documents/current/export-preferences",
-            new CvExportPreferencesDto(3, null));
+            new CvExportPreferencesDto(3));
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
 
         var preview = await client.GetAsync("/api/cv-documents/current/export/preview");

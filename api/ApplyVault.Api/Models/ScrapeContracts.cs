@@ -241,11 +241,10 @@ public sealed record CvDocumentDto(
     DateTimeOffset? StructuredImportedAt,
     bool HasProfilePhoto,
     bool HasOriginalUpload,
-    int TemplateId,
-    int? MaxPages
+    int TemplateId
 );
 
-public sealed record CvExportPreferencesDto(int TemplateId, int? MaxPages);
+public sealed record CvExportPreferencesDto(int TemplateId);
 
 public sealed record CvStructuredImportSummaryDto(
     bool Succeeded,

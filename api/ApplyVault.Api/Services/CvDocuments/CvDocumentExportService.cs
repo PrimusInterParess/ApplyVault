@@ -27,6 +27,7 @@ public interface ICvDocumentExportService
 /// <summary>
 /// Exports the saved structured CV as HTML/PDF. No AI rewrite — FE canvas and BE export
 /// share the same structured payload (fill-the-gaps / layout only).
+/// Always targets a single page via the compact CSS ramp (no user-facing page option).
 /// </summary>
 public sealed class CvDocumentExportService(
     ICvStructuredDocumentService structuredDocumentService,
@@ -36,6 +37,9 @@ public sealed class CvDocumentExportService(
     ICvPdfPageCounter pdfPageCounter,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
 {
+    /// <summary>Fixed export page target — compact ramp tries to fit this many pages.</summary>
+    private const int TargetPageLimit = 1;
+
     public async Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
         CvPdfExportOptions options,
@@ -44,19 +48,17 @@ public sealed class CvDocumentExportService(
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
         var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
-        var normalizedOptions = options with { TemplateId = resolvedTemplateId };
         var (compactLevel, pageCount, pdfBytes) = await ResolveCompactLevelAsync(
             renderRequest,
-            normalizedOptions,
+            resolvedTemplateId,
             cancellationToken).ConfigureAwait(false);
 
-        var notice = AppendCompactNotices(null, compactLevel, pageCount, normalizedOptions.MaxPages);
+        var notice = AppendCompactNotices(null, compactLevel, pageCount);
 
         return new CvPdfExportResult(
             pdfBytes,
             pageCount,
-            normalizedOptions.MaxPages,
-            ExceedsMaxPages(pageCount, normalizedOptions.MaxPages),
+            ExceedsPageTarget(pageCount),
             UsedAi: false,
             notice);
     }
@@ -69,25 +71,11 @@ public sealed class CvDocumentExportService(
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
         var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
-        var normalizedOptions = options with { TemplateId = resolvedTemplateId };
-
-        // Unlimited maxPages stays Normal (compact 0) without a Puppeteer search — same as PDF.
-        // When maxPages is set, resolve via the shared PDF page-count ramp.
-        int compactLevel;
-        string? notice = null;
-        if (!normalizedOptions.MaxPages.HasValue)
-        {
-            compactLevel = 0;
-        }
-        else
-        {
-            var (resolvedLevel, pageCount, _) = await ResolveCompactLevelAsync(
-                renderRequest,
-                normalizedOptions,
-                cancellationToken).ConfigureAwait(false);
-            compactLevel = resolvedLevel;
-            notice = AppendCompactNotices(notice, compactLevel, pageCount, normalizedOptions.MaxPages);
-        }
+        var (compactLevel, pageCount, _) = await ResolveCompactLevelAsync(
+            renderRequest,
+            resolvedTemplateId,
+            cancellationToken).ConfigureAwait(false);
+        var notice = AppendCompactNotices(null, compactLevel, pageCount);
 
         var html = await htmlDocumentBuilder
             .BuildAsync(renderRequest, resolvedTemplateId, ToRenderOptions(compactLevel), cancellationToken)
@@ -134,25 +122,22 @@ public sealed class CvDocumentExportService(
 
     /// <summary>
     /// Shared compact search used by PDF export and HTML preview.
-    /// When <see cref="CvPdfExportOptions.MaxPages"/> is null, returns CompactLevel 0 (Normal)
-    /// after a single render — same semantics as the former PDF-only ramp.
+    /// Ramps CompactLevel until the PDF fits <see cref="TargetPageLimit"/> pages, else best effort.
     /// </summary>
     private async Task<(int CompactLevel, int PageCount, byte[] PdfBytes)> ResolveCompactLevelAsync(
         CvExportRenderRequest renderRequest,
-        CvPdfExportOptions options,
+        int templateId,
         CancellationToken cancellationToken)
     {
         byte[]? bestPdfBytes = null;
         var bestPageCount = int.MaxValue;
         var bestCompactLevel = 0;
 
-        var maxCompactLevel = options.MaxPages.HasValue ? CvPdfRenderOptions.MaxCompactLevel : 0;
-
-        for (var compactLevel = 0; compactLevel <= maxCompactLevel; compactLevel++)
+        for (var compactLevel = 0; compactLevel <= CvPdfRenderOptions.MaxCompactLevel; compactLevel++)
         {
             var renderOptions = ToRenderOptions(compactLevel);
             var pdfBytes = await exportRenderDispatcher
-                .RenderAsync(renderRequest, options.TemplateId, renderOptions, cancellationToken)
+                .RenderAsync(renderRequest, templateId, renderOptions, cancellationToken)
                 .ConfigureAwait(false);
             var pageCount = pdfPageCounter.CountPages(pdfBytes);
 
@@ -163,7 +148,7 @@ public sealed class CvDocumentExportService(
                 bestCompactLevel = compactLevel;
             }
 
-            if (!options.MaxPages.HasValue || pageCount <= options.MaxPages.Value)
+            if (pageCount <= TargetPageLimit)
             {
                 return (compactLevel, pageCount, pdfBytes);
             }
@@ -177,27 +162,20 @@ public sealed class CvDocumentExportService(
             ? CvPdfRenderOptions.Normal
             : new CvPdfRenderOptions(compactLevel);
 
-    private static bool ExceedsMaxPages(int pageCount, int? maxPages) =>
-        maxPages is int limit && pageCount > limit;
+    private static bool ExceedsPageTarget(int pageCount) => pageCount > TargetPageLimit;
 
-    private static string? AppendCompactNotices(
-        string? notice,
-        int compactLevel,
-        int pageCount,
-        int? maxPages)
+    private static string? AppendCompactNotices(string? notice, int compactLevel, int pageCount)
     {
-        if (ExceedsMaxPages(pageCount, maxPages))
+        if (ExceedsPageTarget(pageCount))
         {
             return AppendNotice(
                 notice,
-                $"This export is {pageCount} pages after compacting; your limit is {maxPages}.");
+                $"This export is {pageCount} pages after compacting; it could not fit on one page.");
         }
 
         if (compactLevel > 0)
         {
-            return AppendNotice(
-                notice,
-                $"Layout was compacted to fit the selected {maxPages}-page limit.");
+            return AppendNotice(notice, "Layout was compacted to fit on one page.");
         }
 
         return notice;

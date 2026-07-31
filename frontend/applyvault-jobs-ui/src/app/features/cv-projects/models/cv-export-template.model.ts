@@ -7,11 +7,6 @@ export interface CvExportTemplateOption {
   readonly layoutKind: CvExportTemplateLayoutKind;
 }
 
-export interface CvExportMaxPageOption {
-  readonly value: number | null;
-  readonly label: string;
-}
-
 /** Gallery: Modern and Minimal (ids 2–3). Legacy Classic (1) remaps to Modern. */
 export const CV_EXPORT_TEMPLATES: readonly CvExportTemplateOption[] = [
   {
@@ -33,17 +28,6 @@ export const MAX_CV_EXPORT_TEMPLATE_ID = CV_EXPORT_TEMPLATES[CV_EXPORT_TEMPLATES
 export const DEFAULT_CV_EXPORT_TEMPLATE_ID = 2;
 
 export const CV_EXPORT_TEMPLATE_STORAGE_KEY = 'applyvault.cvExportTemplateId';
-
-export const CV_EXPORT_MAX_PAGE_OPTIONS: readonly CvExportMaxPageOption[] = [
-  { value: null, label: 'No limit' },
-  { value: 1, label: '1 page' },
-  { value: 2, label: '2 pages' }
-] as const;
-
-/** Default export target: fit to a single page (BE compact ramp). */
-export const DEFAULT_CV_EXPORT_MAX_PAGES: number | null = 1;
-
-export const CV_EXPORT_MAX_PAGES_STORAGE_KEY = 'applyvault.cvExportMaxPages';
 
 /**
  * Normalize template ids to the supported set.

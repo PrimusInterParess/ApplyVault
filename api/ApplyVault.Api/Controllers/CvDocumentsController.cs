@@ -21,8 +21,6 @@ public sealed class CvDocumentsController(
     ICvDocumentExportService cvDocumentExportService,
     ICvSectionCatalog sectionCatalog) : ControllerBase
 {
-    private const int MaxExportPageLimit = 5;
-
     [HttpGet("current")]
     public async Task<ActionResult<CvDocumentDto>> GetCurrent(CancellationToken cancellationToken = default)
     {
@@ -168,17 +166,11 @@ public sealed class CvDocumentsController(
             return BadRequest("Export preferences are required.");
         }
 
-        if (preferences.MaxPages is < 1 or > MaxExportPageLimit)
-        {
-            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
-        }
-
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
         var document = await cvDocumentService.UpdateExportPreferencesAsync(
             user,
             new CvExportPreferencesDto(
-                CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId),
-                preferences.MaxPages),
+                CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId)),
             cancellationToken);
 
         return document is null ? NotFound() : Ok(document);
@@ -199,28 +191,22 @@ public sealed class CvDocumentsController(
     [HttpGet("current/export/download")]
     public async Task<IActionResult> DownloadFormattedExport(
         [FromQuery] int? templateId = null,
-        [FromQuery] int? maxPages = null,
         CancellationToken cancellationToken = default)
     {
-        if (maxPages is < 1 or > MaxExportPageLimit)
-        {
-            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
-        }
-
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var resolved = await ResolveExportOptionsAsync(user, templateId, maxPages, cancellationToken);
+        var resolvedTemplateId = await ResolveExportTemplateIdAsync(user, templateId, cancellationToken);
 
         try
         {
             var exportResult = await cvDocumentExportService.ExportPdfAsync(
                 user,
-                new CvPdfExportOptions(resolved.TemplateId, resolved.MaxPages),
+                new CvPdfExportOptions(resolvedTemplateId),
                 cancellationToken);
             var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
-            var fileName = CvExportDownloadFileName.BuildForExport(structured, resolved.TemplateId);
+            var fileName = CvExportDownloadFileName.BuildForExport(structured, resolvedTemplateId);
 
             AppendExportMetadataHeaders(exportResult);
-            Response.Headers["X-Cv-Export-Template-Id"] = resolved.TemplateId.ToString();
+            Response.Headers["X-Cv-Export-Template-Id"] = resolvedTemplateId.ToString();
 
             return File(exportResult.PdfBytes, "application/pdf", fileName);
         }
@@ -241,22 +227,16 @@ public sealed class CvDocumentsController(
     [HttpGet("current/export/preview")]
     public async Task<IActionResult> PreviewFormattedExport(
         [FromQuery] int? templateId = null,
-        [FromQuery] int? maxPages = null,
         CancellationToken cancellationToken = default)
     {
-        if (maxPages is < 1 or > MaxExportPageLimit)
-        {
-            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
-        }
-
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var resolved = await ResolveExportOptionsAsync(user, templateId, maxPages, cancellationToken);
+        var resolvedTemplateId = await ResolveExportTemplateIdAsync(user, templateId, cancellationToken);
 
         try
         {
             var exportResult = await cvDocumentExportService.ExportHtmlAsync(
                 user,
-                new CvPdfExportOptions(resolved.TemplateId, resolved.MaxPages),
+                new CvPdfExportOptions(resolvedTemplateId),
                 cancellationToken);
 
             Response.Headers["X-Cv-Export-Template-Id"] = exportResult.ResolvedTemplateId.ToString();
@@ -283,27 +263,24 @@ public sealed class CvDocumentsController(
         }
     }
 
-    private async Task<(int TemplateId, int? MaxPages)> ResolveExportOptionsAsync(
+    private async Task<int> ResolveExportTemplateIdAsync(
         AppUserEntity user,
         int? templateId,
-        int? maxPages,
         CancellationToken cancellationToken)
     {
-        var document = templateId is null || maxPages is null
-            ? await cvDocumentService.GetCurrentAsync(user, cancellationToken)
-            : null;
+        if (templateId is not null)
+        {
+            return CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId.Value);
+        }
 
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(
-            templateId ?? document?.TemplateId ?? CvExportHtmlTemplateCatalog.DefaultTemplateId);
-        var resolvedMaxPages = maxPages ?? document?.MaxPages;
-
-        return (resolvedTemplateId, resolvedMaxPages);
+        var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
+        return CvExportHtmlTemplateCatalog.NormalizeTemplateId(
+            document?.TemplateId ?? CvExportHtmlTemplateCatalog.DefaultTemplateId);
     }
 
     private void AppendExportMetadataHeaders(CvPdfExportResult exportResult)
     {
         Response.Headers["X-Cv-Export-Page-Count"] = exportResult.PageCount.ToString();
-        Response.Headers["X-Cv-Export-Max-Pages"] = exportResult.MaxPages?.ToString() ?? string.Empty;
         Response.Headers["X-Cv-Export-Exceeds-Limit"] = exportResult.ExceedsMaxPages ? "true" : "false";
 
         if (!string.IsNullOrWhiteSpace(exportResult.Notice))

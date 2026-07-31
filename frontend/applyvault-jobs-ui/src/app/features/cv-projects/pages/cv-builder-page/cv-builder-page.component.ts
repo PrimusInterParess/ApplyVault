@@ -10,9 +10,7 @@ import {
   signal,
   viewChild
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { RouterLink } from '@angular/router';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CvBuilderAssistPanelComponent } from '../../components/cv-builder-assist-panel/cv-builder-assist-panel.component';
@@ -22,7 +20,6 @@ import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import {
-  CV_EXPORT_MAX_PAGE_OPTIONS,
   CV_EXPORT_TEMPLATES,
   normalizeCvExportTemplateId
 } from '../../models/cv-export-template.model';
@@ -47,8 +44,6 @@ import {
 } from '../../utils/cv-structured-draft.util';
 import { normalizeSectionsForEditing } from '../../utils/cv-structured-edit-normalizer.util';
 
-type BuilderStep = 'pick' | 'edit';
-
 @Component({
   selector: 'app-cv-builder-page',
   standalone: true,
@@ -66,16 +61,12 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly cvDocument = inject(CvDocumentFacade);
   protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly cvProjects = inject(CvProjectsFacade);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
 
   protected readonly pdfFileInput = viewChild<ElementRef<HTMLInputElement>>('pdfFileInput');
   protected readonly profilePhotoFileInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoFileInput');
 
   protected readonly templates = CV_EXPORT_TEMPLATES;
-  protected readonly maxPageOptions = CV_EXPORT_MAX_PAGE_OPTIONS;
 
-  protected readonly step = signal<BuilderStep>('pick');
   /** Facade is the single source of truth for Modern/Minimal (ids 2–3). */
   protected readonly selectedTemplateId = this.cvDocument.selectedExportTemplateId;
   protected readonly replaceConfirmOpen = signal(false);
@@ -95,11 +86,6 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
   protected readonly selectedSuggestionIds = signal<string[]>([]);
-
-  private readonly stepQuery = toSignal(
-    this.route.queryParamMap.pipe(map((params) => params.get('step'))),
-    { initialValue: this.route.snapshot.queryParamMap.get('step') }
-  );
 
   protected readonly serverSections = computed(() => {
     const items = this.cvStructured.structured()?.sections ?? [];
@@ -172,15 +158,10 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
 
-  protected readonly selectedTemplateLabel = computed(
-    () => this.templates.find((template) => template.id === this.selectedTemplateId())?.label ?? 'Template'
-  );
-
   private wasUpdatingWithAi = false;
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
-  private pickFidelityTimer: ReturnType<typeof setTimeout> | null = null;
   private editCanvasNormalizedForDocumentId: string | null = null;
   /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
   private structuredLoadDocumentId: string | null = null;
@@ -214,35 +195,6 @@ export class CvBuilderPageComponent implements OnDestroy {
 
       this.structuredLoadDocumentId = document.id;
       this.cvStructured.load();
-    });
-
-    effect(() => {
-      const stepParam = this.stepQuery();
-
-      if (stepParam === 'pick') {
-        this.step.set('pick');
-        return;
-      }
-
-      if (this.hasStructuredCv() && !this.cvDocument.loading() && !this.cvStructured.loading()) {
-        this.step.set('edit');
-      }
-    });
-
-    // Pick gallery/stage: export HTML fidelity when a Structured CV exists.
-    effect(() => {
-      if (this.step() !== 'pick') {
-        return;
-      }
-
-      if (!this.hasStructuredCv() || this.cvDocument.loading() || this.cvStructured.loading()) {
-        return;
-      }
-
-      this.cvDocument.selectedExportMaxPages();
-      this.serverSections();
-      this.cvDocument.document();
-      this.schedulePickFidelityRefresh();
     });
 
     effect(() => {
@@ -293,9 +245,9 @@ export class CvBuilderPageComponent implements OnDestroy {
       this.wasSavingSection = saving;
     });
 
-    // ADR-0003: seed edit-canvas canonical shapes on edit enter / canvas mount.
+    // ADR-0003: seed edit-canvas canonical shapes on canvas mount.
     effect(() => {
-      if (this.step() !== 'edit') {
+      if (!this.hasStructuredCv()) {
         this.editCanvasNormalizedForDocumentId = null;
         return;
       }
@@ -325,10 +277,6 @@ export class CvBuilderPageComponent implements OnDestroy {
       clearTimeout(this.saveTimer);
     }
 
-    if (this.pickFidelityTimer) {
-      clearTimeout(this.pickFidelityTimer);
-    }
-
     this.cvStructured.clearSuggestions();
   }
 
@@ -339,37 +287,17 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
   }
 
-  protected pickFidelitySrcdoc(templateId: number) {
-    return this.cvDocument.pickFidelitySrcdoc(templateId);
-  }
-
-  protected pickFidelityNotice(templateId: number): string | null {
-    return this.cvDocument.pickFidelityNotice(templateId);
-  }
-
   protected selectTemplate(templateId: number): void {
     this.cvDocument.setExportTemplateId(normalizeCvExportTemplateId(templateId));
   }
 
-  protected onMaxPagesChange(event: Event): void {
-    const raw = readInputValue(event);
-    const parsed = raw === '' ? null : Number.parseInt(raw, 10);
-    this.cvDocument.setExportMaxPages(Number.isInteger(parsed) ? parsed : null);
-  }
-
-  /** First-visit only: create Blank CV with starter sections, then enter edit. */
+  /** First-visit only: create Blank CV with starter sections. */
   protected startBlank(): void {
     if (this.hasStructuredCv()) {
       return;
     }
 
     this.runCreateCv();
-  }
-
-  /** Existing Structured CV: keep content, apply selected Template layout, enter edit. */
-  protected continueWithTemplate(): void {
-    this.cvDocument.setExportTemplateId(this.selectedTemplateId());
-    this.enterEdit();
   }
 
   protected openPdfPicker(): void {
@@ -425,15 +353,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     if (file) {
       this.runUpload(file);
     }
-  }
-
-  protected continueEditing(): void {
-    this.enterEdit();
-  }
-
-  protected backToTemplates(): void {
-    this.step.set('pick');
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { step: 'pick' } });
   }
 
   protected zoomIn(): void {
@@ -777,13 +696,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     );
   }
 
-  private enterEdit(): void {
-    this.editCanvasNormalizedForDocumentId = null;
-    this.step.set('edit');
-    this.ensureContentEditShape();
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { step: 'edit' } });
-  }
-
   private scheduleSave(sections: CvStructuredSection[]): void {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
@@ -792,21 +704,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.saveTimer = setTimeout(() => {
       this.persistSections(sections);
     }, 500);
-  }
-
-  private schedulePickFidelityRefresh(): void {
-    if (this.pickFidelityTimer) {
-      clearTimeout(this.pickFidelityTimer);
-    }
-
-    this.pickFidelityTimer = setTimeout(() => {
-      if (this.cvStructured.isSaving()) {
-        this.schedulePickFidelityRefresh();
-        return;
-      }
-
-      this.cvDocument.refreshPickFidelityPreviews();
-    }, 200);
   }
 
   private flushSave(): void {
@@ -836,14 +733,14 @@ export class CvBuilderPageComponent implements OnDestroy {
   private runCreateCv(): void {
     this.cvDocument.setExportTemplateId(this.selectedTemplateId());
     this.cvDocument.startBlankWithStarterSections(() => {
-      this.enterEdit();
+      this.editCanvasNormalizedForDocumentId = null;
     });
   }
 
   private runUpload(file: File): void {
     this.cvDocument.setExportTemplateId(this.selectedTemplateId());
     this.cvDocument.upload(file, () => {
-      this.enterEdit();
+      this.editCanvasNormalizedForDocumentId = null;
     });
   }
 

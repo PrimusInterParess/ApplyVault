@@ -19,13 +19,11 @@ import {
 
 export interface CvFormattedPdfRequest {
   readonly templateId: number;
-  readonly maxPages?: number | null;
 }
 
 export interface CvFormattedPdfResult {
   readonly blob: Blob;
   readonly pageCount: number | null;
-  readonly maxPages: number | null;
   readonly exceedsLimit: boolean;
   readonly notice: string | null;
 }
@@ -94,7 +92,6 @@ export class CvDocumentApiService {
       map((response) => ({
         blob: response.body ?? new Blob([], { type: 'application/pdf' }),
         pageCount: this.readNumberHeader(response.headers.get('X-Cv-Export-Page-Count')),
-        maxPages: this.readNumberHeader(response.headers.get('X-Cv-Export-Max-Pages')),
         exceedsLimit: response.headers.get('X-Cv-Export-Exceeds-Limit') === 'true',
         notice: this.readNoticeHeader(response.headers.get('X-Cv-Export-Notice'))
       }))
@@ -103,7 +100,7 @@ export class CvDocumentApiService {
 
   /**
    * M1: authenticated HTML identical to Puppeteer input (text/html).
-   * GET /api/cv-documents/current/export/preview?templateId&maxPages
+   * GET /api/cv-documents/current/export/preview?templateId
    * Reads additive X-Cv-Export-Compact-Level / X-Cv-Export-Notice when exposed.
    */
   getExportPreviewHtml(request: CvFormattedPdfRequest): Observable<CvExportPreviewHtmlResult> {
@@ -123,13 +120,7 @@ export class CvDocumentApiService {
   }
 
   private buildExportParams(request: CvFormattedPdfRequest): HttpParams {
-    let params = new HttpParams().set('templateId', String(request.templateId));
-
-    if (request.maxPages) {
-      params = params.set('maxPages', String(request.maxPages));
-    }
-
-    return params;
+    return new HttpParams().set('templateId', String(request.templateId));
   }
 
   delete(): Observable<void> {
@@ -141,7 +132,7 @@ export class CvDocumentApiService {
   }
 
   /**
-   * M2: persist export Template + maxPages on the current CV document.
+   * M2: persist export Template on the current CV document.
    * PUT /api/cv-documents/current/export-preferences
    */
   updateExportPrefs(request: UpdateCvExportPrefsRequest): Observable<CvDocument> {

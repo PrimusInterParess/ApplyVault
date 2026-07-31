@@ -1,6 +1,6 @@
 namespace ApplyVault.Api.Services;
 
-public sealed record CvPdfExportOptions(int TemplateId = 2, int? MaxPages = null);
+public sealed record CvPdfExportOptions(int TemplateId = 2);
 
 public sealed record CvPdfRenderOptions(int CompactLevel = 0)
 {
@@ -12,7 +12,6 @@ public sealed record CvPdfRenderOptions(int CompactLevel = 0)
 public sealed record CvPdfExportResult(
     byte[] PdfBytes,
     int PageCount,
-    int? MaxPages,
     bool ExceedsMaxPages,
     bool UsedAi,
     string? Notice);

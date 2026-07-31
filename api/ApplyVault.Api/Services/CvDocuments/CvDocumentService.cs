@@ -333,8 +333,7 @@ public sealed class CvDocumentService(
             OriginalFileSizeBytes = pdfBytes.Length,
             UploadedAt = now,
             UpdatedAt = now,
-            TemplateId = CvExportHtmlTemplateCatalog.DefaultTemplateId,
-            MaxPages = 1
+            TemplateId = CvExportHtmlTemplateCatalog.DefaultTemplateId
         };
 
         dbContext.UserCvDocuments.Add(document);
@@ -357,7 +356,6 @@ public sealed class CvDocumentService(
         }
 
         document.TemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId);
-        document.MaxPages = preferences.MaxPages;
         document.UpdatedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -523,7 +521,6 @@ public sealed class CvDocumentService(
             document.StructuredImportedAt,
             !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey),
             hasOriginalUpload,
-            CvExportHtmlTemplateCatalog.NormalizeTemplateId(document.TemplateId),
-            document.MaxPages);
+            CvExportHtmlTemplateCatalog.NormalizeTemplateId(document.TemplateId));
     }
 }

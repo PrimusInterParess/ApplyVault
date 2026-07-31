@@ -223,8 +223,6 @@ public sealed class UserCvDocumentEntity
 
     public int TemplateId { get; set; } = 2;
 
-    public int? MaxPages { get; set; }
-
     public AppUserEntity? User { get; set; }
 
     public List<UserCvSectionEntity> Sections { get; set; } = [];

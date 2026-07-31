@@ -1,0 +1,34 @@
+task_id: "cv-builder-edit-persist-2026-07-31"
+closed_at: "2026-07-31"
+final_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >
+  Content/template edits on /cv-builder not reflected; sometimes data wiped.
+milestone: "CV builder edit→persist→preview lifecycle hardening (FE v1)"
+agents:
+  - architecture-engineer
+  - frontend-engineer
+  - qa-engineer
+outcome: >
+  FE lifecycle fix shipped: document-id structured load gate (prefs no longer
+  reload structured), save/load generations with PUT coalesce, draft clear on
+  latest successful save + force preview refresh, Contact real UUIDs (no __ch),
+  keep-last export HTML. Unit suite 13/13 SUCCESS (FE + QA re-run).
+limitations:
+  - Browser QA scenarios 1–10 NOT_EXECUTED (login required; API unreachable)
+  - Multi-tab last-writer-wins unchanged (accepted v1)
+  - No dedicated page-component spec for draft-generation clear / load-gate
+  - BE upsert/If-Match deferred unless authenticated smoke still sees wipe
+follow_ups:
+  - "Authenticated smoke on /cv-builder: Content edit→canvas; template mid-edit; Contact sticky draft"
+  - "If wipe/revert still repros under prefs+edit, open BE concurrency task"
+ residual_risks:
+  - E2E wipe/sticky-draft not live-disproven
+  - Coalesce + BE full-replace ordering under slow network
+key_paths:
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-structured.facade.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-document.facade.ts"
+cleanup_note: >
+  Prior active cv-builder-* handoffs were already clear before this run; archive
+  summaries for earlier tasks retained. This task's active/ + scratch/ wiped on Close.

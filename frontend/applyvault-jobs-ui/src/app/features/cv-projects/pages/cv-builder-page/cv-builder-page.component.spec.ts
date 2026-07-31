@@ -288,6 +288,10 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
         .withContext(`canvas templateId after selecting ${templateId}`)
         .toBe(templateId);
       expect(select.value).toBe(String(templateId));
+      const selectedOption = Array.from(select.options).find((option) => option.selected);
+      expect(selectedOption?.value)
+        .withContext(`selected option after choosing ${templateId}`)
+        .toBe(String(templateId));
     }
   });
 });

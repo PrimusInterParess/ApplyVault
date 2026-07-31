@@ -47,7 +47,7 @@
 
 .cv-export-preview--editable .cv-export-preview__name {
   font-size: 1.85rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 
 .cv-export-preview--editable .cv-export-preview__section {
@@ -56,7 +56,7 @@
 
 .cv-export-preview--editable .cv-export-preview__section-title {
   font-size: 0.78rem;
-  margin-bottom: 0;
+  margin-bottom: 0.25rem;
   padding-bottom: 0.2rem;
 }
 
@@ -200,10 +200,10 @@
   padding: 1.35rem 1.5rem;
 }
 
-/* Editable photo sizes mirror export baselines: Classic 140 / Modern 136 / Minimal 128. */
+/* Editable photo sizes mirror export baselines: Classic 120 / Modern 136 / Minimal 128. */
 .cv-export-preview--editable.cv-export-preview--template-1 .cv-export-preview__photo {
-  width: 8.75rem;
-  height: 8.75rem;
+  width: 7.5rem;
+  height: 7.5rem;
   border-radius: 0;
 }
 
@@ -533,7 +533,7 @@
   align-items: center;
   gap: 0.55rem;
   padding: 0.85rem 0.9rem 0.45rem;
-  border-bottom: 1px solid var(--cv-preview-accent);
+  border-bottom: none;
   box-sizing: border-box;
 }
 
@@ -559,7 +559,6 @@
 
 .cv-export-preview--compact .cv-export-preview__classic-header {
   padding: 0.55rem 0.6rem 0.35rem;
-  border-bottom-width: 2px;
 }
 
 .cv-export-preview__classic-header-copy {
@@ -584,12 +583,12 @@
   min-width: 0;
 }
 
-/* BE .cv-contact — wrap valued lines in one row group */
+/* BE .cv-contact — stack valued lines vertically (classic/minimal PDF parity) */
 .cv-export-preview__contact {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 0.55rem;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
   margin: 0;
 }
 

@@ -181,9 +181,23 @@ export function dedupeContactEntries(entries: readonly CvStructuredEntry[]): CvS
   }
 
   const result: CvStructuredEntry[] = [];
+  // Seed with display name(s) so the person name never also appears as a contact channel
+  // (BE AppendClassicContactHeader parity — PDF / Classic canvas).
   const seenValues = new Set<string>();
   const seenEmptyLabels = new Set<string>();
   let keptName = false;
+
+  for (const entry of reconciled) {
+    if (!isContactNameEntry(entry)) {
+      continue;
+    }
+
+    const displayName = entry.subtitle?.trim().toLowerCase();
+
+    if (displayName) {
+      seenValues.add(displayName);
+    }
+  }
 
   for (const entry of reconciled) {
     if (isContactNameEntry(entry)) {

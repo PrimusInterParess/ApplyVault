@@ -1,11 +1,9 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
-using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests;
 
@@ -107,11 +105,9 @@ public sealed class CvDocumentExportServiceCompactParityTests
         return new CvDocumentExportService(
             new StubStructuredDocumentService(),
             new StubCvDocumentService(),
-            new StubExportAiClient(),
             dispatcher,
             htmlBuilder,
             new ScriptedPageCounter(pageCountsByLevel),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false, ApiKey = "test" }),
             NullLogger<CvDocumentExportService>.Instance);
     }
 
@@ -212,14 +208,6 @@ public sealed class CvDocumentExportServiceCompactParityTests
         public Task<CvDocumentDto?> UpdateExportPreferencesAsync(
             AppUserEntity user,
             CvExportPreferencesDto preferences,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
-
-    private sealed class StubExportAiClient : ICvExportAiClient
-    {
-        public Task<CvStructuredImportResult> PolishAsync(
-            IReadOnlyList<CvExportSectionInput> sections,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

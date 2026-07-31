@@ -5,13 +5,17 @@
   <title>CV</title>
   <style>
     :root {
-      --cv-page-pad-y: 16mm;
-      --cv-page-pad-x: 18mm;
+      /* Equal inset; denser baseline so typical CVs fit one page before compact ramp. */
+      --cv-page-pad-y: 14mm;
+      --cv-page-pad-x: 14mm;
       --cv-ink: #1a1a1a;
       --cv-muted: #5c5c5c;
       --cv-rule: #d0d0d0;
       --cv-accent: #2f5d50;
       --cv-surface-soft: #f4f6f5;
+      --cv-space: 2pt;
+      --cv-space-block: 6pt;
+      --cv-space-section: 10pt;
     }
     * { box-sizing: border-box; }
     body {
@@ -19,65 +23,75 @@
       margin: 0;
       padding: 0;
       color: var(--cv-ink);
-      font-size: 10.5pt;
-      line-height: 1.45;
+      font-size: 10pt;
+      line-height: 1.4;
     }
     .cv-classic {
       padding: var(--cv-page-pad-y) var(--cv-page-pad-x);
       max-width: 100%;
     }
+    /* Header: photo 140px / gap ~1rem; no rule under contacts. */
     .cv-header {
       display: flex;
       flex-direction: row;
       align-items: center;
-      gap: 16pt;
-      margin-bottom: 14pt;
-      padding-bottom: 12pt;
-      border-bottom: 1px solid var(--cv-accent);
+      gap: 12pt;
+      margin-bottom: var(--cv-space-section);
+      padding-bottom: 0;
+      border-bottom: none;
     }
     .cv-photo {
       flex: 0 0 auto;
       flex-shrink: 0;
-      width: 140px;
-      height: 140px;
+      width: 120px;
+      height: 120px;
       max-width: 100%;
       object-fit: cover;
       object-position: center;
+      display: block;
     }
     .cv-header-copy {
       flex: 1 1 auto;
       min-width: 0;
     }
     .cv-name {
-      margin: 0;
+      margin: 0 0 var(--cv-space);
       font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-      font-size: 22pt;
+      font-size: 20pt;
       font-weight: 700;
       line-height: 1.15;
       color: var(--cv-ink);
     }
     .cv-tagline {
-      margin: 4px 0 8px;
-      font-size: 11pt;
+      margin: 0 0 var(--cv-space);
+      font-size: 10.5pt;
       color: var(--cv-muted);
     }
     .cv-contact {
       display: flex;
-      flex-wrap: wrap;
-      gap: 2pt 10pt;
-      align-items: baseline;
+      flex-direction: column;
+      gap: var(--cv-space);
+      align-items: flex-start;
       margin: 0;
     }
     .cv-contact-line {
       margin: 0;
       font-size: 9.5pt;
+      line-height: 1.45;
       color: var(--cv-muted);
+    }
+    .cv-header .section {
+      margin: var(--cv-space-block) 0 0;
+    }
+    .cv-header .section-title {
+      margin-bottom: var(--cv-space);
     }
     .cv-main {
       padding: 0;
-      margin-top: 4pt;
+      margin-top: 0;
     }
-    .section { margin-bottom: 14pt; }
+    .section { margin-bottom: var(--cv-space-section); }
+    .section:last-child { margin-bottom: 0; }
     .section-title {
       font-size: 9pt;
       font-weight: 700;
@@ -86,23 +100,25 @@
       color: var(--cv-accent);
       border-bottom: 1px solid var(--cv-rule);
       padding-bottom: 3px;
-      margin: 0 0 10pt;
+      margin: 0 0 var(--cv-space-block);
     }
-    .entry { margin-bottom: 10pt; }
+    .entry { margin-bottom: var(--cv-space-block); }
+    .entry:last-child { margin-bottom: 0; }
     .entry-header {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
       flex-wrap: wrap;
-      gap: 4px 12px;
+      gap: 2pt 10pt;
     }
     .entry-title { font-size: 10.5pt; font-weight: 650; }
     .entry-date { font-size: 9.5pt; color: var(--cv-muted); }
     .entry-subtitle { font-style: italic; margin-top: 2px; color: var(--cv-muted); }
-    .entry-summary { margin: 6px 0 0; }
-    .entry-bullets { margin: 6px 0 0 1.1em; padding: 0; }
+    .entry-summary { margin: var(--cv-space) 0 0; }
+    .entry-bullets { margin: var(--cv-space) 0 0 1.1em; padding: 0; }
     .entry-bullets li { margin-bottom: 0.25em; }
-    .entry-tech { font-size: 9.5pt; color: var(--cv-muted); margin-top: 4px; }
+    .entry-bullets li:last-child { margin-bottom: 0; }
+    .entry-tech { font-size: 9.5pt; color: var(--cv-muted); margin-top: 3px; }
   </style>
 </head>
 <body>

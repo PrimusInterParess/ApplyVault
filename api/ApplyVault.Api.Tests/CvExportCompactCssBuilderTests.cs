@@ -18,27 +18,26 @@ public sealed class CvExportCompactCssBuilderTests
     {
         var css = Normalize(CvExportCompactCssBuilder.Build(new CvPdfRenderOptions(CompactLevel: 4)));
 
-        Assert.Contains("margin-bottom: 11px !important;", css, StringComparison.Ordinal);
-        Assert.Contains(".entry {\n  margin-bottom: 8px !important;\n}", css, StringComparison.Ordinal);
-        Assert.Contains("--cv-page-pad-y: 10mm !important;", css, StringComparison.Ordinal);
-        Assert.Contains("--cv-page-pad-x: 12mm !important;", css, StringComparison.Ordinal);
+        Assert.Contains("margin-bottom: 4px !important;", css, StringComparison.Ordinal);
+        Assert.Contains(".entry {\n  margin-bottom: 3px !important;\n}", css, StringComparison.Ordinal);
+        Assert.Contains("--cv-page-pad-y: 8mm !important;", css, StringComparison.Ordinal);
+        Assert.Contains("--cv-page-pad-x: 9mm !important;", css, StringComparison.Ordinal);
+        Assert.Contains("--cv-space-section: 4pt !important;", css, StringComparison.Ordinal);
         Assert.Contains(".cv-classic {\n  padding: var(--cv-page-pad-y) var(--cv-page-pad-x) !important;\n}", css, StringComparison.Ordinal);
-        Assert.Contains(".cv-body {\n  padding: 10mm 12mm !important;\n}", css, StringComparison.Ordinal);
-        Assert.Contains(".cv-layout .cv-sidebar {\n  padding: 10mm 8mm 10mm 12mm !important;\n}", css, StringComparison.Ordinal);
+        Assert.Contains(".cv-body {\n  padding: 8mm 10mm !important;\n}", css, StringComparison.Ordinal);
+        Assert.Contains(".cv-layout .cv-sidebar {\n  padding: 8mm 7mm 8mm 9mm !important;\n}", css, StringComparison.Ordinal);
         Assert.Contains(".cv-classic .cv-photo {\n  width: 96px !important;", css, StringComparison.Ordinal);
         Assert.Contains(".cv-layout .cv-sidebar .cv-photo {\n  width: 96px !important;", css, StringComparison.Ordinal);
         Assert.Contains(".cv-body .cv-photo {\n  width: 96px !important;", css, StringComparison.Ordinal);
-        Assert.DoesNotContain("margin-bottom: 5px !important;", css, StringComparison.Ordinal);
-        Assert.DoesNotContain(".entry {\n  margin-bottom: 3px !important;\n}", css, StringComparison.Ordinal);
         Assert.DoesNotContain("width: 80px !important;", css, StringComparison.Ordinal);
         Assert.DoesNotContain("width: 72px !important;", css, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData(1, 128, 124, 120, 14, 16)]
-    [InlineData(2, 116, 112, 108, 12, 14)]
-    [InlineData(3, 104, 100, 96, 11, 13)]
-    [InlineData(4, 96, 96, 96, 10, 12)]
+    [InlineData(1, 112, 120, 112, 12, 12)]
+    [InlineData(2, 104, 108, 104, 10, 11)]
+    [InlineData(3, 100, 100, 96, 9, 10)]
+    [InlineData(4, 96, 96, 96, 8, 9)]
     public void Build_photo_and_pad_ramp_matches_ux_spec(
         int level,
         int classicPhoto,
@@ -57,6 +56,17 @@ public sealed class CvExportCompactCssBuilderTests
         Assert.Contains($".cv-body .cv-photo {{\n  width: {minimalPhoto}px !important;", css, StringComparison.Ordinal);
         Assert.Contains($"--cv-page-pad-y: {padY}mm !important;", css, StringComparison.Ordinal);
         Assert.Contains($"--cv-page-pad-x: {padX}mm !important;", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_level_1_shrinks_below_classic_baseline_section_rhythm()
+    {
+        var css = Normalize(CvExportCompactCssBuilder.Build(new CvPdfRenderOptions(CompactLevel: 1)));
+
+        // Classic baseline uses ~10pt section gaps; level 1 must go tighter, not looser.
+        Assert.Contains(".section {\n  margin-bottom: 8px !important;\n}", css, StringComparison.Ordinal);
+        Assert.Contains("--cv-space-section: 8pt !important;", css, StringComparison.Ordinal);
+        Assert.Contains("--cv-page-pad-y: 12mm !important;", css, StringComparison.Ordinal);
     }
 
     private static string Normalize(string css) =>

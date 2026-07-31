@@ -334,7 +334,7 @@ public sealed class CvDocumentService(
             UploadedAt = now,
             UpdatedAt = now,
             TemplateId = CvExportHtmlTemplateCatalog.ClassicTemplateId,
-            MaxPages = null
+            MaxPages = 1
         };
 
         dbContext.UserCvDocuments.Add(document);

@@ -3,8 +3,8 @@
    @page margin stays 0 so iframe preview and PDF share the same breathing room. */
 
 :root {
-  --cv-page-pad-y: 16mm;
-  --cv-page-pad-x: 18mm;
+  --cv-page-pad-y: 14mm;
+  --cv-page-pad-x: 14mm;
   --cv-ink: #1a1a1a;
   --cv-muted: #5c5c5c;
   --cv-rule: #d0d0d0;
@@ -46,7 +46,7 @@ a {
 .section {
   break-inside: auto;
   page-break-inside: auto;
-  margin-bottom: 16px;
+  margin-bottom: 10pt;
 }
 
 .section-title {

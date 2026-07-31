@@ -263,6 +263,24 @@ describe('cv-contact-channels.util legacy Contact', () => {
     ]);
   });
 
+  it('dedupeContactEntries drops contact channel equal to Name subtitle (no duplicate name)', () => {
+    const entries = dedupeContactEntries([
+      { ...createEmptyEntry(0), title: 'Name', subtitle: 'Jane Doe' },
+      { ...createEmptyEntry(1), title: '', bullets: ['Jane Doe'], sortOrder: 1 },
+      { ...createEmptyEntry(2), title: 'Email', bullets: ['jane@example.com'], sortOrder: 2 },
+      { ...createEmptyEntry(3), title: 'Phone', bullets: [''], sortOrder: 3 },
+      { ...createEmptyEntry(4), title: 'LinkedIn', bullets: [''], sortOrder: 4 }
+    ]);
+
+    const fields = entries.filter((entry) => entry.title.trim().toLowerCase() !== 'name');
+    expect(fields.map((entry) => contactEntryValue(entry))).toEqual([
+      'jane@example.com',
+      '',
+      ''
+    ]);
+    expect(fields.some((entry) => contactEntryValue(entry).toLowerCase() === 'jane doe')).toBeFalse();
+  });
+
   it('contactSectionForDisplay always absorbs unlabeled orphans into starters', () => {
     const section = contactSection([
       { ...createEmptyEntry(0), title: 'Name', subtitle: 'Alex', bullets: [] },

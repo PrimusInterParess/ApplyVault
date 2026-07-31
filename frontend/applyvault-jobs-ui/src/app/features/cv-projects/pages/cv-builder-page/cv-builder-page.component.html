@@ -148,10 +148,13 @@
             <span class="cv-builder__sr-only">Template</span>
             <select
               class="cv-builder__select"
-              [value]="'' + selectedTemplateId()"
               (change)="onTemplateSelectChange($event)">
               @for (template of templates; track template.id) {
-                <option [value]="'' + template.id">{{ template.label }}</option>
+                <option
+                  [value]="'' + template.id"
+                  [selected]="selectedTemplateId() === template.id">
+                  {{ template.label }}
+                </option>
               }
             </select>
           </label>

@@ -2,6 +2,7 @@ import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 
 import { InlineEditableTextDirective } from '../../directives/inline-editable-text.directive';
+import { normalizeCvExportTemplateId } from '../../models/cv-export-template.model';
 import { CvSectionType, CvStructuredEntry, CvStructuredSection } from '../../models/cv-structured.model';
 import {
   contactDisplayLine,
@@ -59,14 +60,19 @@ export class CvExportTemplatePreviewComponent {
     return contact ? findContactNameEntry(contact) : null;
   });
 
+  /** Coerce so stringy inputs never miss Classic/Minimal branches (`=== 1` / `=== 3`). */
+  protected readonly resolvedTemplateId = computed(() =>
+    normalizeCvExportTemplateId(Number(this.templateId()))
+  );
+
   protected readonly layout = computed(() =>
-    partitionSectionsForTemplate(this.templateId(), this.effectiveSections(), {
+    partitionSectionsForTemplate(this.resolvedTemplateId(), this.effectiveSections(), {
       includeEmpty: this.editable() || !this.sampleMode()
     })
   );
 
   protected readonly templateClass = computed(
-    () => `cv-export-preview--template-${this.templateId()}`
+    () => `cv-export-preview--template-${this.resolvedTemplateId()}`
   );
 
   protected readonly addableTypes = computed(() => addableSectionTypes(this.effectiveSections()));
@@ -109,8 +115,16 @@ export class CvExportTemplatePreviewComponent {
 
   protected showContactNameInSection(section: CvStructuredSection): boolean {
     // Classic (1) and Minimal (3) already edit the name in the page header.
-    const templateId = Number(this.templateId());
-    return this.isContactSection(section) && templateId !== 1 && templateId !== 3;
+    const templateId = this.resolvedTemplateId();
+
+    if (!this.isContactSection(section) || templateId === 1 || templateId === 3) {
+      return false;
+    }
+
+    // Import often yields Contact + Profile both typed Contact — only the first
+    // owns the in-section name (BE AppendClassicContactHeader parity).
+    const firstContact = this.effectiveSections().find((item) => this.isContactSection(item));
+    return firstContact?.id === section.id;
   }
 
   /**

@@ -5,8 +5,10 @@ namespace ApplyVault.Api.Services.HtmlExport;
 /// <summary>
 /// Builds CompactLevel override CSS for HTML CV export (preview + PDF).
 /// Shrink priority is encoded in the ramp: bullets/entries/sections/pads/fonts before photo floors.
-/// Photo floors stay at or above 96px (preview-parity baselines: Classic 140 / Modern 136 / Minimal 128).
+/// Photo floors stay at or above 96px (preview-parity baselines: Classic 120 / Modern 136 / Minimal 128).
 /// CompactLevel 0 leaves template baselines untouched (no override CSS).
+/// Levels 1–4 must shrink BELOW the denser Classic baseline (10pt / 14mm / 10pt sections)
+/// so MaxPages=1 can actually fit typical multi-section CVs.
 /// </summary>
 internal static class CvExportCompactCssBuilder
 {
@@ -26,6 +28,9 @@ internal static class CvExportCompactCssBuilder
 :root {
   --cv-page-pad-y: {{level.PadY}}mm !important;
   --cv-page-pad-x: {{level.PadX}}mm !important;
+  --cv-space: {{level.SpacePt}}pt !important;
+  --cv-space-block: {{level.SpaceBlockPt}}pt !important;
+  --cv-space-section: {{level.SpaceSectionPt}}pt !important;
 }
 
 html body {
@@ -48,7 +53,7 @@ html body {
 
 .entry-summary,
 .entry-bullets {
-  margin-top: {{Math.Max(2, level.EntryMarginPx / 2)}}px !important;
+  margin-top: {{Math.Max(1, level.EntryMarginPx / 2)}}px !important;
 }
 
 .entry-bullets li {
@@ -77,6 +82,12 @@ html body {
 
 .cv-header {
   gap: {{level.HeaderGapPt}}pt !important;
+  margin-bottom: {{level.SpaceSectionPt}}pt !important;
+}
+
+.cv-name {
+  font-size: {{level.NameFontPt}}pt !important;
+  margin-bottom: {{level.SpacePt}}pt !important;
 }
 
 .cv-classic .cv-photo {
@@ -106,70 +117,86 @@ html body {
         compactLevel switch
         {
             1 => new(
-                FontScale: 0.94m,
-                LineHeight: 1.28m,
-                SectionMarginPx: 16,
-                SectionTitleMarginPx: 8,
-                EntryMarginPx: 12,
-                BulletMarginPx: 3,
-                PadY: 14,
-                PadX: 16,
-                MinimalPadY: 16,
-                MinimalPadX: 18,
-                InnerGutterMm: 11,
-                MainInnerGutterMm: 12,
-                HeaderGapPt: 14,
-                ClassicPhotoPx: 128,
-                ModernPhotoPx: 124,
-                MinimalPhotoPx: 120),
-            2 => new(
-                FontScale: 0.88m,
-                LineHeight: 1.2m,
-                SectionMarginPx: 13,
-                SectionTitleMarginPx: 7,
-                EntryMarginPx: 10,
+                FontScale: 0.92m,
+                LineHeight: 1.25m,
+                SectionMarginPx: 8,
+                SectionTitleMarginPx: 4,
+                EntryMarginPx: 6,
                 BulletMarginPx: 2,
                 PadY: 12,
-                PadX: 14,
-                MinimalPadY: 14,
-                MinimalPadX: 16,
-                InnerGutterMm: 10,
-                MainInnerGutterMm: 11,
-                HeaderGapPt: 12,
-                ClassicPhotoPx: 116,
-                ModernPhotoPx: 112,
-                MinimalPhotoPx: 108),
-            3 => new(
-                FontScale: 0.82m,
-                LineHeight: 1.12m,
-                SectionMarginPx: 12,
-                SectionTitleMarginPx: 6,
-                EntryMarginPx: 9,
-                BulletMarginPx: 1,
-                PadY: 11,
-                PadX: 13,
+                PadX: 12,
                 MinimalPadY: 12,
                 MinimalPadX: 14,
+                InnerGutterMm: 10,
+                MainInnerGutterMm: 11,
+                HeaderGapPt: 10,
+                SpacePt: 2,
+                SpaceBlockPt: 4,
+                SpaceSectionPt: 8,
+                NameFontPt: 18,
+                ClassicPhotoPx: 112,
+                ModernPhotoPx: 120,
+                MinimalPhotoPx: 112),
+            2 => new(
+                FontScale: 0.86m,
+                LineHeight: 1.18m,
+                SectionMarginPx: 6,
+                SectionTitleMarginPx: 3,
+                EntryMarginPx: 5,
+                BulletMarginPx: 1,
+                PadY: 10,
+                PadX: 11,
+                MinimalPadY: 10,
+                MinimalPadX: 12,
                 InnerGutterMm: 9,
                 MainInnerGutterMm: 10,
-                HeaderGapPt: 11,
+                HeaderGapPt: 9,
+                SpacePt: 1,
+                SpaceBlockPt: 3,
+                SpaceSectionPt: 6,
+                NameFontPt: 17,
                 ClassicPhotoPx: 104,
+                ModernPhotoPx: 108,
+                MinimalPhotoPx: 104),
+            3 => new(
+                FontScale: 0.80m,
+                LineHeight: 1.12m,
+                SectionMarginPx: 5,
+                SectionTitleMarginPx: 3,
+                EntryMarginPx: 4,
+                BulletMarginPx: 1,
+                PadY: 9,
+                PadX: 10,
+                MinimalPadY: 9,
+                MinimalPadX: 11,
+                InnerGutterMm: 8,
+                MainInnerGutterMm: 9,
+                HeaderGapPt: 8,
+                SpacePt: 1,
+                SpaceBlockPt: 3,
+                SpaceSectionPt: 5,
+                NameFontPt: 16,
+                ClassicPhotoPx: 100,
                 ModernPhotoPx: 100,
                 MinimalPhotoPx: 96),
             4 => new(
-                FontScale: 0.76m,
+                FontScale: 0.74m,
                 LineHeight: 1.05m,
-                SectionMarginPx: 11,
-                SectionTitleMarginPx: 6,
-                EntryMarginPx: 8,
-                BulletMarginPx: 1,
-                PadY: 10,
-                PadX: 12,
-                MinimalPadY: 10,
-                MinimalPadX: 12,
-                InnerGutterMm: 8,
+                SectionMarginPx: 4,
+                SectionTitleMarginPx: 2,
+                EntryMarginPx: 3,
+                BulletMarginPx: 0,
+                PadY: 8,
+                PadX: 9,
+                MinimalPadY: 8,
+                MinimalPadX: 10,
+                InnerGutterMm: 7,
                 MainInnerGutterMm: 8,
-                HeaderGapPt: 10,
+                HeaderGapPt: 7,
+                SpacePt: 1,
+                SpaceBlockPt: 2,
+                SpaceSectionPt: 4,
+                NameFontPt: 15,
                 // Hard floor: do not shrink photos below 96px (preview-parity AC).
                 ClassicPhotoPx: 96,
                 ModernPhotoPx: 96,
@@ -187,8 +214,12 @@ html body {
                 MinimalPadX: 20,
                 InnerGutterMm: 12,
                 MainInnerGutterMm: 14,
-                HeaderGapPt: 16,
-                ClassicPhotoPx: 140,
+                HeaderGapPt: 12,
+                SpacePt: 2,
+                SpaceBlockPt: 6,
+                SpaceSectionPt: 10,
+                NameFontPt: 20,
+                ClassicPhotoPx: 120,
                 ModernPhotoPx: 136,
                 MinimalPhotoPx: 128)
         };
@@ -209,6 +240,10 @@ html body {
         int InnerGutterMm,
         int MainInnerGutterMm,
         int HeaderGapPt,
+        int SpacePt,
+        int SpaceBlockPt,
+        int SpaceSectionPt,
+        int NameFontPt,
         int ClassicPhotoPx,
         int ModernPhotoPx,
         int MinimalPhotoPx);

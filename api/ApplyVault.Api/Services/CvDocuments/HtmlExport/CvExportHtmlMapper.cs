@@ -43,10 +43,12 @@ internal static class CvExportHtmlMapper
     {
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
 
-        if (resolvedTemplateId == 1)
+        if (resolvedTemplateId == 1 || resolvedTemplateId == 3)
         {
             var header = new StringBuilder();
             var main = new StringBuilder();
+            // Contact + Profile (both SectionType=Contact) must share name/channel dedupe.
+            var contactHeaderState = new ContactHeaderEmitState();
 
             foreach (var section in sections.Where(SectionHasContent))
             {
@@ -54,10 +56,12 @@ internal static class CvExportHtmlMapper
                 {
                     if (IsContactSection(section))
                     {
-                        AppendClassicContactHeader(header, section);
+                        AccumulateClassicContactHeader(section, contactHeaderState);
                     }
                     else
                     {
+                        // Flush contact block before Summary so name/channels stay above it.
+                        FlushClassicContactHeader(header, contactHeaderState);
                         AppendSection(header, section, compact: true);
                     }
                 }
@@ -67,38 +71,13 @@ internal static class CvExportHtmlMapper
                 }
             }
 
-            return (header.ToString(), string.Empty, main.ToString());
-        }
-
-        if (resolvedTemplateId == 3)
-        {
-            var header = new StringBuilder();
-            var main = new StringBuilder();
-
-            foreach (var section in sections.Where(SectionHasContent))
-            {
-                if (IsClassicHeaderSection(section))
-                {
-                    if (IsContactSection(section))
-                    {
-                        AppendClassicContactHeader(header, section);
-                    }
-                    else
-                    {
-                        AppendSection(header, section, compact: true);
-                    }
-                }
-                else
-                {
-                    AppendSection(main, section, compact: false);
-                }
-            }
-
+            FlushClassicContactHeader(header, contactHeaderState);
             return (header.ToString(), string.Empty, main.ToString());
         }
 
         var sidebar = new StringBuilder();
         var mainColumn = new StringBuilder();
+        var sidebarContactState = new ContactHeaderEmitState();
 
         foreach (var section in sections.Where(SectionHasContent))
         {
@@ -107,10 +86,11 @@ internal static class CvExportHtmlMapper
                 // Match Classic/Minimal contact emission: name + value lines (no Email/Phone labels).
                 if (IsContactSection(section))
                 {
-                    AppendClassicContactHeader(sidebar, section);
+                    AccumulateClassicContactHeader(section, sidebarContactState);
                 }
                 else
                 {
+                    FlushClassicContactHeader(sidebar, sidebarContactState);
                     AppendSection(sidebar, section, compact: true);
                 }
             }
@@ -120,7 +100,17 @@ internal static class CvExportHtmlMapper
             }
         }
 
+        FlushClassicContactHeader(sidebar, sidebarContactState);
         return (string.Empty, sidebar.ToString(), mainColumn.ToString());
+    }
+
+    private sealed class ContactHeaderEmitState
+    {
+        public HashSet<string> SeenContactValues { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public string? DisplayName { get; set; }
+        public StringBuilder ContactLines { get; } = new();
+        public bool NameEmitted { get; set; }
+        public bool HasPending { get; set; }
     }
 
     private static void AppendSections(StringBuilder builder, IEnumerable<CvExportSection> sections, bool compact)
@@ -131,20 +121,30 @@ internal static class CvExportHtmlMapper
         }
     }
 
-    private static void AppendClassicContactHeader(StringBuilder builder, CvExportSection section)
+    private static void AccumulateClassicContactHeader(
+        CvExportSection section,
+        ContactHeaderEmitState state)
     {
-        var seenContactValues = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var contactLines = new StringBuilder();
+        var normalized = NormalizeContactEntriesForExport(section);
+        var displayName = ResolveContactDisplayName(section, normalized);
 
-        foreach (var entry in NormalizeContactEntriesForExport(section))
+        // Keep the first non-empty display name; later Contact-typed sections (Profile)
+        // often repeat the same person name in a different casing.
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            state.SeenContactValues.Add(displayName);
+
+            if (!state.NameEmitted && string.IsNullOrWhiteSpace(state.DisplayName))
+            {
+                state.DisplayName = displayName;
+                state.HasPending = true;
+            }
+        }
+
+        foreach (var entry in normalized)
         {
             if (IsContactNameEntry(entry))
             {
-                if (!string.IsNullOrWhiteSpace(entry.Subtitle))
-                {
-                    builder.Append($"""<h1 class="cv-name">{RenderInline(entry.Subtitle)}</h1>""");
-                }
-
                 continue;
             }
 
@@ -155,22 +155,124 @@ internal static class CvExportHtmlMapper
                 continue;
             }
 
-            // Dedupe identical channel values (case-insensitive trim) so Minimal/Classic
-            // headers emit each phone/email/etc. string once even if entries duplicate.
-            if (!seenContactValues.Add(value))
+            // Strip common "Phone: " / "Email: " prefixes from import bullets so lines
+            // match FE channel values and dedupe cleanly across Contact + Profile.
+            value = StripContactChannelLabelPrefix(value);
+
+            if (string.IsNullOrWhiteSpace(value) || !state.SeenContactValues.Add(value))
             {
                 continue;
             }
 
-            contactLines.Append($"""<p class="cv-contact-line">{RenderInline(value)}</p>""");
+            state.ContactLines.Append($"""<p class="cv-contact-line">{RenderInline(value)}</p>""");
+            state.HasPending = true;
+        }
+    }
+
+    private static void FlushClassicContactHeader(StringBuilder builder, ContactHeaderEmitState state)
+    {
+        if (!state.HasPending)
+        {
+            return;
         }
 
-        if (contactLines.Length > 0)
+        state.HasPending = false;
+
+        if (!state.NameEmitted && !string.IsNullOrWhiteSpace(state.DisplayName))
+        {
+            builder.Append($"""<h1 class="cv-name">{RenderInline(state.DisplayName)}</h1>""");
+            state.NameEmitted = true;
+        }
+
+        if (state.ContactLines.Length > 0)
         {
             builder.Append("""<div class="cv-contact">""");
-            builder.Append(contactLines);
+            builder.Append(state.ContactLines);
             builder.Append("</div>");
         }
+
+        state.DisplayName = null;
+        state.ContactLines.Clear();
+        // Keep SeenContactValues + NameEmitted across flushes within the same column.
+    }
+
+    private static string StripContactChannelLabelPrefix(string value)
+    {
+        var trimmed = value.Trim();
+        var separators = new[] { ':', '：' };
+
+        foreach (var separator in separators)
+        {
+            var index = trimmed.IndexOf(separator);
+
+            if (index <= 0 || index >= trimmed.Length - 1)
+            {
+                continue;
+            }
+
+            var label = trimmed[..index].Trim();
+
+            if (IsKnownContactChannelLabel(label))
+            {
+                return trimmed[(index + 1)..].Trim();
+            }
+        }
+
+        return trimmed;
+    }
+
+    /// <summary>
+    /// Resolves the person name for Classic/Minimal headers (FE <c>resolveContactDisplayName</c>
+    /// + legacy title fill-the-gap parity). Prefer Name.subtitle; then legacy person-name Title.
+    /// </summary>
+    private static string? ResolveContactDisplayName(
+        CvExportSection section,
+        IReadOnlyList<CvExportEntry> normalizedEntries)
+    {
+        // Prefer modern Name.subtitle only — do not also fall through to legacy when present.
+        foreach (var entry in normalizedEntries)
+        {
+            if (IsContactNameEntry(entry) && !string.IsNullOrWhiteSpace(entry.Subtitle))
+            {
+                return entry.Subtitle.Trim();
+            }
+        }
+
+        foreach (var entry in section.Entries)
+        {
+            if (IsContactNameEntry(entry) && !string.IsNullOrWhiteSpace(entry.Subtitle))
+            {
+                return entry.Subtitle.Trim();
+            }
+        }
+
+        var hasModernNameEntry = normalizedEntries.Any(IsContactNameEntry)
+            || section.Entries.Any(IsContactNameEntry);
+
+        if (hasModernNameEntry)
+        {
+            // Modern Contact shape is present but subtitle empty — do not invent a second
+            // name from a channel title / leftover legacy title.
+            return null;
+        }
+
+        // Fill-the-gap: import-legacy person name living in Title (not the "Name" label).
+        foreach (var entry in section.Entries)
+        {
+            if (IsKnownContactChannelLabel(entry.Title))
+            {
+                continue;
+            }
+
+            var legacyName = ResolveLegacyContactName(entry);
+
+            if (!string.IsNullOrWhiteSpace(legacyName))
+            {
+                return legacyName;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -277,12 +379,22 @@ internal static class CvExportHtmlMapper
     {
         if (!string.IsNullOrWhiteSpace(entry.Subtitle))
         {
-            return entry.Subtitle.Trim();
+            // Only treat subtitle as a person name on Name / unlabeled legacy rows —
+            // not on Email/Phone channel entries that happen to have a subtitle.
+            if (IsContactNameEntry(entry)
+                || string.IsNullOrWhiteSpace(entry.Title)
+                || !IsKnownContactChannelLabel(entry.Title))
+            {
+                return entry.Subtitle.Trim();
+            }
         }
 
         var title = entry.Title?.Trim() ?? string.Empty;
 
-        if (title.Length == 0 || IsChannelShapedContactLine(title))
+        // FE resolveLegacyContactName: ignore empty, the "Name" label, and channel-shaped titles.
+        if (title.Length == 0
+            || title.Equals("Name", StringComparison.OrdinalIgnoreCase)
+            || IsChannelShapedContactLine(title))
         {
             return null;
         }

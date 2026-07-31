@@ -1,9 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
-using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
 
@@ -26,14 +24,16 @@ public interface ICvDocumentExportService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Exports the saved structured CV as HTML/PDF. No AI rewrite — FE canvas and BE export
+/// share the same structured payload (fill-the-gaps / layout only).
+/// </summary>
 public sealed class CvDocumentExportService(
     ICvStructuredDocumentService structuredDocumentService,
     ICvDocumentService cvDocumentService,
-    ICvExportAiClient exportAiClient,
     ICvExportRenderDispatcher exportRenderDispatcher,
     ICvExportHtmlDocumentBuilder htmlDocumentBuilder,
     ICvPdfPageCounter pdfPageCounter,
-    IOptions<GoogleAiOptions> googleAiOptions,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
 {
     public async Task<CvPdfExportResult> ExportPdfAsync(
@@ -42,8 +42,7 @@ public sealed class CvDocumentExportService(
         CancellationToken cancellationToken = default)
     {
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
-        var (renderRequest, usedAi, notice) = await BuildRenderRequestAsync(user, cancellationToken)
-            .ConfigureAwait(false);
+        var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
         var normalizedOptions = options with { TemplateId = resolvedTemplateId };
         var (compactLevel, pageCount, pdfBytes) = await ResolveCompactLevelAsync(
@@ -51,14 +50,14 @@ public sealed class CvDocumentExportService(
             normalizedOptions,
             cancellationToken).ConfigureAwait(false);
 
-        notice = AppendCompactNotices(notice, compactLevel, pageCount, normalizedOptions.MaxPages);
+        var notice = AppendCompactNotices(null, compactLevel, pageCount, normalizedOptions.MaxPages);
 
         return new CvPdfExportResult(
             pdfBytes,
             pageCount,
             normalizedOptions.MaxPages,
             ExceedsMaxPages(pageCount, normalizedOptions.MaxPages),
-            usedAi,
+            UsedAi: false,
             notice);
     }
 
@@ -68,14 +67,14 @@ public sealed class CvDocumentExportService(
         CancellationToken cancellationToken = default)
     {
         var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
-        var (renderRequest, _, notice) = await BuildRenderRequestAsync(user, cancellationToken)
-            .ConfigureAwait(false);
+        var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
         var normalizedOptions = options with { TemplateId = resolvedTemplateId };
 
         // Unlimited maxPages stays Normal (compact 0) without a Puppeteer search — same as PDF.
         // When maxPages is set, resolve via the shared PDF page-count ramp.
         int compactLevel;
+        string? notice = null;
         if (!normalizedOptions.MaxPages.HasValue)
         {
             compactLevel = 0;
@@ -97,7 +96,7 @@ public sealed class CvDocumentExportService(
         return new CvHtmlExportResult(html, resolvedTemplateId, compactLevel, notice);
     }
 
-    private async Task<(CvExportRenderRequest Request, bool UsedAi, string? Notice)> BuildRenderRequestAsync(
+    private async Task<CvExportRenderRequest> BuildRenderRequestAsync(
         AppUserEntity user,
         CancellationToken cancellationToken)
     {
@@ -125,35 +124,12 @@ public sealed class CvDocumentExportService(
             }
         }
 
-        var renderRequest = CvExportMapping.FromStructuredDocument(structured, profilePhotoBytes, profilePhotoContentType);
-        var usedAi = false;
-        string? notice = null;
+        logger.LogDebug(
+            "Exporting structured CV for user {UserId} with {SectionCount} sections (no AI polish).",
+            user.Id,
+            structured.Sections.Count);
 
-        if (googleAiOptions.Value.Enabled)
-        {
-            try
-            {
-                var aiInput = CvExportPolishPayloadBuilder.FromDocument(structured);
-                var polished = await exportAiClient.PolishAsync(aiInput, cancellationToken);
-
-                if (polished.Sections.Count > 0)
-                {
-                    renderRequest = CvExportMapping.FromImportResult(
-                        polished,
-                        structured,
-                        profilePhotoBytes,
-                        profilePhotoContentType);
-                    usedAi = true;
-                }
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                logger.LogWarning(exception, "CV export AI polish failed; falling back to saved structured content.");
-                notice = "AI polish was unavailable; exported using saved content.";
-            }
-        }
-
-        return (renderRequest, usedAi, notice);
+        return CvExportMapping.FromStructuredDocument(structured, profilePhotoBytes, profilePhotoContentType);
     }
 
     /// <summary>

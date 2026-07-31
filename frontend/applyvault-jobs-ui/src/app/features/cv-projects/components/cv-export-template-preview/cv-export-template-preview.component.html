@@ -6,7 +6,7 @@
   [attr.role]="editable() ? 'document' : 'img'"
   [attr.aria-label]="editable() ? 'Editable CV' : 'CV template preview'">
   <div class="cv-export-preview__page">
-    @if (templateId() === 1) {
+    @if (resolvedTemplateId() === 1) {
       <header class="cv-export-preview__classic-header">
         @if (profilePhotoUrl()) {
           <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
@@ -30,7 +30,7 @@
       <div class="cv-export-preview__main">
         <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
       </div>
-    } @else if (templateId() === 3) {
+    } @else if (resolvedTemplateId() === 3) {
       <div class="cv-export-preview__main cv-export-preview__main--single">
         <header class="cv-export-preview__minimal-header">
           <div class="cv-export-preview__minimal-header-copy">

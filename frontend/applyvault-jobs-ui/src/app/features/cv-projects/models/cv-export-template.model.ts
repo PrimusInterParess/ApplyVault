@@ -46,7 +46,8 @@ export const CV_EXPORT_MAX_PAGE_OPTIONS: readonly CvExportMaxPageOption[] = [
   { value: 2, label: '2 pages' }
 ] as const;
 
-export const DEFAULT_CV_EXPORT_MAX_PAGES: number | null = null;
+/** Default export target: fit to a single page (BE compact ramp). */
+export const DEFAULT_CV_EXPORT_MAX_PAGES: number | null = 1;
 
 export const CV_EXPORT_MAX_PAGES_STORAGE_KEY = 'applyvault.cvExportMaxPages';
 

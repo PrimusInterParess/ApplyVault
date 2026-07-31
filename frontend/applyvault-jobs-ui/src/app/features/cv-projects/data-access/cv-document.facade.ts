@@ -170,7 +170,8 @@ export class CvDocumentFacade {
       .upload(file)
       .pipe(
         switchMap((result) => {
-          this.setDocument(result.document);
+          // Keep optimistic gallery/edit Template selection; upload DTO may echo Classic.
+          this.setDocument(result.document, { applyExportPrefs: false });
           this.importSummary.set(result.import);
           this.loadProfilePhoto(result.document);
           return this.apiService.getStructured().pipe(
@@ -266,7 +267,8 @@ export class CvDocumentFacade {
     this.startBlankSubscription = this.apiService.startBlank().subscribe({
       next: (document) => {
         this.startingBlank.set(false);
-        this.setDocument(document);
+        // Keep optimistic gallery/edit Template selection; blank docs default to Classic.
+        this.setDocument(document, { applyExportPrefs: false });
         this.cvStructured.setStructured({
           documentId: document.id,
           structuredImportedAt: null,
@@ -298,7 +300,8 @@ export class CvDocumentFacade {
       .startBlank()
       .pipe(
         switchMap((document) => {
-          this.setDocument(document);
+          // Keep optimistic gallery/edit Template selection; blank docs default to Classic.
+          this.setDocument(document, { applyExportPrefs: false });
           return this.apiService.saveStructured(toSaveRequest(createBuilderStarterSections()));
         })
       )
@@ -312,12 +315,15 @@ export class CvDocumentFacade {
             this.document.set({
               ...current,
               hasStructuredContent: structured.sections.length > 0,
-              structuredImportedAt: structured.structuredImportedAt
+              structuredImportedAt: structured.structuredImportedAt,
+              templateId: this.selectedExportTemplateId(),
+              maxPages: this.selectedExportMaxPages()
             });
           }
 
           this.persistExportPrefs();
-          this.load();
+          // Do not load() here — getCurrent would re-apply server TemplateId (often Classic)
+          // and snap the edit/gallery selection before persistExportPrefs completes.
           onComplete?.();
         },
         error: (error) => {
@@ -954,15 +960,39 @@ export class CvDocumentFacade {
   }
 
   private applyExportPrefsFromDocument(document: CvDocument): void {
-    if (typeof document.templateId === 'number' && Number.isInteger(document.templateId)) {
+    // In-flight persistExportPrefs owns Template selection — do not snap back from a
+    // stale getCurrent / start-blank / upload echo (Classic default is a common culprit).
+    const prefsWriteInFlight =
+      this.exportPrefsSubscription !== null && !this.exportPrefsSubscription.closed;
+
+    if (
+      !prefsWriteInFlight &&
+      typeof document.templateId === 'number' &&
+      Number.isInteger(document.templateId)
+    ) {
       const normalized = normalizeCvExportTemplateId(document.templateId);
       this.selectedExportTemplateId.set(normalized);
       this.writeTemplateCache(normalized);
     }
 
-    // null = explicit no limit; server value wins over sessionStorage cache.
+    // Server value wins over session cache. Legacy null (unset) → 1-page default.
+    // Explicit "No limit" is preserved via session sentinel `none` when DB is still null.
     if (document.maxPages !== undefined) {
-      const normalized = this.normalizeExportMaxPages(document.maxPages);
+      let normalized: number | null;
+
+      if (document.maxPages === null) {
+        try {
+          normalized =
+            sessionStorage.getItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY) === 'none'
+              ? null
+              : DEFAULT_CV_EXPORT_MAX_PAGES;
+        } catch {
+          normalized = DEFAULT_CV_EXPORT_MAX_PAGES;
+        }
+      } else {
+        normalized = this.normalizeExportMaxPages(document.maxPages);
+      }
+
       this.selectedExportMaxPages.set(normalized);
       this.writeMaxPagesCache(normalized);
     }
@@ -1025,11 +1055,11 @@ export class CvDocumentFacade {
 
   private writeMaxPagesCache(maxPages: number | null): void {
     try {
-      if (maxPages === null) {
-        sessionStorage.removeItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY);
-      } else {
-        sessionStorage.setItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY, String(maxPages));
-      }
+      // Sentinel so explicit "No limit" is distinct from unset → default (1 page).
+      sessionStorage.setItem(
+        CV_EXPORT_MAX_PAGES_STORAGE_KEY,
+        maxPages === null ? 'none' : String(maxPages)
+      );
     } catch {
       // Ignore storage failures (private mode, quota, etc.).
     }
@@ -1080,8 +1110,12 @@ export class CvDocumentFacade {
         return DEFAULT_CV_EXPORT_MAX_PAGES;
       }
 
+      if (stored === 'none') {
+        return null;
+      }
+
       const parsed = Number.parseInt(stored, 10);
-      return this.normalizeExportMaxPages(Number.isInteger(parsed) ? parsed : null);
+      return this.normalizeExportMaxPages(Number.isInteger(parsed) ? parsed : DEFAULT_CV_EXPORT_MAX_PAGES);
     } catch {
       return DEFAULT_CV_EXPORT_MAX_PAGES;
     }

@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { switchMap, map } from 'rxjs/operators';
 
@@ -12,7 +12,7 @@ import {
   CV_EXPORT_TEMPLATE_STORAGE_KEY,
   DEFAULT_CV_EXPORT_MAX_PAGES,
   DEFAULT_CV_EXPORT_TEMPLATE_ID,
-  MAX_CV_EXPORT_TEMPLATE_ID
+  normalizeCvExportTemplateId
 } from '../models/cv-export-template.model';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
@@ -33,6 +33,8 @@ export class CvDocumentFacade {
   private downloadOriginalSubscription: Subscription | null = null;
   private downloadFormattedSubscription: Subscription | null = null;
   private downloadFormattedFileSubscription: Subscription | null = null;
+  private exportHtmlPreviewSubscription: Subscription | null = null;
+  private exportPrefsSubscription: Subscription | null = null;
   private profilePhotoSubscription: Subscription | null = null;
   private profilePhotoUploadSubscription: Subscription | null = null;
   private profilePhotoDeleteSubscription: Subscription | null = null;
@@ -49,6 +51,7 @@ export class CvDocumentFacade {
   readonly downloadingOriginal = signal(false);
   readonly downloadingFormatted = signal(false);
   readonly previewLoading = signal(false);
+  readonly exportHtmlPreviewLoading = signal(false);
   readonly loadingProfilePhoto = signal(false);
   readonly uploadingProfilePhoto = signal(false);
   readonly deletingProfilePhoto = signal(false);
@@ -62,6 +65,7 @@ export class CvDocumentFacade {
   readonly downloadOriginalError = signal<string | null>(null);
   readonly downloadFormattedError = signal<string | null>(null);
   readonly previewError = signal<string | null>(null);
+  readonly exportHtmlPreviewError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
   readonly selectedExportTemplateId = signal(this.readStoredExportTemplateId());
@@ -72,6 +76,8 @@ export class CvDocumentFacade {
   readonly previewExceedsLimit = signal(false);
   readonly previewNotice = signal<string | null>(null);
   readonly previewBlobUrl = signal<SafeResourceUrl | null>(null);
+  /** Sandboxed iframe srcdoc for M1 fidelity preview (strategy A). */
+  readonly exportHtmlPreviewSrcdoc = signal<SafeHtml | null>(null);
 
   readonly hasDocument = computed(() => this.document() !== null);
 
@@ -102,6 +108,7 @@ export class CvDocumentFacade {
     effect(() => {
       this.cvStructured.structured();
       this.clearFormattedPreview();
+      this.clearExportHtmlPreview();
     });
   }
 
@@ -113,7 +120,7 @@ export class CvDocumentFacade {
     this.loadSubscription = this.apiService.getCurrent().subscribe({
       next: (document) => {
         this.loading.set(false);
-        this.document.set(document);
+        this.setDocument(document);
         this.loadProfilePhoto(document);
       },
       error: (error) => {
@@ -146,7 +153,7 @@ export class CvDocumentFacade {
       .upload(file)
       .pipe(
         switchMap((result) => {
-          this.document.set(result.document);
+          this.setDocument(result.document);
           this.importSummary.set(result.import);
           this.loadProfilePhoto(result.document);
           return this.apiService.getStructured().pipe(
@@ -158,6 +165,7 @@ export class CvDocumentFacade {
         next: ({ structured }) => {
           this.uploading.set(false);
           this.cvStructured.setStructured(hydrateStructuredDocument(structured));
+          this.persistExportPrefs();
           onComplete?.();
         },
         error: (error) => {
@@ -241,12 +249,13 @@ export class CvDocumentFacade {
     this.startBlankSubscription = this.apiService.startBlank().subscribe({
       next: (document) => {
         this.startingBlank.set(false);
-        this.document.set(document);
+        this.setDocument(document);
         this.cvStructured.setStructured({
           documentId: document.id,
           structuredImportedAt: null,
           sections: []
         });
+        this.persistExportPrefs();
       },
       error: (error) => {
         this.startingBlank.set(false);
@@ -272,7 +281,7 @@ export class CvDocumentFacade {
       .startBlank()
       .pipe(
         switchMap((document) => {
-          this.document.set(document);
+          this.setDocument(document);
           return this.apiService.saveStructured(toSaveRequest(createBuilderStarterSections()));
         })
       )
@@ -290,6 +299,7 @@ export class CvDocumentFacade {
             });
           }
 
+          this.persistExportPrefs();
           this.load();
           onComplete?.();
         },
@@ -336,29 +346,73 @@ export class CvDocumentFacade {
   }
 
   setExportTemplateId(templateId: number): void {
-    this.selectedExportTemplateId.set(templateId);
+    const normalized = normalizeCvExportTemplateId(templateId);
+    this.selectedExportTemplateId.set(normalized);
     this.clearFormattedPreview();
-
-    try {
-      sessionStorage.setItem(CV_EXPORT_TEMPLATE_STORAGE_KEY, String(templateId));
-    } catch {
-      // Ignore storage failures (private mode, quota, etc.).
-    }
+    this.clearExportHtmlPreview();
+    this.writeTemplateCache(normalized);
+    this.persistExportPrefs();
   }
 
   setExportMaxPages(maxPages: number | null): void {
-    this.selectedExportMaxPages.set(maxPages);
+    const normalized = this.normalizeExportMaxPages(maxPages);
+    this.selectedExportMaxPages.set(normalized);
     this.clearFormattedPreview();
+    this.clearExportHtmlPreview();
+    this.writeMaxPagesCache(normalized);
+    this.persistExportPrefs();
+  }
 
-    try {
-      if (maxPages === null) {
-        sessionStorage.removeItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY);
-      } else {
-        sessionStorage.setItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY, String(maxPages));
-      }
-    } catch {
-      // Ignore storage failures (private mode, quota, etc.).
+  /**
+   * Load server HTML for the sandboxed fidelity iframe.
+   * Same templateId + maxPages as PDF download so compact CSS matches export.
+   */
+  refreshExportHtmlPreview(): void {
+    if (!this.canExportFormatted()) {
+      this.clearExportHtmlPreview();
+      this.exportHtmlPreviewError.set(
+        this.document()
+          ? 'Save your CV sections before loading the export preview.'
+          : 'Create or upload a CV before loading the export preview.'
+      );
+      return;
     }
+
+    const templateId = this.selectedExportTemplateId();
+    const maxPages = this.selectedExportMaxPages();
+
+    this.cancelExportHtmlPreview();
+    this.exportHtmlPreviewLoading.set(true);
+    this.exportHtmlPreviewError.set(null);
+    this.exportHtmlPreviewSrcdoc.set(null);
+
+    this.exportHtmlPreviewSubscription = this.apiService
+      .getExportPreviewHtml({ templateId, maxPages })
+      .subscribe({
+        next: (html) => {
+          this.exportHtmlPreviewLoading.set(false);
+          this.exportHtmlPreviewSrcdoc.set(this.sanitizer.bypassSecurityTrustHtml(html));
+        },
+        error: (error) => {
+          this.exportHtmlPreviewLoading.set(false);
+          this.exportHtmlPreviewSrcdoc.set(null);
+
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          if (error instanceof HttpErrorResponse && error.status === 404) {
+            this.exportHtmlPreviewError.set(
+              'Export preview is not available yet. Structure editing still works; PDF download uses the export endpoint.'
+            );
+            return;
+          }
+
+          this.exportHtmlPreviewError.set(
+            this.readErrorMessage(error, 'Could not load the export HTML preview.')
+          );
+        }
+      });
   }
 
   downloadFormatted(): void {
@@ -486,11 +540,12 @@ export class CvDocumentFacade {
     this.uploadingProfilePhoto.set(true);
     this.profilePhotoError.set(null);
     this.clearFormattedPreview();
+    this.clearExportHtmlPreview();
 
     this.profilePhotoUploadSubscription = this.apiService.uploadProfilePhoto(file).subscribe({
       next: (document) => {
         this.uploadingProfilePhoto.set(false);
-        this.document.set(document);
+        this.setDocument(document);
         this.loadProfilePhoto(document);
       },
       error: (error) => {
@@ -514,11 +569,12 @@ export class CvDocumentFacade {
     this.deletingProfilePhoto.set(true);
     this.profilePhotoError.set(null);
     this.clearFormattedPreview();
+    this.clearExportHtmlPreview();
 
     this.profilePhotoDeleteSubscription = this.apiService.deleteProfilePhoto().subscribe({
       next: (document) => {
         this.deletingProfilePhoto.set(false);
-        this.document.set(document);
+        this.setDocument(document);
         this.clearProfilePhoto();
       },
       error: (error) => {
@@ -615,6 +671,13 @@ export class CvDocumentFacade {
     this.clearFormattedPreviewBlob();
   }
 
+  private clearExportHtmlPreview(): void {
+    this.cancelExportHtmlPreview();
+    this.exportHtmlPreviewLoading.set(false);
+    this.exportHtmlPreviewError.set(null);
+    this.exportHtmlPreviewSrcdoc.set(null);
+  }
+
   private clearFormattedPreviewBlob(): void {
     if (this.previewObjectUrl) {
       URL.revokeObjectURL(this.previewObjectUrl);
@@ -634,9 +697,12 @@ export class CvDocumentFacade {
     this.cancelDownloadOriginal();
     this.cancelDownloadFormatted();
     this.cancelDownloadFormattedFile();
+    this.cancelExportHtmlPreview();
+    this.cancelExportPrefs();
     this.cancelProfilePhotoUpload();
     this.cancelProfilePhotoDelete();
     this.clearFormattedPreview();
+    this.clearExportHtmlPreview();
     this.clearProfilePhoto();
     this.loading.set(false);
     this.uploading.set(false);
@@ -646,6 +712,7 @@ export class CvDocumentFacade {
     this.downloadingOriginal.set(false);
     this.downloadingFormatted.set(false);
     this.previewLoading.set(false);
+    this.exportHtmlPreviewLoading.set(false);
     this.uploadingProfilePhoto.set(false);
     this.deletingProfilePhoto.set(false);
     this.document.set(null);
@@ -658,6 +725,7 @@ export class CvDocumentFacade {
     this.downloadOriginalError.set(null);
     this.downloadFormattedError.set(null);
     this.previewError.set(null);
+    this.exportHtmlPreviewError.set(null);
   }
 
   private cancelLoad(): void {
@@ -700,6 +768,16 @@ export class CvDocumentFacade {
     this.downloadFormattedFileSubscription = null;
   }
 
+  private cancelExportHtmlPreview(): void {
+    this.exportHtmlPreviewSubscription?.unsubscribe();
+    this.exportHtmlPreviewSubscription = null;
+  }
+
+  private cancelExportPrefs(): void {
+    this.exportPrefsSubscription?.unsubscribe();
+    this.exportPrefsSubscription = null;
+  }
+
   private cancelProfilePhoto(): void {
     this.profilePhotoSubscription?.unsubscribe();
     this.profilePhotoSubscription = null;
@@ -724,6 +802,112 @@ export class CvDocumentFacade {
     URL.revokeObjectURL(url);
   }
 
+  /**
+   * Apply document metadata and prefer server templateId/maxPages over sessionStorage.
+   */
+  private setDocument(document: CvDocument): void {
+    this.document.set(document);
+    this.applyExportPrefsFromDocument(document);
+  }
+
+  private applyExportPrefsFromDocument(document: CvDocument): void {
+    if (typeof document.templateId === 'number' && Number.isInteger(document.templateId)) {
+      const normalized = normalizeCvExportTemplateId(document.templateId);
+      this.selectedExportTemplateId.set(normalized);
+      this.writeTemplateCache(normalized);
+    }
+
+    // null = explicit no limit; server value wins over sessionStorage cache.
+    if (document.maxPages !== undefined) {
+      const normalized = this.normalizeExportMaxPages(document.maxPages);
+      this.selectedExportMaxPages.set(normalized);
+      this.writeMaxPagesCache(normalized);
+    }
+  }
+
+  /** Persist current selection to API when a document exists; sessionStorage remains cache. */
+  private persistExportPrefs(): void {
+    if (!this.document()) {
+      return;
+    }
+
+    const templateId = this.selectedExportTemplateId();
+    const maxPages = this.selectedExportMaxPages();
+
+    this.cancelExportPrefs();
+    this.exportPrefsSubscription = this.apiService
+      .updateExportPrefs({ templateId, maxPages })
+      .subscribe({
+        next: (document) => {
+          // Update metadata without re-applying prefs (avoids echo loops on normalize).
+          this.document.set(document);
+
+          if (typeof document.templateId === 'number' && Number.isInteger(document.templateId)) {
+            const normalized = normalizeCvExportTemplateId(document.templateId);
+
+            if (normalized !== this.selectedExportTemplateId()) {
+              this.selectedExportTemplateId.set(normalized);
+              this.writeTemplateCache(normalized);
+            }
+          }
+
+          if (document.maxPages !== undefined) {
+            const normalized = this.normalizeExportMaxPages(document.maxPages);
+
+            if (normalized !== this.selectedExportMaxPages()) {
+              this.selectedExportMaxPages.set(normalized);
+              this.writeMaxPagesCache(normalized);
+            }
+          }
+        },
+        error: (error) => {
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          // Soft-fail non-success; local + sessionStorage cache still drive export/preview.
+          if (
+            error instanceof HttpErrorResponse &&
+            (error.status === 404 || error.status === 405 || error.status === 501)
+          ) {
+            return;
+          }
+
+          // Soft-fail other errors; export/preview still use in-memory selection.
+        }
+      });
+  }
+
+  private writeTemplateCache(templateId: number): void {
+    try {
+      sessionStorage.setItem(CV_EXPORT_TEMPLATE_STORAGE_KEY, String(templateId));
+    } catch {
+      // Ignore storage failures (private mode, quota, etc.).
+    }
+  }
+
+  private writeMaxPagesCache(maxPages: number | null): void {
+    try {
+      if (maxPages === null) {
+        sessionStorage.removeItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(CV_EXPORT_MAX_PAGES_STORAGE_KEY, String(maxPages));
+      }
+    } catch {
+      // Ignore storage failures (private mode, quota, etc.).
+    }
+  }
+
+  private normalizeExportMaxPages(maxPages: number | null): number | null {
+    if (maxPages === null) {
+      return null;
+    }
+
+    return Number.isInteger(maxPages) && maxPages >= 1 && maxPages <= 2
+      ? maxPages
+      : DEFAULT_CV_EXPORT_MAX_PAGES;
+  }
+
   private readStoredExportTemplateId(): number {
     try {
       const stored = sessionStorage.getItem(CV_EXPORT_TEMPLATE_STORAGE_KEY);
@@ -734,9 +918,18 @@ export class CvDocumentFacade {
 
       const parsed = Number.parseInt(stored, 10);
 
-      return Number.isInteger(parsed) && parsed >= 1 && parsed <= MAX_CV_EXPORT_TEMPLATE_ID
-        ? parsed
-        : DEFAULT_CV_EXPORT_TEMPLATE_ID;
+      if (!Number.isInteger(parsed)) {
+        return DEFAULT_CV_EXPORT_TEMPLATE_ID;
+      }
+
+      const normalized = normalizeCvExportTemplateId(parsed);
+
+      // Persist remap so legacy ids 4/5 (and unknowns) become Classic in sessionStorage.
+      if (normalized !== parsed) {
+        this.writeTemplateCache(normalized);
+      }
+
+      return normalized;
     } catch {
       return DEFAULT_CV_EXPORT_TEMPLATE_ID;
     }
@@ -751,10 +944,7 @@ export class CvDocumentFacade {
       }
 
       const parsed = Number.parseInt(stored, 10);
-
-      return Number.isInteger(parsed) && parsed >= 1 && parsed <= 2
-        ? parsed
-        : DEFAULT_CV_EXPORT_MAX_PAGES;
+      return this.normalizeExportMaxPages(Number.isInteger(parsed) ? parsed : null);
     } catch {
       return DEFAULT_CV_EXPORT_MAX_PAGES;
     }

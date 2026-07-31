@@ -1,12 +1,7 @@
-using ApplyVault.Api.Options;
-using Microsoft.Extensions.Options;
-
 namespace ApplyVault.Api.Services.HtmlExport;
 
 public sealed class CvExportRenderDispatcher(
-    ICvPdfExportRenderer questPdfRenderer,
-    ICvHtmlCvPdfExporter htmlCvPdfExporter,
-    IOptions<CvHtmlExportOptions> htmlExportOptions) : ICvExportRenderDispatcher
+    ICvHtmlCvPdfExporter htmlCvPdfExporter) : ICvExportRenderDispatcher
 {
     public Task<byte[]> RenderAsync(
         CvExportRenderRequest request,
@@ -14,16 +9,10 @@ public sealed class CvExportRenderDispatcher(
         CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        if (templateId == 1 || !CvExportHtmlTemplateCatalog.UsesHtmlRenderer(templateId))
-        {
-            return Task.FromResult(questPdfRenderer.Render(request, options));
-        }
+        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
 
-        if (!htmlExportOptions.Value.EnableHtmlTemplates)
-        {
-            return Task.FromResult(questPdfRenderer.Render(request, options));
-        }
-
-        return htmlCvPdfExporter.ExportAsync(request, templateId, options, cancellationToken);
+        // M1: QuestPDF retired from the v1 supported set (ids 1–3). EnableHtmlTemplates
+        // remains the Chromium startup/ops switch; PDF export for 1–3 always uses HTML.
+        return htmlCvPdfExporter.ExportAsync(request, resolvedTemplateId, options, cancellationToken);
     }
 }

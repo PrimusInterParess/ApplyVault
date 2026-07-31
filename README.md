@@ -23,7 +23,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Persist generated CV project summaries per user (title, summary, bullets, tech stack) with regenerate and delete; summaries are removed when GitHub is disconnected.
 - Upload one PDF CV per user from the dashboard, store the file on local disk or Azure Blob Storage, and auto-extract structured sections on upload (Google AI with heuristic fallback) plus optional profile-photo extraction.
 - Edit structured CV sections (Experience, Projects, Education, Skills, Summary, Custom) with inline editing, drag-and-drop reorder, re-import from the stored PDF, Google AI section updates, and reviewable improvement suggestions.
-- Export a formatted PDF from structured CV content using selectable HTML templates (Classic, Modern, Minimal ATS, Creative, Professional).
+- Export a formatted PDF from structured CV content using selectable HTML templates (Classic, Modern, Minimal).
 - Preview the original uploaded PDF in the browser with replace and delete flows.
 - Connect a Gmail mailbox from settings and poll for job-related emails with a hosted background sync worker.
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
@@ -213,7 +213,7 @@ Option sections (validated at startup when enabled):
 - `CvDocumentStorage`
   Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object and triggers structured re-import.
 - `CvHtmlExport`
-  Controls HTML-template PDF export (`EnableHtmlTemplates`, `TemplatesSubfolder`, `MaxConcurrentExports`). Templates are numbered 1–5 (Classic through Professional).
+  Controls HTML-template PDF export (`EnableHtmlTemplates`, `TemplatesSubfolder`, `MaxConcurrentExports`). Templates are numbered 1–3 (Classic, Modern, Minimal); unknown ids normalize to Classic.
 - `ConnectionStrings:Redis`
   Optional shared Redis for EURES/Jobnet ranked-result caches and Gmail sync locking when running more than one API replica. Omit for single-replica local dev (in-memory cache and in-process lock fallback).
 - `Cors`

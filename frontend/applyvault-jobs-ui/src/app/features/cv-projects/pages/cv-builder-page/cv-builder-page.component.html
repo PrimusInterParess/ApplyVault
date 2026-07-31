@@ -21,7 +21,7 @@
         <p class="cv-builder__eyebrow">Templates</p>
         <h1 class="cv-builder__title">Design your CV</h1>
         <p class="cv-builder__lead">
-          Choose a layout. You’ll edit text directly on the page — like a document, not a form.
+          Choose a layout. Edit content in Structure and Content; the canvas shows an export-faithful preview.
         </p>
         @if (hasStructuredCv()) {
           <button type="button" class="cv-builder__text-btn" (click)="continueEditing()">
@@ -146,90 +146,22 @@
             <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
             <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">+</button>
           </div>
-          <div class="cv-builder__structure">
-            <button
-              type="button"
-              class="cv-builder__ghost-btn"
-              [attr.aria-expanded]="structureOpen()"
-              aria-controls="cv-builder-structure-panel"
-              (click)="toggleStructure()">
-              Structure
-            </button>
-            @if (structureOpen()) {
-              <div
-                id="cv-builder-structure-panel"
-                class="cv-builder__structure-panel"
-                role="dialog"
-                aria-label="CV section structure">
-                <div class="cv-builder__structure-head">
-                  <p class="cv-builder__structure-title">Sections</p>
-                  <button type="button" class="cv-builder__icon-btn" (click)="closeStructure()" aria-label="Close structure">
-                    ×
-                  </button>
-                </div>
-                @if (sections().length === 0) {
-                  <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
-                } @else {
-                  <ul class="cv-builder__structure-list">
-                    @for (section of sections(); track section.id) {
-                      <li class="cv-builder__structure-item">
-                        <span class="cv-builder__structure-label">
-                          <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
-                          <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
-                        </span>
-                        <span class="cv-builder__structure-actions">
-                          <button
-                            type="button"
-                            class="cv-builder__icon-btn"
-                            [disabled]="!canMoveSectionUp(section.id)"
-                            aria-label="Move section up"
-                            (click)="moveSection(section.id, -1)">
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            class="cv-builder__icon-btn"
-                            [disabled]="!canMoveSectionDown(section.id)"
-                            aria-label="Move section down"
-                            (click)="moveSection(section.id, 1)">
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            class="cv-builder__structure-remove"
-                            aria-label="Remove section"
-                            (click)="removeSection(section.id)">
-                            Remove
-                          </button>
-                        </span>
-                      </li>
-                    }
-                  </ul>
-                }
-                <div class="cv-builder__structure-add">
-                  <label class="cv-builder__structure-add-field">
-                    <span class="cv-builder__sr-only">Section type</span>
-                    <select
-                      class="cv-builder__structure-select"
-                      [value]="pendingAddSectionType()"
-                      [disabled]="structureSectionTypes().length === 0"
-                      (change)="onPendingAddSectionTypeChange($event)">
-                      @for (sectionType of structureSectionTypes(); track sectionType) {
-                        <option [value]="sectionType">{{ sectionType }}</option>
-                      }
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    class="cv-builder__structure-add-btn"
-                    [disabled]="structureSectionTypes().length === 0"
-                    (click)="addSectionFromStructure()">
-                    Add section
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
+          <button
+            type="button"
+            class="cv-builder__ghost-btn"
+            [attr.aria-expanded]="structureOpen()"
+            aria-controls="cv-builder-structure-panel"
+            (click)="toggleStructure()">
+            Structure
+          </button>
+          <button
+            type="button"
+            class="cv-builder__ghost-btn"
+            [attr.aria-expanded]="contentOpen()"
+            aria-controls="cv-builder-content-panel"
+            (click)="toggleContent()">
+            Content
+          </button>
           <div class="cv-builder__projects">
             <button
               type="button"
@@ -329,6 +261,13 @@
               </div>
             }
           </div>
+          <button
+            type="button"
+            class="cv-builder__ghost-btn"
+            [disabled]="cvDocument.exportHtmlPreviewLoading()"
+            (click)="refreshFidelityPreview()">
+            {{ cvDocument.exportHtmlPreviewLoading() ? 'Refreshing…' : 'Refresh preview' }}
+          </button>
           <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
           <button
             type="button"
@@ -387,15 +326,15 @@
       </header>
 
       <div class="cv-builder__desk-scroll">
-        <p class="cv-builder__desk-hint">Click any text to edit · Structure to add or reorder · Projects to import summaries · autosaves</p>
+        <p class="cv-builder__desk-hint">
+          Canvas is export preview · Structure / Content to edit · Projects to import · autosaves
+        </p>
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">
-            <app-cv-export-template-preview
-              [templateId]="selectedTemplateId()"
-              [sections]="sections()"
-              [editable]="true"
-              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
-              (inlineEdit)="onInlineEdit($event)" />
+            <app-cv-export-html-preview
+              [srcdoc]="cvDocument.exportHtmlPreviewSrcdoc()"
+              [loading]="cvDocument.exportHtmlPreviewLoading()"
+              [error]="cvDocument.exportHtmlPreviewError()" />
           </div>
         </div>
       </div>
@@ -403,11 +342,138 @@
       <button
         type="button"
         class="cv-builder__fab"
-        [class.cv-builder__fab--hidden]="assistOpen()"
+        [class.cv-builder__fab--hidden]="assistOpen() || structureOpen() || contentOpen()"
         (click)="openAssist()"
         aria-label="Open AI assist">
         AI
       </button>
+
+      @if (structureOpen()) {
+        <div
+          class="cv-builder__drawer-backdrop"
+          role="presentation"
+          (click)="closeStructure()"></div>
+        <aside
+          id="cv-builder-structure-panel"
+          class="cv-builder__drawer cv-builder__drawer--structure"
+          role="dialog"
+          aria-modal="true"
+          aria-label="CV section structure">
+          <header class="cv-builder__drawer-header">
+            <div class="cv-builder__drawer-heading">
+              <p class="cv-builder__drawer-eyebrow">Structure</p>
+              <h2 class="cv-builder__drawer-title">Sections</h2>
+            </div>
+            <button
+              type="button"
+              class="cv-builder__drawer-close"
+              (click)="closeStructure()"
+              aria-label="Close structure">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+          <div class="cv-builder__drawer-body">
+            @if (sections().length === 0) {
+              <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
+            } @else {
+              <ul class="cv-builder__structure-list">
+                @for (section of sections(); track section.id) {
+                  <li class="cv-builder__structure-item">
+                    <span class="cv-builder__structure-label">
+                      <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
+                      <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
+                    </span>
+                    <span class="cv-builder__structure-actions">
+                      <button
+                        type="button"
+                        class="cv-builder__icon-btn"
+                        [disabled]="!canMoveSectionUp(section.id)"
+                        aria-label="Move section up"
+                        (click)="moveSection(section.id, -1)">
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        class="cv-builder__icon-btn"
+                        [disabled]="!canMoveSectionDown(section.id)"
+                        aria-label="Move section down"
+                        (click)="moveSection(section.id, 1)">
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        class="cv-builder__structure-remove"
+                        aria-label="Remove section"
+                        (click)="removeSection(section.id)">
+                        Remove
+                      </button>
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="cv-builder__structure-add">
+              <label class="cv-builder__structure-add-field">
+                <span class="cv-builder__sr-only">Section type</span>
+                <select
+                  class="cv-builder__structure-select"
+                  [value]="pendingAddSectionType()"
+                  [disabled]="structureSectionTypes().length === 0"
+                  (change)="onPendingAddSectionTypeChange($event)">
+                  @for (sectionType of structureSectionTypes(); track sectionType) {
+                    <option [value]="sectionType">{{ sectionType }}</option>
+                  }
+                </select>
+              </label>
+              <button
+                type="button"
+                class="cv-builder__structure-add-btn"
+                [disabled]="structureSectionTypes().length === 0"
+                (click)="addSectionFromStructure()">
+                Add section
+              </button>
+            </div>
+          </div>
+        </aside>
+      }
+
+      @if (contentOpen()) {
+        <div
+          class="cv-builder__drawer-backdrop"
+          role="presentation"
+          (click)="closeContent()"></div>
+        <aside
+          id="cv-builder-content-panel"
+          class="cv-builder__drawer cv-builder__drawer--content"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit CV content">
+          <header class="cv-builder__drawer-header">
+            <div class="cv-builder__drawer-heading">
+              <p class="cv-builder__drawer-eyebrow">Content</p>
+              <h2 class="cv-builder__drawer-title">Edit content</h2>
+            </div>
+            <button
+              type="button"
+              class="cv-builder__drawer-close"
+              (click)="closeContent()"
+              aria-label="Close content editor">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+          <p class="cv-builder__drawer-hint">
+            Edit entries here. The canvas shows the export preview after save.
+          </p>
+          <div class="cv-builder__drawer-body cv-builder__content-editor">
+            <app-cv-export-template-preview
+              [templateId]="selectedTemplateId()"
+              [sections]="sections()"
+              [editable]="true"
+              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
+              (inlineEdit)="onInlineEdit($event)" />
+          </div>
+        </aside>
+      }
     </div>
   }
 

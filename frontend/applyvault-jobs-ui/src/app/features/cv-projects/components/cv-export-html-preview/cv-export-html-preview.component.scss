@@ -1,0 +1,34 @@
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+}
+
+.cv-html-preview {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36rem;
+  background: #fff;
+}
+
+.cv-html-preview__frame {
+  display: block;
+  width: 100%;
+  min-height: 36rem;
+  height: 52rem;
+  border: 0;
+  background: #fff;
+}
+
+.cv-html-preview__status {
+  margin: 0;
+  padding: 2rem 1.25rem;
+  color: #5b6575;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.cv-html-preview__status--error {
+  color: #8a2b2b;
+}

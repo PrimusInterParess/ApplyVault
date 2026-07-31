@@ -6,78 +6,7 @@
   [attr.role]="editable() ? 'document' : 'img'"
   [attr.aria-label]="editable() ? 'Editable CV' : 'CV template preview'">
   <div class="cv-export-preview__page">
-    @if (templateId() === 5) {
-      <header class="cv-export-preview__pro-header">
-        @if (profilePhotoUrl()) {
-          <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
-        } @else if (sampleMode() && !editable()) {
-          <div class="cv-export-preview__photo cv-export-preview__photo--placeholder" aria-hidden="true"></div>
-        }
-        <div class="cv-export-preview__pro-header-copy">
-          @if (editable() && contactNameEntry(); as nameEntry) {
-            <h1
-              class="cv-export-preview__name cv-export-preview__editable"
-              [appInlineEditableText]="contactNameText(nameEntry)"
-              [enabled]="true"
-              data-placeholder="Your name"
-              (textChange)="emitContactName(nameEntry, $event)"></h1>
-          } @else {
-            <h1 class="cv-export-preview__name">{{ displayName() }}</h1>
-          }
-          @if (layout().header.length > 0) {
-            @for (section of layout().header; track section.id) {
-              @if (isContactSection(section)) {
-                @if (editable()) {
-                  <div class="cv-export-preview__contact-fields">
-                    @for (entry of visibleContactEntries(section); track entry.id) {
-                      <div class="cv-export-preview__contact-field">
-                        <span
-                          class="cv-export-preview__editable cv-export-preview__editable--inline"
-                          [appInlineEditableText]="contactValue(entry)"
-                          [enabled]="true"
-                          [attr.data-placeholder]="contactPlaceholder(entry)"
-                          (textChange)="emitBullet(section.id, entry.id, 0, $event)"></span>
-                        @if (canRemoveEntry(section, entry)) {
-                          <button
-                            type="button"
-                            class="cv-export-preview__entry-remove"
-                            aria-label="Remove contact"
-                            (click)="emitRemoveEntry(section.id, entry.id)">
-                            ×
-                          </button>
-                        }
-                      </div>
-                    }
-                    <button
-                      type="button"
-                      class="cv-export-preview__contact-add-btn"
-                      aria-label="Add contact"
-                      (click)="emitAddEntry(section.id)">
-                      +
-                    </button>
-                  </div>
-                } @else {
-                  <p class="cv-export-preview__contact-line">
-                    @for (line of contactLines(section); track line; let last = $last) {
-                      <span>{{ line }}</span>@if (!last) {<span class="cv-export-preview__contact-sep"> · </span>}
-                    }
-                  </p>
-                }
-              }
-            }
-          } @else if (sampleMode()) {
-            <p class="cv-export-preview__contact-line">
-              <span>alex&#64;example.com</span>
-              <span class="cv-export-preview__contact-sep"> · </span>
-              <span>Copenhagen</span>
-            </p>
-          }
-        </div>
-      </header>
-      <div class="cv-export-preview__main">
-        <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
-      </div>
-    } @else if (templateId() === 1) {
+    @if (templateId() === 1) {
       <header class="cv-export-preview__classic-header">
         @if (profilePhotoUrl()) {
           <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />

@@ -108,8 +108,8 @@ export class CvExportTemplatePreviewComponent {
   }
 
   protected showContactNameInSection(section: CvStructuredSection): boolean {
-    // Templates 1 and 5 already edit the name in the page header.
-    return this.isContactSection(section) && this.templateId() !== 1 && this.templateId() !== 5;
+    // Classic (1) already edits the name in the page header.
+    return this.isContactSection(section) && this.templateId() !== 1;
   }
 
   protected visibleContactEntries(section: CvStructuredSection): readonly CvStructuredEntry[] {

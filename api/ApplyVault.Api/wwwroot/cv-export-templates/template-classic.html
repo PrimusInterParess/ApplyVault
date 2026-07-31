@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CV</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      margin: 0;
+      padding: 0;
+      color: #111;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .cv-classic {
+      padding: 0;
+    }
+    .cv-header {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid #111;
+    }
+    .cv-photo {
+      flex: 0 0 auto;
+      width: 96px;
+      height: 96px;
+      object-fit: cover;
+    }
+    .cv-header-copy {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .cv-name {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .cv-tagline {
+      margin: 4px 0 8px;
+      font-size: 13px;
+      color: #333;
+    }
+    .cv-contact {
+      margin: 0;
+    }
+    .cv-contact-line {
+      margin: 0 0 2px;
+      font-size: 12px;
+      color: #444;
+    }
+    .cv-main {
+      padding: 0;
+    }
+    .section { margin-bottom: 16px; }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid #111;
+      padding-bottom: 3px;
+      margin: 0 0 10px;
+    }
+    .entry { margin-bottom: 12px; }
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+    }
+    .entry-title { font-weight: 700; }
+    .entry-date { font-size: 12px; color: #444; }
+    .entry-subtitle { font-style: italic; margin-top: 2px; }
+    .entry-summary { margin: 6px 0 0; }
+    .entry-bullets { margin: 6px 0 0 20px; padding: 0; }
+    .entry-bullets li { margin-bottom: 3px; }
+    .entry-tech { font-size: 12px; color: #333; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="cv-classic">
+    <header class="cv-header">
+      {{ProfilePhotoHtml}}
+      <div class="cv-header-copy">
+        {{HeaderHtml}}
+      </div>
+    </header>
+    <main class="cv-main">
+      {{MainHtml}}
+    </main>
+  </div>
+</body>
+</html>

@@ -73,21 +73,6 @@ export function partitionSectionsForTemplate(
     return { header: [], sidebar: [], main: ordered };
   }
 
-  if (templateId === 5) {
-    const header: CvStructuredSection[] = [];
-    const main: CvStructuredSection[] = [];
-
-    for (const section of ordered) {
-      if (isContactSection(section)) {
-        header.push(section);
-      } else {
-        main.push(section);
-      }
-    }
-
-    return { header, sidebar: [], main };
-  }
-
   if (templateId === 1) {
     const header: CvStructuredSection[] = [];
     const main: CvStructuredSection[] = [];

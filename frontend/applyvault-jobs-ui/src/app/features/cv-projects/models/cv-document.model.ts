@@ -12,6 +12,16 @@ export interface CvDocument {
   readonly structuredImportedAt: string | null;
   readonly hasProfilePhoto: boolean;
   readonly hasOriginalUpload: boolean;
+  /** M2: persisted export Template id (normalized 1|2|3). Server wins over sessionStorage on load. */
+  readonly templateId: number;
+  /** M2: persisted max page limit (null = no limit; BE allows 1–5 when set). */
+  readonly maxPages: number | null;
+}
+
+/** PUT /api/cv-documents/current/export-preferences */
+export interface UpdateCvExportPrefsRequest {
+  readonly templateId: number;
+  readonly maxPages: number | null;
 }
 
 export interface CvStructuredImportSummary {

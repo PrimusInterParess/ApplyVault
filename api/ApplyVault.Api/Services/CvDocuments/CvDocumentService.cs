@@ -1,6 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
+using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -31,6 +32,11 @@ public interface ICvDocumentService
     Task<bool> DeleteAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
     Task<CvDocumentDto> StartBlankAsync(AppUserEntity user, CancellationToken cancellationToken = default);
+
+    Task<CvDocumentDto?> UpdateExportPreferencesAsync(
+        AppUserEntity user,
+        CvExportPreferencesDto preferences,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record CvDocumentContent(
@@ -326,10 +332,33 @@ public sealed class CvDocumentService(
             FileSizeBytes = pdfBytes.Length,
             OriginalFileSizeBytes = pdfBytes.Length,
             UploadedAt = now,
-            UpdatedAt = now
+            UpdatedAt = now,
+            TemplateId = CvExportHtmlTemplateCatalog.ClassicTemplateId,
+            MaxPages = null
         };
 
         dbContext.UserCvDocuments.Add(document);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return MapDocument(document);
+    }
+
+    public async Task<CvDocumentDto?> UpdateExportPreferencesAsync(
+        AppUserEntity user,
+        CvExportPreferencesDto preferences,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await dbContext.UserCvDocuments
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null)
+        {
+            return null;
+        }
+
+        document.TemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId);
+        document.MaxPages = preferences.MaxPages;
+        document.UpdatedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapDocument(document);
@@ -493,6 +522,8 @@ public sealed class CvDocumentService(
             hasStructuredContent,
             document.StructuredImportedAt,
             !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey),
-            hasOriginalUpload);
+            hasOriginalUpload,
+            CvExportHtmlTemplateCatalog.NormalizeTemplateId(document.TemplateId),
+            document.MaxPages);
     }
 }

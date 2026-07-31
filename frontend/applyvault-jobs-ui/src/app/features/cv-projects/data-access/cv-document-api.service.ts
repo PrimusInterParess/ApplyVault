@@ -3,7 +3,12 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
 import { API_CONFIG } from '../../../core/config/api.config';
-import { CvDocument, CvDocumentUploadResult, CvStructuredReimportResult } from '../models/cv-document.model';
+import {
+  CvDocument,
+  CvDocumentUploadResult,
+  CvStructuredReimportResult,
+  UpdateCvExportPrefsRequest
+} from '../models/cv-document.model';
 import {
   CvImprovementSuggestions,
   CvStructuredDocument,
@@ -74,20 +79,10 @@ export class CvDocumentApiService {
   }
 
   downloadFormattedPdf(request: CvFormattedPdfRequest): Observable<CvFormattedPdfResult> {
-    let params = new HttpParams();
-
-    if (request.templateId > 1) {
-      params = params.set('templateId', String(request.templateId));
-    }
-
-    if (request.maxPages) {
-      params = params.set('maxPages', String(request.maxPages));
-    }
-
     return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/download`, {
       responseType: 'blob',
       observe: 'response',
-      params
+      params: this.buildExportParams(request)
     }).pipe(
       map((response) => ({
         blob: response.body ?? new Blob([], { type: 'application/pdf' }),
@@ -99,12 +94,44 @@ export class CvDocumentApiService {
     );
   }
 
+  /**
+   * M1: authenticated HTML identical to Puppeteer input (text/html).
+   * GET /api/cv-documents/current/export/preview?templateId&maxPages
+   */
+  getExportPreviewHtml(request: CvFormattedPdfRequest): Observable<string> {
+    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/preview`, {
+      responseType: 'text',
+      params: this.buildExportParams(request)
+    });
+  }
+
+  private buildExportParams(request: CvFormattedPdfRequest): HttpParams {
+    let params = new HttpParams().set('templateId', String(request.templateId));
+
+    if (request.maxPages) {
+      params = params.set('maxPages', String(request.maxPages));
+    }
+
+    return params;
+  }
+
   delete(): Observable<void> {
     return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/cv-documents/current`);
   }
 
   startBlank(): Observable<CvDocument> {
     return this.httpClient.post<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current/start-blank`, {});
+  }
+
+  /**
+   * M2: persist export Template + maxPages on the current CV document.
+   * PUT /api/cv-documents/current/export-preferences
+   */
+  updateExportPrefs(request: UpdateCvExportPrefsRequest): Observable<CvDocument> {
+    return this.httpClient.put<CvDocument>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/export-preferences`,
+      request
+    );
   }
 
   getStructured(): Observable<CvStructuredDocument> {

@@ -240,8 +240,12 @@ public sealed record CvDocumentDto(
     bool HasStructuredContent,
     DateTimeOffset? StructuredImportedAt,
     bool HasProfilePhoto,
-    bool HasOriginalUpload
+    bool HasOriginalUpload,
+    int TemplateId,
+    int? MaxPages
 );
+
+public sealed record CvExportPreferencesDto(int TemplateId, int? MaxPages);
 
 public sealed record CvStructuredImportSummaryDto(
     bool Succeeded,

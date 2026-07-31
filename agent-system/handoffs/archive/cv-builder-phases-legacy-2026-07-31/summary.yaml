@@ -1,0 +1,23 @@
+task_id: "cv-builder-phases-legacy"
+closed_at: "2026-07-31"
+integration_status: "ABANDONED"
+summary: >-
+  Archived and removed pre-layout operate YAML piled at agent-system/handoffs/
+  root (cv-builder phase 1–2d). Superseded by sole-surface CV builder work and
+  later by stable v1 M1/M2 (cv-builder-v1-m1/m2-2026-07-31 archives).
+removed_from_handoffs_root:
+  - cv-builder-phase1-delegation.yaml
+  - cv-builder-phase1-frontend-handoff.yaml
+  - cv-builder-phase2a-delegation.yaml
+  - cv-builder-phase2a-frontend-handoff.yaml
+  - cv-builder-phase2b-delegation.yaml
+  - cv-builder-phase2b-frontend-handoff.yaml
+  - cv-builder-phase2c-delegation.yaml
+  - cv-builder-phase2c-frontend-handoff.yaml
+  - cv-builder-phase2d-delegation.yaml
+  - cv-builder-phase2d-frontend-handoff.yaml
+note: >-
+  Thin YAML deleted without copying bodies into archive (historical operate
+  metadata only). Product outcome retained via ADR-0002 and subsequent v1 work.
+pr_links: []
+issue_links: []

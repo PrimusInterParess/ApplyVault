@@ -1,0 +1,24 @@
+task_id: "cv-builder-v1-m2-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+milestone: "Stable CV builder v1 — M2 (persist template preference)"
+summary: >-
+  templateId + maxPages on UserCvDocuments; CvDocumentDto; PUT
+  export-preferences; FE load/save aligned; export/preview use stored prefs when
+  query omitted. Prefs integration 5/5; CvDocuments 24/24; FE build exit 0.
+limitations:
+  - FE maxPages UI clamp null|1|2 vs BE 1–5 (server 3–5 may normalize on FE load)
+  - Browser cross-session E2E reload smoke not executed (API + FE wiring verified)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Optional: align FE maxPages options to BE 1–5"
+  - "Optional: manual browser reload smoke"
+  - "M3+ only if explicitly requested (theme, Letter, more templates, etc.)"
+program_note: >-
+  Stable CV builder v1 program (M0–M2) complete with documented limitations from
+  M1 (preview/Puppeteer visual) and M2 (maxPages clamp / no browser E2E).
+key_paths:
+  - "api/ApplyVault.Api/Migrations/20260731161222_AddCvDocumentExportPreferences.cs"
+  - "api/ApplyVault.Api/Controllers/CvDocumentsController.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/"

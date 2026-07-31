@@ -1,9 +1,4 @@
-export type CvExportTemplateLayoutKind =
-  | 'classic'
-  | 'twoColumn'
-  | 'minimal'
-  | 'creative'
-  | 'professional';
+export type CvExportTemplateLayoutKind = 'classic' | 'twoColumn' | 'minimal';
 
 export interface CvExportTemplateOption {
   readonly id: number;
@@ -17,36 +12,25 @@ export interface CvExportMaxPageOption {
   readonly label: string;
 }
 
+/** M1 gallery: Classic, Modern, Minimal only (ids 1–3). */
 export const CV_EXPORT_TEMPLATES: readonly CvExportTemplateOption[] = [
   {
     id: 1,
     label: 'Classic',
-    description: 'Single-column layout with a clear header band and navy accents.',
+    description: 'One-column layout with a clear header band.',
     layoutKind: 'classic'
   },
   {
     id: 2,
-    label: 'Modern (two-column)',
-    description: 'Dark sidebar for contact and skills; experience in the main column.',
+    label: 'Modern',
+    description: 'Simple two-column layout with sidebar and main body.',
     layoutKind: 'twoColumn'
   },
   {
     id: 3,
-    label: 'Minimal ATS',
-    description: 'Serif type and simple rules — optimized for applicant tracking systems.',
+    label: 'Minimal',
+    description: 'Clean one-column layout with sparse styling.',
     layoutKind: 'minimal'
-  },
-  {
-    id: 4,
-    label: 'Creative',
-    description: 'Purple gradient sidebar with rounded photo and accent borders.',
-    layoutKind: 'creative'
-  },
-  {
-    id: 5,
-    label: 'Professional (single-column)',
-    description: 'Name and contact block at the top; Calibri-style body sections below.',
-    layoutKind: 'professional'
   }
 ] as const;
 
@@ -65,3 +49,11 @@ export const CV_EXPORT_MAX_PAGE_OPTIONS: readonly CvExportMaxPageOption[] = [
 export const DEFAULT_CV_EXPORT_MAX_PAGES: number | null = null;
 
 export const CV_EXPORT_MAX_PAGES_STORAGE_KEY = 'applyvault.cvExportMaxPages';
+
+/**
+ * Normalize template ids to the M1 supported set.
+ * Keep 2|3; map legacy 4/5 and any unknown → Classic (1).
+ */
+export function normalizeCvExportTemplateId(templateId: number): number {
+  return templateId === 2 || templateId === 3 ? templateId : DEFAULT_CV_EXPORT_TEMPLATE_ID;
+}

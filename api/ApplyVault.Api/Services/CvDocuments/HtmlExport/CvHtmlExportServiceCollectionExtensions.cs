@@ -13,6 +13,7 @@ public static class CvHtmlExportServiceCollectionExtensions
             .Bind(configuration.GetSection(CvHtmlExportOptions.SectionName));
 
         services.AddScoped<ICvExportRenderDispatcher, CvExportRenderDispatcher>();
+        services.AddScoped<ICvExportHtmlDocumentBuilder, CvExportHtmlDocumentBuilder>();
         services.AddScoped<ICvHtmlCvPdfExporter, HtmlCvPdfExporter>();
         services.AddSingleton<PuppeteerBrowserHostedService>();
         services.AddSingleton<IHostedService>((serviceProvider) =>

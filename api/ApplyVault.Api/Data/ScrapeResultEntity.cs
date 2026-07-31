@@ -221,6 +221,10 @@ public sealed class UserCvDocumentEntity
 
     public string? ProfilePhotoContentType { get; set; }
 
+    public int TemplateId { get; set; } = 1;
+
+    public int? MaxPages { get; set; }
+
     public AppUserEntity? User { get; set; }
 
     public List<UserCvSectionEntity> Sections { get; set; } = [];

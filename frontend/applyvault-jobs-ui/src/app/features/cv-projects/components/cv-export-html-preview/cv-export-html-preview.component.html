@@ -1,0 +1,15 @@
+<div class="cv-html-preview" role="region" aria-label="CV export preview">
+  @if (loading()) {
+    <p class="cv-html-preview__status" aria-busy="true">Loading preview…</p>
+  } @else if (error()) {
+    <p class="cv-html-preview__status cv-html-preview__status--error" role="alert">{{ error() }}</p>
+  } @else if (srcdoc()) {
+    <iframe
+      class="cv-html-preview__frame"
+      title="CV export preview"
+      sandbox="allow-same-origin"
+      [srcdoc]="srcdoc()"></iframe>
+  } @else {
+    <p class="cv-html-preview__status">{{ emptyHint() }}</p>
+  }
+</div>

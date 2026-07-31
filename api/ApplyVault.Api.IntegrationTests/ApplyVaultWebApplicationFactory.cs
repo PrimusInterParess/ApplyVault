@@ -1,4 +1,5 @@
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.HtmlExport;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -70,6 +71,18 @@ public sealed class ApplyVaultWebApplicationFactory : WebApplicationFactory<Prog
                 options.DefaultChallengeScheme = TestAuthHandler.SchemeName;
                 options.DefaultScheme = TestAuthHandler.SchemeName;
             });
+
+            // Avoid Chromium in tests; still exercise the shared HTML builder via a PDF double.
+            var htmlExporterDescriptors = services
+                .Where((descriptor) => descriptor.ServiceType == typeof(ICvHtmlCvPdfExporter))
+                .ToList();
+
+            foreach (var descriptor in htmlExporterDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddScoped<ICvHtmlCvPdfExporter, HtmlCvPdfExporterTestDouble>();
         });
     }
 

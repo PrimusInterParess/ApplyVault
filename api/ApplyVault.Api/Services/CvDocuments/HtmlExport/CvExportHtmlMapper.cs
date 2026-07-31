@@ -41,35 +41,44 @@ internal static class CvExportHtmlMapper
         IReadOnlyList<CvExportSection> sections,
         int templateId)
     {
-        if (templateId == 3)
+        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
+
+        if (resolvedTemplateId == 1)
+        {
+            var header = new StringBuilder();
+            var main = new StringBuilder();
+
+            foreach (var section in sections.Where(SectionHasContent))
+            {
+                if (IsClassicHeaderSection(section))
+                {
+                    if (IsContactSection(section))
+                    {
+                        AppendClassicContactHeader(header, section);
+                    }
+                    else
+                    {
+                        AppendSection(header, section, compact: true);
+                    }
+                }
+                else
+                {
+                    AppendSection(main, section, compact: false);
+                }
+            }
+
+            return (header.ToString(), string.Empty, main.ToString());
+        }
+
+        if (resolvedTemplateId == 3)
         {
             var body = new StringBuilder();
             AppendSections(body, sections, compact: false);
             return (string.Empty, string.Empty, body.ToString());
         }
 
-        if (templateId == 5)
-        {
-            var header = new StringBuilder();
-            var body = new StringBuilder();
-
-            foreach (var section in sections.Where(SectionHasContent))
-            {
-                if (IsContactSection(section))
-                {
-                    AppendContactHeader(header, section);
-                }
-                else
-                {
-                    AppendProfessionalSection(body, section);
-                }
-            }
-
-            return (header.ToString(), string.Empty, body.ToString());
-        }
-
         var sidebar = new StringBuilder();
-        var main = new StringBuilder();
+        var mainColumn = new StringBuilder();
 
         foreach (var section in sections.Where(SectionHasContent))
         {
@@ -79,11 +88,11 @@ internal static class CvExportHtmlMapper
             }
             else
             {
-                AppendSection(main, section, compact: false);
+                AppendSection(mainColumn, section, compact: false);
             }
         }
 
-        return (string.Empty, sidebar.ToString(), main.ToString());
+        return (string.Empty, sidebar.ToString(), mainColumn.ToString());
     }
 
     private static void AppendSections(StringBuilder builder, IEnumerable<CvExportSection> sections, bool compact)
@@ -94,101 +103,41 @@ internal static class CvExportHtmlMapper
         }
     }
 
-    private static void AppendContactHeader(StringBuilder builder, CvExportSection section)
+    private static void AppendClassicContactHeader(StringBuilder builder, CvExportSection section)
     {
         foreach (var entry in section.Entries.Where((entry) => EntryHasContent(section, entry)))
         {
-            if (!string.IsNullOrWhiteSpace(entry.Title))
+            if (IsContactNameEntry(entry))
             {
-                builder.Append($"""<h1 class="cv-name">{RenderInline(entry.Title)}</h1>""");
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.Subtitle))
-            {
-                builder.Append($"""<p class="cv-tagline">{RenderInline(entry.Subtitle)}</p>""");
-            }
-
-            var contactLines = entry.Bullets.Count > 0
-                ? entry.Bullets
-                : CvExportTextNormalizer.Paragraphs(entry.Summary);
-
-            if (contactLines.Count > 0)
-            {
-                builder.Append("""<div class="cv-contact">""");
-
-                foreach (var line in contactLines)
+                if (!string.IsNullOrWhiteSpace(entry.Subtitle))
                 {
-                    builder.Append($"""<p class="cv-contact-line">{RenderInline(line)}</p>""");
+                    builder.Append($"""<h1 class="cv-name">{RenderInline(entry.Subtitle)}</h1>""");
                 }
 
-                builder.Append("</div>");
+                continue;
             }
+
+            var value = ContactEntryValue(entry);
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            builder.Append($"""<p class="cv-contact-line">{RenderInline(value)}</p>""");
         }
     }
 
-    private static void AppendProfessionalSection(StringBuilder builder, CvExportSection section)
+    private static string ContactEntryValue(CvExportEntry entry)
     {
-        var sectionClass = $"section section-{NormalizeSectionClass(section.SectionType)}";
+        var fromBullet = entry.Bullets.FirstOrDefault((line) => !string.IsNullOrWhiteSpace(line));
 
-        builder.Append($"""<section class="{sectionClass}">""");
-
-        if (!string.IsNullOrWhiteSpace(section.Heading))
+        if (!string.IsNullOrWhiteSpace(fromBullet))
         {
-            builder.Append($"""<h2 class="section-title">{Encode(section.Heading)}</h2>""");
+            return fromBullet.Trim();
         }
 
-        foreach (var entry in section.Entries.Where((entry) => EntryHasContent(section, entry)))
-        {
-            AppendProfessionalEntry(builder, entry, section.SectionType);
-        }
-
-        builder.Append("</section>");
-    }
-
-    private static void AppendProfessionalEntry(
-        StringBuilder builder,
-        CvExportEntry entry,
-        string sectionType)
-    {
-        builder.Append("""<div class="entry">""");
-
-        var titleLine = BuildProfessionalTitleLine(entry);
-
-        if (!string.IsNullOrWhiteSpace(titleLine))
-        {
-            builder.Append($"""<div class="entry-title-line">{RenderProfessionalTitleLine(entry)}</div>""");
-        }
-
-        if (!string.IsNullOrWhiteSpace(entry.DateRange))
-        {
-            builder.Append($"""<div class="entry-date">{Encode(entry.DateRange)}</div>""");
-        }
-
-        if (!string.IsNullOrWhiteSpace(entry.Summary))
-        {
-            builder.Append($"""<p class="entry-summary">{RenderInline(entry.Summary)}</p>""");
-        }
-
-        AppendEntryBodyContent(builder, entry, sectionType);
-        builder.Append("</div>");
-    }
-
-    private static string? BuildProfessionalTitleLine(CvExportEntry entry)
-    {
-        var hasTitle = !string.IsNullOrWhiteSpace(entry.Title);
-        var hasSubtitle = !string.IsNullOrWhiteSpace(entry.Subtitle);
-
-        if (hasTitle && hasSubtitle)
-        {
-            return $"{entry.Title} | {entry.Subtitle}";
-        }
-
-        if (hasTitle)
-        {
-            return entry.Title;
-        }
-
-        return hasSubtitle ? entry.Subtitle : null;
+        return string.IsNullOrWhiteSpace(entry.Summary) ? string.Empty : entry.Summary.Trim();
     }
 
     private static void AppendSection(StringBuilder builder, CvExportSection section, bool compact)
@@ -303,6 +252,9 @@ internal static class CvExportHtmlMapper
         section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase)
         || section.SectionType == CvSectionTypes.Contact;
 
+    private static bool IsClassicHeaderSection(CvExportSection section) =>
+        section.SectionType == CvSectionTypes.Summary || IsContactSection(section);
+
     private static bool IsContactNameEntry(CvExportEntry entry) =>
         entry.Title.Equals("Name", StringComparison.OrdinalIgnoreCase);
 
@@ -348,24 +300,6 @@ internal static class CvExportHtmlMapper
         string.IsNullOrWhiteSpace(sectionType)
             ? "custom"
             : sectionType.Trim().ToLowerInvariant();
-
-    private static string RenderProfessionalTitleLine(CvExportEntry entry)
-    {
-        var hasTitle = !string.IsNullOrWhiteSpace(entry.Title);
-        var hasSubtitle = !string.IsNullOrWhiteSpace(entry.Subtitle);
-
-        if (hasTitle && hasSubtitle)
-        {
-            return $"{RenderInline(entry.Title)} | {RenderInline(entry.Subtitle)}";
-        }
-
-        if (hasTitle)
-        {
-            return RenderInline(entry.Title);
-        }
-
-        return hasSubtitle ? RenderInline(entry.Subtitle!) : string.Empty;
-    }
 
     private static string RenderInline(string? value) =>
         CvExportInlineHtmlRenderer.Render(value);

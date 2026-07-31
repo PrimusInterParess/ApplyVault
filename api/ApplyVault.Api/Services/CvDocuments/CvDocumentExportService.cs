@@ -7,9 +7,16 @@ using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
 
+public sealed record CvHtmlExportResult(string Html, int ResolvedTemplateId);
+
 public interface ICvDocumentExportService
 {
     Task<CvPdfExportResult> ExportPdfAsync(
+        AppUserEntity user,
+        CvPdfExportOptions options,
+        CancellationToken cancellationToken = default);
+
+    Task<CvHtmlExportResult> ExportHtmlAsync(
         AppUserEntity user,
         CvPdfExportOptions options,
         CancellationToken cancellationToken = default);
@@ -20,6 +27,7 @@ public sealed class CvDocumentExportService(
     ICvDocumentService cvDocumentService,
     ICvExportAiClient exportAiClient,
     ICvExportRenderDispatcher exportRenderDispatcher,
+    ICvExportHtmlDocumentBuilder htmlDocumentBuilder,
     ICvPdfPageCounter pdfPageCounter,
     IOptions<GoogleAiOptions> googleAiOptions,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
@@ -28,6 +36,60 @@ public sealed class CvDocumentExportService(
         AppUserEntity user,
         CvPdfExportOptions options,
         CancellationToken cancellationToken = default)
+    {
+        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
+        var (renderRequest, usedAi, notice) = await BuildRenderRequestAsync(user, cancellationToken)
+            .ConfigureAwait(false);
+
+        var normalizedOptions = options with { TemplateId = resolvedTemplateId };
+        var (pdfBytes, pageCount, compactLevel) = await RenderWithinPageLimitAsync(
+            renderRequest,
+            normalizedOptions,
+            cancellationToken);
+        var exceedsMaxPages = normalizedOptions.MaxPages is int maxPages && pageCount > maxPages;
+
+        if (exceedsMaxPages)
+        {
+            notice = AppendNotice(
+                notice,
+                $"This export is {pageCount} pages after compacting; your limit is {normalizedOptions.MaxPages}.");
+        }
+        else if (compactLevel > 0)
+        {
+            notice = AppendNotice(
+                notice,
+                $"Layout was compacted to fit the selected {normalizedOptions.MaxPages}-page limit.");
+        }
+
+        return new CvPdfExportResult(
+            pdfBytes,
+            pageCount,
+            normalizedOptions.MaxPages,
+            exceedsMaxPages,
+            usedAi,
+            notice);
+    }
+
+    public async Task<CvHtmlExportResult> ExportHtmlAsync(
+        AppUserEntity user,
+        CvPdfExportOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
+        var (renderRequest, _, _) = await BuildRenderRequestAsync(user, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Preview uses Normal compact; maxPages-driven compact matching PDF may need Puppeteer page counts (residual).
+        var html = await htmlDocumentBuilder
+            .BuildAsync(renderRequest, resolvedTemplateId, CvPdfRenderOptions.Normal, cancellationToken)
+            .ConfigureAwait(false);
+
+        return new CvHtmlExportResult(html, resolvedTemplateId);
+    }
+
+    private async Task<(CvExportRenderRequest Request, bool UsedAi, string? Notice)> BuildRenderRequestAsync(
+        AppUserEntity user,
+        CancellationToken cancellationToken)
     {
         var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
             ?? throw new InvalidOperationException("Create or upload a CV before exporting structured content.");
@@ -81,32 +143,7 @@ public sealed class CvDocumentExportService(
             }
         }
 
-        var (pdfBytes, pageCount, compactLevel) = await RenderWithinPageLimitAsync(
-            renderRequest,
-            options,
-            cancellationToken);
-        var exceedsMaxPages = options.MaxPages is int maxPages && pageCount > maxPages;
-
-        if (exceedsMaxPages)
-        {
-            notice = AppendNotice(
-                notice,
-                $"This export is {pageCount} pages after compacting; your limit is {options.MaxPages}.");
-        }
-        else if (compactLevel > 0)
-        {
-            notice = AppendNotice(
-                notice,
-                $"Layout was compacted to fit the selected {options.MaxPages}-page limit.");
-        }
-
-        return new CvPdfExportResult(
-            pdfBytes,
-            pageCount,
-            options.MaxPages,
-            exceedsMaxPages,
-            usedAi,
-            notice);
+        return (renderRequest, usedAi, notice);
     }
 
     private async Task<(byte[] PdfBytes, int PageCount, int CompactLevel)> RenderWithinPageLimitAsync(

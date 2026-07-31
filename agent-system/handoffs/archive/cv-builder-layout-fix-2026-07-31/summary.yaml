@@ -1,0 +1,22 @@
+task_id: "cv-builder-layout-fix-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D1 — CV builder Content and Structure clipped/unusable (out of display)
+summary: >-
+  Replaced Structure/Content absolute topbar popovers with fixed full-height
+  drawers (assist-panel pattern); removed :host overflow-x:clip. Development
+  ng build PASS (FE + QA re-run).
+limitations:
+  - Browser viewport smoke not executed (no running app during QA)
+  - Projects remains absolute topbar popover (out of DoD)
+  - Production anyComponentStyle budget failures may persist (pre-existing)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Manual smoke: Structure/Content/Assist on /cv-builder at ~1280px"
+  - "Optional: Projects popover fix"
+  - "Optional: CSS budget cleanup"
+key_paths:
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.html"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.scss"

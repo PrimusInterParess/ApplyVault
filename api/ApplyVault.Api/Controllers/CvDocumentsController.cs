@@ -1,3 +1,4 @@
+using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.CvSectionCatalog;
@@ -157,6 +158,32 @@ public sealed class CvDocumentsController(
         return Ok(await cvDocumentService.StartBlankAsync(user, cancellationToken));
     }
 
+    [HttpPut("current/export-preferences")]
+    public async Task<ActionResult<CvDocumentDto>> UpdateExportPreferences(
+        [FromBody] CvExportPreferencesDto? preferences,
+        CancellationToken cancellationToken = default)
+    {
+        if (preferences is null)
+        {
+            return BadRequest("Export preferences are required.");
+        }
+
+        if (preferences.MaxPages is < 1 or > MaxExportPageLimit)
+        {
+            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
+        }
+
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var document = await cvDocumentService.UpdateExportPreferencesAsync(
+            user,
+            new CvExportPreferencesDto(
+                CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId),
+                preferences.MaxPages),
+            cancellationToken);
+
+        return document is null ? NotFound() : Ok(document);
+    }
+
     [HttpGet("section-catalog")]
     [AllowAnonymous]
     public ActionResult<CvSectionCatalogDto> GetSectionCatalog() => Ok(sectionCatalog.ToApiDto());
@@ -171,27 +198,23 @@ public sealed class CvDocumentsController(
 
     [HttpGet("current/export/download")]
     public async Task<IActionResult> DownloadFormattedExport(
-        [FromQuery] int templateId = 1,
+        [FromQuery] int? templateId = null,
         [FromQuery] int? maxPages = null,
         CancellationToken cancellationToken = default)
     {
-        if (!CvExportHtmlTemplateCatalog.IsValidTemplateId(templateId))
-        {
-            return BadRequest($"templateId must be between {CvExportHtmlTemplateCatalog.MinTemplateId} and {CvExportHtmlTemplateCatalog.MaxTemplateId}.");
-        }
-
         if (maxPages is < 1 or > MaxExportPageLimit)
         {
             return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
         }
 
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var resolved = await ResolveExportOptionsAsync(user, templateId, maxPages, cancellationToken);
 
         try
         {
             var exportResult = await cvDocumentExportService.ExportPdfAsync(
                 user,
-                new CvPdfExportOptions(templateId, maxPages),
+                new CvPdfExportOptions(resolved.TemplateId, resolved.MaxPages),
                 cancellationToken);
             var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
             var fileName = document is null
@@ -199,6 +222,7 @@ public sealed class CvDocumentsController(
                 : $"{Path.GetFileNameWithoutExtension(document.OriginalFileName)}-export.pdf";
 
             AppendExportMetadataHeaders(exportResult);
+            Response.Headers["X-Cv-Export-Template-Id"] = resolved.TemplateId.ToString();
 
             return File(exportResult.PdfBytes, "application/pdf", fileName);
         }
@@ -214,6 +238,62 @@ public sealed class CvDocumentsController(
 
             return BadRequest(message);
         }
+    }
+
+    [HttpGet("current/export/preview")]
+    public async Task<IActionResult> PreviewFormattedExport(
+        [FromQuery] int? templateId = null,
+        [FromQuery] int? maxPages = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxPages is < 1 or > MaxExportPageLimit)
+        {
+            return BadRequest($"maxPages must be between 1 and {MaxExportPageLimit}.");
+        }
+
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+        var resolved = await ResolveExportOptionsAsync(user, templateId, maxPages, cancellationToken);
+
+        try
+        {
+            var exportResult = await cvDocumentExportService.ExportHtmlAsync(
+                user,
+                new CvPdfExportOptions(resolved.TemplateId, resolved.MaxPages),
+                cancellationToken);
+
+            Response.Headers["X-Cv-Export-Template-Id"] = exportResult.ResolvedTemplateId.ToString();
+
+            return Content(exportResult.Html, "text/html; charset=utf-8");
+        }
+        catch (InvalidOperationException exception)
+        {
+            var message = exception.Message;
+
+            if (message.Contains("before exporting", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("No structured", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound();
+            }
+
+            return BadRequest(message);
+        }
+    }
+
+    private async Task<(int TemplateId, int? MaxPages)> ResolveExportOptionsAsync(
+        AppUserEntity user,
+        int? templateId,
+        int? maxPages,
+        CancellationToken cancellationToken)
+    {
+        var document = templateId is null || maxPages is null
+            ? await cvDocumentService.GetCurrentAsync(user, cancellationToken)
+            : null;
+
+        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(
+            templateId ?? document?.TemplateId ?? CvExportHtmlTemplateCatalog.ClassicTemplateId);
+        var resolvedMaxPages = maxPages ?? document?.MaxPages;
+
+        return (resolvedTemplateId, resolvedMaxPages);
     }
 
     private void AppendExportMetadataHeaders(CvPdfExportResult exportResult)

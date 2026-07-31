@@ -6,6 +6,7 @@ import { map } from 'rxjs/operators';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CvBuilderAssistPanelComponent } from '../../components/cv-builder-assist-panel/cv-builder-assist-panel.component';
+import { CvExportHtmlPreviewComponent } from '../../components/cv-export-html-preview/cv-export-html-preview.component';
 import { CvExportTemplatePreviewComponent } from '../../components/cv-export-template-preview/cv-export-template-preview.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
@@ -14,7 +15,8 @@ import {
   CV_EXPORT_MAX_PAGE_OPTIONS,
   CV_EXPORT_TEMPLATES,
   DEFAULT_CV_EXPORT_TEMPLATE_ID,
-  MAX_CV_EXPORT_TEMPLATE_ID
+  MAX_CV_EXPORT_TEMPLATE_ID,
+  normalizeCvExportTemplateId
 } from '../../models/cv-export-template.model';
 import {
   CvImprovementSuggestion,
@@ -41,7 +43,13 @@ type BuilderStep = 'pick' | 'edit';
 @Component({
   selector: 'app-cv-builder-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, CvExportTemplatePreviewComponent, CvBuilderAssistPanelComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    CvExportHtmlPreviewComponent,
+    CvExportTemplatePreviewComponent,
+    CvBuilderAssistPanelComponent
+  ],
   templateUrl: './cv-builder-page.component.html',
   styleUrl: './cv-builder-page.component.scss'
 })
@@ -64,6 +72,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly pendingPdfFile = signal<File | null>(null);
   protected readonly assistOpen = signal(false);
   protected readonly structureOpen = signal(false);
+  protected readonly contentOpen = signal(false);
   protected readonly projectsOpen = signal(false);
   protected readonly pendingAddSectionType = signal<CvSectionType>('Experience');
   protected readonly zoom = signal(1);
@@ -157,10 +166,15 @@ export class CvBuilderPageComponent implements OnDestroy {
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private htmlPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    const templateFromStorage = this.cvDocument.selectedExportTemplateId();
-    this.selectedTemplateId.set(templateFromStorage);
+    // Keep local gallery selection aligned with facade (server prefs → facade → UI).
+    effect(() => {
+      this.selectedTemplateId.set(
+        normalizeCvExportTemplateId(this.cvDocument.selectedExportTemplateId())
+      );
+    });
 
     effect(() => {
       if (!this.cvDocument.loading() && this.cvDocument.hasDocument()) {
@@ -217,6 +231,20 @@ export class CvBuilderPageComponent implements OnDestroy {
 
       this.wasSavingSection = savingId !== null;
     });
+
+    // M1 strategy A: refresh sandboxed fidelity preview on edit canvas deps.
+    effect(() => {
+      if (this.step() !== 'edit') {
+        return;
+      }
+
+      this.selectedTemplateId();
+      this.cvDocument.selectedExportMaxPages();
+      this.serverSections();
+      this.cvDocument.document();
+      this.cvStructured.savingSectionId();
+      this.scheduleHtmlPreviewRefresh();
+    });
   }
 
   ngOnDestroy(): void {
@@ -224,12 +252,17 @@ export class CvBuilderPageComponent implements OnDestroy {
       clearTimeout(this.saveTimer);
     }
 
+    if (this.htmlPreviewTimer) {
+      clearTimeout(this.htmlPreviewTimer);
+    }
+
     this.cvStructured.clearSuggestions();
   }
 
   protected selectTemplate(templateId: number): void {
-    this.selectedTemplateId.set(templateId);
-    this.cvDocument.setExportTemplateId(templateId);
+    const normalized = normalizeCvExportTemplateId(templateId);
+    this.selectedTemplateId.set(normalized);
+    this.cvDocument.setExportTemplateId(normalized);
   }
 
   protected onMaxPagesChange(event: Event): void {
@@ -328,6 +361,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected openAssist(): void {
     this.assistOpen.set(true);
     this.structureOpen.set(false);
+    this.contentOpen.set(false);
     this.projectsOpen.set(false);
   }
 
@@ -340,6 +374,7 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     if (this.structureOpen()) {
       this.assistOpen.set(false);
+      this.contentOpen.set(false);
       this.projectsOpen.set(false);
       const available = this.structureSectionTypes();
       const pending = this.pendingAddSectionType();
@@ -354,12 +389,27 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.structureOpen.set(false);
   }
 
+  protected toggleContent(): void {
+    this.contentOpen.update((open) => !open);
+
+    if (this.contentOpen()) {
+      this.assistOpen.set(false);
+      this.structureOpen.set(false);
+      this.projectsOpen.set(false);
+    }
+  }
+
+  protected closeContent(): void {
+    this.contentOpen.set(false);
+  }
+
   protected toggleProjects(): void {
     this.projectsOpen.update((open) => !open);
 
     if (this.projectsOpen()) {
       this.assistOpen.set(false);
       this.structureOpen.set(false);
+      this.contentOpen.set(false);
       this.cvProjects.loadSummaries();
     }
   }
@@ -527,6 +577,11 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
   }
 
+  protected refreshFidelityPreview(): void {
+    this.flushSave();
+    this.cvDocument.refreshExportHtmlPreview();
+  }
+
   protected toggleAiUpdateSection(sectionId: string): void {
     if (this.assistDisabled()) {
       return;
@@ -612,6 +667,26 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.saveTimer = setTimeout(() => {
       this.persistSections(sections);
     }, 500);
+  }
+
+  private scheduleHtmlPreviewRefresh(): void {
+    if (this.htmlPreviewTimer) {
+      clearTimeout(this.htmlPreviewTimer);
+    }
+
+    this.htmlPreviewTimer = setTimeout(() => {
+      // Wait for in-flight saves; skip while a local draft is unsaved (server HTML only).
+      if (this.cvStructured.savingSectionId()) {
+        this.scheduleHtmlPreviewRefresh();
+        return;
+      }
+
+      if (this.inlineDraft()) {
+        return;
+      }
+
+      this.cvDocument.refreshExportHtmlPreview();
+    }, 450);
   }
 
   private flushSave(): void {

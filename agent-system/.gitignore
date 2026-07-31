@@ -1,0 +1,4 @@
+# Operate working trees — thin metadata only under handoffs/active
+scratch/
+**/build-out/
+handoffs/active/

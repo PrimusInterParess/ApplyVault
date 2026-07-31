@@ -1,0 +1,24 @@
+validation_report:
+  task_id: TASK-SAMPLE-001
+  validator: principal-software-architect
+  subject: handoff TASK-SAMPLE-001
+  status: PARTIAL
+
+  checks:
+    - id: V-001
+      description: Scope respected
+      result: PASSED
+      evidence: []
+      notes: No out-of-scope domains touched.
+    - id: V-002
+      description: Automated tests executed
+      result: NOT_RUN
+      evidence: []
+      notes: Demo sample; tests not claimed.
+
+  defects: []
+  risks:
+    - Persistence provider undecided
+  limitations:
+    - No runtime verification in this sample handoff
+  recommendation: APPROVE_WITH_CONDITIONS

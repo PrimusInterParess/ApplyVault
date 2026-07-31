@@ -43,13 +43,21 @@ $requiredCore = @(
   "audit-prompts.md",
   "operate-agent-system.md",
   "upgrade-architect.md",
-  "update-context-mapping.md"
+  "update-context-mapping.md",
+  "architect-review.md",
+  "update-ownership.md"
 )
 
 $requiredCommands = @(
   "architect.md", "discover.md", "brownfield.md", "hybrid.md",
   "generate-prompt-pack.md", "create-agent.md", "extend-fleet.md",
-  "audit.md", "operate.md", "upgrade-architect.md", "update-context.md"
+  "audit.md", "operate.md", "update-context.md",
+  "architect-review.md", "update-ownership.md"
+)
+
+# Upgrade is skill-only so the slash menu can show a YAML description.
+$requiredSkills = @(
+  "upgrade-architect"
 )
 
 if (-not (Test-Path -LiteralPath $CoreDir)) {
@@ -106,6 +114,12 @@ if (-not (Test-Path -LiteralPath $SkillsDir)) {
 }
 else {
   $skillDirs = Get-ChildItem -LiteralPath $SkillsDir -Directory | Sort-Object Name
+  $foundSkills = @($skillDirs | ForEach-Object { $_.Name })
+  foreach ($name in $requiredSkills) {
+    if ($foundSkills -notcontains $name) {
+      Add-Err "missing Cursor skill: $name"
+    }
+  }
   foreach ($dir in $skillDirs) {
     $skillMd = Join-Path $dir.FullName "SKILL.md"
     if (-not (Test-Path -LiteralPath $skillMd)) {
@@ -146,7 +160,14 @@ $expected = @(
   "project-context.schema.json",
   "capability-matrix.schema.json",
   "discovery-ledger.schema.json",
-  "requirements-spec.schema.json"
+  "requirements-spec.schema.json",
+  "architect-install.schema.json",
+  "manifest.schema.json",
+  "agent-registry.schema.json",
+  "task-delegation.schema.json",
+  "agent-handoff.schema.json",
+  "validation-report.schema.json",
+  "context-index.schema.json"
 )
 if (-not (Test-Path -LiteralPath $SchemasDir)) {
   Add-Err "schemas/ directory missing"

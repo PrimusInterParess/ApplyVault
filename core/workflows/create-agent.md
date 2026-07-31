@@ -1,12 +1,22 @@
 # Create Agent
 
-Create one specialized agent prompt for an existing or in-progress fleet.
+Create one specialized agent prompt for an existing or in-progress fleet and
+**save** it into the prompt pack when authorized.
 
 ## Prerequisites
 
-- Approved project context, or an explicit CREATE_AGENT request with enough scope
-- Clear capability the agent must own
-- Provider status: verified, required, preferred, proposed, undecided, or not applicable
+| Check | If missing |
+|---|---|
+| Approved `agent-system/project-specification.md` (`APPROVED` or `APPROVED WITH CHANGES`) | Stop; finish discovery/approval. Explicit CREATE_AGENT without an approved spec is allowed only as **PREVIEW** (chat output), not pack writes, unless the user records an override assumption. |
+| Clear capability the agent must own | Ask once |
+| Provider status: verified, required, preferred, proposed, undecided, or not applicable | Classify before specializing |
+| Existing `agent-system/manifest.yaml` for this project | Stop before SAVE if another project's pack would be overwritten |
+
+## Modes
+
+- `SAVE` (default when prerequisites met and user authorizes pack changes): write
+  agent + governance updates under `agent-system/`.
+- `PREVIEW`: show copy-ready prompt and update blocks; write no pack files.
 
 ## Steps
 
@@ -16,23 +26,30 @@ Create one specialized agent prompt for an existing or in-progress fleet.
 4. Inherit adopted project operating procedures from shared context /
    [existing-operating-procedures.md](existing-operating-procedures.md); do not
    introduce a conflicting workflow loop.
-5. Generate a complete agent prompt with all 18 required sections (see [generate-prompt-pack.md](generate-prompt-pack.md)).
-6. Produce an Architect update block:
-   - registry entry
-   - invocation conditions
-   - required inputs/outputs
-   - integration checks
-   - ownership conflict rules
-7. Produce handoff contracts for producers/consumers.
-8. List quality gates and Definition of Done.
+5. Generate a complete agent prompt with all 18 required sections (see
+   [generate-prompt-pack.md](generate-prompt-pack.md)), including the
+   **§6 / §11** style–patterns–skills–knowledge binding rules (paths only;
+   no invented house style).
+6. Produce registry / ownership / contract / handoff updates (Architect update
+   block).
+7. In `SAVE` mode:
+   - Write `agents/<file>.md` (do not overwrite unrelated project packs).
+   - Update `governance/agent-registry.yaml`, ownership matrix, contracts,
+     Architect prompt as needed.
+   - Record both **agent id** and **prompt_file** (see [../glossary.md](../glossary.md)).
+   - Verify 18 section headings and non-empty files.
+   - When PowerShell is available, run
+     `powershell -NoProfile -File scripts/validate-agent-system.ps1`.
+8. Recommend semantic version bump for the pack when ownership changes.
 
 ## Output
 
 1. Necessity assessment
-2. Generated agent prompt (copy-ready)
-3. Architect update block
-4. Handoff table
-5. Execution-order notes
-6. Quality checklist
+2. Mode (`SAVE` / `PREVIEW`) and files written or proposed
+3. Generated agent prompt path or preview
+4. Architect / registry update summary
+5. Handoff table
+6. Verification result
+7. Next step (`/operate` or `/extend-fleet` if more agents needed)
 
 Do not invent credentials, repo files, or test results.

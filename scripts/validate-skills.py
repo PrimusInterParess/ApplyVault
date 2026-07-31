@@ -26,11 +26,17 @@ REQUIRED_CORE = [
     "project-discovery.reference.md",
     "brownfield-research.md",
     "brownfield-research.reference.md",
+    "existing-operating-procedures.md",
+    "existing-operating-procedures.reference.md",
     "generate-prompt-pack.md",
     "create-agent.md",
     "extend-fleet.md",
     "audit-prompts.md",
     "operate-agent-system.md",
+    "upgrade-architect.md",
+    "update-context-mapping.md",
+    "architect-review.md",
+    "update-ownership.md",
 ]
 
 REQUIRED_COMMANDS = [
@@ -43,6 +49,14 @@ REQUIRED_COMMANDS = [
     "extend-fleet.md",
     "audit.md",
     "operate.md",
+    "update-context.md",
+    "architect-review.md",
+    "update-ownership.md",
+]
+
+# Upgrade is skill-only so the slash menu can show a YAML description.
+REQUIRED_SKILLS = [
+    "upgrade-architect",
 ]
 
 REQUIRED_RULES = [
@@ -103,6 +117,10 @@ def main() -> int:
     else:
         skill_dirs = sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir())
         skill_count = len(skill_dirs)
+        found_skills = {p.name for p in skill_dirs}
+        for name in REQUIRED_SKILLS:
+            if name not in found_skills:
+                fail(f"missing Cursor skill: {name}", errors)
         for skill_dir in skill_dirs:
             skill_md = skill_dir / "SKILL.md"
             if not skill_md.is_file():
@@ -133,6 +151,13 @@ def main() -> int:
         "capability-matrix.schema.json",
         "discovery-ledger.schema.json",
         "requirements-spec.schema.json",
+        "architect-install.schema.json",
+        "manifest.schema.json",
+        "agent-registry.schema.json",
+        "task-delegation.schema.json",
+        "agent-handoff.schema.json",
+        "validation-report.schema.json",
+        "context-index.schema.json",
     }
     if not SCHEMAS_DIR.is_dir():
         fail("schemas/ directory missing", errors)

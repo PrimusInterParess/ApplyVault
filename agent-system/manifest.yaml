@@ -1,10 +1,11 @@
 prompt_pack:
   id: applyvault-agent-system-v1
   name: ApplyVault Agent System
-  version: 1.0.0
+  version: 1.1.0
+  library_version: "0.5.4"
   project_mode: BROWNFIELD
   specification_status: APPROVED
-  generated_at: "2026-07-29T00:00:00Z"
+  generated_at: "2026-07-31T00:00:00Z"
   adaptation_mode: BRIDGE
 
 governance:
@@ -26,6 +27,13 @@ agents:
     title: Product Manager
     prompt_file: agents/product-manager.md
     type: CORE
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: architecture-engineer
+    title: Architecture Engineer
+    prompt_file: agents/architecture-engineer.md
+    type: SPECIALIST
     provider_scope: GENERIC
     invocation: CONDITIONAL
     status: ACTIVE
@@ -71,6 +79,13 @@ agents:
     provider_scope: GENERIC
     invocation: CONDITIONAL
     status: ACTIVE
+  - id: code-review-engineer
+    title: Code Review Engineer
+    prompt_file: agents/code-review-engineer.md
+    type: REVIEWER
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
   - id: platform-engineer
     title: Platform Engineer
     prompt_file: agents/platform-engineer.md
@@ -86,7 +101,9 @@ artifacts:
   ownership_matrix: governance/ownership-matrix.md
   task_protocol: protocols/task-delegation.yaml
   handoff_protocol: protocols/agent-handoff.yaml
+  close_protocol: protocols/task-close.yaml
   execution_workflow: protocols/execution-workflow.md
+  architect_install: architect-install.yaml
 
 provider_decisions:
   - capability: identity

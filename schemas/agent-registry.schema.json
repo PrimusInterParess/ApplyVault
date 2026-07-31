@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/agent-registry.schema.json",
+  "title": "Agent registry",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["agents"],
+  "properties": {
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "prompt_file"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "prompt_file": { "type": "string", "minLength": 1 },
+          "display_name": { "type": "string" },
+          "role": { "type": "string" },
+          "ownership": { "type": "string" }
+        }
+      }
+    }
+  }
+}

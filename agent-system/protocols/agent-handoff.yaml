@@ -3,8 +3,9 @@ handoff:
   task_id: ""
   from_agent: ""
   to_agent: principal-software-architect
-  status: "" # COMPLETED | BLOCKED | NEEDS_DECISION | PARTIAL
+  status: "" # READY | BLOCKED | NEEDS_DECISION | PARTIAL | STALE
   summary: ""
+  artifacts: [] # repo paths, scratch/<task-id>/ paths, or PR/issue URLs — never build trees
   evidence:
     files_touched: []
     tests_run: []
@@ -12,7 +13,10 @@ handoff:
   residual_risks: []
   open_questions: []
   next_recommended_action: ""
+  handoff_path: "agent-system/handoffs/active/<task-id>/"
 
 instructions: |
-  Specialists return this package to the Principal Architect.
+  Specialists return this thin package under handoff_path.
+  Put probes/builds under agent-system/scratch/<task-id>/ — never under handoffs/.
   Never include secret values. Cite paths and command names only for evidence.
+  Principal runs READY reconciliation then Close (protocols/task-close.yaml).

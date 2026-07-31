@@ -13,12 +13,63 @@ If the file is unavailable, use an approved specification supplied in the
 conversation. If neither exists, stop instead of reconstructing it from memory.
 
 Full deep checklist: [../../references/source-prompts/03-generate-complete-prompt-pack.md](../../references/source-prompts/03-generate-complete-prompt-pack.md)
+**If the deep playbook conflicts with this file, this file wins** (especially
+`SAVE` / `PREVIEW` / no chat-dump-as-pack rules).
+
+Agent **id** vs **prompt filename** convention: see [../glossary.md](../glossary.md).
+When writing `manifest.yaml`, set `library_version` from the library `VERSION`
+file so `/operate` can detect drift.
 
 ## Mission
 
 Generate a project-specific multi-agent prompt pack. Do **not** implement the application.
 
 Specialize agents only for verified or approved providers. Prefer generic capability agents when undecided.
+
+### Default reviewer (required in SAVE packs)
+
+Unless the approved specification **explicitly excludes** code review / PR
+quality (Excluded Agents or equivalent), or already names an equivalent
+REVIEWER id, **SAVE modes must create `code-review-engineer`** in the pack:
+
+1. Write `agents/code-review-engineer.md` (all 18 sections).
+2. Register it in `manifest.yaml` and `governance/agent-registry.yaml`.
+3. Add ownership for PR/diff review and `/architect-review` override.
+4. Split from `qa-engineer` when both exist: QA owns test evidence; 
+   `code-review-engineer` owns diff/intent/architecture/security review findings.
+5. Seed quality bar from
+   [../templates/code-review-engineer.md](../templates/code-review-engineer.md);
+   bind project paths/contracts from shared context (do not invent providers).
+
+On `/upgrade-architect` regenerations, if the agent is missing and not
+excluded, **add it** — do not wait for `/extend-fleet` or `/create-agent`.
+Report `code-review-engineer: created | refreshed | skipped (excluded|exists)`.
+
+### Default architecture engineer (required in SAVE packs)
+
+Unless the approved specification **explicitly excludes** architecture design /
+redesign ownership (Excluded Agents or equivalent), or already names an
+equivalent architecture-design SPECIALIST id, **SAVE modes must create
+`architecture-engineer`** in the pack:
+
+1. Write `agents/architecture-engineer.md` (all 18 sections).
+2. Register it in `manifest.yaml` and `governance/agent-registry.yaml`
+   (`type: SPECIALIST`, invocation conditional).
+3. Add ownership for architecture design, redesign of existing features, and
+   structural shape for new implementation.
+4. Split ownership clearly:
+   - Principal Architect owns orchestration, delegation, and integration.
+   - `architecture-engineer` owns design/redesign proposals and design handoffs.
+   - Feature engineers own implementation in delegated paths.
+   - `code-review-engineer` owns diff/intent/architecture/security **review
+     findings** (not authoring the design).
+5. Seed quality bar from
+   [../templates/architecture-engineer.md](../templates/architecture-engineer.md);
+   bind project paths/contracts from shared context (do not invent providers).
+
+On `/upgrade-architect` regenerations, if the agent is missing and not
+excluded, **add it** — do not wait for `/extend-fleet` or `/create-agent`.
+Report `architecture-engineer: created | refreshed | skipped (excluded|exists)`.
 
 ## Existing operating procedures
 
@@ -63,10 +114,12 @@ file-writing tools are available.
 3. Principal Architect / Orchestrator prompt
 4. One prompt per approved agent (18-section structure)
 5. Agent registry + ownership matrix + contract registry
-6. Task-delegation and handoff protocols
+6. Task-delegation and handoff protocols (include Close / cleanup)
 7. Execution workflow + approval/quality/integration policies
 8. Risk and decision register templates
 9. Examples + README + actual file tree in `SAVE` modes
+10. Operate working trees: `handoffs/{active,archive}/`, `scratch/`, pack
+    `.gitignore` for scratch and active handoffs
 
 Required layout:
 
@@ -74,6 +127,7 @@ Required layout:
 agent-system/
   project-specification.md  # preserve; do not regenerate or delete
   README.md
+  .gitignore                # scratch/, **/build-out/, handoffs/active/
   manifest.yaml
   governance/
     shared-context.yaml
@@ -88,18 +142,28 @@ agent-system/
     risk-register.yaml
     decision-register.yaml
   protocols/
-    task-delegation.yaml
+    task-delegation.yaml    # templates must show scratch_dir + handoff_dir
     agent-handoff.yaml
-    execution-workflow.md
+    task-close.yaml
+    execution-workflow.md   # includes reconcile + Close cleanup steps
     validation-report.yaml
   agents/
-    00-principal-architect.md
+    00-principal-architect.md  # cleanup is part of COMPLETE
     <one-file-per-approved-agent>.md
+  handoffs/
+    active/                 # .gitkeep; thin YAML/MD only at operate time
+    archive/                # optional sample summary.yaml
+  scratch/                  # .gitkeep; per-task disposable root
   examples/
     project-invocation.md
     delegation-examples.md
     handoff-example.yaml
 ```
+
+Handoffs are metadata-only; `artifacts:` are repo paths, `scratch/<task-id>/`
+paths, or PR/issue URLs — never embed build trees. Full operate rules:
+[operate-agent-system.md](operate-agent-system.md) (**Handoffs and scratch**,
+**READY reconciliation**, **Close**).
 
 ## File-writing rules
 
@@ -141,6 +205,56 @@ In `SAVE` modes:
 17. Escalation Conditions  
 18. Prohibited Behaviors  
 
+### Filling §6 / §11 (style, patterns, skills, knowledge)
+
+Style, design patterns, implementation conventions, skills, and domain
+knowledge are **project-owned first**. Agent prompts must **bind to verified
+paths**, not paste encyclopedias into every file and not silently replace
+project standards with an Architect house style.
+
+Agents **may and should suggest improvements** (better style rules, clearer
+patterns, missing skills, stronger knowledge docs) when evidence or gaps
+justify it. Suggestions are always labeled `ARCHITECT_PROPOSED` (or recorded
+in the decision/risk register) and need user approval before they become
+required practice or before overwriting project files.
+
+Ensure `governance/shared-context.yaml` carries the EOP skill / knowledge /
+procedure path inventory under `existing_operating_procedures` (or explicitly
+`NONE`). Every agent’s §6 and §11 must reference those paths when present.
+
+**§11 Technical Standards** must include:
+
+- When evidence exists: code style / lint / format sources (paths only —
+  e.g. editorconfig, linter config, `CONTRIBUTING` style sections)
+- When evidence exists: established design or architecture patterns **in this
+  repo** (cite evidence)
+- When gaps or risks exist: concise **improvement proposals** labeled
+  `ARCHITECT_PROPOSED` (what, why better, impact, approval needed) — never
+  silent invention treated as fact
+- Implementation constraints from approved contracts / ADRs (paths + one-line
+  purpose)
+- If nothing is known: `UNDECIDED` / `NONE`, plus optional proposals
+
+**§6 Operating Principles** must require agents to:
+
+- When EOP mode is `FOLLOW`, `COMPOSE`, or `BRIDGE`: read the listed project
+  skills, `CONTEXT.md`, ADRs, and host rules **before** implementing
+- Prefer those project procedures over Architect defaults **until** a proposed
+  change is approved
+- Surface better alternatives in handoffs / decision register instead of
+  quietly drifting
+
+**Hard rules:**
+
+- Follow verified project standards by default; propose better approaches
+  explicitly — do not pretend a suggestion is already adopted
+- Do not invent a mandatory house style when the project has none — state the
+  gap, propose options if useful, await approval
+- Do not paste full skill or CONTEXT bodies into agent prompts — paths +
+  one-line purpose only
+- Never overwrite project skills, `CONTEXT.md`, ADRs, or host instruction files
+  during `SAVE` without explicit user authorization
+
 ## Consistency checks before finishing
 
 - No duplicate ownership
@@ -152,6 +266,15 @@ In `SAVE` modes:
 - Adopted existing operating procedures are reflected in shared context,
   execution workflow, and agent Operating Principles (or explicitly `NONE`)
 - Project skill / host-instruction / domain-memory files were not overwritten
+- §6 / §11 bind to shared-context EOP / style / pattern / knowledge paths
+  (paths only; no pasted skill bodies; no silent house-style override)
+- Improvement ideas are labeled `ARCHITECT_PROPOSED` (or equivalent), not
+  written as verified project fact
+- Greenfield / empty style inventory is labeled `NONE` / `UNDECIDED` /
+  `ARCHITECT_PROPOSED` rather than silent defaults
+- `handoffs/`, `scratch/`, `protocols/task-close.yaml`, and pack `.gitignore`
+  exist; task-delegation templates include `scratch_dir` / `handoff_dir`;
+  execution workflow includes reconcile + Close
 
 ## Save verification
 

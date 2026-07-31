@@ -1,4 +1,4 @@
-# Existing Operating Procedures � Reference
+# Existing Operating Procedures — Reference
 
 Neutral pattern catalog for detecting and adapting to project-local agent
 workflows. Author names and repo URLs below are **illustrative examples only** —

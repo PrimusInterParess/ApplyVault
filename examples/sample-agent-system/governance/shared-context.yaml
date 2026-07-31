@@ -1,0 +1,92 @@
+project:
+  id: sample-catalog-api
+  name: Sample Catalog API
+  mode: GREENFIELD
+  description: Fictional provider-neutral catalog API for Architect demos.
+  business_goal: Demonstrate a minimal valid agent-system prompt pack.
+  phase: IMPLEMENTATION
+
+governance:
+  architect: principal-software-architect
+  approval_required_for:
+    - provider selection
+    - breaking API contract changes
+
+existing_operating_procedures:
+  mode: NONE
+  detection_status: NOT_FOUND
+  adaptation_mode: NONE
+  procedure_paths: []
+  canonical_workflow_chain: []
+  domain_memory_locations: []
+  work_tracking_binding: none
+  precedence_notes:
+    - No project-owned operating procedures; use Architect defaults.
+
+capabilities:
+  identity:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+  payments:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+  ai:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+  persistence:
+    required: YES
+    provider: undecided
+    status: UNDECIDED
+  hosting:
+    required: YES
+    provider: undecided
+    status: UNDECIDED
+  cicd:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+  observability:
+    required: NO
+    provider: none
+    status: NOT_APPLICABLE
+
+technology:
+  frontend: none
+  backend: undecided-http-api
+  mobile: none
+  database: undecided
+  infrastructure_as_code: none
+
+contracts:
+  api: contracts/catalog-api (PROPOSED)
+  events: none
+  data: contracts/catalog-data (NOT_DEFINED)
+  identity: none
+  authorization: none
+  billing: none
+  ai: none
+  configuration: none
+  observability: none
+
+constraints:
+  security:
+    - No secrets in repo or prompts
+  compliance: []
+  availability: demo-only
+  latency: best-effort
+  scalability: single-instance demo
+  budget: none
+  data_residency: n/a
+  delivery:
+    - Keep pack short and validator-clean
+
+assumptions:
+  - Catalog items are simple records without media uploads.
+risks:
+  - Persistence provider remains undecided.
+open_questions:
+  - Which HTTP framework and datastore for a real implementation?
+blockers: []

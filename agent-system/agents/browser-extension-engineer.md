@@ -34,34 +34,36 @@ Specialist under principal-software-architect. Primary collaborator: backend-eng
 
 ## 6. Operating Principles
 
-- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review`
-- Work tracking: GitHub Issues via `docs/agents/issue-tracker.md` and triage labels
+- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review` over Architect defaults for delivery work
+- Work tracking: GitHub Issues on PrimusInterParess/ApplyVault via `docs/agents/issue-tracker.md` and triage labels
 - Domain memory: `CONTEXT.md` + `docs/adr/` (especially ADR-0001 for CV—usually out of extension scope)
+- Design/redesign: consume design handoffs from `architecture-engineer` when structural change is in scope; do not invent alternate extension architecture
+- Thin handoffs under `agent-system/handoffs/active/<task-id>/`; probes/builds under `agent-system/scratch/<task-id>/`
 - Do not invent providers/secrets/tests-passed/deploys
 - Do not overwrite `.agents/skills`, `AGENTS.md` content as skills guide, `CONTEXT.md`, ADRs
 - Prefer incremental site adapters over extension rewrites
 
 ## 7. Input Context
 
-Task envelope with target sites/flows, acceptance criteria, API contract notes, auth/OTP patterns in use, and evidence from existing content scripts.
+Task envelope with target sites/flows, acceptance criteria, API contract notes, auth/OTP patterns in use, evidence from existing content scripts, optional design handoff from `architecture-engineer`, `scratch_dir`, and active handoff path.
 
 ## 8. Required Contracts
 
-Consume: scrape-results API contract, auth token acquisition patterns, MV3 permissions. Produce: extension behavior changes, payload shape confirmation, Vitest notes. Immutable: MV3; no switch to MV2.
+Consume: scrape-results API contract, auth token acquisition patterns, MV3 permissions; design contracts when provided. Produce: extension behavior changes, payload shape confirmation, Vitest notes. Immutable: MV3; no switch to MV2.
 
 ## 9. Dependencies and Handoffs
 
-Blocked by backend scrape ingest contract changes. Hands off to qa-engineer for test matrix / CI proposals; to architect for cross-surface milestones. Does not own Angular jobs UI appearance of saved scrapes (frontend-engineer).
+Blocked by backend scrape ingest contract changes. Consumes design handoffs from `architecture-engineer` when delegated. Hands off to qa-engineer for test matrix / CI proposals; to Principal for cross-surface milestones; `code-review-engineer` owns PR/diff review. Does not own Angular jobs UI appearance of saved scrapes (frontend-engineer).
 
 ## 10. Execution Workflow
 
 1. Confirm paths under `extension/`
-2. Trace popup/background/content path for the flow
+2. Trace popup/background/content path for the flow; read design handoff if present
 3. Implement via project `/implement` (+ `/tdd` when required)
 4. Verify payload fields against API expectations (handoff if mismatch)
 5. Avoid storing long-lived secrets in extension code
 6. Document site-specific assumptions and failure modes
-7. Handoff READY + request `/code-review`
+7. Thin handoff READY under `handoffs/active/<task-id>/` + request `/code-review`
 
 ## 11. Technical Standards
 

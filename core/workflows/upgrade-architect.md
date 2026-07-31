@@ -114,11 +114,13 @@ were previously recorded:
 2. Update the specification section
    **Existing Agent / Skills / Documentation Procedures** when the inventory
    or adaptation mode changed.
-3. Keep status `APPROVED WITH CHANGES` only if material adoption decisions
-   changed; otherwise leave approval status as-is and note procedure refresh
-   in the upgrade summary.
+3. Keep status `APPROVED WITH CHANGES` when the procedure inventory or
+   adaptation mode changes in a material way; otherwise leave approval status
+   as-is and note procedure refresh in the upgrade summary.
 4. If adoption decisions would change in a breaking way, stop and ask for
    approval before regenerating agents.
+5. Always note library version before → after and list agent/governance files
+   replaced.
 
 For `GREENFIELD` with `NOT_FOUND` / `NONE`, skip unless the user points at a
 new skills pack.
@@ -134,9 +136,53 @@ these upgrade rules:
    using **current** core rules.
 3. Preserve `project-specification.md` (and plan/mapping files above).
 4. Bind `existing_operating_procedures` into shared context when adopted.
-5. Verify with the generate-prompt-pack save verification steps.
+5. **Auto-ensure project reviewer:** follow generate-prompt-pack **Default
+   reviewer (required in SAVE packs)**. If `code-review-engineer` (or an
+   equivalent REVIEWER already owning PR/diff review) is absent and the spec
+   does not exclude code review, **create and wire it** during this SAVE.
+   Do not tell the user to run `/extend-fleet` / `/create-agent` for this
+   default agent.
+6. **Auto-ensure architecture engineer:** follow generate-prompt-pack
+   **Default architecture engineer (required in SAVE packs)**. If
+   `architecture-engineer` (or an equivalent SPECIALIST already owning
+   architecture design/redesign) is absent and the spec does not exclude
+   architecture design, **create and wire it** during this SAVE.
+   Do not tell the user to run `/extend-fleet` / `/create-agent` for this
+   default agent.
+7. Ensure operate working trees and Close protocol exist (create if missing):
+   `handoffs/active/` (+ `.gitkeep`), `handoffs/archive/`, `scratch/` (+
+   `.gitkeep`), `protocols/task-close.yaml`, pack `.gitignore` entries for
+   `scratch/`, `**/build-out/`, and `handoffs/active/`. Refresh
+   `execution-workflow.md` and Principal DoD so Close cleanup is part of
+   COMPLETE. Do not delete user archive summaries.
+8. **Legacy operate piles:** scan for loose handoffs, `debug/` trees, and
+   build dumps under operate paths (see operate-agent-system **Legacy operate
+   piles**). Present M1 Keep-as-active / M2 Archive+clean / M3 Delete; never
+   silent-delete thin YAML. Always remove `bin/` / `obj/` / `build-out/` /
+   coverage dumps from handoff areas. Record outcome in the upgrade summary.
+9. Verify with the generate-prompt-pack save verification steps.
+10. In the upgrade summary, state reviewer and architecture-engineer outcomes:
+   each as `created` | `refreshed` | `skipped (excluded)` |
+   `skipped (equivalent exists)`; also note handoffs/scratch/Close and legacy
+   pile migration outcomes.
 
-### 5. Report
+### 5. Ownership sync (required chain)
+
+After a successful pack regenerate (step 4), run
+[update-ownership.md](update-ownership.md) in `REPO` mode (or `DIFF` if the
+user already provided a base ref for that purpose):
+
+1. Use the **same** workflow as `/update-ownership` — do not fork behavior.
+2. Propose ownership gaps vs the live repo; **confirm with the user** before
+   writing the matrix.
+3. If the user skips confirmation, record
+   `ownership_sync: skipped (user declined)` and continue; do not block the
+   library upgrade result solely for a declined ownership pass.
+4. If update-ownership is `OWNERSHIP_SYNC_BLOCKED` only because new agents are
+   required, note `NEEDS_NEW_AGENT` and point to `/extend-fleet`; library
+   upgrade may still be `ARCHITECT_UPGRADE_READY`.
+
+### 6. Report
 
 Return a short summary only:
 
@@ -146,8 +192,12 @@ Return a short summary only:
 4. Spec path + approval status
 5. Procedure adaptation mode (`FOLLOW` / `COMPOSE` / `BRIDGE` / `NONE`)
 6. Files created / updated / skipped under `agent-system/`
-7. Verification result
-8. Next step: `/operate` (or `/audit` if they want a review pass)
+7. `code-review-engineer` outcome (see step 4)
+8. `architecture-engineer` outcome (see step 4)
+9. Ownership sync outcome (see step 5): applied / no changes / skipped / blocked
+10. Verification result
+11. Next step: `/operate`, `/architect-review <base>`, `/update-ownership`, or
+    `/extend-fleet` when `NEEDS_NEW_AGENT`
 
 ## Result status
 

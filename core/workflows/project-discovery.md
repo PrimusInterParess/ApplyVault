@@ -9,7 +9,7 @@ For Brownfield/Hybrid, use [brownfield-research.md](brownfield-research.md) inst
 1. Capability before provider.
 2. Provider-neutral until verified or approved.
 3. Minimal necessary complexity.
-4. Evidence over assumption � classify every material statement.
+4. Evidence over assumption — classify every material statement.
 5. One question per message; wait for the answer.
 6. Max 25 primary questions unless the user authorizes more.
 7. End with `APPROVAL REQUIRED`, not prompt generation.
@@ -30,7 +30,8 @@ For each question:
 
 1. Ask one question.
 2. Use the host IDE's native structured-question or multiple-choice tool when
-   available so options are clickable. In Cursor, use `AskQuestion`.
+   Prefer the host's native choice UI when available so options are
+   clickable. Cursor `AskQuestion` details live under `.cursor/`.
 3. Use plain-text options only as a fallback when no choice tool is available.
 4. Explain each option clearly enough for the user to understand the difference.
 5. Put the option the agent suggests first, mark it `(Recommended)`, and briefly
@@ -59,7 +60,7 @@ Order is a guide, not a script:
 3. Roles and access needs (whether auth is required comes first)
 4. Core user journeys and scope (include / exclude / defer)
 5. Functional capabilities
-6. Identity capability (only if needed) � then providers if undecided
+6. Identity capability (only if needed) — then providers if undecided
 7. Payments / billing capability (only if needed)
 8. Data / persistence needs
 9. AI / automated decisions (only if needed)
@@ -68,7 +69,7 @@ Order is a guide, not a script:
 12. Hosting, delivery, environments, ops
 13. Security, privacy, compliance
 14. Quality / testing expectations
-15. Technology preferences and undecided providers (compare ?3 options)
+15. Technology preferences and undecided providers (compare ≥3 options)
 
 Maintain a capability matrix per [../../schemas/capability-matrix.schema.json](../../schemas/capability-matrix.schema.json).
 
@@ -80,7 +81,7 @@ Discovery is complete when project mode, goals, scope, users, journeys, material
 
 Otherwise readiness is:
 
-`NOT_READY � BLOCKING_INFORMATION_REQUIRED`
+`NOT_READY — BLOCKING_INFORMATION_REQUIRED`
 
 ## Final deliverable
 
@@ -92,7 +93,7 @@ Include all sections listed in [project-discovery.reference.md](project-discover
 
 For Greenfield section 10 (Current Repository):
 
-`Not applicable � Greenfield project.`
+`Not applicable — Greenfield project.`
 
 For section **Existing Agent / Skills / Documentation Procedures**: use
 `NOT_FOUND` / adaptation mode `NONE` unless the user pasted or pointed at an
@@ -110,7 +111,7 @@ When workspace file-writing tools are available:
 3. Before approval, include this metadata near the top:
 
    ```text
-   Status: PROPOSED � APPROVAL REQUIRED
+   Status: PROPOSED — APPROVAL REQUIRED
    ```
 
 4. When the user replies `APPROVED`, update it to:
@@ -121,7 +122,7 @@ When workspace file-writing tools are available:
 
 5. For `APPROVED WITH CHANGES`, apply the stated changes, regenerate the affected
    sections, save the updated file, and mark it `APPROVED WITH CHANGES`.
-6. For `REVISE`, update and save it as `PROPOSED � APPROVAL REQUIRED`.
+6. For `REVISE`, update and save it as `PROPOSED — APPROVAL REQUIRED`.
 7. Do not overwrite a different existing project specification silently. If the
    path already contains an unrelated specification, save a clearly named
    proposed copy and report the conflict.

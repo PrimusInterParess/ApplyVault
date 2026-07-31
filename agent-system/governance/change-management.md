@@ -3,8 +3,12 @@
 ## Prompt pack changes
 
 - Same-project refresh after Architect library update: `/upgrade-architect`
-- Do not use install `-Force` for routine upgrades
+  (regenerates pack, auto-adds default reviewer/architecture agents, then
+  ownership sync)
+- Do not use install `-Force` for routine upgrades; prefer
+  `scripts/update-into-project.*` then `/upgrade-architect`
 - Preserve `project-specification.md` unless discovery revises it
+- Ownership matrix refresh without full pack regen: `/update-ownership`
 
 ## Application changes
 

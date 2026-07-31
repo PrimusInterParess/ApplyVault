@@ -1,0 +1,24 @@
+# Checkable Definition of Done for request Close (cleanup gate).
+# Architect fills one instance per closed / abandoned task_id.
+close:
+  task_id: TASK-SAMPLE-001
+  final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+  # REQUEST COMPLETE | REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS | ABANDONED
+
+  archive_summary_path: handoffs/archive/TASK-SAMPLE-001/summary.yaml
+  pr_links: []
+  open_limitations:
+    - Persistence undecided
+
+  cleanup:
+    scratch_deleted: false
+    active_cleared: false
+    size_guard_passed: false
+    notes: Example template only — set true when Close actually ran.
+
+  definition_of_done:
+    - Archive summary written (status, PR links, open limitations)
+    - agent-system/scratch/<task-id>/ deleted entirely
+    - agent-system/handoffs/active/<task-id>/ cleared (or only thin finals moved to archive)
+    - No binary or >64KB files remain under handoffs/
+    - Lasting findings promoted to Jira / ADR / PR when still useful

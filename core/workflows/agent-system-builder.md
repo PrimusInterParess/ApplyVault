@@ -21,35 +21,37 @@ Also see: [../slash-commands.md](../slash-commands.md)
 | `/discover`, greenfield discovery | `DISCOVER_PROJECT` | [project-discovery.md](project-discovery.md) (ask A/B/C if needed) |
 | `/brownfield`, analyze existing repo | Brownfield | [brownfield-research.md](brownfield-research.md) |
 | `/hybrid`, existing + major new features | Hybrid | [brownfield-research.md](brownfield-research.md) then discovery follow-up |
-| `/generate-prompt-pack`, GENERATE_COMPLETE_PROMPT_PACK, BUILD_FLEET | Phase 2 | [generate-prompt-pack.md](generate-prompt-pack.md) � requires approved spec |
+| `/generate-prompt-pack`, GENERATE_COMPLETE_PROMPT_PACK, BUILD_FLEET | Phase 2 | [generate-prompt-pack.md](generate-prompt-pack.md) — requires approved spec |
 | `/create-agent`, CREATE_AGENT | Phase 2 | [create-agent.md](create-agent.md) |
 | `/extend-fleet`, EXTEND_FLEET | Phase 2 | [extend-fleet.md](extend-fleet.md) |
 | `/audit`, AUDIT_PROMPTS | Phase 2 | [audit-prompts.md](audit-prompts.md) |
 | `/operate`, delegate, handoff | Phase 2 | [operate-agent-system.md](operate-agent-system.md) |
+| `/update-ownership`, sync ownership matrix | Phase 2 | [update-ownership.md](update-ownership.md) |
+| `/architect-review`, PR/diff review, leave PR comments | Phase 2 | [architect-review.md](architect-review.md) — library on-demand review |
 | UPDATE_ORCHESTRATOR | Phase 2 | Prefer [extend-fleet.md](extend-fleet.md) or [create-agent.md](create-agent.md) Architect update blocks |
 
 ## First question when mode is unknown
 
-Use the host's native choice tool when available so the project modes are
-clickable. In Cursor, use `AskQuestion`. Use the following text only as a
-fallback:
+Prefer the host's native choice UI when available so project modes are
+clickable. Cursor adapter details live under `.cursor/`. Use the following
+text only as a fallback:
 
 ```text
 Which project mode best matches the work?
 
-A. GREENFIELD � a future project without an existing implementation.
+A. GREENFIELD — a future project without an existing implementation.
    Best when: you are designing a new product or system from requirements.
    Result: requirements interview first; there is no repository to research.
 
-B. BROWNFIELD � an existing project that should be researched first.
+B. BROWNFIELD — an existing project that should be researched first.
    Best when: the goal is to understand, document, audit, or improve what exists.
    Result: read-only repository analysis before recommendations.
 
-C. HYBRID � an existing project receiving significant new functionality.
+C. HYBRID — an existing project receiving significant new functionality.
    Best when: current contracts must be preserved while planning major new work.
    Result: repository research first, then discovery for the new capability.
 
-D. Other � describe your situation.
+D. Other — describe your situation.
 
 Recommended: the agent marks A, B, or C from the known context and gives one
 short reason. If there is not enough context, the recommendation is omitted.
@@ -57,14 +59,15 @@ short reason. If there is not enough context, the recommendation is omitted.
 Reply with A, B, C, D, or describe your situation.
 ```
 
-- **A** ? [project-discovery.md](project-discovery.md)
-- **B** or **C** ? [brownfield-research.md](brownfield-research.md)
+- **A** → [project-discovery.md](project-discovery.md)
+- **B** or **C** → [brownfield-research.md](brownfield-research.md)
 
 ## Provider-neutral foundation
 
 - Capability before provider.
-- Source-of-truth order: verified evidence ? user-confirmed ? org standard ? constraints ? preference ? approved recommendation ? labeled assumption.
-- Decision states: `VERIFIED_EXISTING`, `USER_REQUIRED`, `ORGANIZATION_REQUIRED`, `USER_PREFERRED`, `ARCHITECT_PROPOSED`, `UNDECIDED`, `NOT_APPLICABLE`, `MIGRATION_PLANNED`.
+- Source-of-truth order: verified evidence → user-confirmed → org standard → constraints → preference → approved recommendation → labeled assumption.
+- Decision states: `VERIFIED_EXISTING`, `USER_REQUIRED`, `ORGANIZATION_REQUIRED`, `USER_PREFERRED`, `ARCHITECT_PROPOSED`, `UNDECIDED`, `NOT_APPLICABLE`, `MIGRATION_PLANNED`
+  (see [../glossary.md](../glossary.md) for ledger mapping).
 - Prefer minimal architecture.
 - Prefer project-local agent/skills/documentation procedures when present —
   see [existing-operating-procedures.md](existing-operating-procedures.md).

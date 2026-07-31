@@ -9,6 +9,7 @@ project:
     Evolve the full product across extension, API, and dashboard while preserving
     existing agent delivery procedures.
   phase: IMPLEMENTATION
+  library_version: "0.5.4"
 
 governance:
   architect: principal-software-architect
@@ -33,7 +34,27 @@ existing_operating_procedures:
     - docs/adr/
     - core/
     - .cursor/commands/
+    - .cursor/skills/
     - .cursor/rules/job-results-ui-ux.mdc
+  skill_inventory:
+    root: .agents/skills/
+    count: 41
+    delivery_chain:
+      - grilling / grill-with-docs / domain-modeling (as needed)
+      - to-spec
+      - to-tickets
+      - implement
+      - tdd
+      - code-review
+      - triage / qa (as needed)
+  knowledge_paths:
+    - CONTEXT.md
+    - docs/adr/
+    - docs/agents/domain.md
+  style_and_pattern_paths:
+    - .cursor/rules/job-results-ui-ux.mdc
+    - frontend/applyvault-jobs-ui/ (Angular project conventions)
+    - api/ApplyVault.Api/ (ASP.NET conventions)
   canonical_workflow_chain:
     - clarify/grill/domain-modeling as needed
     - to-spec → GitHub issue (ready-for-agent)
@@ -54,6 +75,7 @@ existing_operating_procedures:
     - Architect /operate orchestrates; does not replace Issues or skills chain
     - Prefer CONTEXT.md and ADR-0001 vocabulary for CV work
     - Never overwrite .agents/skills, CONTEXT.md, ADRs, or docs/agents/*
+    - Root AGENTS.md is BRIDGE (skills guide + Architect pointer)
 
 capabilities:
   identity:
@@ -115,6 +137,13 @@ constraints:
   - no fabricated test pass or deploy claims
   - payments agents excluded
   - preserve monorepo seams; no rewrite without approval
+  - thin handoffs only; builds under scratch/
+
+operate_paths:
+  handoffs_active: agent-system/handoffs/active/
+  handoffs_archive: agent-system/handoffs/archive/
+  scratch: agent-system/scratch/
+  close_protocol: agent-system/protocols/task-close.yaml
 
 repository_roots:
   - extension/
@@ -123,3 +152,7 @@ repository_roots:
   - api/ApplyVault.Api.IntegrationTests/
   - frontend/applyvault-jobs-ui/
   - shared/cv-section-catalog/
+  - plans/
+  - docs/agents/
+  - .agents/skills/
+  - .github/workflows/

@@ -1,0 +1,6 @@
+task_id: TASK-SAMPLE-001
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+pr_links: []
+open_limitations:
+  - Persistence undecided
+closed_note: Sample archive summary only — demonstrates Close retention shape.

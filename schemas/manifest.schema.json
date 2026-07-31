@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/manifest.schema.json",
+  "title": "Agent-system prompt-pack manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["project_name", "library_version"],
+  "properties": {
+    "project_name": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string" },
+    "library_version": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string" },
+    "agents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "notes": { "type": "string" }
+  }
+}

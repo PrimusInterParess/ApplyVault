@@ -16,7 +16,7 @@ from the clone’s `VERSION` file. If an app keeps a separate checkout and links
 `core/` (junction/symlink) or otherwise points at that checkout, add a tracked
 policy with that project’s `library_root` — see **Install policy** below.
 
-## Option B � Copy portable files into a target project
+## Option B — Copy portable files into a target project
 
 From this repository:
 
@@ -92,10 +92,18 @@ then an existing stamp only.
 
 ## After install
 
-1. Open the target project.
-2. Run `/discover` (Cursor) or say: `Start agent system discovery`.
-3. Complete discovery ? `APPROVAL REQUIRED` ? approve.
-4. Run `/generate-prompt-pack` (or equivalent) for phase 2.
+1. Open the project in your AI IDE.
+2. Run `/architect` or `/discover` and complete discovery.
+3. Reply `APPROVED` (or `APPROVED WITH CHANGES`) when the specification is ready.
+4. After approval, the pack is generated automatically in `SAVE` mode under
+   `agent-system/`. Use `/generate-prompt-pack` only to regenerate or recover.
+5. Run `/operate` for planning or implementation.
+6. On-demand code review (no fleet required): `/architect-review <base>`.
+7. After a later library update: update files, then `/upgrade-architect`
+   (auto-adds `code-review-engineer` and `architecture-engineer` when missing,
+   then runs ownership sync).
+8. On demand without a library bump: `/update-ownership` to refresh the
+   ownership matrix from the repo/diff.
 
 ## Updating to a new library version
 
@@ -107,7 +115,7 @@ Bump `VERSION` in this repo when you publish. Consumers update as follows.
 cd /path/to/your/app
 git submodule update --remote vendor/thearchitect
 # or pin a release tag:
-# cd vendor/thearchitect && git fetch && git checkout v0.3.0
+# cd vendor/thearchitect && git fetch && git checkout v0.5.0
 ```
 
 Point IDE instructions at `vendor/thearchitect/AGENTS.md` so you never copy
@@ -118,7 +126,7 @@ library files into the app root.
 ```bash
 cd thearchitect
 git pull
-# or: git fetch && git checkout v0.3.0
+# or: git fetch && git checkout v0.4.0
 ```
 
 ### Option B (copied into an app) — use the update script

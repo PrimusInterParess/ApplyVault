@@ -35,6 +35,11 @@ approves a change:
 
 Label each adopted procedure `VERIFIED_EXISTING`. Label Architect additions that
 fill a gap `ARCHITECT_PROPOSED`. Never invent a procedure the repo does not have.
+Vocabulary: [../glossary.md](../glossary.md). Persist
+`existing_operating_procedures` per
+[`schemas/project-context.schema.json`](../../schemas/project-context.schema.json)
+(`$defs` / property on project context) and the pack
+`governance/shared-context.yaml`.
 
 ## When to run
 
@@ -106,11 +111,15 @@ When procedures were adopted:
    `existing_operating_procedures` (see schema).
 2. Add an **Operating Principles** bullet to every generated agent:
    follow adopted project procedures before Architect defaults.
-3. In `protocols/execution-workflow.md`, map Architect phases onto the
+3. When generating or refreshing the pack, fill agent **§6 / §11** from this
+   inventory per
+   [generate-prompt-pack.md](generate-prompt-pack.md)
+   (style, patterns, skills, knowledge = paths only).
+4. In `protocols/execution-workflow.md`, map Architect phases onto the
    project's workflow chain when one exists (do not duplicate competing loops).
-4. In the Principal Architect prompt, require procedure re-resolution at the
+5. In the Principal Architect prompt, require procedure re-resolution at the
    start of `/operate`.
-5. Do **not** regenerate or overwrite project skill files, `CONTEXT.md`, ADRs,
+6. Do **not** regenerate or overwrite project skill files, `CONTEXT.md`, ADRs,
    or host instruction files as part of prompt-pack generation.
 
 ## Safety

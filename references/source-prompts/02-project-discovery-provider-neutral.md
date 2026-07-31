@@ -1,6 +1,12 @@
-# Step 2 � Run Provider-Neutral Project Discovery
+# Step 2 - Run Provider-Neutral Project Discovery
 
-After Step 1 responds with `PROMPT FACTORY READY`, paste the entire prompt below into the **same AI chat**.
+> **Source of truth:** `core/workflows/`. If this playbook conflicts with `core/`, **core wins**. This file is progressive disclosure / paste legacy.
+
+**Preferred path:** follow `core/workflows/project-discovery.md` (and `brownfield-research.md` for B/C) via `/discover`, `/brownfield`, `/hybrid`, or `/architect`. Slash map also includes `/upgrade-architect` and `/update-context` (`core/slash-commands.md`). Prefer the host IDE native choice UI; ask exactly one question at a time. Detect existing operating procedures and record adaptation mode `FOLLOW` / `COMPOSE` / `BRIDGE` / `NONE`.
+
+**After approval:** automatically run generate-prompt-pack in `SAVE` mode (write under `agent-system/`). Do not wait for the user to paste Step 3.
+
+**Fallback:** after Step 1 responds with `PROMPT FACTORY READY`, paste the entire prompt below into the same AI chat.
 
 ```markdown
 # Command: DISCOVER_PROJECT
@@ -13,9 +19,9 @@ Your objective is to produce an evidence-based project specification that can la
 
 The process must support:
 
-- `GREENFIELD` � a future project without an existing implementation.
-- `BROWNFIELD` � an existing project that must be researched first.
-- `HYBRID` � an existing project receiving significant new functionality.
+- `GREENFIELD` - a future project without an existing implementation.
+- `BROWNFIELD` - an existing project that must be researched first.
+- `HYBRID` - an existing project receiving significant new functionality.
 
 Do not generate any agents during this step.
 
@@ -94,7 +100,7 @@ Never present an assumption, proposal, or user report as repository-verified evi
 1. Ask exactly one question per message.
 2. Wait for the user's answer before continuing.
 3. Do not combine several questions into one sentence or bullet list.
-4. Prefer concise multiple-choice answers when useful.
+4. Prefer the host IDE native structured-question / multiple-choice UI when available so options are clickable; use plain-text multiple-choice only as fallback.
 5. Always permit a custom answer.
 6. Explain unfamiliar terminology briefly.
 7. Do not ask for information already established by reliable evidence.
@@ -120,11 +126,11 @@ Your first response must contain exactly:
 
 Is this:
 
-A. GREENFIELD � a future project without an existing implementation
+A. GREENFIELD - a future project without an existing implementation
 
-B. BROWNFIELD � an existing project that should be researched first
+B. BROWNFIELD - an existing project that should be researched first
 
-C. HYBRID � an existing project receiving significant new functionality
+C. HYBRID - an existing project receiving significant new functionality
 
 Reply with A, B, or C.
 
@@ -403,7 +409,7 @@ If a likely secret is found:
 
 Inspect in stages, stopping when enough evidence exists for the current question.
 
-### Stage 1 � Orientation
+### Stage 1 - Orientation
 
 - Root structure.
 - README and contribution guides.
@@ -412,7 +418,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Build configuration.
 - Architecture documents and decision records.
 
-### Stage 2 � Application Topology
+### Stage 2 - Application Topology
 
 - User-facing applications.
 - APIs and services.
@@ -422,7 +428,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Data-access layers.
 - External integrations.
 
-### Stage 3 � Contracts and Data
+### Stage 3 - Contracts and Data
 
 - API specifications.
 - Request and response models.
@@ -432,7 +438,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Error conventions.
 - Sources of truth.
 
-### Stage 4 � Identity and Authorization
+### Stage 4 - Identity and Authorization
 
 - Identity SDKs and middleware.
 - Login and callback flows.
@@ -442,7 +448,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - User lifecycle and synchronization.
 - Frontend guards and backend enforcement.
 
-### Stage 5 � Payments and Billing
+### Stage 5 - Payments and Billing
 
 - Provider SDKs.
 - Checkout or payment creation.
@@ -452,7 +458,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Internal entitlement synchronization.
 - Failed-payment and reconciliation logic.
 
-### Stage 6 � AI
+### Stage 6 - AI
 
 - Model clients.
 - Prompt definitions and versions.
@@ -462,7 +468,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Output validation.
 - Evaluation, latency, rate-limit, and cost controls.
 
-### Stage 7 � Infrastructure and Delivery
+### Stage 7 - Infrastructure and Delivery
 
 - Container definitions.
 - Infrastructure as Code.
@@ -473,7 +479,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Identity and access for workloads.
 - Rollback strategy.
 
-### Stage 8 � Configuration
+### Stage 8 - Configuration
 
 - Local, test, staging, and production configuration.
 - Build-time, deployment-time, and runtime values.
@@ -481,7 +487,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 - Feature flags.
 - Configuration validation.
 
-### Stage 9 � Quality
+### Stage 9 - Quality
 
 - Unit, integration, contract, end-to-end, security, performance, and AI-evaluation tests.
 - Test data and mocking.
@@ -490,7 +496,7 @@ Inspect in stages, stopping when enough evidence exists for the current question
 
 Reading tests does not prove they pass.
 
-### Stage 10 � Observability and Operations
+### Stage 10 - Observability and Operations
 
 - Structured logging.
 - Correlation and tracing.
@@ -697,7 +703,7 @@ Discovery is complete only when:
 
 If these criteria cannot be met, classify readiness as:
 
-`NOT_READY � BLOCKING_INFORMATION_REQUIRED`
+`NOT_READY - BLOCKING_INFORMATION_REQUIRED`
 
 ---
 
@@ -739,7 +745,7 @@ Include measurable targets where confirmed.
 
 For Greenfield state:
 
-`Not applicable � Greenfield project.`
+`Not applicable - Greenfield project.`
 
 For Brownfield and Hybrid include evidence-supported structure and topology.
 
@@ -856,7 +862,7 @@ For Brownfield and Hybrid, list primary evidence.
 
 For Greenfield state:
 
-`Not applicable � no existing repository was analyzed.`
+`Not applicable - no existing repository was analyzed.`
 
 ## 40. Repository Access and Validation Limitations
 
@@ -875,7 +881,24 @@ Choose exactly one:
 
 - `READY_FOR_PROMPT_PACK_GENERATION`
 - `READY_WITH_DOCUMENTED_ASSUMPTIONS`
-- `NOT_READY � BLOCKING_INFORMATION_REQUIRED`
+- `NOT_READY - BLOCKING_INFORMATION_REQUIRED`
+
+---
+
+# 10.1 Existing Agent / Skills / Documentation Procedures
+
+Include a specification section with this title. Record:
+
+1. Detection status: `FOUND` | `PARTIAL` | `NOT_FOUND`
+2. Adaptation mode: `FOLLOW` | `COMPOSE` | `BRIDGE` | `NONE`
+3. Procedure inventory (path, type, purpose, confidence)
+4. Canonical workflow chain if any
+5. Domain memory locations
+6. Work-tracking binding
+7. Conflicts with Architect defaults and proposed resolutions
+8. Adoption decisions after approval
+
+For Greenfield with no external skills pack: `NOT_FOUND` / mode `NONE`. Follow `core/workflows/existing-operating-procedures.md`. Slash map reminders: `/upgrade-architect`, `/update-context`.
 
 ---
 
@@ -895,10 +918,16 @@ Accept only:
 
 Do not generate the prompt pack before approval.
 
-After approval, automatically generate and save the complete prompt pack as
-separate files under `agent-system/`. Do not ask the user to select a generation
-format. Verify the files before reporting completion. Do not implement the
-application until the user starts the operate workflow.
+After `APPROVED` or `APPROVED WITH CHANGES`:
+
+1. Persist `agent-system/project-specification.md` with approved status.
+2. Immediately run `GENERATE_COMPLETE_PROMPT_PACK` / `core/workflows/generate-prompt-pack.md` in `SAVE` mode.
+3. Write real files under `agent-system/`; do not dump the complete pack into chat; return a short summary.
+4. Bind `existing_operating_procedures` into shared context when adopted (`FOLLOW` / `COMPOSE` / `BRIDGE` / `NONE`).
+5. Do not ask the user to paste Step 3 or choose a generation format.
+6. Do not implement the application until the user starts `/operate`.
+
+If file-writing tools are unavailable, report `PROMPT_PACK_BLOCKED` and offer `PREVIEW` instead of pretending chat output is a saved pack.
 
 ---
 
@@ -912,13 +941,15 @@ Expected response:
 ```text
 Is this:
 
-A. GREENFIELD � a future project without an existing implementation
+A. GREENFIELD - a future project without an existing implementation
 
-B. BROWNFIELD � an existing project that should be researched first
+B. BROWNFIELD - an existing project that should be researched first
 
-C. HYBRID � an existing project receiving significant new functionality
+C. HYBRID - an existing project receiving significant new functionality
 
 Reply with A, B, or C.
 ```
 
-Continue answering one question at a time in the same chat until the specification ends with `APPROVAL REQUIRED`.
+**Preferred next step after approval:** auto-`SAVE` generate under `agent-system/` (see `core/workflows/generate-prompt-pack.md`), then `/operate`.
+
+**Fallback:** continue answering one question at a time in the same chat until the specification ends with `APPROVAL REQUIRED`.

@@ -9,7 +9,9 @@
 5. Extension changes include/adjust Vitest specs when extraction/quality logic changes.
 6. No secrets in diffs, prompts, or handoffs.
 7. Prefer project skills: `/tdd` at agreed seams, then `/code-review`.
-8. Do not claim full suite green unless executed or CI evidence is cited.
+8. Pack reviewer: `code-review-engineer` owns `/architect-review` findings; `qa-engineer` owns test strategy/evidence (do not merge those roles).
+9. Thin handoffs only under `handoffs/active/<task-id>/`; Close before COMPLETE.
+10. Do not claim full suite green unless executed or CI evidence is cited.
 
 ## Known gaps (do not ignore)
 

@@ -1,4 +1,4 @@
-# Project Discovery � Reference
+# Project Discovery — Reference
 
 ## Question format
 
@@ -60,7 +60,7 @@ Otherwise omit it. Recommendations are proposals until the user approves them.
 
 - Use case, inputs/outputs, determinism
 - Data sensitivity, retrieval, tools, human review
-- Latency/cost; do not add AI �because we can�
+- Latency/cost; do not add AI 'because we can'
 
 ### Clients and UX
 
@@ -88,7 +88,7 @@ When undecided and material:
 | Option | Advantages | Disadvantages | Cost | Ops complexity | Fit |
 |---|---|---|---|---|---|
 
-Present ?3 options; recommend; wait for approval.
+Present ≥3 options; recommend; wait for approval.
 
 ## Specification section list
 
@@ -133,7 +133,7 @@ Present ?3 options; recommend; wait for approval.
 37. Excluded Agents (with reasons)  
 38. Preliminary Ownership Matrix  
 39. Proposed Execution Order  
-40. Evidence Index (`Not applicable � no existing repository was analyzed.`)  
+40. Evidence Index (`Not applicable — no existing repository was analyzed.`)  
 41. Repository Access and Validation Limitations  
 42. Readiness Recommendation  
 
@@ -141,7 +141,7 @@ Readiness values:
 
 - `READY_FOR_PROMPT_PACK_GENERATION`
 - `READY_WITH_DOCUMENTED_ASSUMPTIONS`
-- `NOT_READY � BLOCKING_INFORMATION_REQUIRED`
+- `NOT_READY — BLOCKING_INFORMATION_REQUIRED`
 
 ## After approval
 
@@ -155,6 +155,6 @@ repository task mapping, and application implementation happen later through
 
 ## Example agent IDs (not defaults)
 
-`principal-software-architect`, `product-manager`, `ui-ux-designer`, `frontend-engineer`, `backend-engineer`, `database-engineer`, `identity-access-engineer`, `payment-billing-engineer`, `ai-llm-engineer`, `cloud-platform-engineer`, `cicd-engineer`, `security-engineer`, `qa-engineer`, `technical-writer`
+`principal-software-architect`, `architecture-engineer`, `product-manager`, `ui-ux-designer`, `frontend-engineer`, `backend-engineer`, `database-engineer`, `identity-access-engineer`, `payment-billing-engineer`, `ai-llm-engineer`, `cloud-platform-engineer`, `cicd-engineer`, `security-engineer`, `qa-engineer`, `code-review-engineer`, `technical-writer`
 
 Specialize only when a provider is verified or approved (e.g. `auth0-identity-engineer`).

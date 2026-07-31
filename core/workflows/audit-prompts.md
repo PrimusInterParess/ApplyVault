@@ -13,6 +13,12 @@ Review one or more Architect / agent prompts or a full `agent-system/` pack.
 - Hallucination controls
 - Brownfield compatibility
 - Obsolete provider/framework lock-in
+- Existing-operating-procedures adaptation (`FOLLOW` / `COMPOSE` / `BRIDGE` / `NONE`)
+- Consistency with `core/` when deep `references/` playbooks are in scope
+- Adapter / slash-command parity with `core/slash-commands.md`
+- Broken links to workflows or progressive-disclosure files
+- Library vs pack `library_version` drift (recommend `/upgrade-architect`)
+- Encoding / normative token corruption (`PROPOSED — APPROVAL REQUIRED`, readiness enums)
 
 ## Output
 

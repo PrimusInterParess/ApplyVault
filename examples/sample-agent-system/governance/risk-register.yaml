@@ -1,0 +1,15 @@
+risks:
+  - id: R-001
+    title: Persistence provider undecided
+    severity: MEDIUM
+    likelihood: HIGH
+    owner: principal-software-architect
+    mitigation: Keep persistence behind an interface; escalate before production claims.
+    status: OPEN
+  - id: R-002
+    title: Demo pack mistaken for production system
+    severity: LOW
+    likelihood: MEDIUM
+    owner: user
+    mitigation: README marks project as fictional demo.
+    status: OPEN

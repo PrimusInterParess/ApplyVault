@@ -11,6 +11,17 @@ disable-model-invocation: true
 
 **Read and follow:** [core/workflows/operate-agent-system.md](../../../core/workflows/operate-agent-system.md)
 
+## Cursor-specific: choice UI
+
+When presenting A–E (or other operate choices), use the native **`AskQuestion`**
+tool so options are clickable. Do not print the text menu first when
+`AskQuestion` is available.
+
+Also use **`AskQuestion`** for the **Same-task restart gate** (Resume vs
+Fresh start) whenever `handoffs/active/<task-id>/` or `scratch/<task-id>/`
+already has data for the issue being operated. Do not auto-resume or
+auto-wipe across a new chat/thread.
+
 ## Cursor-specific: native Task delegation
 
 When executing options **C** or **D** (or any specialist implementation under
@@ -26,4 +37,6 @@ When executing options **C** or **D** (or any specialist implementation under
    read-only research.
 5. Do not implement another agent’s owned work in the parent chat while `Task`
    is available.
-6. Integrate returned handoffs in the parent, then continue the operate loop.
+6. Integrate returned handoffs in the parent (after READY reconciliation), then
+   continue the operate loop through Approve → **Close** (archive summary,
+   delete `scratch/<task-id>/`, clear `handoffs/active/<task-id>/`).

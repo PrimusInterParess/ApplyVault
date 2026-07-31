@@ -1,0 +1,57 @@
+library_version: "0.5.4"
+project_name: sample-catalog-api
+
+prompt_pack:
+  id: sample-catalog-api-pack
+  name: Sample Catalog API Agent System
+  version: "1.1.0"
+  project_mode: GREENFIELD
+  specification_status: APPROVED
+
+governance:
+  orchestrator: principal-software-architect
+  final_integration_owner: principal-software-architect
+  approval_authorities:
+    - user
+
+agents:
+  - id: principal-software-architect
+    title: Principal Software Architect
+    prompt_file: agents/00-principal-architect.md
+    type: ORCHESTRATOR
+    provider_scope: GENERIC
+    invocation: ALWAYS
+    status: ACTIVE
+  - id: architecture-engineer
+    title: Architecture Engineer
+    prompt_file: agents/architecture-engineer.md
+    type: SPECIALIST
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+  - id: backend-engineer
+    title: Backend Engineer
+    prompt_file: agents/backend-engineer.md
+    type: CORE
+    provider_scope: GENERIC
+    invocation: CONDITIONAL
+    status: ACTIVE
+
+artifacts:
+  shared_context: governance/shared-context.yaml
+  agent_registry: governance/agent-registry.yaml
+  contract_registry: governance/contract-registry.yaml
+  ownership_matrix: governance/ownership-matrix.md
+  task_protocol: protocols/task-delegation.yaml
+  handoff_protocol: protocols/agent-handoff.yaml
+  task_close_protocol: protocols/task-close.yaml
+  execution_workflow: protocols/execution-workflow.md
+  handoffs_active: handoffs/active/
+  handoffs_archive: handoffs/archive/
+  scratch_root: scratch/
+
+provider_decisions: []
+assumptions:
+  - Demo API uses in-memory or file persistence until persistence provider is approved.
+unresolved_items:
+  - Hosting provider undecided

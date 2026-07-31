@@ -1,0 +1,48 @@
+handoff:
+  task_id: TASK-SAMPLE-001
+  producer: backend-engineer
+  consumers:
+    - principal-software-architect
+  status: READY
+  summary: Proposed list-items response shape for Sample Catalog API.
+
+  scope:
+    completed:
+      - Documented list endpoint fields
+    not_completed:
+      - Persistence implementation
+    out_of_scope:
+      - Authentication
+
+  # Paths/URLs only — never embed bin/, obj/, node_modules/, coverage, build-out/
+  artifacts:
+    - name: catalog-list-sketch
+      reference: examples/handoff-example.yaml
+      type: DOCUMENTATION
+      version: "0.1.0"
+
+  contracts:
+    consumed:
+      - catalog-api
+    produced: []
+    proposed:
+      - catalog-api list response fields
+    changed: []
+
+  validation:
+    performed:
+      - Self-review against delegation scope
+    not_performed:
+      - Automated tests (not run)
+    evidence: []
+    result: PARTIAL
+
+  decisions: []
+  assumptions:
+    - Item has id, name, description, price fields
+  risks:
+    - Persistence undecided
+  blockers: []
+  required_approvals: []
+  next_actions:
+    - Architect integration review

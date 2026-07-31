@@ -1,5 +1,6 @@
-registry_version: "1.0.0"
+registry_version: "1.1.0"
 project_id: applyvault
+library_version: "0.5.4"
 orchestrator: principal-software-architect
 
 agents:
@@ -12,14 +13,17 @@ agents:
       - orchestration
       - integration-review
       - procedure-bridge
+      - close-cleanup
     collaborators:
       - product-manager
+      - architecture-engineer
       - frontend-engineer
       - backend-engineer
       - browser-extension-engineer
       - ai-llm-engineer
       - ui-ux-designer
       - qa-engineer
+      - code-review-engineer
       - platform-engineer
 
   - id: product-manager
@@ -34,6 +38,24 @@ agents:
     collaborators:
       - principal-software-architect
       - ui-ux-designer
+      - architecture-engineer
+
+  - id: architecture-engineer
+    title: Architecture Engineer
+    prompt_file: agents/architecture-engineer.md
+    type: SPECIALIST
+    status: ACTIVE
+    owns:
+      - architecture-design
+      - architecture-redesign
+      - structural-shape-for-new-features
+    collaborators:
+      - principal-software-architect
+      - backend-engineer
+      - frontend-engineer
+      - browser-extension-engineer
+      - platform-engineer
+      - code-review-engineer
 
   - id: frontend-engineer
     title: Frontend Engineer
@@ -46,6 +68,8 @@ agents:
       - ui-ux-designer
       - backend-engineer
       - qa-engineer
+      - architecture-engineer
+      - code-review-engineer
 
   - id: backend-engineer
     title: Backend Engineer
@@ -60,6 +84,8 @@ agents:
       - platform-engineer
       - browser-extension-engineer
       - qa-engineer
+      - architecture-engineer
+      - code-review-engineer
 
   - id: browser-extension-engineer
     title: Browser Extension Engineer
@@ -71,6 +97,8 @@ agents:
     collaborators:
       - backend-engineer
       - qa-engineer
+      - architecture-engineer
+      - code-review-engineer
 
   - id: ai-llm-engineer
     title: AI / LLM Engineer
@@ -83,6 +111,8 @@ agents:
     collaborators:
       - backend-engineer
       - frontend-engineer
+      - architecture-engineer
+      - code-review-engineer
 
   - id: ui-ux-designer
     title: UI/UX Designer
@@ -109,6 +139,25 @@ agents:
       - backend-engineer
       - browser-extension-engineer
       - platform-engineer
+      - code-review-engineer
+
+  - id: code-review-engineer
+    title: Code Review Engineer
+    prompt_file: agents/code-review-engineer.md
+    type: REVIEWER
+    status: ACTIVE
+    owns:
+      - pr-diff-review
+      - architect-review-findings
+      - intent-architecture-security-review
+    collaborators:
+      - principal-software-architect
+      - qa-engineer
+      - architecture-engineer
+      - frontend-engineer
+      - backend-engineer
+      - browser-extension-engineer
+      - platform-engineer
 
   - id: platform-engineer
     title: Platform Engineer
@@ -121,6 +170,8 @@ agents:
     collaborators:
       - backend-engineer
       - qa-engineer
+      - architecture-engineer
+      - code-review-engineer
 
 excluded_agents:
   - payment-billing-engineer

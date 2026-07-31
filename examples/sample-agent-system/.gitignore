@@ -1,0 +1,7 @@
+# Per-task disposable operate trees (never commit)
+scratch/
+**/build-out/
+
+# Active handoffs are ephemeral; archive summaries may be committed
+handoffs/active/**
+!handoffs/active/.gitkeep

@@ -1,0 +1,4 @@
+# Auto-created by /upgrade-architect — copy-install layout
+install_style: copy_install
+library_root: .
+write_app_root_stamp: true

@@ -8,8 +8,8 @@ For pure Greenfield interviews, use [project-discovery.md](project-discovery.md)
 
 | Mode | Behavior |
 |---|---|
-| `BROWNFIELD` | Repository research ? specification ? approval |
-| `HYBRID` | Brownfield research first ? interview for new work ? classify PRESERVE / EXTEND / REFACTOR / REPLACE / REQUIRES_DECISION ? specification ? approval |
+| `BROWNFIELD` | Repository research → specification → approval |
+| `HYBRID` | Brownfield research first → interview for new work → classify PRESERVE / EXTEND / REFACTOR / REPLACE / REQUIRES_DECISION → specification → approval |
 
 ## Access check
 
@@ -43,7 +43,7 @@ inappropriate.
 
 - No modify, format, migrate, install, build, test, start, deploy, or external calls without explicit authorization.
 - Never display secret values; report path + category only if a likely secret appears.
-- Source inspection ? runtime verification; reading tests ? tests pass.
+- Source inspection → runtime verification; reading tests → tests pass.
 - The only automatic write allowed during discovery is the governance artifact
   `agent-system/project-specification.md`, following the persistence rules in
   [project-discovery.md](project-discovery.md). This does not authorize changes
@@ -76,7 +76,7 @@ For material findings:
 
 Classifications: `VERIFIED_PROJECT_FACT` | `USER_REPORTED_FACT` | `PROPOSED_DECISION` / proposed finding | `ASSUMPTION` | `RISK` | `OPEN_QUESTION` | `BLOCKER`
 
-Cite paths, symbols, config **key names**, routes, schema names � never secret values.
+Cite paths, symbols, config **key names**, routes, schema names — never secret values.
 
 Align ledger entries with [../../schemas/discovery-ledger.schema.json](../../schemas/discovery-ledger.schema.json).
 

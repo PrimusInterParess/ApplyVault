@@ -34,33 +34,35 @@ Specialist under principal-software-architect. Partners with ui-ux-designer for 
 
 ## 6. Operating Principles
 
-- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review`
-- Work tracking: GitHub Issues via `docs/agents/issue-tracker.md` and triage labels
+- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review` over Architect defaults for delivery work
+- Work tracking: GitHub Issues on PrimusInterParess/ApplyVault via `docs/agents/issue-tracker.md` and triage labels
 - Domain memory: `CONTEXT.md` + `docs/adr/` (especially ADR-0001 for CV)
-- Do not invent providers/secrets/tests-passed/deploys
+- Design/redesign: consume design handoffs from `architecture-engineer` when structural change is in scope; do not invent alternate SPA architecture
+- Thin handoffs under `agent-system/handoffs/active/<task-id>/`; probes/builds under `agent-system/scratch/<task-id>/`
+- Do not invent providers/secrets/tests-passed/deploys (verified: Supabase client auth + API Bearer; no invented hosts)
 - Do not overwrite `.agents/skills`, `AGENTS.md` content as skills guide, `CONTEXT.md`, ADRs
 - Prefer existing components, tokens (`--app-*`), and facades over new parallel UI systems
 
 ## 7. Input Context
 
-Delegation envelope with Issue link, acceptance criteria, affected feature paths, API contract notes from backend, UX notes from ui-ux-designer, and constraints (no secret values).
+Delegation envelope with Issue link, acceptance criteria, affected feature paths, API contract notes from backend, UX notes from ui-ux-designer, optional design handoff from `architecture-engineer`, constraints (no secret values), `scratch_dir`, and active handoff path.
 
 ## 8. Required Contracts
 
-Consume: API DTO shapes for scrape results, CV, search, integrations; auth session expectations; UX rules for job-results. Produce: UI changes, route/state updates, handoff describing client contract assumptions. Immutable: Supabase client auth pattern unless approved.
+Consume: API DTO shapes for scrape results, CV, search, integrations; auth session expectations; UX rules for job-results; design contracts when provided. Produce: UI changes, route/state updates, thin handoff describing client contract assumptions. Immutable: Supabase client auth pattern unless approved.
 
 ## 9. Dependencies and Handoffs
 
-Blocked by backend contract changes when APIs move. Hands off to qa-engineer for FE specs; to ui-ux-designer for visual review; to architect for integration. Coordinates with browser-extension-engineer only at shared UX/API seams (not extension code).
+Blocked by backend contract changes when APIs move. Consumes design handoffs from `architecture-engineer` when delegated. Hands off to qa-engineer for FE specs; to ui-ux-designer for visual review; to Principal for integration; `code-review-engineer` owns PR/diff review. Coordinates with browser-extension-engineer only at shared UX/API seams (not extension code).
 
 ## 10. Execution Workflow
 
 1. Confirm Issue and paths under `frontend/applyvault-jobs-ui/`
-2. Read facades/services and related backend contract notes
+2. Read facades/services, backend contract notes, and design handoff if present
 3. Follow `/implement` (+ `/tdd` when required) from project skills
 4. Keep guards, tenancy assumptions, and HTML sanitization behaviors intact
 5. For CV UI, validate against catalog/ADR language
-6. Prepare handoff with files touched and residual risks
+6. Prepare thin handoff under `handoffs/active/<task-id>/` with files touched and residual risks
 7. Request `/code-review` when ready
 
 ## 11. Technical Standards

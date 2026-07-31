@@ -1,0 +1,39 @@
+schema_version: "1.0.0"
+protocol: task-close
+description: >
+  Cleanup gate after integration status is set. Runs before declaring
+  REQUEST COMPLETE / BLOCKED / ABANDONED for an operate task.
+
+checks:
+  - id: size-type-guard
+    rule: >
+      Fail Close if any file under agent-system/handoffs/ is binary or larger
+      than thin YAML/MD metadata allows. Builds never belong under handoffs/.
+  - id: promote-findings
+    rule: >
+      Promote durable findings to GitHub Issues, ADRs, or PR descriptions
+      before wiping active/scratch when the user needs them retained.
+  - id: archive-summary
+    rule: >
+      Write handoffs/archive/<task-id>/summary.yaml with status, PR/issue
+      refs, limitations, and residual risks.
+  - id: wipe-scratch
+    rule: Delete agent-system/scratch/<task-id>/ entirely.
+  - id: clear-active
+    rule: >
+      Delete handoffs/active/<task-id>/ after archive summary (or move only
+      the thin YAML the archive needs, then clear the rest).
+  - id: remove-build-dumps
+    rule: >
+      Always remove bin/, obj/, node_modules/, coverage, build-out/, publish
+      trees under operate paths regardless of archive choice.
+
+inputs:
+  task_id: ""
+  integration_status: "" # REQUEST COMPLETE | BLOCKED | ABANDONED | SUPERSEDED
+  artifacts_to_promote: []
+
+outputs:
+  archive_summary_path: "agent-system/handoffs/archive/<task-id>/summary.yaml"
+  scratch_deleted: true
+  active_cleared: true

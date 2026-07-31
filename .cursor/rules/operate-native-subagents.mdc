@@ -1,0 +1,24 @@
+---
+description: Require Cursor Task for /operate specialist agents (inject fleet prompts + delegation).
+alwaysApply: true
+---
+
+# Operate — native subagent delegation
+
+When running `/operate`, `operate-agent-system`, or implementing work from an
+`agent-system/` prompt pack:
+
+1. Parent chat = Principal Architect / orchestrator only.
+2. For each selected specialist (any agent other than the orchestrator), use
+   Cursor **Task** when available.
+3. Each Task prompt must include that agent’s `agent-system/agents/*.md`
+   purpose and the filled `task-delegation.yaml` for this request.
+4. Do not role-play `backend-engineer`, `frontend-engineer`, `qa-engineer`,
+   or other fleet specialists in the parent turn while Task is available.
+5. After Task returns, integrate the handoff in the parent and continue the
+   operate loop (next agent, QA Task, or integration review).
+
+When running `/operate`, also use **`AskQuestion`** for A–E menus when available.
+
+Full procedure: `core/workflows/operate-agent-system.md` (§ Delegation runtime).
+Cursor tool names: `.cursor/skills/operate-agent-system/SKILL.md`.

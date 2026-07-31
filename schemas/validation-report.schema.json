@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/validation-report.schema.json",
+  "title": "Validation report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["subject_task_id", "result"],
+  "properties": {
+    "subject_task_id": { "type": "string" },
+    "reviewer_agent_id": { "type": "string" },
+    "result": {
+      "type": "string",
+      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL", "BLOCKED"]
+    },
+    "checks": { "type": "array" },
+    "evidence": { "type": ["array", "object", "string"] },
+    "notes": { "type": "string" }
+  }
+}

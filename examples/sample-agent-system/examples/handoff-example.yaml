@@ -1,0 +1,43 @@
+handoff:
+  task_id: TASK-SAMPLE-001
+  producer: backend-engineer
+  consumers:
+    - principal-software-architect
+  status: READY
+  summary: Example handoff for list-catalog-items sketch.
+  scope:
+    completed:
+      - Response field list (id, name, description, price)
+    not_completed:
+      - Persistence
+    out_of_scope:
+      - Auth
+  # Paths/URLs only — never embed build trees under handoffs/
+  artifacts:
+    - name: list-items-sketch
+      reference: protocols/agent-handoff.yaml
+      type: DOCUMENTATION
+      version: "0.1.0"
+  contracts:
+    consumed:
+      - catalog-api
+    produced: []
+    proposed:
+      - catalog-api list fields
+    changed: []
+  validation:
+    performed:
+      - Scope self-check
+    not_performed:
+      - Automated tests
+    evidence: []
+    result: PARTIAL
+  decisions: []
+  assumptions:
+    - Price is a decimal string for demo clarity
+  risks:
+    - Persistence undecided
+  blockers: []
+  required_approvals: []
+  next_actions:
+    - Architect review

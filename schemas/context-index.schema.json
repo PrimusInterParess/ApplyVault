@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/context-index.schema.json",
+  "title": "Agent-system context index",
+  "description": "Paths only — never secret contents.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["artifacts"],
+  "properties": {
+    "generated_at": { "type": "string" },
+    "source_priority": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "properties": {
+        "project_specification": { "type": "string" },
+        "shared_context": { "type": "string" },
+        "contract_registry": { "type": "string" },
+        "ownership_matrix": { "type": "string" },
+        "agent_prompts_dir": { "type": "string" },
+        "protocols_dir": { "type": "string" }
+      }
+    }
+  }
+}

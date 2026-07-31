@@ -1,0 +1,19 @@
+decisions:
+  - id: D-001
+    title: Fleet limited to Architect + Backend Engineer
+    status: APPROVED
+    decided_by: user
+    rationale: Minimal demo pack for validator and operate examples.
+    date: "2026-07-30"
+  - id: D-002
+    title: Provider-neutral technology choices
+    status: APPROVED
+    decided_by: user
+    rationale: Avoid inventing cloud/vendor bindings in the sample.
+    date: "2026-07-30"
+  - id: D-003
+    title: Persistence provider
+    status: PROPOSED
+    decided_by: principal-software-architect
+    rationale: Defer until a real implementation target exists.
+    date: "2026-07-30"

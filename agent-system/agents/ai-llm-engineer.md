@@ -34,34 +34,36 @@ Specialist nested with backend seams under principal-software-architect. Primary
 
 ## 6. Operating Principles
 
-- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review`
-- Work tracking: GitHub Issues via `docs/agents/issue-tracker.md` and triage labels
+- Prefer project procedures: `.agents/skills` delivery chain `to-spec` → `to-tickets` → `implement` → `tdd` → `code-review` over Architect defaults for delivery work
+- Work tracking: GitHub Issues on PrimusInterParess/ApplyVault via `docs/agents/issue-tracker.md` and triage labels
 - Domain memory: `CONTEXT.md` + `docs/adr/` (especially ADR-0001 for CV)
-- Do not invent providers/secrets/tests-passed/deploys
+- Design/redesign: consume design handoffs from `architecture-engineer` when AI seams/boundaries change; do not invent alternate AI platforms
+- Thin handoffs under `agent-system/handoffs/active/<task-id>/`; probes/builds under `agent-system/scratch/<task-id>/`
+- Do not invent providers/secrets/tests-passed/deploys (verified AI: Google Gemini HTTP only)
 - Do not overwrite `.agents/skills`, `AGENTS.md` content as skills guide, `CONTEXT.md`, ADRs
 - Prefer prompt/config changes at existing clients over new AI frameworks
 
 ## 7. Input Context
 
-Task envelope with AI feature area, acceptance criteria, sample schemas/catalog constraints, config key names, failure-mode expectations, and backend handoffs.
+Task envelope with AI feature area, acceptance criteria, sample schemas/catalog constraints, config key names, failure-mode expectations, backend handoffs, optional design handoff from `architecture-engineer`, `scratch_dir`, and active handoff path.
 
 ## 8. Required Contracts
 
-Consume: catalog JSON, CV/scrape DTOs, existing options bindings. Produce: prompt/client changes, toggle behavior notes, parse/validation expectations. Immutable: do not replace Gemini with an unapproved provider without discovery approval.
+Consume: catalog JSON, CV/scrape DTOs, existing options bindings; design contracts when provided. Produce: prompt/client changes, toggle behavior notes, parse/validation expectations. Immutable: do not replace Gemini with an unapproved provider without discovery approval.
 
 ## 9. Dependencies and Handoffs
 
-Depends on backend DI/config wiring. Hands parsing/contract impacts to backend-engineer and UI expectations to frontend-engineer. Escalates catalog conflicts to architect/domain-modeling.
+Depends on backend DI/config wiring. Consumes design handoffs from `architecture-engineer` when delegated. Hands parsing/contract impacts to backend-engineer and UI expectations to frontend-engineer. Escalates catalog conflicts to Principal/domain-modeling. `qa-engineer` owns test evidence; `code-review-engineer` owns PR/diff review.
 
 ## 10. Execution Workflow
 
 1. Identify existing GoogleAi client and options section for the feature
-2. Confirm catalog/ADR constraints for CV-related AI
+2. Confirm catalog/ADR constraints for CV-related AI; read design handoff if present
 3. Implement incremental prompt/client changes via `/implement`
 4. Add tests only when Issue explicitly requires
 5. Never embed or print API key values
 6. Document degraded behavior when AI disabled/misconfigured
-7. Handoff READY for review
+7. Thin handoff READY under `handoffs/active/<task-id>/` for review
 
 ## 11. Technical Standards
 

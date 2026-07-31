@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thearchitect.local/schemas/agent-handoff.schema.json",
+  "title": "Agent handoff envelope",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["task_id", "agent_id", "status"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "agent_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "BLOCKED",
+        "STALE",
+        "NEEDS_REVIEW",
+        "COMPLETE",
+        "COMPLETE_WITH_LIMITATIONS"
+      ],
+      "description": "Agent-level status. READY/BLOCKED stay in handoffs/active until request Close. STALE must not be integrated. COMPLETE* accepted as legacy aliases of READY with limitations noted in summary."
+    },
+    "summary": { "type": "string" },
+    "artifacts": {
+      "type": ["array", "object"],
+      "description": "References only: repo paths, scratch/<task-id>/ paths, or PR/issue URLs. Never embed build trees (bin/, obj/, node_modules/, coverage, build-out/)."
+    },
+    "evidence": { "type": ["array", "object", "string"] },
+    "blockers": { "type": ["array", "string"] },
+    "follow_ups": { "type": ["array", "string"] }
+  }
+}

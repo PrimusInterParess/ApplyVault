@@ -1,12 +1,90 @@
-# Step 4 — Operate the Generated Agent System
+# Step 4 - Operate the Generated Agent System
 
-Use this guide after Step 3 returns `PROMPT_PACK_READY` or `PROMPT_PACK_READY_WITH_DOCUMENTED_LIMITATIONS` and you have saved its proposed files.
+> **Source of truth:** `core/workflows/`. If this playbook conflicts with `core/`, **core wins**. This file is progressive disclosure / paste legacy.
 
-## 1. Choose an operating model
+**Preferred path:** `/operate` -> `core/workflows/operate-agent-system.md`. Cursor-specific tool names (`AskQuestion`, `Task`, `subagent_type`) live under `.cursor/` adapters -- not as portable hard requirements.
 
-### Option A — Native multi-agent platform
+Use this after generate-prompt-pack returns `PROMPT_PACK_READY` or `PROMPT_PACK_READY_WITH_DOCUMENTED_LIMITATIONS` with files under `agent-system/`.
 
-Use this when your AI platform can invoke named sub-agents.
+---
+
+# Core operate summary (authoritative outline)
+
+## Entry menu (A-E)
+
+When `/operate` is invoked without a concrete request, prefer the host native choice UI. Text fallback:
+
+```text
+What would you like the agent system to do?
+
+A. Create an implementation plan only
+B. Create a repository task mapping
+C. Implement the next approved milestone
+D. Execute a specific request
+E. Resume or review existing work
+
+Reply with A, B, C, D, or E.
+```
+
+Mark one option `(Recommended)` only when project state supports it (new Greenfield -> A; approved spec without mapping -> B; approved plan ready -> C; concrete request -> skip menu and use D; interrupted work -> E).
+
+## Context-index resolution
+
+Before A-E substantive work, resolve where artifacts live:
+
+1. `agent-system/context-index.yaml` if present
+2. Canonical `agent-system/` (`project-specification.md`, `governance/`, `agents/`, `protocols/`)
+3. Discovery evidence-based path mapping
+4. Read-only scan; ask only when ambiguous
+
+Build an in-memory context index: `spec_path`, `shared_context_path`, `agents_dir`, governance/protocol paths.
+
+## Library vs pack version warning
+
+1. Resolve library `VERSION` (same order as `/upgrade-architect`).
+2. Read `library_version` from `agent-system/manifest.yaml`.
+3. If library is newer than the pack (or pack omits `library_version` while `VERSION` exists), warn once and recommend `/upgrade-architect` before large implementation (C/D).
+4. Do not block read-only A/B/E solely for mismatch; still surface the warning.
+
+## Existing operating procedures (before plan/implement)
+
+Resolve adopted procedures per `core/workflows/existing-operating-procedures.md` before A-E do substantive work:
+
+1. Read `existing_operating_procedures` from shared context when present.
+2. If missing, re-scan read-only.
+3. If mode is `FOLLOW` / `COMPOSE` / `BRIDGE`, require specialists to honor the project workflow chain before Architect defaults.
+4. Do not invent a competing clarify/spec/ticket loop.
+5. Do not overwrite project skills / host instructions / `CONTEXT.md` / ADRs without explicit authorization.
+
+## Host-neutral isolated subagent inject
+
+For C/D (and authorized specialist work):
+
+1. Parent chat = Principal Architect / orchestrator only.
+2. Parent must not role-play fleet specialists when isolated subagents are available.
+3. For each selected primary agent, launch an isolated subagent/Task run and **inject**:
+   - that agent's `agents/<file>.md` purpose (exact text or path + read instruction)
+   - the filled `task-delegation.yaml` for this request (unchanged bounds)
+   - shared-context / contract paths, authorization bounds, required handoff return
+4. Parallelize only when the plan marks tasks unblocked and non-conflicting.
+5. After each return, Architect validates the handoff and continues (next agent, QA, integration).
+6. If isolated subagents are unavailable, say so once, then fall back to separate chats (preferred) or single chat (last resort).
+
+Do not invent new host Task *kinds*; reuse generic runners and inject fleet purpose + task.
+
+**Auth note:** A/B may write proposed `agent-system/` plans/mappings; must not modify application source. C/D need explicit implementation authorization.
+
+---
+
+# Appendix / fallback -- paste templates and chat operating models
+
+The sections below remain useful when the host cannot use native isolated subagents or when operators prefer copy-paste envelopes. Prefer the Core operate summary above when `core/` is loaded.
+
+## Appendix A - Choose an operating model (fallback)
+
+### Option A - Native multi-agent platform
+
+Use this when your AI platform can invoke named sub-agents. Prefer host-neutral inject of agent prompt + task-delegation (see Core operate summary). Cursor `Task` / `AskQuestion` details: `.cursor/`. 
 
 - Install `agents/00-principal-architect.md` as the main agent.
 - Install every other file under `agents/` as a named sub-agent.
@@ -16,7 +94,7 @@ Use this when your AI platform can invoke named sub-agents.
 
 This is the preferred model when true delegation is supported.
 
-### Option B — Separate AI chats
+### Option B - Separate AI chats
 
 Use this when your platform does not support native sub-agents.
 
@@ -28,7 +106,7 @@ Use this when your platform does not support native sub-agents.
 
 Do not ask implementation agents to coordinate the whole fleet themselves.
 
-### Option C — Single AI chat
+### Option C - Single AI chat
 
 Use this only for small or low-risk tasks.
 
@@ -55,7 +133,7 @@ as system instructions.
 Then paste:
 
 ```text
-Initialize this project’s agent system.
+Initialize this project's agent system.
 
 Authoritative artifacts:
 
@@ -146,7 +224,7 @@ Delete authorization rows that are irrelevant, but never imply authorization tha
 
 ---
 
-# 4. Review the Architect’s delegation
+# 4. Review the Architect's delegation
 
 The Architect should return:
 
@@ -598,11 +676,11 @@ Principal Architect
 For separate chats:
 
 ```text
-Chat 1 — Prompt Factory
-Chat 2 — Principal Architect
-Chat 3 — Invoked Agent A
-Chat 4 — Invoked Agent B
-Chat 5 — Validator, if required
+Chat 1 - Prompt Factory
+Chat 2 - Principal Architect
+Chat 3 - Invoked Agent A
+Chat 4 - Invoked Agent B
+Chat 5 - Validator, if required
 ```
 
 You do not need to open every agent chat in advance.
@@ -624,4 +702,4 @@ You do not need to open every agent chat in advance.
 - Re-run integration review after material changes.
 - Version the prompt pack.
 
-This completes the reusable Prompt Factory and agent-operation workflow.
+This completes the fallback paste / chat operating guide. Prefer `core/workflows/operate-agent-system.md` and `/operate` when available.

@@ -1,0 +1,27 @@
+contracts:
+  - id: catalog-api
+    name: Catalog HTTP API
+    domain: API
+    status: PROPOSED
+    owner: backend-engineer
+    consumers:
+      - principal-software-architect
+    artifact: contracts/catalog-api.md
+    version: UNVERSIONED
+    compatibility: NOT_APPLICABLE
+    validation:
+      - OpenAPI or equivalent route list when defined
+    approval_required_for_change: true
+
+  - id: catalog-data
+    name: Catalog Data Model
+    domain: DATA
+    status: NOT_DEFINED
+    owner: backend-engineer
+    consumers:
+      - principal-software-architect
+    artifact: contracts/catalog-data.md
+    version: UNVERSIONED
+    compatibility: UNKNOWN
+    validation: []
+    approval_required_for_change: true

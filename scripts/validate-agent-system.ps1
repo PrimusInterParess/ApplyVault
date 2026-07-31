@@ -33,12 +33,16 @@ $requiredFiles = @(
   "governance/decision-register.yaml",
   "protocols/task-delegation.yaml",
   "protocols/agent-handoff.yaml",
+  "protocols/task-close.yaml",
   "protocols/execution-workflow.md",
   "protocols/validation-report.yaml",
   "agents/00-principal-architect.md",
   "examples/project-invocation.md",
   "examples/delegation-examples.md",
-  "examples/handoff-example.yaml"
+  "examples/handoff-example.yaml",
+  ".gitignore",
+  "handoffs/active/.gitkeep",
+  "scratch/.gitkeep"
 )
 
 foreach ($relative in $requiredFiles) {

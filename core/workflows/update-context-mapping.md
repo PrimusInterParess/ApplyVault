@@ -32,6 +32,8 @@ Architect can use it.
    path to use (one question at a time).
 5. Write the refreshed mapping to:
    `agent-system/context-index.yaml`
+   Schema: [../../schemas/context-index.schema.json](../../schemas/context-index.schema.json).
+   Store **paths only** — never secret values, tokens, or file contents.
 
 ## Context index format
 

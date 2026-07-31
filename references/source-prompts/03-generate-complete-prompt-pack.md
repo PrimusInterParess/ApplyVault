@@ -1,22 +1,23 @@
-# Step 3 — Generate the Complete Agent Prompt Pack
+# Step 3 - Generate the Complete Agent Prompt Pack
 
-Use this only after Step 2 has produced the specification and you have replied `APPROVED` or `APPROVED WITH CHANGES`.
+> **Source of truth:** `core/workflows/`. If this playbook conflicts with `core/`, **core wins**. This file is progressive disclosure / paste legacy.
 
-When asked what you want next, paste the entire prompt below into the **same AI chat**.
+**Preferred path:** after discovery approval, `core/workflows/generate-prompt-pack.md` runs automatically in `SAVE` mode (also via `/generate-prompt-pack` or `/upgrade-architect`). Write real files under `agent-system/`. Do **not** dump the complete pack into chat. Return a short summary only. Support `SAVE` / `PREVIEW` / `PROMPT_PACK_BLOCKED`. Preserve `project-specification.md`. Set `library_version` in `manifest.yaml` from the library `VERSION` file. Bind `existing_operating_procedures` into shared context.
+
+**Fallback:** only when file-writing tools are unavailable or the host cannot load `core/`, paste the prompt below. Even then, prefer `PREVIEW` excerpts over a full chat dump.
 
 ```markdown
 # Command: GENERATE_COMPLETE_PROMPT_PACK
 
-Selection: D — Generate the complete prompt pack and propose each prompt as a separate file.
+Mode: SAVE (default) - write each artifact under agent-system/. PREVIEW - no files.
 
 Use the approved `PROJECT REQUIREMENTS AND CURRENT-STATE SPECIFICATION` as the authoritative project context.
 
 Generate a complete, provider-neutral, project-specific multi-agent operating system. Specialize agents only where a provider, platform, framework, or tool was verified or explicitly approved.
 
-Do not implement the application. Generate the prompts, contracts, governance artifacts, execution process, and proposed prompt files.
+Do not implement the application. Generate the prompts, contracts, governance artifacts, and execution process. In SAVE mode write real files; never claim a pack was saved from chat-only output.
 
 ---
-
 # 1. Source-of-Truth Rules
 
 Use this precedence:
@@ -74,6 +75,7 @@ Do not generate prompts for excluded agents.
 Use this structure unless the approved project requires a justified variation:
 
     agent-system/
+      project-specification.md  # preserve; do not regenerate or delete
       README.md
       manifest.yaml
 
@@ -107,7 +109,11 @@ Use this structure unless the approved project requires a justified variation:
 
 Adjust filenames to the approved fleet. Use lowercase kebab-case.
 
-Do not claim files were physically created. Present them as proposed files unless tools actually create them.
+In `SAVE` mode: create directories and write each artifact to its path under `agent-system/`. Preserve `agent-system/project-specification.md` (do not regenerate or delete it). Set `library_version` in `manifest.yaml` from the library `VERSION` file. Persist adopted procedures under `existing_operating_procedures` in `governance/shared-context.yaml`.
+
+In `PREVIEW` mode: write no files; show a concise proposed tree and representative excerpts only.
+
+If file-writing tools are unavailable for `SAVE`, stop with `PROMPT_PACK_BLOCKED` (offer `PREVIEW`). Do not pretend chat output is a saved prompt pack.
 
 ---
 
@@ -119,6 +125,7 @@ Generate `manifest.yaml` with:
       id: "<PROMPT-PACK-ID>"
       name: "<PROJECT-NAME> Agent System"
       version: "1.0.0"
+      library_version: "<FROM LIBRARY VERSION FILE>"
       project_mode: "<GREENFIELD | BROWNFIELD | HYBRID>"
       specification_status: "APPROVED"
       generated_at: "<ISO-8601-OR-OMITTED>"
@@ -179,6 +186,8 @@ It must contain:
 - Required approvals.
 
 Every agent must be instructed to consume this file before acting.
+
+When the approved specification records existing procedures, include `existing_operating_procedures` (adaptation mode `FOLLOW` / `COMPOSE` / `BRIDGE` / `NONE`, inventory paths, workflow chain). Never overwrite project skills, host instructions, `CONTEXT.md`, or ADRs during SAVE.
 
 Agents must not copy the entire shared context into every response. They should reference relevant fields and report changes through handoffs.
 
@@ -734,17 +743,17 @@ Generate `governance/integration-policy.md`.
 
 Require checks for applicable boundaries:
 
-- Frontend ? API.
-- API ? persistence.
-- API ? identity.
-- API ? billing.
-- API ? AI.
-- Services ? events or queues.
-- Application ? external integrations.
-- Runtime ? configuration and secrets.
-- Deployment ? infrastructure.
-- Implementation ? tests.
-- Production behavior ? observability.
+- Frontend -> API.
+- API -> persistence.
+- API -> identity.
+- API -> billing.
+- API -> AI.
+- Services -> events or queues.
+- Application -> external integrations.
+- Runtime -> configuration and secrets.
+- Deployment -> infrastructure.
+- Implementation -> tests.
+- Production behavior -> observability.
 
 For each boundary define:
 
@@ -972,56 +981,41 @@ Fix inconsistencies before returning the pack.
 
 ---
 
-# 25. Required Response Format
+# 25. Required Response Format (matches core SAVE behavior)
 
-Return:
+## Generation modes
 
-## 1. Generation Summary
+- `SAVE` (default): create every prompt and governance artifact as a real, separate file under `agent-system/`.
+- `SAVE_WITH_PLAN` / `SAVE_WITH_PLAN_AND_MAPPING`: same as `SAVE`, plus optional plan/mapping files.
+- `PREVIEW`: write no files; show a concise proposed tree and representative excerpts only.
 
-- Project.
-- Project mode.
-- Specification status.
-- Number of agents.
-- Generic versus specialized agents.
-- Assumptions.
-- Unresolved blockers.
+Never interpret "separate files" as "print multiple file-shaped blocks in chat" when workspace file-writing tools are available.
 
-## 2. Final Agent Fleet
+## After SAVE (chat response)
 
-| Agent | Type | Provider Scope | Primary Ownership | Invocation |
-|---|---|---|---|---|
+Do **not** dump all generated file contents into chat. Return only:
 
-## 3. Proposed File Tree
+1. Generation mode.
+2. Files created, updated, skipped, or blocked.
+3. Agent fleet summary (table ok).
+4. Unresolved approved/proposed decisions.
+5. Verification results (manifest paths exist; 18 sections; `project-specification.md` preserved).
+6. Exact next command: `/operate`.
+7. Result status: `PROMPT_PACK_READY` | `PROMPT_PACK_READY_WITH_DOCUMENTED_LIMITATIONS` | `PROMPT_PACK_BLOCKED`.
 
-## 4. Generated Files
+## PREVIEW (chat response)
 
-For every file:
+Show the proposed file tree plus short representative excerpts. Do not paste every file body.
 
-### `<relative/path>`
+## PROMPT_PACK_BLOCKED
 
-```text
-<complete file content>
+If file writing fails or tools are unavailable for `SAVE`, explain the blocker and that `PREVIEW` is available. Do not pretend chat output is a saved pack.
+
+## Consistency before finishing
+
+Also verify: adopted existing operating procedures reflected in shared context / execution workflow / Operating Principles (or explicitly `NONE`); project skill / host-instruction / domain-memory files were not overwritten; `library_version` set from `VERSION`.
+
+Begin now in `SAVE` mode unless the user requested `PREVIEW`.
 ```
 
-Use a more precise fence language where appropriate, such as `yaml` or `markdown`.
-
-Do not omit required content. Do not use references such as "same as above."
-
-## 5. Consistency Review
-
-Report passed checks and remaining limitations.
-
-## 6. Generation Result
-
-Choose:
-
-- `PROMPT_PACK_READY`
-- `PROMPT_PACK_READY_WITH_DOCUMENTED_LIMITATIONS`
-- `PROMPT_PACK_BLOCKED`
-
-If blocked, do not generate misleading partial prompts as though complete.
-
-Begin now.
-```
-
-The generated response can be large because it contains the complete project-specific agent system. Save each proposed file under the path shown by the generator.
+On hosts with file tools, prefer core `SAVE` behavior over pasting this entire block.

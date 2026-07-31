@@ -1,14 +1,26 @@
-<div class="cv-html-preview" role="region" aria-label="CV export preview">
+<div
+  class="cv-html-preview"
+  [class.cv-html-preview--stage]="density() === 'stage'"
+  [class.cv-html-preview--thumb]="density() === 'thumb'"
+  role="region"
+  [attr.aria-label]="
+    density() === 'stage'
+      ? 'CV export preview — scroll to see full document'
+      : 'CV export preview'
+  ">
   @if (loading()) {
     <p class="cv-html-preview__status" aria-busy="true">Loading preview…</p>
   } @else if (error()) {
     <p class="cv-html-preview__status cv-html-preview__status--error" role="alert">{{ error() }}</p>
   } @else if (srcdoc()) {
-    <iframe
-      class="cv-html-preview__frame"
-      title="CV export preview"
-      sandbox="allow-same-origin"
-      [srcdoc]="srcdoc()"></iframe>
+    <div class="cv-html-preview__scale">
+      <iframe
+        class="cv-html-preview__frame"
+        title="CV export preview"
+        sandbox="allow-same-origin"
+        [attr.tabindex]="density() === 'stage' ? 0 : null"
+        [srcdoc]="srcdoc()"></iframe>
+    </div>
   } @else {
     <p class="cv-html-preview__status">{{ emptyHint() }}</p>
   }

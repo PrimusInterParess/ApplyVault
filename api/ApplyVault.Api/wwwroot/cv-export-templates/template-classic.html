@@ -29,17 +29,20 @@
     .cv-header {
       display: flex;
       flex-direction: row;
-      align-items: flex-start;
-      gap: 14pt;
+      align-items: center;
+      gap: 16pt;
       margin-bottom: 14pt;
       padding-bottom: 12pt;
       border-bottom: 1px solid var(--cv-accent);
     }
     .cv-photo {
       flex: 0 0 auto;
-      width: 88px;
-      height: 88px;
+      flex-shrink: 0;
+      width: 140px;
+      height: 140px;
+      max-width: 100%;
       object-fit: cover;
+      object-position: center;
     }
     .cv-header-copy {
       flex: 1 1 auto;
@@ -59,10 +62,14 @@
       color: var(--cv-muted);
     }
     .cv-contact {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2pt 10pt;
+      align-items: baseline;
       margin: 0;
     }
     .cv-contact-line {
-      margin: 0 0 1px;
+      margin: 0;
       font-size: 9.5pt;
       color: var(--cv-muted);
     }

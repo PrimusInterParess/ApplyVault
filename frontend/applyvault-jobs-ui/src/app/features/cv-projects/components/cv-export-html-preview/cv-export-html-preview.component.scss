@@ -4,6 +4,12 @@
   min-height: 100%;
 }
 
+:host.cv-html-preview-host--thumb,
+:host.cv-html-preview-host--stage {
+  min-height: 0;
+  height: 100%;
+}
+
 .cv-html-preview {
   box-sizing: border-box;
   width: 100%;
@@ -13,6 +19,11 @@
   margin: 0;
   background: #fff;
   overflow: visible;
+}
+
+.cv-html-preview__scale {
+  width: 100%;
+  min-height: inherit;
 }
 
 .cv-html-preview__frame {
@@ -40,4 +51,66 @@
 
 .cv-html-preview__status--error {
   color: #8a2b2b;
+}
+
+/* Stage / thumbs: scale A4-width export HTML (794 CSS px). */
+.cv-html-preview--stage,
+.cv-html-preview--thumb {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.cv-html-preview--stage .cv-html-preview__status,
+.cv-html-preview--thumb .cv-html-preview__status {
+  padding: 1rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.cv-html-preview--stage .cv-html-preview__frame,
+.cv-html-preview--thumb .cv-html-preview__frame {
+  width: 794px;
+  height: 1123px;
+  min-height: 0;
+  transform-origin: top left;
+}
+
+/* Thumbs: first-page crop only (intentional miniature). */
+.cv-html-preview--thumb {
+  height: 9.5rem;
+  pointer-events: none;
+}
+
+.cv-html-preview--thumb .cv-html-preview__scale {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cv-html-preview--thumb .cv-html-preview__frame {
+  overflow: hidden;
+  transform: scale(0.152);
+}
+
+/*
+ * Stage: scaled A4-width viewport; scroll so multi-page export HTML below
+ * page 1 is reachable (PDF paginates the same continuous document).
+ */
+.cv-html-preview--stage {
+  height: 28rem;
+  pointer-events: auto;
+}
+
+.cv-html-preview--stage .cv-html-preview__scale {
+  position: absolute;
+  inset: 0;
+  /* Clip to stage chrome; do not outer-scroll the unscaled transform layout box. */
+  overflow: hidden;
+}
+
+.cv-html-preview--stage .cv-html-preview__frame {
+  /* Scroll continuous export HTML inside the scaled A4 viewport. */
+  overflow: auto;
+  transform: scale(0.42);
 }

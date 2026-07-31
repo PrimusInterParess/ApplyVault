@@ -1,0 +1,35 @@
+task_id: "cv-builder-preview-pdf-fidelity-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — Frontend template visualization must match downloaded PDF;
+  diagnose why content appears out of the display.
+summary: >-
+  Root causes: (1) pick stage/thumbs clipped continuous A4 iframe with
+  overflow:hidden while PDF paginates; (2) ExportHtmlAsync always CompactLevel 0
+  while PDF ramps compact for maxPages. BE: ResolveCompactLevelAsync shared by
+  preview+PDF; additive Compact-Level/Notice headers. FE: stage overflow:auto
+  scroll; thumbs stay page-1 crop; notice UI wired. QA: CompactParityTests 4/4;
+  static wiring PASS; authenticated canvas↔PDF smoke not run.
+limitations:
+  - Authenticated multi-page stage ↔ PDF visual smoke not executed (login + API down)
+  - CORS AddApplyVaultCors lacks WithExposedHeaders for X-Cv-Export-* — notice/compact UI may stay empty in browser; HTML body compact parity still unit-covered
+  - Empty-pick Angular samples still out of scope (no sample-preview API)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Restart API; login; smoke stage scroll + canvas vs PDF for maxPages null/1/2 × Classic/Modern/Minimal"
+  - "Optional: WithExposedHeaders for X-Cv-Export-Compact-Level and X-Cv-Export-Notice"
+key_paths:
+  - "api/ApplyVault.Api/Services/CvDocuments/CvDocumentExportService.cs"
+  - "api/ApplyVault.Api/Controllers/CvDocumentsController.cs"
+  - "api/ApplyVault.Api.Tests/CvDocumentExportServiceCompactParityTests.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-html-preview/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-document-api.service.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-document.facade.ts"
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer

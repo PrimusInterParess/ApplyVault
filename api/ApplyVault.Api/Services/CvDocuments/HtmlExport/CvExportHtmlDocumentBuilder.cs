@@ -65,7 +65,7 @@ public sealed class CvExportHtmlDocumentBuilder(
         }
 
         var printCss = File.ReadAllText(printCssPath);
-        var compactCss = BuildCompactCss(renderOptions);
+        var compactCss = CvExportCompactCssBuilder.Build(renderOptions);
 
         const string headClose = "</head>";
 
@@ -79,71 +79,4 @@ public sealed class CvExportHtmlDocumentBuilder(
             $"<style>{printCss}{compactCss}</style>{headClose}",
             StringComparison.OrdinalIgnoreCase);
     }
-
-    private static string BuildCompactCss(CvPdfRenderOptions? renderOptions)
-    {
-        var compactLevel = Math.Clamp(renderOptions?.CompactLevel ?? 0, 0, CvPdfRenderOptions.MaxCompactLevel);
-
-        if (compactLevel == 0)
-        {
-            return string.Empty;
-        }
-
-        var (fontScale, lineHeight, sectionMargin, entryMargin, bulletMargin, photoSize) = compactLevel switch
-        {
-            1 => (0.94m, 1.28m, 12, 9, 3, 96),
-            2 => (0.88m, 1.2m, 9, 7, 2, 88),
-            3 => (0.82m, 1.12m, 7, 5, 1, 76),
-            4 => (0.76m, 1.05m, 5, 3, 0, 64),
-            _ => (1m, 1.4m, 16, 12, 4, 108)
-        };
-
-        return $$"""
-
-html body {
-  font-size: {{FormatPercent(fontScale)}} !important;
-  line-height: {{lineHeight:0.##}} !important;
-}
-
-.section {
-  margin-bottom: {{sectionMargin}}px !important;
-}
-
-.section-title {
-  margin-bottom: {{Math.Max(3, sectionMargin / 2)}}px !important;
-  padding-bottom: 2px !important;
-}
-
-.entry {
-  margin-bottom: {{entryMargin}}px !important;
-}
-
-.entry-summary,
-.entry-bullets {
-  margin-top: {{Math.Max(2, entryMargin / 2)}}px !important;
-}
-
-.entry-bullets li {
-  margin-bottom: {{bulletMargin}}px !important;
-}
-
-.entry-tech {
-  margin-top: 2px !important;
-}
-
-.cv-sidebar,
-.cv-main {
-  padding: {{Math.Max(8, sectionMargin)}}px {{Math.Max(10, sectionMargin + 2)}}px !important;
-}
-
-.cv-photo {
-  width: {{photoSize}}px !important;
-  height: {{photoSize}}px !important;
-  max-width: {{photoSize}}px !important;
-  max-height: {{photoSize}}px !important;
-}
-""";
-    }
-
-    private static string FormatPercent(decimal value) => $"{value * 100m:0.#}%";
 }

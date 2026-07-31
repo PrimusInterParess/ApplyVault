@@ -89,4 +89,22 @@ describe('cv-structured-edit-normalizer.util', () => {
 
     expect(section.entries[0]?.techStack).toBe('C#, SQL');
   });
+
+  it('dedupes Contact Phone field entries with the same value', () => {
+    const section = normalizeSectionForEditing({
+      id: 'section-1',
+      heading: 'Contact',
+      sectionType: 'Contact',
+      sortOrder: 0,
+      entries: [
+        { ...baseEntry, id: 'n', title: 'Name', subtitle: 'Alex' },
+        { ...baseEntry, id: 'p1', title: 'Phone', bullets: ['+45 12 34 56 78'], sortOrder: 1 },
+        { ...baseEntry, id: 'p2', title: 'Phone', bullets: ['+45 12 34 56 78'], sortOrder: 2 }
+      ]
+    });
+
+    const phones = section.entries.filter((entry) => entry.title.trim().toLowerCase() === 'phone');
+    expect(phones.length).toBe(1);
+    expect(phones[0]?.bullets[0]).toBe('+45 12 34 56 78');
+  });
 });

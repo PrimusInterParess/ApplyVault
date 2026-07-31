@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
@@ -11,6 +11,13 @@ import {
 import { toSaveRequest, hydrateStructuredDocument } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
+type PendingStructuredSave = {
+  sections: readonly CvStructuredSection[];
+  sectionId: string | null;
+  orderOnly: boolean;
+  generation: number;
+};
+
 @Injectable({ providedIn: 'root' })
 export class CvStructuredFacade {
   private readonly apiService = inject(CvDocumentApiService);
@@ -18,6 +25,10 @@ export class CvStructuredFacade {
   private saveSubscription: Subscription | null = null;
   private aiUpdateSubscription: Subscription | null = null;
   private suggestionsSubscription: Subscription | null = null;
+
+  private loadGeneration = 0;
+  private saveGeneration = 0;
+  private pendingSave: PendingStructuredSave | null = null;
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
@@ -30,18 +41,33 @@ export class CvStructuredFacade {
   readonly saveError = signal<string | null>(null);
   readonly aiUpdateError = signal<string | null>(null);
   readonly suggestionError = signal<string | null>(null);
+  /** Monotonic generation of the last successfully applied structured save. */
+  readonly lastSuccessfulSaveGeneration = signal(0);
+
+  readonly isSaving = computed(
+    () => this.savingSectionId() !== null || this.savingSectionOrder()
+  );
 
   load(): void {
-    this.cancelLoad();
+    const generation = ++this.loadGeneration;
+    this.cancelLoadSubscription();
     this.loading.set(true);
     this.error.set(null);
 
     this.loadSubscription = this.apiService.getStructured().subscribe({
       next: (document) => {
+        if (generation !== this.loadGeneration) {
+          return;
+        }
+
         this.loading.set(false);
         this.structured.set(hydrateStructuredDocument(document));
       },
       error: (error) => {
+        if (generation !== this.loadGeneration) {
+          return;
+        }
+
         this.loading.set(false);
 
         if (error instanceof HttpErrorResponse && error.status === 404) {
@@ -58,50 +84,32 @@ export class CvStructuredFacade {
     });
   }
 
-  save(sections: readonly CvStructuredSection[], sectionId: string): void {
-    this.cancelSave();
-    this.savingSectionId.set(sectionId);
-    this.savingSectionOrder.set(false);
+  /**
+   * Persist sections. Coalesces overlapping PUTs to the latest payload (never cancels an
+   * in-flight HTTP PUT — unsubscribe would not cancel the server). Returns the save generation.
+   */
+  save(sections: readonly CvStructuredSection[], sectionId: string): number {
+    const generation = ++this.saveGeneration;
     this.saveError.set(null);
-
-    this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
-      next: (document) => {
-        this.savingSectionId.set(null);
-        this.structured.set(hydrateStructuredDocument(document));
-      },
-      error: (error) => {
-        this.savingSectionId.set(null);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.saveError.set(this.readErrorMessage(error, 'Could not save structured CV content.'));
-      }
+    this.enqueueOrStartSave({
+      sections,
+      sectionId,
+      orderOnly: false,
+      generation
     });
+    return generation;
   }
 
-  saveSectionOrder(sections: readonly CvStructuredSection[]): void {
-    this.cancelSave();
-    this.savingSectionId.set(null);
-    this.savingSectionOrder.set(true);
+  saveSectionOrder(sections: readonly CvStructuredSection[]): number {
+    const generation = ++this.saveGeneration;
     this.saveError.set(null);
-
-    this.saveSubscription = this.apiService.saveStructured(toSaveRequest(sections)).subscribe({
-      next: (document) => {
-        this.savingSectionOrder.set(false);
-        this.structured.set(hydrateStructuredDocument(document));
-      },
-      error: (error) => {
-        this.savingSectionOrder.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.saveError.set(this.readErrorMessage(error, 'Could not save section order.'));
-      }
+    this.enqueueOrStartSave({
+      sections,
+      sectionId: null,
+      orderOnly: true,
+      generation
     });
+    return generation;
   }
 
   updateWithAi(instructions: string, sectionIds?: readonly string[]): void {
@@ -187,14 +195,93 @@ export class CvStructuredFacade {
     this.structured.set(hydrateStructuredDocument(document));
   }
 
-  private cancelLoad(): void {
-    this.loadSubscription?.unsubscribe();
-    this.loadSubscription = null;
+  private enqueueOrStartSave(request: PendingStructuredSave): void {
+    if (this.saveSubscription) {
+      // Keep only the latest intent; let the in-flight PUT finish, then send coalesced payload.
+      this.pendingSave = request;
+      this.applySavingFlags(request);
+      return;
+    }
+
+    this.startSave(request);
   }
 
-  private cancelSave(): void {
-    this.saveSubscription?.unsubscribe();
-    this.saveSubscription = null;
+  private startSave(request: PendingStructuredSave): void {
+    this.applySavingFlags(request);
+
+    this.saveSubscription = this.apiService.saveStructured(toSaveRequest(request.sections)).subscribe({
+      next: (document) => {
+        this.saveSubscription = null;
+
+        const pending = this.pendingSave;
+        this.pendingSave = null;
+
+        if (pending && pending.generation > request.generation) {
+          // Stale response relative to a newer local intent — do not apply; send latest.
+          this.startSave(pending);
+          return;
+        }
+
+        if (request.generation !== this.saveGeneration) {
+          this.clearSavingFlags();
+          return;
+        }
+
+        this.clearSavingFlags();
+        this.structured.set(hydrateStructuredDocument(document));
+        this.lastSuccessfulSaveGeneration.set(request.generation);
+      },
+      error: (error) => {
+        this.saveSubscription = null;
+
+        const pending = this.pendingSave;
+        this.pendingSave = null;
+
+        if (pending && pending.generation > request.generation) {
+          // Failed older PUT; still attempt the latest coalesced payload.
+          this.startSave(pending);
+          return;
+        }
+
+        this.clearSavingFlags();
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        if (request.generation !== this.saveGeneration) {
+          return;
+        }
+
+        this.saveError.set(
+          this.readErrorMessage(
+            error,
+            request.orderOnly ? 'Could not save section order.' : 'Could not save structured CV content.'
+          )
+        );
+      }
+    });
+  }
+
+  private applySavingFlags(request: PendingStructuredSave): void {
+    if (request.orderOnly) {
+      this.savingSectionId.set(null);
+      this.savingSectionOrder.set(true);
+      return;
+    }
+
+    this.savingSectionId.set(request.sectionId);
+    this.savingSectionOrder.set(false);
+  }
+
+  private clearSavingFlags(): void {
+    this.savingSectionId.set(null);
+    this.savingSectionOrder.set(false);
+  }
+
+  private cancelLoadSubscription(): void {
+    this.loadSubscription?.unsubscribe();
+    this.loadSubscription = null;
   }
 
   private cancelAiUpdate(): void {

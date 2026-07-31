@@ -1,0 +1,34 @@
+task_id: "cv-builder-preview-parity-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — Frontend templates must match PDF; photo still too small;
+  phone duplicates on Minimal.
+summary: >-
+  Architecture: server export HTML is sole fidelity source for gallery/stage/canvas.
+  Photos Classic/Modern/Minimal 140/136/128. Contact header dedupes identical
+  values (Minimal phone-once). FE gallery/stage use html-preview when Structured
+  CV exists; Angular editable only in Content drawer with Contact+Summary header
+  and flattened Contact. CvExport 31/31; FE development build exit 0.
+limitations:
+  - Authenticated browser canvas↔PDF visual smoke not executed (login redirect)
+  - Empty pick step still uses illustrative Angular sample (no sample-preview API)
+  - Restart API required to pick up wwwroot template changes on a long-lived host
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Restart API; login; smoke Minimal phone once + photo size + gallery vs PDF"
+  - "Optional: GET export/sample-preview for empty-state pixel parity"
+key_paths:
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/"
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/CvExportHtmlMapper.cs"
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/CvExportCompactCssBuilder.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-html-preview/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-export-template-layout.util.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.ts"
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer

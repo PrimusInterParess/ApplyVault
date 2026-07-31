@@ -200,9 +200,35 @@
   padding: 1.35rem 1.5rem;
 }
 
-.cv-export-preview--editable .cv-export-preview__photo {
-  width: 5.5rem;
-  height: 5.5rem;
+/* Editable photo sizes mirror export baselines: Classic 140 / Modern 136 / Minimal 128. */
+.cv-export-preview--editable.cv-export-preview--template-1 .cv-export-preview__photo {
+  width: 8.75rem;
+  height: 8.75rem;
+  border-radius: 0;
+}
+
+.cv-export-preview--editable.cv-export-preview--template-2 .cv-export-preview__photo {
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__photo {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0;
+}
+
+.cv-export-preview--editable .cv-export-preview__classic-header {
+  gap: 1rem;
+  align-items: center;
+}
+
+.cv-export-preview--editable .cv-export-preview__minimal-header {
+  gap: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .cv-export-preview--editable .cv-export-preview__editable {
@@ -285,19 +311,39 @@
   width: 2.2rem;
   height: 2.2rem;
   object-fit: cover;
+  object-position: center;
   display: block;
   margin-bottom: 0.35rem;
   border-radius: 0.15rem;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cv-export-preview--template-1 .cv-export-preview__photo {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.cv-export-preview--template-2 .cv-export-preview__photo {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.35rem;
+}
+
+.cv-export-preview--template-3 .cv-export-preview__photo {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.2rem;
+  margin-bottom: 0;
 }
 
 .cv-export-preview__photo--placeholder {
   background: rgb(31 42 38 / 8%);
   border: 1px solid rgb(31 42 38 / 18%);
-}
-
-.cv-export-preview__photo--float {
-  float: right;
-  margin: 0 0 0.35rem 0.4rem;
 }
 
 .cv-export-preview__name {
@@ -310,6 +356,14 @@
 
 .cv-export-preview__section {
   margin-bottom: 0.45rem;
+}
+
+.cv-export-preview__section--flat-contact {
+  margin-bottom: 0.35rem;
+}
+
+.cv-export-preview__section--flat-contact .cv-export-preview__entry--contact {
+  margin-bottom: 0.1rem;
 }
 
 .cv-export-preview__section-title {
@@ -476,10 +530,31 @@
 
 .cv-export-preview__classic-header {
   display: flex;
-  gap: 0.45rem;
+  align-items: center;
+  gap: 0.55rem;
   padding: 0.85rem 0.9rem 0.45rem;
   border-bottom: 1px solid var(--cv-preview-accent);
   box-sizing: border-box;
+}
+
+.cv-export-preview__minimal-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-bottom: 0.45rem;
+  box-sizing: border-box;
+}
+
+.cv-export-preview__minimal-header-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cv-export-preview--compact .cv-export-preview__minimal-header {
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .cv-export-preview--compact .cv-export-preview__classic-header {
@@ -667,4 +742,11 @@
 .cv-export-preview--template-3 .cv-export-preview__main .cv-export-preview__section-title {
   color: #111;
   border-bottom-color: #111;
+}
+
+/* Compact gallery: keep page clip for thumbs, but photo stays inside content box (no float). */
+.cv-export-preview--compact .cv-export-preview__minimal-header .cv-export-preview__photo,
+.cv-export-preview--compact .cv-export-preview__classic-header .cv-export-preview__photo,
+.cv-export-preview--compact .cv-export-preview__sidebar .cv-export-preview__photo {
+  max-width: 100%;
 }

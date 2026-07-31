@@ -30,6 +30,7 @@ public sealed class CvExportHtmlMapperLayoutTests
         Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
         Assert.DoesNotContain("Jane Doe", main, StringComparison.Ordinal);
         Assert.DoesNotContain("Experienced engineer.", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="section-title">Contact</h2>""", header, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public sealed class CvExportHtmlMapperLayoutTests
     }
 
     [Fact]
-    public void ApplyTemplate_Minimal_puts_all_sections_in_Main()
+    public void ApplyTemplate_Minimal_puts_Contact_and_Summary_in_Header()
     {
         var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest(), templateId: 3);
 
@@ -58,12 +59,20 @@ public sealed class CvExportHtmlMapperLayoutTests
         var sidebar = Slice(html, "|S:", "|M:");
         var main = Slice(html, "|M:", null);
 
-        Assert.True(string.IsNullOrWhiteSpace(header));
+        Assert.Contains("Jane Doe", header, StringComparison.Ordinal);
+        Assert.Contains("jane@example.com", header, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Experienced engineer.", header, StringComparison.Ordinal);
+        Assert.DoesNotContain("Acme Corp", header, StringComparison.Ordinal);
+
         Assert.True(string.IsNullOrWhiteSpace(sidebar));
-        Assert.Contains("Jane Doe", main, StringComparison.Ordinal);
-        Assert.Contains("Experienced engineer.", main, StringComparison.Ordinal);
         Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
         Assert.Contains("C#", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("Jane Doe", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("Experienced engineer.", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("jane@example.com", main, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("""class="section-title">Contact</h2>""", header, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="section-title">Contact</h2>""", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="section-title">Summary</h2>""", main, StringComparison.Ordinal);
     }
 
     private static CvExportRenderRequest BuildFixtureRequest() =>

@@ -42,10 +42,20 @@
                 [attr.aria-selected]="selectedTemplateId() === template.id"
                 (click)="selectTemplate(template.id)">
                 <span class="cv-builder__template-thumb">
-                  <app-cv-export-template-preview
-                    [templateId]="template.id"
-                    [sampleMode]="true"
-                    [compact]="true" />
+                  @if (hasStructuredCv()) {
+                    <app-cv-export-html-preview
+                      [srcdoc]="pickFidelitySrcdoc(template.id)"
+                      [loading]="cvDocument.pickFidelityPreviewLoading() && !pickFidelitySrcdoc(template.id)"
+                      [error]="null"
+                      [emptyHint]="'Loading export preview…'"
+                      density="thumb" />
+                  } @else {
+                    <!-- Empty pick / no sample-preview API: illustrative Angular fallback only. -->
+                    <app-cv-export-template-preview
+                      [templateId]="template.id"
+                      [sampleMode]="true"
+                      [compact]="true" />
+                  }
                 </span>
                 <span class="cv-builder__template-meta">
                   <span class="cv-builder__template-label">{{ template.label }}</span>
@@ -57,10 +67,20 @@
         </div>
 
         <aside class="cv-builder__stage">
-          <div class="cv-builder__paper cv-builder__paper--stage">
-            <app-cv-export-template-preview
-              [templateId]="selectedTemplateId()"
-              [sampleMode]="true" />
+          <div class="cv-builder__paper cv-builder__paper--stage cv-builder__paper--fidelity">
+            @if (hasStructuredCv()) {
+              <app-cv-export-html-preview
+                [srcdoc]="pickFidelitySrcdoc(selectedTemplateId())"
+                [loading]="cvDocument.pickFidelityPreviewLoading() && !pickFidelitySrcdoc(selectedTemplateId())"
+                [error]="cvDocument.pickFidelityPreviewError()"
+                [emptyHint]="'Export preview unavailable for this template.'"
+                density="stage" />
+            } @else {
+              <!-- Empty pick / no sample-preview API: illustrative Angular fallback only. -->
+              <app-cv-export-template-preview
+                [templateId]="selectedTemplateId()"
+                [sampleMode]="true" />
+            }
           </div>
 
           <div class="cv-builder__stage-panel">
@@ -75,6 +95,9 @@
                 }
               </select>
             </label>
+            @if (pickFidelityNotice(selectedTemplateId()); as notice) {
+              <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
+            }
 
             <div class="cv-builder__cta-row">
               @if (hasStructuredCv()) {
@@ -329,6 +352,9 @@
         <p class="cv-builder__desk-hint">
           Canvas is export preview · Structure / Content to edit · Projects to import · autosaves
         </p>
+        @if (cvDocument.exportHtmlPreviewNotice(); as notice) {
+          <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
+        }
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">
             <app-cv-export-html-preview

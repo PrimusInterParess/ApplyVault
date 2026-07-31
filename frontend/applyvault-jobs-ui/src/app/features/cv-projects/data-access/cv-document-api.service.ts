@@ -30,6 +30,13 @@ export interface CvFormattedPdfResult {
   readonly notice: string | null;
 }
 
+/** GET current/export/preview — HTML body plus additive compact/notice headers. */
+export interface CvExportPreviewHtmlResult {
+  readonly html: string;
+  readonly compactLevel: number | null;
+  readonly notice: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CvDocumentApiService {
   private readonly httpClient = inject(HttpClient);
@@ -97,12 +104,22 @@ export class CvDocumentApiService {
   /**
    * M1: authenticated HTML identical to Puppeteer input (text/html).
    * GET /api/cv-documents/current/export/preview?templateId&maxPages
+   * Reads additive X-Cv-Export-Compact-Level / X-Cv-Export-Notice when exposed.
    */
-  getExportPreviewHtml(request: CvFormattedPdfRequest): Observable<string> {
-    return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/preview`, {
-      responseType: 'text',
-      params: this.buildExportParams(request)
-    });
+  getExportPreviewHtml(request: CvFormattedPdfRequest): Observable<CvExportPreviewHtmlResult> {
+    return this.httpClient
+      .get(`${this.apiConfig.baseUrl}/cv-documents/current/export/preview`, {
+        responseType: 'text',
+        observe: 'response',
+        params: this.buildExportParams(request)
+      })
+      .pipe(
+        map((response) => ({
+          html: response.body ?? '',
+          compactLevel: this.readNumberHeader(response.headers.get('X-Cv-Export-Compact-Level')),
+          notice: this.readNoticeHeader(response.headers.get('X-Cv-Export-Notice'))
+        }))
+      );
   }
 
   private buildExportParams(request: CvFormattedPdfRequest): HttpParams {

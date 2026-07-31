@@ -24,9 +24,54 @@ export function contactDisplayLine(entry: CvStructuredEntry): string {
 }
 
 export function contactFieldEntries(section: CvStructuredSection): readonly CvStructuredEntry[] {
-  return [...section.entries]
-    .sort((left, right) => left.sortOrder - right.sortOrder)
-    .filter((entry) => !isContactNameEntry(entry));
+  return dedupeContactEntries(
+    [...section.entries]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .filter((entry) => !isContactNameEntry(entry))
+  );
+}
+
+/**
+ * Drop duplicate Contact field values (case-insensitive trim) and duplicate empty
+ * labeled slots (e.g. two empty Phone fields). Name entries are preserved as-is.
+ */
+export function dedupeContactEntries(entries: readonly CvStructuredEntry[]): CvStructuredEntry[] {
+  const result: CvStructuredEntry[] = [];
+  const seenValues = new Set<string>();
+  const seenEmptyLabels = new Set<string>();
+
+  for (const entry of entries) {
+    if (isContactNameEntry(entry)) {
+      result.push(entry);
+      continue;
+    }
+
+    const valueKey = contactEntryValue(entry).toLowerCase();
+
+    if (valueKey) {
+      if (seenValues.has(valueKey)) {
+        continue;
+      }
+
+      seenValues.add(valueKey);
+      result.push(entry);
+      continue;
+    }
+
+    const labelKey = entry.title.trim().toLowerCase();
+
+    if (labelKey) {
+      if (seenEmptyLabels.has(labelKey)) {
+        continue;
+      }
+
+      seenEmptyLabels.add(labelKey);
+    }
+
+    result.push(entry);
+  }
+
+  return result;
 }
 
 export function contactFieldHasValue(entry: CvStructuredEntry): boolean {
@@ -91,17 +136,88 @@ export function createStarterContactEntries(): CvStructuredEntry[] {
   ];
 }
 
-/** One entry with multiple contact bullets — import / pre-multi-entry shape. */
+/**
+ * Labels that identify a Contact channel entry (aligned with BE
+ * `IsKnownContactChannelLabel` in CvExportHtmlMapper).
+ */
+export function isKnownContactChannelLabel(title: string | null | undefined): boolean {
+  if (!title || !title.trim()) {
+    return false;
+  }
+
+  switch (title.trim().toLowerCase()) {
+    case 'email':
+    case 'e-mail':
+    case 'phone':
+    case 'mobile':
+    case 'tel':
+    case 'telephone':
+    case 'linkedin':
+    case 'location':
+    case 'address':
+    case 'website':
+    case 'web':
+    case 'url':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/** True when a line looks like a channel value, not a person name (BE parity). */
+export function isChannelShapedContactLine(value: string | null | undefined): boolean {
+  if (!value || !value.trim()) {
+    return false;
+  }
+
+  if (isKnownContactChannelLabel(value)) {
+    return true;
+  }
+
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+
+  return (
+    trimmed.includes('@') ||
+    trimmed.includes('://') ||
+    lower.startsWith('www.') ||
+    lower.includes('linkedin.com/')
+  );
+}
+
+/**
+ * Import-legacy / pre-multi-entry Contact: one entry with multiple valued bullets
+ * whose title is not a known channel label (person name, blank, or "Name").
+ * Aligns with BE `TryExpandImportLegacyContact` (+ keeps Title=="Name" expand for drawer).
+ */
 export function isLegacyContactSection(section: CvStructuredSection): boolean {
   if (section.entries.length !== 1) {
     return false;
   }
 
   const only = section.entries[0];
-  const title = only.title.trim().toLowerCase();
-  const isNameOrBlank = title.length === 0 || title === 'name';
+  const valuedBullets = only.bullets.filter((line) => line.trim().length > 0);
 
-  return isNameOrBlank && only.bullets.filter((line) => line.trim().length > 0).length > 1;
+  if (valuedBullets.length < 2) {
+    return false;
+  }
+
+  // Known channel titles (Email/Phone/…) are modern multi-bullet entries, not import-legacy.
+  return !isKnownContactChannelLabel(only.title);
+}
+
+function resolveLegacyContactName(entry: CvStructuredEntry): string | null {
+  const subtitle = entry.subtitle?.trim();
+  if (subtitle) {
+    return subtitle;
+  }
+
+  const title = entry.title.trim();
+  if (!title || title.toLowerCase() === 'name' || isChannelShapedContactLine(title)) {
+    return null;
+  }
+
+  return title;
 }
 
 /**
@@ -119,12 +235,7 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
   if (isLegacyContactSection(section)) {
     const only = sorted[0];
     const lines = only.bullets.map((line) => line.trim()).filter((line) => line.length > 0);
-
-    let nameSubtitle = only.subtitle?.trim() || null;
-
-    if (!nameSubtitle && only.title.trim() && only.title.trim().toLowerCase() !== 'name') {
-      nameSubtitle = only.title.trim();
-    }
+    const nameSubtitle = resolveLegacyContactName(only);
 
     section.entries = [
       {
@@ -132,9 +243,10 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
         id: only.id,
         subtitle: nameSubtitle
       },
+      // Real UUIDs only — synthetic `__ch` ids fail API Guid binding and sticky-draft equality.
       ...lines.map((line, index) => ({
         ...createContactFieldEntry(index + 1),
-        id: `${only.id}__ch${index}`,
+        id: crypto.randomUUID(),
         bullets: [line]
       }))
     ];
@@ -144,6 +256,10 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
   if (!findContactNameEntry(section)) {
     section.entries = [createContactNameEntry(0), ...section.entries];
   }
+
+  section.entries = dedupeContactEntries(
+    [...section.entries].sort((left, right) => left.sortOrder - right.sortOrder)
+  ).map((entry, index) => ({ ...entry, sortOrder: index }));
 
   return section;
 }

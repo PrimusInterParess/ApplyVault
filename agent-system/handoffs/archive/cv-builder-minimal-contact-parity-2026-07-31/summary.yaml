@@ -1,0 +1,34 @@
+task_id: "cv-builder-minimal-contact-parity-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — Minimal template missing full contact information (clipped /
+  out of display); downloaded PDF needs formatting to better reflect frontend.
+summary: >-
+  Root cause: HtmlExport AppendClassicContactHeader emitted only the first
+  bullet per Contact entry, so import-legacy (person-name title + multi-bullet
+  channels) dropped channels in preview and PDF (same HTML). BE:
+  NormalizeContactEntriesForExport + .cv-contact flex-wrap on Minimal/Classic.
+  FE: widened isLegacyContactSection to match BE legacy expand for Content
+  drawer. QA: API contact tests 13/13; FE util specs 6/6; static wiring 7/7.
+limitations:
+  - Authenticated Minimal canvas/stage ↔ PDF channel-set smoke not executed (no browser auth session)
+  - Running API may serve stale wwwroot until restarted after template CSS edits
+  - FE drawer still does not expand non-import-legacy known-channel multi-bullet entries (BE expands on export HTML only)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Restart API if needed; login and smoke Minimal multi-channel Contact on canvas vs PDF"
+key_paths:
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/CvExportHtmlMapper.cs"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-minimal.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-classic.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/cv-export-print.css"
+  - "api/ApplyVault.Api.Tests/CvExportHtmlMapperContactTests.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.spec.ts"
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer

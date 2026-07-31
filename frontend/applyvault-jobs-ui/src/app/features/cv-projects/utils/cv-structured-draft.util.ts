@@ -276,6 +276,9 @@ function toComparableSections(sections: readonly CvStructuredSection[]) {
 }
 
 function toComparableSection(section: CvStructuredSection) {
+  const isContact =
+    section.sectionType === 'Contact' || section.heading.trim().toLowerCase() === 'contact';
+
   return {
     id: section.id,
     heading: section.heading.trim(),
@@ -283,17 +286,54 @@ function toComparableSection(section: CvStructuredSection) {
     sortOrder: section.sortOrder,
     entries: [...section.entries]
       .sort((left, right) => left.sortOrder - right.sortOrder)
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title.trim(),
-        subtitle: normalizeOptionalText(entry.subtitle),
-        dateRange: normalizeOptionalText(entry.dateRange),
-        summary: entry.summary.trim(),
-        bullets: entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0),
-        techStack: entry.techStack.trim(),
-        source: entry.source.trim() || 'Manual',
-        sourceSummaryId: entry.sourceSummaryId,
-        sortOrder: entry.sortOrder
-      }))
+      .map((entry, index) => toComparableEntry(entry, section.sectionType, isContact, index))
+  };
+}
+
+/**
+ * Normalize entry shape before equality (skills bullets↔techStack, contact summary↔bullets)
+ * so round-trips do not sticky-draft after a successful save.
+ */
+function toComparableEntry(
+  entry: CvStructuredEntry,
+  sectionType: CvStructuredSection['sectionType'],
+  isContact: boolean,
+  sortOrder: number
+) {
+  let bullets = entry.bullets.map((bullet) => bullet.trim()).filter((bullet) => bullet.length > 0);
+  let summary = entry.summary.trim();
+  let techStack = entry.techStack.trim();
+
+  if (isContact && bullets.length === 0 && summary) {
+    bullets = summary
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    summary = '';
+  }
+
+  if (sectionType === 'Skills') {
+    if (!techStack && bullets.length > 0) {
+      techStack = bullets.join(', ');
+    }
+
+    bullets = [];
+  }
+
+  if (sectionType === 'Summary' && !summary && entry.title.trim()) {
+    summary = entry.title.trim();
+  }
+
+  return {
+    id: entry.id,
+    title: entry.title.trim(),
+    subtitle: normalizeOptionalText(entry.subtitle),
+    dateRange: normalizeOptionalText(entry.dateRange),
+    summary,
+    bullets,
+    techStack,
+    source: entry.source.trim() || 'Manual',
+    sourceSummaryId: entry.sourceSummaryId,
+    sortOrder
   };
 }

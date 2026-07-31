@@ -106,6 +106,7 @@ a {
 
 .cv-name,
 .cv-tagline,
+.cv-contact,
 .cv-contact-line {
   overflow-wrap: anywhere;
   word-break: break-word;

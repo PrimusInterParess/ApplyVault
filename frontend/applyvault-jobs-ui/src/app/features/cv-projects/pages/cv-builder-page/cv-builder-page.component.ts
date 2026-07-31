@@ -140,12 +140,10 @@ export class CvBuilderPageComponent implements OnDestroy {
     return this.serverSections().length > 0;
   });
 
-  protected readonly assistDisabled = computed(
-    () => this.cvStructured.savingSectionId() !== null || this.cvStructured.savingSectionOrder()
-  );
+  protected readonly assistDisabled = computed(() => this.cvStructured.isSaving());
 
   protected readonly saveStatus = computed(() => {
-    if (this.cvStructured.savingSectionId()) {
+    if (this.cvStructured.isSaving()) {
       return 'Saving…';
     }
 
@@ -167,6 +165,14 @@ export class CvBuilderPageComponent implements OnDestroy {
   private importingProjectSectionId: string | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private htmlPreviewTimer: ReturnType<typeof setTimeout> | null = null;
+  private pickFidelityTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
+  private structuredLoadDocumentId: string | null = null;
+  /** Local edit generation; cleared only when matching save generation succeeds. */
+  private editGeneration = 0;
+  private editGenerationAtLastSaveRequest = 0;
+  private lastSaveRequestGeneration = 0;
+  private seenSuccessfulSaveGeneration = 0;
 
   constructor() {
     // Keep local gallery selection aligned with facade (server prefs → facade → UI).
@@ -176,10 +182,29 @@ export class CvBuilderPageComponent implements OnDestroy {
       );
     });
 
+    // Load structured only when document identity appears/changes — not on export-prefs metadata echo.
     effect(() => {
-      if (!this.cvDocument.loading() && this.cvDocument.hasDocument()) {
-        this.cvStructured.load();
+      if (this.cvDocument.loading()) {
+        return;
       }
+
+      const document = this.cvDocument.document();
+
+      if (!document) {
+        this.structuredLoadDocumentId = null;
+        return;
+      }
+
+      if (this.structuredLoadDocumentId === document.id) {
+        return;
+      }
+
+      if (this.cvStructured.isSaving()) {
+        return;
+      }
+
+      this.structuredLoadDocumentId = document.id;
+      this.cvStructured.load();
     });
 
     effect(() => {
@@ -195,6 +220,22 @@ export class CvBuilderPageComponent implements OnDestroy {
       }
     });
 
+    // Pick gallery/stage: export HTML fidelity when a Structured CV exists.
+    effect(() => {
+      if (this.step() !== 'pick') {
+        return;
+      }
+
+      if (!this.hasStructuredCv() || this.cvDocument.loading() || this.cvStructured.loading()) {
+        return;
+      }
+
+      this.cvDocument.selectedExportMaxPages();
+      this.serverSections();
+      this.cvDocument.document();
+      this.schedulePickFidelityRefresh();
+    });
+
     effect(() => {
       const updating = this.cvStructured.updatingWithAi();
 
@@ -208,9 +249,10 @@ export class CvBuilderPageComponent implements OnDestroy {
     });
 
     effect(() => {
-      const savingId = this.cvStructured.savingSectionId();
+      const saving = this.cvStructured.isSaving();
       const saveError = this.cvStructured.saveError();
-      const finishedSave = this.wasSavingSection && !savingId;
+      const successfulGeneration = this.cvStructured.lastSuccessfulSaveGeneration();
+      const finishedSave = this.wasSavingSection && !saving;
 
       if (this.importingProjectSectionId && finishedSave) {
         if (!saveError) {
@@ -221,15 +263,27 @@ export class CvBuilderPageComponent implements OnDestroy {
         this.importingProjectsBusy.set(false);
       }
 
-      if (finishedSave && !saveError) {
+      // Clear draft on successful latest save generation when no newer local edit exists.
+      if (
+        successfulGeneration > 0 &&
+        successfulGeneration !== this.seenSuccessfulSaveGeneration &&
+        successfulGeneration === this.lastSaveRequestGeneration &&
+        this.editGeneration === this.editGenerationAtLastSaveRequest
+      ) {
+        this.seenSuccessfulSaveGeneration = successfulGeneration;
+        this.inlineDraft.set(null);
+        this.scheduleHtmlPreviewRefresh(true);
+      } else if (finishedSave && !saveError) {
+        // Secondary: equality clear for edge cases (AI/import paths) after normalize harden.
         const draft = this.inlineDraft();
 
         if (!draft || sectionsAreEqual(draft, this.serverSections())) {
           this.inlineDraft.set(null);
+          this.scheduleHtmlPreviewRefresh(true);
         }
       }
 
-      this.wasSavingSection = savingId !== null;
+      this.wasSavingSection = saving;
     });
 
     // M1 strategy A: refresh sandboxed fidelity preview on edit canvas deps.
@@ -242,7 +296,7 @@ export class CvBuilderPageComponent implements OnDestroy {
       this.cvDocument.selectedExportMaxPages();
       this.serverSections();
       this.cvDocument.document();
-      this.cvStructured.savingSectionId();
+      this.cvStructured.isSaving();
       this.scheduleHtmlPreviewRefresh();
     });
   }
@@ -256,7 +310,19 @@ export class CvBuilderPageComponent implements OnDestroy {
       clearTimeout(this.htmlPreviewTimer);
     }
 
+    if (this.pickFidelityTimer) {
+      clearTimeout(this.pickFidelityTimer);
+    }
+
     this.cvStructured.clearSuggestions();
+  }
+
+  protected pickFidelitySrcdoc(templateId: number) {
+    return this.cvDocument.pickFidelitySrcdoc(templateId);
+  }
+
+  protected pickFidelityNotice(templateId: number): string | null {
+    return this.cvDocument.pickFidelityNotice(templateId);
   }
 
   protected selectTemplate(templateId: number): void {
@@ -465,11 +531,13 @@ export class CvBuilderPageComponent implements OnDestroy {
     const nextSections = cloneSectionsForDraft(this.sections());
     const projectsSection = appendProjectSummariesToSections(nextSections, summaries);
 
+    this.editGeneration++;
     this.inlineDraft.set(nextSections);
     this.importingProjectSectionId = projectsSection.id;
     this.importingProjectsBusy.set(true);
     this.cvStructured.clearSaveError();
-    this.cvStructured.save(nextSections, projectsSection.id);
+    this.editGenerationAtLastSaveRequest = this.editGeneration;
+    this.lastSaveRequestGeneration = this.cvStructured.save(nextSections, projectsSection.id);
   }
 
   protected onPendingAddSectionTypeChange(event: Event): void {
@@ -546,6 +614,7 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
 
     const next = applyCvTemplateInlineEdit(this.sections(), edit);
+    this.editGeneration++;
     this.inlineDraft.set(next);
     this.scheduleSave(next);
   }
@@ -554,6 +623,7 @@ export class CvBuilderPageComponent implements OnDestroy {
     edit: Extract<CvTemplateInlineEdit, { kind: 'addSection' | 'removeSection' | 'reorderSections' }>
   ): void {
     const next = applyCvTemplateInlineEdit(this.sections(), edit);
+    this.editGeneration++;
     this.inlineDraft.set(next);
     this.scheduleSave(next);
 
@@ -669,24 +739,40 @@ export class CvBuilderPageComponent implements OnDestroy {
     }, 500);
   }
 
-  private scheduleHtmlPreviewRefresh(): void {
+  private scheduleHtmlPreviewRefresh(force = false): void {
     if (this.htmlPreviewTimer) {
       clearTimeout(this.htmlPreviewTimer);
     }
 
     this.htmlPreviewTimer = setTimeout(() => {
-      // Wait for in-flight saves; skip while a local draft is unsaved (server HTML only).
-      if (this.cvStructured.savingSectionId()) {
-        this.scheduleHtmlPreviewRefresh();
+      // Wait for in-flight saves; skip while a local draft is unsaved (server HTML only),
+      // unless force=true after a successful latest-generation clear.
+      if (this.cvStructured.isSaving()) {
+        this.scheduleHtmlPreviewRefresh(force);
         return;
       }
 
-      if (this.inlineDraft()) {
+      if (!force && this.inlineDraft()) {
         return;
       }
 
       this.cvDocument.refreshExportHtmlPreview();
     }, 450);
+  }
+
+  private schedulePickFidelityRefresh(): void {
+    if (this.pickFidelityTimer) {
+      clearTimeout(this.pickFidelityTimer);
+    }
+
+    this.pickFidelityTimer = setTimeout(() => {
+      if (this.cvStructured.isSaving()) {
+        this.schedulePickFidelityRefresh();
+        return;
+      }
+
+      this.cvDocument.refreshPickFidelityPreviews();
+    }, 200);
   }
 
   private flushSave(): void {
@@ -709,7 +795,8 @@ export class CvBuilderPageComponent implements OnDestroy {
       return;
     }
 
-    this.cvStructured.save(sections, anchorSectionId);
+    this.editGenerationAtLastSaveRequest = this.editGeneration;
+    this.lastSaveRequestGeneration = this.cvStructured.save(sections, anchorSectionId);
   }
 
   private runCreateCv(): void {

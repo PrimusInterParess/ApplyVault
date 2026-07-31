@@ -5,8 +5,8 @@
   <title>CV</title>
   <style>
     :root {
-      --cv-page-pad-y: 16mm;
-      --cv-page-pad-x: 18mm;
+      --cv-page-pad-y: 18mm;
+      --cv-page-pad-x: 20mm;
       --cv-ink: #1a1a1a;
       --cv-muted: #5c5c5c;
       --cv-rule: #d0d0d0;
@@ -23,15 +23,29 @@
       line-height: 1.45;
     }
     .cv-body {
-      padding: 18mm 20mm;
+      padding: var(--cv-page-pad-y) var(--cv-page-pad-x);
+    }
+    .cv-header {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16pt;
+      margin-bottom: 14pt;
+    }
+    .cv-header-copy {
+      flex: 1 1 auto;
+      min-width: 0;
     }
     .cv-photo {
-      width: 72px;
-      height: 72px;
+      flex: 0 0 auto;
+      flex-shrink: 0;
+      width: 128px;
+      height: 128px;
+      max-width: 100%;
       object-fit: cover;
-      float: right;
+      object-position: center;
       border-radius: 4px;
-      margin: 0 0 12pt 16pt;
     }
     .cv-name {
       margin: 0 0 6pt;
@@ -53,8 +67,15 @@
       font-size: 11pt;
       color: var(--cv-muted);
     }
+    .cv-contact {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2pt 10pt;
+      align-items: baseline;
+      margin: 0;
+    }
     .cv-contact-line {
-      margin: 0 0 1px;
+      margin: 0;
       font-size: 9.5pt;
       color: var(--cv-muted);
     }
@@ -88,7 +109,12 @@
 </head>
 <body>
   <div class="cv-body">
-    {{ProfilePhotoHtml}}
+    <header class="cv-header">
+      <div class="cv-header-copy">
+        {{HeaderHtml}}
+      </div>
+      {{ProfilePhotoHtml}}
+    </header>
     {{MainHtml}}
   </div>
 </body>

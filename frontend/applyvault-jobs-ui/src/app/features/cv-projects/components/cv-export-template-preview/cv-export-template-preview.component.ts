@@ -108,8 +108,13 @@ export class CvExportTemplatePreviewComponent {
   }
 
   protected showContactNameInSection(section: CvStructuredSection): boolean {
-    // Classic (1) already edits the name in the page header.
-    return this.isContactSection(section) && this.templateId() !== 1;
+    // Classic (1) and Minimal (3) already edit the name in the page header.
+    return this.isContactSection(section) && this.templateId() !== 1 && this.templateId() !== 3;
+  }
+
+  /** Match BE AppendClassicContactHeader: no "Contact" section-title in Classic/Minimal header. */
+  protected showSectionTitle(section: CvStructuredSection): boolean {
+    return !(this.isContactSection(section) && (this.templateId() === 1 || this.templateId() === 3));
   }
 
   protected visibleContactEntries(section: CvStructuredSection): readonly CvStructuredEntry[] {

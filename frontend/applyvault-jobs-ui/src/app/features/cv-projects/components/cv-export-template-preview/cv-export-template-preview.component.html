@@ -32,9 +32,26 @@
       </div>
     } @else if (templateId() === 3) {
       <div class="cv-export-preview__main cv-export-preview__main--single">
-        @if (profilePhotoUrl()) {
-          <img class="cv-export-preview__photo cv-export-preview__photo--float" [src]="profilePhotoUrl()" alt="" />
-        }
+        <header class="cv-export-preview__minimal-header">
+          <div class="cv-export-preview__minimal-header-copy">
+            @if (editable() && contactNameEntry(); as nameEntry) {
+              <h1
+                class="cv-export-preview__name cv-export-preview__editable"
+                [appInlineEditableText]="contactNameText(nameEntry)"
+                [enabled]="true"
+                data-placeholder="Your name"
+                (textChange)="emitContactName(nameEntry, $event)"></h1>
+            } @else {
+              <h1 class="cv-export-preview__name">{{ displayName() }}</h1>
+            }
+            <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().header }" />
+          </div>
+          @if (profilePhotoUrl()) {
+            <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
+          } @else if (sampleMode() && !editable()) {
+            <div class="cv-export-preview__photo cv-export-preview__photo--placeholder" aria-hidden="true"></div>
+          }
+        </header>
         <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
       </div>
     } @else {
@@ -76,43 +93,47 @@
 
 <ng-template #sectionList let-sections>
   @for (section of sections; track section.id) {
-    <section class="cv-export-preview__section">
-      @if (editable()) {
-        <div class="cv-export-preview__section-head">
-          <h2
-            class="cv-export-preview__section-title cv-export-preview__editable"
-            [appInlineEditableText]="section.heading"
-            [enabled]="true"
-            data-placeholder="Section title"
-            (textChange)="emitSectionHeading(section.id, $event)"></h2>
-          <div class="cv-export-preview__section-actions">
-            <button
-              type="button"
-              class="cv-export-preview__section-action"
-              [disabled]="!canMoveSectionUp(section.id)"
-              aria-label="Move section up"
-              (click)="emitMoveSection(section.id, -1)">
-              ↑
-            </button>
-            <button
-              type="button"
-              class="cv-export-preview__section-action"
-              [disabled]="!canMoveSectionDown(section.id)"
-              aria-label="Move section down"
-              (click)="emitMoveSection(section.id, 1)">
-              ↓
-            </button>
-            <button
-              type="button"
-              class="cv-export-preview__section-action cv-export-preview__section-action--danger"
-              aria-label="Remove section"
-              (click)="emitRemoveSection(section.id)">
-              ×
-            </button>
+    <section
+      class="cv-export-preview__section"
+      [class.cv-export-preview__section--flat-contact]="isContactSection(section) && !showSectionTitle(section)">
+      @if (showSectionTitle(section)) {
+        @if (editable()) {
+          <div class="cv-export-preview__section-head">
+            <h2
+              class="cv-export-preview__section-title cv-export-preview__editable"
+              [appInlineEditableText]="section.heading"
+              [enabled]="true"
+              data-placeholder="Section title"
+              (textChange)="emitSectionHeading(section.id, $event)"></h2>
+            <div class="cv-export-preview__section-actions">
+              <button
+                type="button"
+                class="cv-export-preview__section-action"
+                [disabled]="!canMoveSectionUp(section.id)"
+                aria-label="Move section up"
+                (click)="emitMoveSection(section.id, -1)">
+                ↑
+              </button>
+              <button
+                type="button"
+                class="cv-export-preview__section-action"
+                [disabled]="!canMoveSectionDown(section.id)"
+                aria-label="Move section down"
+                (click)="emitMoveSection(section.id, 1)">
+                ↓
+              </button>
+              <button
+                type="button"
+                class="cv-export-preview__section-action cv-export-preview__section-action--danger"
+                aria-label="Remove section"
+                (click)="emitRemoveSection(section.id)">
+                ×
+              </button>
+            </div>
           </div>
-        </div>
-      } @else {
-        <h2 class="cv-export-preview__section-title">{{ section.heading }}</h2>
+        } @else {
+          <h2 class="cv-export-preview__section-title">{{ section.heading }}</h2>
+        }
       }
 
       @for (entry of visibleContactEntries(section); track entry.id) {

@@ -262,6 +262,12 @@ public sealed class CvDocumentsController(
                 cancellationToken);
 
             Response.Headers["X-Cv-Export-Template-Id"] = exportResult.ResolvedTemplateId.ToString();
+            Response.Headers["X-Cv-Export-Compact-Level"] = exportResult.CompactLevel.ToString();
+
+            if (!string.IsNullOrWhiteSpace(exportResult.Notice))
+            {
+                Response.Headers["X-Cv-Export-Notice"] = Uri.EscapeDataString(exportResult.Notice);
+            }
 
             return Content(exportResult.Html, "text/html; charset=utf-8");
         }

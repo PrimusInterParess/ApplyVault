@@ -1,0 +1,33 @@
+task_id: "cv-builder-photo-spacing-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — Profile photo on templates too small / mispositioned (out of
+  display); downloaded one-page PDF too crowded.
+summary: >-
+  UX + BE + FE: Classic/Modern/Minimal photos 112/108/100px; Minimal flex
+  header (no float); Puppeteer PDF margins 0 (document pads only); compact
+  CSS floors so one-page fit keeps section/entry/photo minima. CvExport tests
+  43/43; FE development build exit 0.
+limitations:
+  - Authenticated browser /cv-builder + PDF visual smoke not executed (login redirect)
+  - Running API may serve stale wwwroot until restarted
+  - Production ng build style-budget failures remain (pre-existing)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Restart API; login and smoke Classic/Modern/Minimal with photo + one-page download"
+key_paths:
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-classic.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-modern.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-minimal.html"
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/HtmlCvPdfExporter.cs"
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/CvExportCompactCssBuilder.cs"
+  - "api/ApplyVault.Api/Services/CvDocuments/HtmlExport/CvExportHtmlMapper.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-template-preview/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-export-template-layout.util.ts"
+agents:
+  - ui-ux-designer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer

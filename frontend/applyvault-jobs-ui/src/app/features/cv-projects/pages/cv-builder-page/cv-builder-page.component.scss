@@ -120,7 +120,9 @@
 
 .cv-builder__template-thumb {
   display: block;
+  height: 9.5rem;
   border-radius: 0.55rem;
+  /* Clip the scaled page frame only — fidelity thumbs scale the full A4 page. */
   overflow: hidden;
   background: var(--cv-paper);
   box-shadow:
@@ -131,6 +133,11 @@
     transform 0.2s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
+}
+
+.cv-builder__template-thumb app-cv-export-html-preview {
+  display: block;
+  height: 100%;
 }
 
 .cv-builder__template-card:hover .cv-builder__template-thumb {
@@ -182,6 +189,17 @@
   box-shadow:
     0 1px 2px rgb(28 35 48 / 5%),
     0 24px 48px rgb(28 35 48 / 14%);
+}
+
+.cv-builder__paper--fidelity {
+  height: 28rem;
+  /* Stage chrome bounds the viewport; multi-page scroll lives inside the fidelity iframe. */
+  overflow: hidden;
+}
+
+.cv-builder__paper--fidelity app-cv-export-html-preview {
+  display: block;
+  height: 100%;
 }
 
 .cv-builder__stage-panel {
@@ -259,6 +277,13 @@
   margin: 0;
   color: #b42318;
   font-size: 0.85rem;
+}
+
+.cv-builder__export-notice {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--cv-muted);
 }
 
 /* —— Edit desk —— */

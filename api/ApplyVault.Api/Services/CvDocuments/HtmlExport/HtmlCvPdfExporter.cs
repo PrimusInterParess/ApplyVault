@@ -67,6 +67,11 @@ public sealed class HtmlCvPdfExporter(
 
         await page.SetContentAsync(finalHtml).ConfigureAwait(false);
 
+        // Document templates own page inset via CSS padding; @page margin is 0.
+        // Keep Puppeteer margins at 0 so PDF does not double-inset vs preview.
+        // CompactLevel spacing is applied in HTML CSS (CvExportCompactCssBuilder), not browser margins.
+        _ = options;
+
         return await page.PdfDataAsync(new PdfOptions
         {
             Format = PaperFormat.A4,
@@ -74,26 +79,11 @@ public sealed class HtmlCvPdfExporter(
             PreferCSSPageSize = true,
             MarginOptions = new MarginOptions
             {
-                Top = ResolvePdfMargin(options, normalMillimeters: 10),
-                Bottom = ResolvePdfMargin(options, normalMillimeters: 10),
-                Left = ResolvePdfMargin(options, normalMillimeters: 12),
-                Right = ResolvePdfMargin(options, normalMillimeters: 12)
+                Top = "0",
+                Bottom = "0",
+                Left = "0",
+                Right = "0"
             }
         }).ConfigureAwait(false);
-    }
-
-    private static string ResolvePdfMargin(CvPdfRenderOptions? options, int normalMillimeters)
-    {
-        var compactLevel = Math.Clamp(options?.CompactLevel ?? 0, 0, CvPdfRenderOptions.MaxCompactLevel);
-        var scale = compactLevel switch
-        {
-            1 => 0.9m,
-            2 => 0.8m,
-            3 => 0.7m,
-            4 => 0.6m,
-            _ => 1m
-        };
-
-        return $"{Math.Max(4, normalMillimeters * scale):0.#}mm";
     }
 }

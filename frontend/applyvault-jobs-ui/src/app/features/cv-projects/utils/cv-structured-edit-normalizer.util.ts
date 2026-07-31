@@ -1,14 +1,19 @@
 import { CvSectionType, CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
+import { dedupeContactEntries } from './cv-contact-channels.util';
 
 export function normalizeSectionForEditing(section: CvStructuredSection): CvStructuredSection {
   const isContact =
     section.sectionType === 'Contact' || section.heading.trim().toLowerCase() === 'contact';
 
+  const entries = section.entries.map((entry) =>
+    normalizeEntryForEditing(entry, section.sectionType, isContact)
+  );
+
   return {
     ...section,
-    entries: section.entries.map((entry) =>
-      normalizeEntryForEditing(entry, section.sectionType, isContact)
-    )
+    entries: isContact
+      ? dedupeContactEntries(entries).map((entry, index) => ({ ...entry, sortOrder: index }))
+      : entries
   };
 }
 

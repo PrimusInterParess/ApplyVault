@@ -1,0 +1,34 @@
+task_id: "cv-builder-templates-minimal-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — CV preview text hugged borders; templates stiff. Replace
+  Classic/Modern/Minimal with original FlowCV-inspired minimalist designs;
+  document-owned page insets for preview/PDF parity.
+summary: >-
+  UX spec + restyled wwwroot templates (Classic/Modern/Minimal) with 16–20mm
+  document padding and @page margin 0; Modern soft sage sidebar. FE gallery
+  copy + preview chrome overflow/padding fixes. Catalog tests 15/15; FE
+  development build exit 0 (QA re-run).
+limitations:
+  - Browser /cv-builder + PDF corner smoke not executed (API timed out during QA)
+  - CompactLevel px overrides may still fight mm paddings on Modern
+  - Production ng build style-budget failures remain (pre-existing)
+pr_links: []
+issue_links: []
+follow_ups:
+  - "Restart API if needed; manual smoke all 3 templates on /cv-builder + PDF corners"
+  - "Optional: CompactLevel visual check on Modern"
+key_paths:
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-classic.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-modern.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-minimal.html"
+  - "api/ApplyVault.Api/wwwroot/cv-export-templates/cv-export-print.css"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/models/cv-export-template.model.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-template-preview/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.scss"
+agents:
+  - ui-ux-designer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer

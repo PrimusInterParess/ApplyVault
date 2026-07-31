@@ -821,7 +821,8 @@
   display: grid;
   justify-items: center;
   gap: 0.65rem;
-  overflow-x: hidden;
+  /* Allow zoomed paper to remain reachable (scale transform overflows layout box). */
+  overflow-x: auto;
   overflow-y: auto;
 }
 
@@ -845,7 +846,9 @@
     0 18px 40px rgb(28 35 48 / 12%),
     0 40px 80px rgb(28 35 48 / 10%);
   border: 1px solid rgb(28 35 48 / 6%);
-  overflow: hidden;
+  /* Do not clip iframe document page padding / tall preview content. */
+  overflow: visible;
+  border-radius: 0.35rem;
 }
 
 .cv-builder__content-editor {

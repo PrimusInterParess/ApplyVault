@@ -17,19 +17,19 @@ export const CV_EXPORT_TEMPLATES: readonly CvExportTemplateOption[] = [
   {
     id: 1,
     label: 'Classic',
-    description: 'One-column layout with a clear header band.',
+    description: 'Balanced one-column layout with a calm header and generous margins.',
     layoutKind: 'classic'
   },
   {
     id: 2,
     label: 'Modern',
-    description: 'Simple two-column layout with sidebar and main body.',
+    description: 'Two-column layout with a soft sidebar and open main column.',
     layoutKind: 'twoColumn'
   },
   {
     id: 3,
     label: 'Minimal',
-    description: 'Clean one-column layout with sparse styling.',
+    description: 'Sparse one-column layout with light rules and open whitespace.',
     layoutKind: 'minimal'
   }
 ] as const;

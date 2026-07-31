@@ -4,31 +4,41 @@
   <meta charset="UTF-8">
   <title>CV</title>
   <style>
+    :root {
+      --cv-page-pad-y: 16mm;
+      --cv-page-pad-x: 18mm;
+      --cv-ink: #1a1a1a;
+      --cv-muted: #5c5c5c;
+      --cv-rule: #d0d0d0;
+      --cv-accent: #2f5d50;
+      --cv-surface-soft: #f4f6f5;
+    }
     * { box-sizing: border-box; }
     body {
-      font-family: Georgia, 'Times New Roman', serif;
+      font-family: "Segoe UI", Candara, Calibri, sans-serif;
       margin: 0;
       padding: 0;
-      color: #111;
-      font-size: 13px;
+      color: var(--cv-ink);
+      font-size: 10.5pt;
       line-height: 1.45;
     }
     .cv-classic {
-      padding: 0;
+      padding: var(--cv-page-pad-y) var(--cv-page-pad-x);
+      max-width: 100%;
     }
     .cv-header {
       display: flex;
       flex-direction: row;
       align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 18px;
-      padding-bottom: 12px;
-      border-bottom: 1.5px solid #111;
+      gap: 14pt;
+      margin-bottom: 14pt;
+      padding-bottom: 12pt;
+      border-bottom: 1px solid var(--cv-accent);
     }
     .cv-photo {
       flex: 0 0 auto;
-      width: 96px;
-      height: 96px;
+      width: 88px;
+      height: 88px;
       object-fit: cover;
     }
     .cv-header-copy {
@@ -37,37 +47,41 @@
     }
     .cv-name {
       margin: 0;
-      font-size: 22px;
+      font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      font-size: 22pt;
       font-weight: 700;
       line-height: 1.15;
+      color: var(--cv-ink);
     }
     .cv-tagline {
       margin: 4px 0 8px;
-      font-size: 13px;
-      color: #333;
+      font-size: 11pt;
+      color: var(--cv-muted);
     }
     .cv-contact {
       margin: 0;
     }
     .cv-contact-line {
-      margin: 0 0 2px;
-      font-size: 12px;
-      color: #444;
+      margin: 0 0 1px;
+      font-size: 9.5pt;
+      color: var(--cv-muted);
     }
     .cv-main {
       padding: 0;
+      margin-top: 4pt;
     }
-    .section { margin-bottom: 16px; }
+    .section { margin-bottom: 14pt; }
     .section-title {
-      font-size: 12px;
+      font-size: 9pt;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      border-bottom: 1px solid #111;
+      letter-spacing: 0.12em;
+      color: var(--cv-accent);
+      border-bottom: 1px solid var(--cv-rule);
       padding-bottom: 3px;
-      margin: 0 0 10px;
+      margin: 0 0 10pt;
     }
-    .entry { margin-bottom: 12px; }
+    .entry { margin-bottom: 10pt; }
     .entry-header {
       display: flex;
       justify-content: space-between;
@@ -75,13 +89,13 @@
       flex-wrap: wrap;
       gap: 4px 12px;
     }
-    .entry-title { font-weight: 700; }
-    .entry-date { font-size: 12px; color: #444; }
-    .entry-subtitle { font-style: italic; margin-top: 2px; }
+    .entry-title { font-size: 10.5pt; font-weight: 650; }
+    .entry-date { font-size: 9.5pt; color: var(--cv-muted); }
+    .entry-subtitle { font-style: italic; margin-top: 2px; color: var(--cv-muted); }
     .entry-summary { margin: 6px 0 0; }
-    .entry-bullets { margin: 6px 0 0 20px; padding: 0; }
-    .entry-bullets li { margin-bottom: 3px; }
-    .entry-tech { font-size: 12px; color: #333; margin-top: 4px; }
+    .entry-bullets { margin: 6px 0 0 1.1em; padding: 0; }
+    .entry-bullets li { margin-bottom: 0.25em; }
+    .entry-tech { font-size: 9.5pt; color: var(--cv-muted); margin-top: 4px; }
   </style>
 </head>
 <body>

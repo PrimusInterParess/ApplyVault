@@ -1,8 +1,20 @@
-/* Shared print/PDF rules for Chromium (Puppeteer) multi-page CV export */
+/* Shared print/PDF rules for Chromium (Puppeteer) multi-page CV export.
+   Page inset is owned by each template shell (document padding / cell padding).
+   @page margin stays 0 so iframe preview and PDF share the same breathing room. */
+
+:root {
+  --cv-page-pad-y: 16mm;
+  --cv-page-pad-x: 18mm;
+  --cv-ink: #1a1a1a;
+  --cv-muted: #5c5c5c;
+  --cv-rule: #d0d0d0;
+  --cv-accent: #2f5d50;
+  --cv-surface-soft: #f4f6f5;
+}
 
 @page {
   size: A4;
-  margin: 10mm 12mm;
+  margin: 0;
 }
 
 html,

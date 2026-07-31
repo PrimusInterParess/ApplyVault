@@ -18,10 +18,12 @@
 }
 
 .cv-export-preview__page {
+  box-sizing: border-box;
   aspect-ratio: 210 / 297;
   width: 100%;
   max-height: 100%;
-  overflow: hidden;
+  /* Clip only for miniature thumbs; stage/editable keep page insets visible. */
+  overflow: auto;
   background: var(--cv-preview-main-bg);
   color: var(--cv-preview-main-fg);
   font-family: var(--cv-preview-font);
@@ -31,6 +33,7 @@
 
 .cv-export-preview--compact .cv-export-preview__page {
   font-size: 0.4rem;
+  overflow: hidden;
 }
 
 /* Editable = real document feel (Resume.io-style) */
@@ -126,12 +129,12 @@
 }
 
 .cv-export-preview__sidebar .cv-export-preview__section-action {
-  color: rgb(255 255 255 / 75%);
+  color: rgb(31 42 38 / 55%);
 }
 
 .cv-export-preview__sidebar .cv-export-preview__section-action:hover:not(:disabled) {
-  color: #fff;
-  background: rgb(255 255 255 / 12%);
+  color: #1f2a26;
+  background: rgb(31 42 38 / 8%);
 }
 
 .cv-export-preview__add-section {
@@ -247,18 +250,34 @@
 .cv-export-preview__sidebar {
   background: var(--cv-preview-sidebar-bg);
   color: var(--cv-preview-sidebar-fg);
-  padding: 0.55rem 0.45rem;
+  /* Outer-edge inset mirrors export template cell padding (spec §5.1 / §7.2). */
+  padding: 0.85rem 0.65rem 0.85rem 0.9rem;
   min-height: 100%;
+  box-sizing: border-box;
 }
 
 .cv-export-preview__main {
-  padding: 0.55rem 0.6rem;
+  padding: 0.85rem 0.9rem 0.85rem 0.75rem;
   background: var(--cv-preview-main-bg);
   color: var(--cv-preview-main-fg);
   min-height: 100%;
+  box-sizing: border-box;
 }
 
 .cv-export-preview__main--single {
+  padding: 0.95rem 1.05rem;
+  box-sizing: border-box;
+}
+
+.cv-export-preview--compact .cv-export-preview__sidebar {
+  padding: 0.55rem 0.45rem;
+}
+
+.cv-export-preview--compact .cv-export-preview__main {
+  padding: 0.55rem 0.6rem;
+}
+
+.cv-export-preview--compact .cv-export-preview__main--single {
   padding: 0.6rem;
 }
 
@@ -272,8 +291,8 @@
 }
 
 .cv-export-preview__photo--placeholder {
-  background: rgb(255 255 255 / 18%);
-  border: 1px solid rgb(255 255 255 / 25%);
+  background: rgb(31 42 38 / 8%);
+  border: 1px solid rgb(31 42 38 / 18%);
 }
 
 .cv-export-preview__photo--float {
@@ -305,7 +324,7 @@
 }
 
 .cv-export-preview__sidebar .cv-export-preview__section-title {
-  border-bottom-color: rgb(255 255 255 / 35%);
+  border-bottom-color: rgb(47 93 80 / 35%);
 }
 
 .cv-export-preview__main .cv-export-preview__section-title {
@@ -385,18 +404,18 @@
 }
 
 .cv-export-preview__sidebar .cv-export-preview__add-entry {
-  color: #fff;
-  border-color: rgb(255 255 255 / 35%);
-  background: rgb(255 255 255 / 8%);
+  color: #1f6f5b;
+  border-color: rgb(31 111 91 / 35%);
+  background: rgb(255 255 255 / 55%);
 }
 
 .cv-export-preview__sidebar .cv-export-preview__add-entry:hover {
-  background: rgb(255 255 255 / 16%);
-  border-color: rgb(255 255 255 / 55%);
+  background: rgb(31 111 91 / 8%);
+  border-color: #1f6f5b;
 }
 
 .cv-export-preview__sidebar .cv-export-preview__entry-remove {
-  color: rgb(255 255 255 / 75%);
+  color: #8a93a3;
 }
 
 .cv-export-preview__entry-header {
@@ -458,8 +477,14 @@
 .cv-export-preview__classic-header {
   display: flex;
   gap: 0.45rem;
+  padding: 0.85rem 0.9rem 0.45rem;
+  border-bottom: 1px solid var(--cv-preview-accent);
+  box-sizing: border-box;
+}
+
+.cv-export-preview--compact .cv-export-preview__classic-header {
   padding: 0.55rem 0.6rem 0.35rem;
-  border-bottom: 2px solid var(--cv-preview-accent);
+  border-bottom-width: 2px;
 }
 
 .cv-export-preview__classic-header-copy {
@@ -470,8 +495,13 @@
 .cv-export-preview__pro-header {
   display: flex;
   gap: 0.45rem;
-  padding: 0.55rem 0.6rem;
+  padding: 0.85rem 0.9rem;
   border-bottom: 1px solid #ddd;
+  box-sizing: border-box;
+}
+
+.cv-export-preview--compact .cv-export-preview__pro-header {
+  padding: 0.55rem 0.6rem;
 }
 
 .cv-export-preview__pro-header-copy {
@@ -542,9 +572,9 @@
 }
 
 .cv-export-preview__sidebar .cv-export-preview__contact-add-btn {
-  color: #fff;
-  border-color: rgb(255 255 255 / 40%);
-  background: rgb(255 255 255 / 8%);
+  color: #1f6f5b;
+  border-color: rgb(31 111 91 / 35%);
+  background: rgb(255 255 255 / 55%);
 }
 
 .cv-export-preview__contact-channels {
@@ -598,24 +628,33 @@
 }
 
 .cv-export-preview__sidebar .cv-export-preview__contact-chip {
-  color: #fff;
-  border-color: rgb(255 255 255 / 35%);
-  background: rgb(255 255 255 / 8%);
+  color: #1f6f5b;
+  border-color: rgb(31 111 91 / 35%);
+  background: rgb(255 255 255 / 55%);
 }
 
 .cv-export-preview__sidebar .cv-export-preview__contact-label {
   opacity: 0.85;
 }
 
-/* Template 1 — QuestPDF Classic accent */
+/* Template 1 — Classic accent + symmetric shell inset */
 .cv-export-preview--template-1 {
-  --cv-preview-accent: #1b4f72;
+  --cv-preview-accent: #2f5d50;
 }
 
-/* Template 2 — template-modern.html */
+.cv-export-preview--template-1 .cv-export-preview__main {
+  padding: 0.55rem 0.9rem 0.85rem;
+}
+
+.cv-export-preview--compact.cv-export-preview--template-1 .cv-export-preview__main {
+  padding: 0.55rem 0.6rem;
+}
+
+/* Template 2 — soft sidebar (gallery/stage chrome; export HTML owned by API) */
 .cv-export-preview--template-2 {
-  --cv-preview-sidebar-bg: #2c3e50;
-  --cv-preview-accent: #1b4f72;
+  --cv-preview-sidebar-bg: #eef2f0;
+  --cv-preview-sidebar-fg: #1f2a26;
+  --cv-preview-accent: #2f5d50;
 }
 
 /* Template 3 — template-minimal.html */

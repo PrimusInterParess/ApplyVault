@@ -32,16 +32,166 @@ export function contactFieldEntries(section: CvStructuredSection): readonly CvSt
 }
 
 /**
- * Drop duplicate Contact field values (case-insensitive trim) and duplicate empty
- * labeled slots (e.g. two empty Phone fields). Name entries are preserved as-is.
+ * Canonical channel key for Contact labels (aliases → one bucket).
+ * Aligns with BE `IsKnownContactChannelLabel` groupings used in edit dedupe.
+ */
+export function canonicalContactChannelLabel(title: string | null | undefined): string {
+  if (!title || !title.trim()) {
+    return '';
+  }
+
+  switch (title.trim().toLowerCase()) {
+    case 'email':
+    case 'e-mail':
+      return 'email';
+    case 'phone':
+    case 'mobile':
+    case 'tel':
+    case 'telephone':
+      return 'phone';
+    case 'linkedin':
+      return 'linkedin';
+    case 'location':
+    case 'address':
+      return 'location';
+    case 'website':
+    case 'web':
+    case 'url':
+      return 'website';
+    default:
+      return title.trim().toLowerCase();
+  }
+}
+
+/** Infer a starter channel label from an unlabeled valued line (email/phone/linkedin/web). */
+export function inferContactChannelLabelFromValue(value: string | null | undefined): string | null {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (trimmed.includes('@')) {
+    return 'email';
+  }
+
+  if (lower.includes('linkedin.com/')) {
+    return 'linkedin';
+  }
+
+  if (trimmed.includes('://') || lower.startsWith('www.')) {
+    return 'website';
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+
+  if (digits.length >= 6 && /^[\d\s+()./\-]+$/.test(trimmed)) {
+    return 'phone';
+  }
+
+  return null;
+}
+
+/**
+ * Fold unlabeled valued Contact fields into empty labeled starter slots (Email/Phone/…)
+ * when the value shape matches. Prevents Classic/Minimal edit canvas from showing both
+ * a filled orphan line and an empty Email/Phone/LinkedIn ghost for the same channel.
+ */
+function absorbUnlabeledIntoEmptySlots(
+  entries: readonly CvStructuredEntry[]
+): CvStructuredEntry[] {
+  const working = entries.map((entry) => ({
+    ...entry,
+    bullets: [...entry.bullets],
+    fields: { ...(entry.fields ?? {}) }
+  }));
+
+  const emptySlotsByLabel = new Map<string, CvStructuredEntry>();
+
+  for (const entry of working) {
+    if (isContactNameEntry(entry) || contactEntryValue(entry)) {
+      continue;
+    }
+
+    const label = canonicalContactChannelLabel(entry.title);
+
+    if (!label || emptySlotsByLabel.has(label)) {
+      continue;
+    }
+
+    emptySlotsByLabel.set(label, entry);
+  }
+
+  if (emptySlotsByLabel.size === 0) {
+    return working;
+  }
+
+  const absorbedIds = new Set<string>();
+
+  for (const entry of working) {
+    if (isContactNameEntry(entry) || entry.title.trim() || !contactEntryValue(entry)) {
+      continue;
+    }
+
+    const inferred = inferContactChannelLabelFromValue(contactEntryValue(entry));
+
+    if (!inferred) {
+      continue;
+    }
+
+    const slot = emptySlotsByLabel.get(inferred);
+
+    if (!slot) {
+      continue;
+    }
+
+    slot.bullets = [contactEntryValue(entry)];
+    slot.summary = '';
+    absorbedIds.add(entry.id);
+    emptySlotsByLabel.delete(inferred);
+  }
+
+  if (absorbedIds.size === 0) {
+    return working;
+  }
+
+  return working.filter((entry) => !absorbedIds.has(entry.id));
+}
+
+/**
+ * Drop duplicate Contact field values (case-insensitive trim), duplicate empty
+ * labeled slots, empty slots when a valued same-label channel already exists, and
+ * absorb unlabeled valued orphans into empty starter slots. Keeps the first Name.
  */
 export function dedupeContactEntries(entries: readonly CvStructuredEntry[]): CvStructuredEntry[] {
+  const reconciled = absorbUnlabeledIntoEmptySlots(entries);
+  const valuedLabels = new Set<string>();
+
+  for (const entry of reconciled) {
+    if (isContactNameEntry(entry) || !contactEntryValue(entry)) {
+      continue;
+    }
+
+    const label = canonicalContactChannelLabel(entry.title);
+
+    if (label) {
+      valuedLabels.add(label);
+    }
+  }
+
   const result: CvStructuredEntry[] = [];
   const seenValues = new Set<string>();
   const seenEmptyLabels = new Set<string>();
+  let keptName = false;
 
-  for (const entry of entries) {
+  for (const entry of reconciled) {
     if (isContactNameEntry(entry)) {
+      if (keptName) {
+        continue;
+      }
+
+      keptName = true;
       result.push(entry);
       continue;
     }
@@ -58,10 +208,10 @@ export function dedupeContactEntries(entries: readonly CvStructuredEntry[]): CvS
       continue;
     }
 
-    const labelKey = entry.title.trim().toLowerCase();
+    const labelKey = canonicalContactChannelLabel(entry.title);
 
     if (labelKey) {
-      if (seenEmptyLabels.has(labelKey)) {
+      if (seenEmptyLabels.has(labelKey) || valuedLabels.has(labelKey)) {
         continue;
       }
 
@@ -220,8 +370,21 @@ function resolveLegacyContactName(entry: CvStructuredEntry): string | null {
   return title;
 }
 
+function valuedContactBullets(entry: CvStructuredEntry): string[] {
+  return entry.bullets.map((line) => line.trim()).filter((line) => line.length > 0);
+}
+
 /**
- * Expands a legacy Contact entry (many bullets) into Name + one field per line.
+ * True when any Contact entry has multiple valued bullets that Content/export should
+ * expand into one channel entry each (BE `NormalizeContactEntriesForExport` parity).
+ */
+export function hasValuedMultiBulletContactChannels(section: CvStructuredSection): boolean {
+  return section.entries.some((entry) => valuedContactBullets(entry).length > 1);
+}
+
+/**
+ * Expands import-legacy and valued multi-bullet Contact channels into Name + one
+ * field per valued line (BE `NormalizeContactEntriesForExport` parity).
  * Mutates `section.entries` in place; call on a draft clone.
  */
 export function ensureModernContactShape(section: CvStructuredSection): CvStructuredSection {
@@ -234,7 +397,7 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
 
   if (isLegacyContactSection(section)) {
     const only = sorted[0];
-    const lines = only.bullets.map((line) => line.trim()).filter((line) => line.length > 0);
+    const lines = valuedContactBullets(only);
     const nameSubtitle = resolveLegacyContactName(only);
 
     section.entries = [
@@ -250,8 +413,65 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
         bullets: [line]
       }))
     ];
+
+    section.entries = dedupeContactEntries(
+      [...section.entries].sort((left, right) => left.sortOrder - right.sortOrder)
+    ).map((entry, index) => ({ ...entry, sortOrder: index }));
+
     return section;
   }
+
+  // Non-import-legacy: expand Name bullets + known-channel multi-bullet entries
+  // into one valued field each (matches BE NormalizeContactEntriesForExport).
+  const expanded: CvStructuredEntry[] = [];
+
+  for (const entry of sorted) {
+    if (isContactNameEntry(entry)) {
+      expanded.push({
+        ...entry,
+        bullets: [],
+        fields: { ...(entry.fields ?? {}) }
+      });
+
+      for (const bullet of valuedContactBullets(entry)) {
+        expanded.push({
+          ...createContactFieldEntry(expanded.length),
+          id: crypto.randomUUID(),
+          bullets: [bullet]
+        });
+      }
+
+      continue;
+    }
+
+    const lines = valuedContactBullets(entry);
+
+    if (lines.length > 1) {
+      for (let index = 0; index < lines.length; index++) {
+        expanded.push({
+          ...(index === 0
+            ? { ...entry, fields: { ...(entry.fields ?? {}) } }
+            : createContactFieldEntry(expanded.length)),
+          id: index === 0 ? entry.id : crypto.randomUUID(),
+          // Keep original label on the first expanded field; rest unlabeled like BE.
+          title: index === 0 ? entry.title : '',
+          summary: '',
+          bullets: [lines[index]],
+          sortOrder: expanded.length
+        });
+      }
+
+      continue;
+    }
+
+    expanded.push({
+      ...entry,
+      bullets: [...entry.bullets],
+      fields: { ...(entry.fields ?? {}) }
+    });
+  }
+
+  section.entries = expanded;
 
   if (!findContactNameEntry(section)) {
     section.entries = [createContactNameEntry(0), ...section.entries];
@@ -264,18 +484,18 @@ export function ensureModernContactShape(section: CvStructuredSection): CvStruct
   return section;
 }
 
-/** Non-mutating view of Contact entries in the modern Name + fields shape. */
+/**
+ * Non-mutating view of Contact entries in the modern Name + fields shape.
+ * Always runs ensureModernContactShape so absorb/dedupe applies even when the
+ * draft still has starters + unlabeled orphans (Classic/Minimal edit canvas).
+ */
 export function contactSectionForDisplay(section: CvStructuredSection): CvStructuredSection {
-  if (!isLegacyContactSection(section)) {
-    return section;
-  }
-
   const draft: CvStructuredSection = {
     ...section,
     entries: section.entries.map((entry) => ({
       ...entry,
       bullets: [...entry.bullets],
-      fields: { ...entry.fields }
+      fields: { ...(entry.fields ?? {}) }
     }))
   };
 

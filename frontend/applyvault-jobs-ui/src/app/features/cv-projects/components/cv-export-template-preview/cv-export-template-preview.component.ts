@@ -109,12 +109,46 @@ export class CvExportTemplatePreviewComponent {
 
   protected showContactNameInSection(section: CvStructuredSection): boolean {
     // Classic (1) and Minimal (3) already edit the name in the page header.
-    return this.isContactSection(section) && this.templateId() !== 1 && this.templateId() !== 3;
+    const templateId = Number(this.templateId());
+    return this.isContactSection(section) && templateId !== 1 && templateId !== 3;
   }
 
-  /** Match BE AppendClassicContactHeader: no "Contact" section-title in Classic/Minimal header. */
+  /**
+   * Match BE AppendClassicContactHeader for all templates: Contact has no section title
+   * (Classic/Minimal header + Modern sidebar all emit name + value lines only).
+   */
   protected showSectionTitle(section: CvStructuredSection): boolean {
-    return !(this.isContactSection(section) && (this.templateId() === 1 || this.templateId() === 3));
+    return !this.isContactSection(section);
+  }
+
+  /** Contact channels only (BE cv-contact-line parity). Name handled separately. */
+  protected visibleContactChannels(section: CvStructuredSection): readonly CvStructuredEntry[] {
+    if (!this.isContactSection(section)) {
+      return [];
+    }
+
+    const view = contactSectionForDisplay(section);
+    return this.editable() ? contactFieldEntries(view) : contactFieldsWithValues(view);
+  }
+
+  /** Modern sidebar: Name lives in the Contact block (Classic/Minimal use page header). */
+  protected visibleContactName(section: CvStructuredSection): CvStructuredEntry | null {
+    if (!this.showContactNameInSection(section)) {
+      return null;
+    }
+
+    const view = contactSectionForDisplay(section);
+    const name = findContactNameEntry(view);
+
+    if (!name) {
+      return null;
+    }
+
+    if (!this.editable() && !(name.subtitle?.trim())) {
+      return null;
+    }
+
+    return name;
   }
 
   protected visibleContactEntries(section: CvStructuredSection): readonly CvStructuredEntry[] {
@@ -122,27 +156,9 @@ export class CvExportTemplatePreviewComponent {
       return this.sortedEntries(section);
     }
 
-    const view = contactSectionForDisplay(section);
-    const fields = this.editable()
-      ? contactFieldEntries(view)
-      : contactFieldsWithValues(view);
-
-    if (!this.showContactNameInSection(section)) {
-      return fields;
-    }
-
-    const name = findContactNameEntry(view);
-
-    if (!name) {
-      return fields;
-    }
-
-    // Preview/export: hide empty Name; editable keeps the Starter Entry slot for filling.
-    if (!this.editable() && !(name.subtitle?.trim())) {
-      return fields;
-    }
-
-    return [name, ...fields];
+    const name = this.visibleContactName(section);
+    const fields = this.visibleContactChannels(section);
+    return name ? [name, ...fields] : fields;
   }
 
   protected contactValue(entry: CvStructuredEntry): string {

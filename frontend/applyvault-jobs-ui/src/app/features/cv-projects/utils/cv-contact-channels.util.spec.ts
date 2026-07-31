@@ -1,6 +1,12 @@
 import {
+  contactEntryValue,
+  contactFieldEntries,
+  contactFieldHasValue,
   contactSectionForDisplay,
+  createStarterContactEntries,
+  dedupeContactEntries,
   ensureModernContactShape,
+  hasValuedMultiBulletContactChannels,
   isKnownContactChannelLabel,
   isLegacyContactSection
 } from './cv-contact-channels.util';
@@ -108,6 +114,178 @@ describe('cv-contact-channels.util legacy Contact', () => {
     expect(section.entries.slice(1).map((entry) => entry.bullets[0])).toEqual([
       '+1 555 0100',
       'linkedin.com/in/alex'
+    ]);
+  });
+
+  it('detects known-channel multi-bullet as valued expand (not import-legacy)', () => {
+    const section = contactSection([
+      {
+        ...createEmptyEntry(0),
+        title: 'Name',
+        subtitle: 'Alex',
+        bullets: []
+      },
+      {
+        ...createEmptyEntry(1),
+        title: 'Email',
+        bullets: ['a@b.com', 'other@b.com']
+      }
+    ]);
+
+    expect(isLegacyContactSection(section)).toBeFalse();
+    expect(hasValuedMultiBulletContactChannels(section)).toBeTrue();
+  });
+
+  it('ensureModernContactShape expands known-channel multi-bullet into one field per value', () => {
+    const section = contactSection([
+      {
+        ...createEmptyEntry(0),
+        title: 'Name',
+        subtitle: 'Alex',
+        bullets: []
+      },
+      {
+        ...createEmptyEntry(1),
+        id: 'email-1',
+        title: 'Email',
+        bullets: ['a@b.com', 'other@b.com']
+      },
+      {
+        ...createEmptyEntry(2),
+        title: 'Phone',
+        bullets: ['']
+      }
+    ]);
+
+    ensureModernContactShape(section);
+
+    expect(section.entries.map((entry) => entry.title)).toEqual(['Name', 'Email', '', 'Phone']);
+    expect(section.entries[1].id).toBe('email-1');
+    expect(section.entries[1].bullets).toEqual(['a@b.com']);
+    expect(section.entries[2].bullets).toEqual(['other@b.com']);
+    expect(section.entries[3].title).toBe('Phone');
+    expect(contactFieldHasValue(section.entries[3])).toBeFalse();
+  });
+
+  it('contactSectionForDisplay expands valued multi-bullet without mutating source', () => {
+    const section = contactSection([
+      {
+        ...createEmptyEntry(0),
+        title: 'Name',
+        subtitle: 'Alex',
+        bullets: []
+      },
+      {
+        ...createEmptyEntry(1),
+        title: 'Email',
+        bullets: ['a@b.com', 'other@b.com']
+      }
+    ]);
+
+    const view = contactSectionForDisplay(section);
+
+    expect(view.entries.slice(1).map((entry) => entry.bullets[0])).toEqual([
+      'a@b.com',
+      'other@b.com'
+    ]);
+    expect(section.entries.length).toBe(2);
+    expect(section.entries[1].bullets).toEqual(['a@b.com', 'other@b.com']);
+  });
+
+  it('keeps empty Contact field slots when expanding multi-bullet siblings', () => {
+    const section = contactSection([
+      {
+        ...createEmptyEntry(0),
+        title: 'Name',
+        subtitle: null,
+        bullets: []
+      },
+      {
+        ...createEmptyEntry(1),
+        title: 'Email',
+        bullets: ['a@b.com', 'b@b.com']
+      },
+      {
+        ...createEmptyEntry(2),
+        title: 'LinkedIn',
+        bullets: ['']
+      }
+    ]);
+
+    ensureModernContactShape(section);
+
+    const linkedIn = section.entries.find((entry) => entry.title.trim().toLowerCase() === 'linkedin');
+    expect(linkedIn).toBeTruthy();
+    expect(contactFieldHasValue(linkedIn!)).toBeFalse();
+  });
+
+  it('absorbs Name-bullet channels into empty Email/Phone/LinkedIn starters (no Classic dups)', () => {
+    const starters = createStarterContactEntries();
+    starters[0] = {
+      ...starters[0],
+      subtitle: 'Alex Rivera',
+      bullets: ['alex@example.com', '+45 12 34 56 78', 'linkedin.com/in/alex']
+    };
+
+    const section = contactSection(starters);
+    ensureModernContactShape(section);
+
+    const fields = contactFieldEntries(section);
+    expect(fields.map((entry) => entry.title.trim().toLowerCase())).toEqual([
+      'email',
+      'phone',
+      'linkedin'
+    ]);
+    expect(fields.map((entry) => entry.bullets[0])).toEqual([
+      'alex@example.com',
+      '+45 12 34 56 78',
+      'linkedin.com/in/alex'
+    ]);
+  });
+
+  it('dedupeContactEntries drops empty labeled slot when valued same-label exists', () => {
+    const entries = dedupeContactEntries([
+      { ...createEmptyEntry(0), title: 'Name', subtitle: 'Alex' },
+      { ...createEmptyEntry(1), title: 'Email', bullets: ['a@b.com'], sortOrder: 1 },
+      { ...createEmptyEntry(2), title: 'Email', bullets: [''], sortOrder: 2 },
+      { ...createEmptyEntry(3), title: 'Phone', bullets: [''], sortOrder: 3 },
+      { ...createEmptyEntry(4), title: 'LinkedIn', bullets: [''], sortOrder: 4 }
+    ]);
+
+    const fields = entries.filter((entry) => entry.title.trim().toLowerCase() !== 'name');
+    const emails = fields.filter((entry) => entry.title.trim().toLowerCase() === 'email');
+    expect(emails.length).toBe(1);
+    expect(emails[0]?.bullets[0]).toBe('a@b.com');
+    expect(fields.map((entry) => entry.title.trim().toLowerCase())).toEqual([
+      'email',
+      'phone',
+      'linkedin'
+    ]);
+  });
+
+  it('contactSectionForDisplay always absorbs unlabeled orphans into starters', () => {
+    const section = contactSection([
+      { ...createEmptyEntry(0), title: 'Name', subtitle: 'Alex', bullets: [] },
+      { ...createEmptyEntry(1), title: '', bullets: ['alex@example.com'], sortOrder: 1 },
+      { ...createEmptyEntry(2), title: '', bullets: ['+45 12 34 56 78'], sortOrder: 2 },
+      { ...createEmptyEntry(3), title: 'Email', bullets: [''], sortOrder: 3 },
+      { ...createEmptyEntry(4), title: 'Phone', bullets: [''], sortOrder: 4 },
+      { ...createEmptyEntry(5), title: 'LinkedIn', bullets: [''], sortOrder: 5 }
+    ]);
+
+    const view = contactSectionForDisplay(section);
+    const fields = contactFieldEntries(view);
+
+    expect(fields.length).toBe(3);
+    expect(fields.map((entry) => entry.title.trim().toLowerCase())).toEqual([
+      'email',
+      'phone',
+      'linkedin'
+    ]);
+    expect(fields.map((entry) => contactEntryValue(entry))).toEqual([
+      'alex@example.com',
+      '+45 12 34 56 78',
+      ''
     ]);
   });
 });

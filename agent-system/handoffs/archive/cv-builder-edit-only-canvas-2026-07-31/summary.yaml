@@ -1,0 +1,30 @@
+task_id: "cv-builder-edit-only-canvas-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D — Edit-only pivot (Option A): editable Angular layout as main
+  edit desk; demote export HTML to on-demand Check export modal; retire
+  Content dual-layout.
+summary: >-
+  Architecture Option A + ADR-0003 Accepted. UX: Check export modal before
+  Download PDF; Content/Refresh preview removed. FE implemented desk swap,
+  modal wiring, copy, stopped continuous export HTML canvas refresh. QA
+  independent re-run 5/5 + 44/44 SUCCESS; static criteria PASS.
+limitations:
+  - Authenticated browser smoke (edit desk, live Check export, Download PDF) NOT_EXECUTED
+  - Escape dismiss + focus-return code-present; browser-unproven
+  - Modal loading/error transitions not fully exercised (page stubs stay ready)
+  - PDF parity drift remains product-accepted (Angular edit ≈ approximation)
+follow_ups:
+  - "Login; smoke edit on canvas → Check export → Download PDF; Escape/focus on modal"
+  - "Optional: prune dead Content-drawer SCSS"
+pr_links: []
+issue_links: []
+agents:
+  - architecture-engineer
+  - ui-ux-designer
+  - frontend-engineer
+  - qa-engineer
+key_paths:
+  - "docs/adr/0003-cv-builder-edit-canvas-vs-export-preview.md"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/"

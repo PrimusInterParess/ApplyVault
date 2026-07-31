@@ -871,9 +871,15 @@
     0 18px 40px rgb(28 35 48 / 12%),
     0 40px 80px rgb(28 35 48 / 10%);
   border: 1px solid rgb(28 35 48 / 6%);
-  /* Do not clip iframe document page padding / tall preview content. */
+  /* Do not clip tall editable template layout. */
   overflow: visible;
   border-radius: 0.35rem;
+  background: #fff;
+}
+
+.cv-builder__paper--editor app-cv-export-template-preview {
+  display: block;
+  width: 100%;
 }
 
 .cv-builder__content-editor {
@@ -954,6 +960,60 @@
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.15rem;
+}
+
+.cv-builder__modal--check-export {
+  width: min(52rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cv-builder__check-export-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.15rem 1.15rem 0.85rem;
+  border-bottom: 1px solid rgb(28 35 48 / 8%);
+}
+
+.cv-builder__check-export-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cv-builder__check-export-heading h2 {
+  margin: 0;
+}
+
+.cv-builder__check-export-desc {
+  margin: 0.45rem 0 0;
+  color: var(--cv-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.cv-builder__check-export-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem 1.15rem;
+  background: #f4f6f8;
+}
+
+.cv-builder__check-export-body .cv-builder__export-notice {
+  margin: 0 0 0.65rem;
+}
+
+.cv-builder__check-export-actions {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.85rem 1.15rem 1.1rem;
+  border-top: 1px solid rgb(28 35 48 / 8%);
+  background: #fff;
 }
 
 @media (max-width: 960px) {

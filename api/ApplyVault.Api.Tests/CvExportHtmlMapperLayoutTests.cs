@@ -48,6 +48,11 @@ public sealed class CvExportHtmlMapperLayoutTests
         Assert.Contains("C#", sidebar, StringComparison.Ordinal);
         Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
         Assert.DoesNotContain("Acme Corp", sidebar, StringComparison.Ordinal);
+        // Contact uses value lines (not Email/Phone entry titles), matching Classic/Minimal.
+        Assert.Contains("""class="cv-contact-line">""", sidebar, StringComparison.Ordinal);
+        Assert.Contains("jane@example.com", sidebar, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("""class="section-title">Contact</h2>""", sidebar, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="entry-title">Email</div>""", sidebar, StringComparison.Ordinal);
     }
 
     [Fact]

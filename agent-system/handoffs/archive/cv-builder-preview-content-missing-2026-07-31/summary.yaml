@@ -1,0 +1,31 @@
+task_id: "cv-builder-preview-content-missing-2026-07-31"
+closed_at: "2026-07-31"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+request: >-
+  /operate D (fresh): CV builder template preview omits some fields/content;
+  Content drawer may also hide those fields.
+summary: >-
+  Dual-surface diagnosis (Content = local draft Angular; canvas = server export
+  HTML). FE shipped: hydrate/open normalize Summary title→summary and Skills
+  bullets→techStack; Contact valued multi-bullet expand for display + Content
+  open; Saving… / Updating preview… status; sole-fidelity canvas unchanged.
+  QA re-ran unit include set 27/27 SUCCESS. BE step 2 not delegated (no evidence
+  saved flat fields omit from export HTML).
+limitations:
+  - Authenticated Content↔canvas↔PDF smoke NOT_EXECUTED (no local session)
+  - saveStatus Updating preview… lifecycle not covered by page-component Karma
+  - BE mapper still possible if post-save export HTML omits non-empty flat fields
+follow_ups:
+  - "Login; smoke Content edit → save → canvas; Summary-in-title import; Contact multi-channel Classic/Modern/Minimal"
+  - "If export still omits saved flat fields after FE settle, open BE mapper task"
+pr_links: []
+issue_links: []
+agents:
+  - architecture-engineer
+  - frontend-engineer
+  - qa-engineer
+key_paths:
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-structured.facade.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-structured-edit-normalizer.util.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.ts"

@@ -1,0 +1,24 @@
+task_id: cv-builder-template-selector-2026-07-31
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-07-31"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+summary: >
+  Edit-step Template select on /cv-builder?step=edit now drives the Angular
+  edit canvas via facade SoT (no local mirror effect); persistExportPrefs no
+  longer snaps selection from stale echoes; select values string-coerced.
+  Karma select→canvas (1→2→3→1) passed independently (FE + QA, 6/6).
+pr_links: []
+agents:
+  - frontend-engineer (READY, integrated)
+  - qa-engineer (READY, integrated)
+files_changed:
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/data-access/cv-document.facade.ts
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.ts
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.html
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-builder-page/cv-builder-page.component.spec.ts
+limitations:
+  - Authenticated browser visual check blocked by login wall
+  - Full test:ci not run; page-spec only
+residual_risks:
+  - Human spot-check recommended after login: select Classic/Modern/Minimal and confirm cv-export-preview--template-N / layout change
+follow_ups: []

@@ -1,0 +1,14 @@
+task_id: operate-handoffs-cleared-2026-07-31
+status: ABANDONED_SUPERSEDED
+closed_at: "2026-07-31"
+reason: >
+  User requested /operate with explicit "clear the handoffs" before a new
+  request (CV builder edit-step template selector). Active and scratch were
+  already empty on disk (.gitkeep only); prior CV-builder operate piles treated
+  as superseded.
+integration_status: ABANDONED
+pr_links: []
+limitations: []
+residual_risks: []
+notes:
+  - New work proceeds under cv-builder-template-selector-2026-07-31

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
-import { createEmptySection } from '../utils/cv-structured-draft.util';
+import { createEmptyEntry, createEmptySection } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
 
@@ -117,5 +117,52 @@ describe('CvStructuredFacade save generations / coalesce', () => {
 
     expect(facade.lastSuccessfulSaveGeneration()).toBe(3);
     expect(facade.structured()?.sections[0].heading).toBe('c');
+  });
+
+  it('normalizes Summary title→summary and Skills bullets→techStack on load', () => {
+    facade.load();
+
+    getSubjects[0].next({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 's1',
+              title: 'Imported profile text',
+              summary: ''
+            }
+          ]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'skills-1',
+          heading: 'Skills',
+          sectionType: 'Skills',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'k1',
+              bullets: ['TypeScript', 'Angular'],
+              techStack: ''
+            }
+          ]
+        }
+      ]
+    });
+    getSubjects[0].complete();
+
+    const summary = facade.structured()?.sections.find((item) => item.sectionType === 'Summary');
+    const skills = facade.structured()?.sections.find((item) => item.sectionType === 'Skills');
+
+    expect(summary?.entries[0].summary).toBe('Imported profile text');
+    expect(skills?.entries[0].techStack).toBe('TypeScript, Angular');
+    expect(skills?.entries[0].bullets).toEqual([]);
   });
 });

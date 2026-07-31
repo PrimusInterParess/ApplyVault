@@ -38,6 +38,8 @@ export class CvDocumentFacade {
   private exportHtmlPreviewGeneration = 0;
   private pickFidelityPreviewSubscription: Subscription | null = null;
   private exportPrefsSubscription: Subscription | null = null;
+  /** Monotonic token so stale export-prefs HTTP responses cannot overwrite a newer selection. */
+  private exportPrefsGeneration = 0;
   private profilePhotoSubscription: Subscription | null = null;
   private profilePhotoUploadSubscription: Subscription | null = null;
   private profilePhotoDeleteSubscription: Subscription | null = null;
@@ -663,7 +665,8 @@ export class CvDocumentFacade {
     this.profilePhotoUploadSubscription = this.apiService.uploadProfilePhoto(file).subscribe({
       next: (document) => {
         this.uploadingProfilePhoto.set(false);
-        this.setDocument(document);
+        // Photo DTO must not clobber in-flight / optimistic export template selection.
+        this.setDocument(document, { applyExportPrefs: false });
         this.loadProfilePhoto(document);
       },
       error: (error) => {
@@ -692,7 +695,8 @@ export class CvDocumentFacade {
     this.profilePhotoDeleteSubscription = this.apiService.deleteProfilePhoto().subscribe({
       next: (document) => {
         this.deletingProfilePhoto.set(false);
-        this.setDocument(document);
+        // Photo DTO must not clobber in-flight / optimistic export template selection.
+        this.setDocument(document, { applyExportPrefs: false });
         this.clearProfilePhoto();
       },
       error: (error) => {
@@ -933,10 +937,19 @@ export class CvDocumentFacade {
   }
 
   /**
-   * Apply document metadata and prefer server templateId/maxPages over sessionStorage.
+   * Apply document metadata. Optionally sync export prefs from the DTO (load/upload/start-blank).
+   * Photo and export-prefs echoes must not clobber an optimistic gallery selection.
    */
-  private setDocument(document: CvDocument): void {
+  private setDocument(
+    document: CvDocument,
+    options?: { readonly applyExportPrefs?: boolean }
+  ): void {
     this.document.set(document);
+
+    if (options?.applyExportPrefs === false) {
+      return;
+    }
+
     this.applyExportPrefsFromDocument(document);
   }
 
@@ -963,32 +976,26 @@ export class CvDocumentFacade {
 
     const templateId = this.selectedExportTemplateId();
     const maxPages = this.selectedExportMaxPages();
+    const generation = ++this.exportPrefsGeneration;
 
     this.cancelExportPrefs();
     this.exportPrefsSubscription = this.apiService
       .updateExportPrefs({ templateId, maxPages })
       .subscribe({
         next: (document) => {
-          // Update metadata without re-applying prefs (avoids echo loops on normalize).
-          this.document.set(document);
-
-          if (typeof document.templateId === 'number' && Number.isInteger(document.templateId)) {
-            const normalized = normalizeCvExportTemplateId(document.templateId);
-
-            if (normalized !== this.selectedExportTemplateId()) {
-              this.selectedExportTemplateId.set(normalized);
-              this.writeTemplateCache(normalized);
-            }
+          // Ignore superseded responses (rapid template switching / cancelled request races).
+          if (generation !== this.exportPrefsGeneration) {
+            return;
           }
 
-          if (document.maxPages !== undefined) {
-            const normalized = this.normalizeExportMaxPages(document.maxPages);
-
-            if (normalized !== this.selectedExportMaxPages()) {
-              this.selectedExportMaxPages.set(normalized);
-              this.writeMaxPagesCache(normalized);
-            }
-          }
+          // Refresh document metadata but keep optimistic export prefs as source of truth.
+          // Re-applying response templateId previously snapped the edit canvas back when the
+          // echo lagged or differed from the latest local selection.
+          this.document.set({
+            ...document,
+            templateId: this.selectedExportTemplateId(),
+            maxPages: this.selectedExportMaxPages()
+          });
         },
         error: (error) => {
           if (isRequestAborted(error)) {

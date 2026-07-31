@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  OnDestroy,
+  signal,
+  viewChild
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -14,7 +24,6 @@ import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import {
   CV_EXPORT_MAX_PAGE_OPTIONS,
   CV_EXPORT_TEMPLATES,
-  DEFAULT_CV_EXPORT_TEMPLATE_ID,
   MAX_CV_EXPORT_TEMPLATE_ID,
   normalizeCvExportTemplateId
 } from '../../models/cv-export-template.model';
@@ -37,6 +46,7 @@ import {
   sectionHasContent,
   sectionsAreEqual
 } from '../../utils/cv-structured-draft.util';
+import { normalizeSectionsForEditing } from '../../utils/cv-structured-edit-normalizer.util';
 
 type BuilderStep = 'pick' | 'edit';
 
@@ -67,15 +77,17 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly maxPageOptions = CV_EXPORT_MAX_PAGE_OPTIONS;
 
   protected readonly step = signal<BuilderStep>('pick');
-  protected readonly selectedTemplateId = signal(DEFAULT_CV_EXPORT_TEMPLATE_ID);
+  /** Facade is the single source of truth for Classic/Modern/Minimal (ids 1–3). */
+  protected readonly selectedTemplateId = this.cvDocument.selectedExportTemplateId;
   protected readonly replaceConfirmOpen = signal(false);
   protected readonly pendingPdfFile = signal<File | null>(null);
   protected readonly assistOpen = signal(false);
   protected readonly structureOpen = signal(false);
-  protected readonly contentOpen = signal(false);
   protected readonly projectsOpen = signal(false);
+  protected readonly checkExportOpen = signal(false);
   protected readonly pendingAddSectionType = signal<CvSectionType>('Experience');
   protected readonly zoom = signal(1);
+  private checkExportTriggerEl: HTMLElement | null = null;
 
   protected readonly inlineDraft = signal<CvStructuredSection[] | null>(null);
   protected readonly selectedProjectSummaryIds = signal<string[]>([]);
@@ -154,6 +166,11 @@ export class CvBuilderPageComponent implements OnDestroy {
     return 'Saved';
   });
 
+  /** Check export shows last saved HTML; hint when local draft/save is in flight. */
+  protected readonly showingLastSavedExport = computed(
+    () => this.checkExportOpen() && (!!this.inlineDraft() || this.cvStructured.isSaving())
+  );
+
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
 
   protected readonly selectedTemplateLabel = computed(
@@ -164,8 +181,8 @@ export class CvBuilderPageComponent implements OnDestroy {
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
-  private htmlPreviewTimer: ReturnType<typeof setTimeout> | null = null;
   private pickFidelityTimer: ReturnType<typeof setTimeout> | null = null;
+  private editCanvasNormalizedForDocumentId: string | null = null;
   /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
   private structuredLoadDocumentId: string | null = null;
   /** Local edit generation; cleared only when matching save generation succeeds. */
@@ -175,13 +192,6 @@ export class CvBuilderPageComponent implements OnDestroy {
   private seenSuccessfulSaveGeneration = 0;
 
   constructor() {
-    // Keep local gallery selection aligned with facade (server prefs → facade → UI).
-    effect(() => {
-      this.selectedTemplateId.set(
-        normalizeCvExportTemplateId(this.cvDocument.selectedExportTemplateId())
-      );
-    });
-
     // Load structured only when document identity appears/changes — not on export-prefs metadata echo.
     effect(() => {
       if (this.cvDocument.loading()) {
@@ -272,32 +282,42 @@ export class CvBuilderPageComponent implements OnDestroy {
       ) {
         this.seenSuccessfulSaveGeneration = successfulGeneration;
         this.inlineDraft.set(null);
-        this.scheduleHtmlPreviewRefresh(true);
       } else if (finishedSave && !saveError) {
         // Secondary: equality clear for edge cases (AI/import paths) after normalize harden.
         const draft = this.inlineDraft();
 
         if (!draft || sectionsAreEqual(draft, this.serverSections())) {
           this.inlineDraft.set(null);
-          this.scheduleHtmlPreviewRefresh(true);
         }
       }
 
       this.wasSavingSection = saving;
     });
 
-    // M1 strategy A: refresh sandboxed fidelity preview on edit canvas deps.
+    // ADR-0003: seed edit-canvas canonical shapes on edit enter / canvas mount.
     effect(() => {
       if (this.step() !== 'edit') {
+        this.editCanvasNormalizedForDocumentId = null;
         return;
       }
 
-      this.selectedTemplateId();
-      this.cvDocument.selectedExportMaxPages();
+      if (this.cvDocument.loading() || this.cvStructured.loading()) {
+        return;
+      }
+
+      const documentId = this.cvDocument.document()?.id ?? null;
       this.serverSections();
-      this.cvDocument.document();
-      this.cvStructured.isSaving();
-      this.scheduleHtmlPreviewRefresh();
+
+      if (!documentId || this.sections().length === 0) {
+        return;
+      }
+
+      if (this.editCanvasNormalizedForDocumentId === documentId) {
+        return;
+      }
+
+      this.editCanvasNormalizedForDocumentId = documentId;
+      this.ensureContentEditShape();
     });
   }
 
@@ -306,15 +326,18 @@ export class CvBuilderPageComponent implements OnDestroy {
       clearTimeout(this.saveTimer);
     }
 
-    if (this.htmlPreviewTimer) {
-      clearTimeout(this.htmlPreviewTimer);
-    }
-
     if (this.pickFidelityTimer) {
       clearTimeout(this.pickFidelityTimer);
     }
 
     this.cvStructured.clearSuggestions();
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onDocumentEscape(): void {
+    if (this.checkExportOpen()) {
+      this.closeCheckExport();
+    }
   }
 
   protected pickFidelitySrcdoc(templateId: number) {
@@ -326,9 +349,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   }
 
   protected selectTemplate(templateId: number): void {
-    const normalized = normalizeCvExportTemplateId(templateId);
-    this.selectedTemplateId.set(normalized);
-    this.cvDocument.setExportTemplateId(normalized);
+    this.cvDocument.setExportTemplateId(normalizeCvExportTemplateId(templateId));
   }
 
   protected onMaxPagesChange(event: Event): void {
@@ -427,8 +448,8 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected openAssist(): void {
     this.assistOpen.set(true);
     this.structureOpen.set(false);
-    this.contentOpen.set(false);
     this.projectsOpen.set(false);
+    this.checkExportOpen.set(false);
   }
 
   protected closeAssist(): void {
@@ -440,8 +461,8 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     if (this.structureOpen()) {
       this.assistOpen.set(false);
-      this.contentOpen.set(false);
       this.projectsOpen.set(false);
+      this.checkExportOpen.set(false);
       const available = this.structureSectionTypes();
       const pending = this.pendingAddSectionType();
 
@@ -455,18 +476,56 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.structureOpen.set(false);
   }
 
-  protected toggleContent(): void {
-    this.contentOpen.update((open) => !open);
+  /**
+   * Seed the edit canvas with canonical edit shapes (Summary/Skills slots + Contact
+   * multi-bullet expand) so fields show and channel edits target stable entry ids.
+   * Persists when normalization changes the payload.
+   */
+  private ensureContentEditShape(): void {
+    const current = this.sections();
 
-    if (this.contentOpen()) {
-      this.assistOpen.set(false);
-      this.structureOpen.set(false);
-      this.projectsOpen.set(false);
+    if (current.length === 0) {
+      return;
     }
+
+    const normalized = normalizeSectionsForEditing(current);
+
+    if (sectionsAreEqual(normalized, current)) {
+      return;
+    }
+
+    this.editGeneration++;
+    this.inlineDraft.set(normalized);
+    this.scheduleSave(normalized);
   }
 
-  protected closeContent(): void {
-    this.contentOpen.set(false);
+  protected openCheckExport(): void {
+    const active = document.activeElement;
+    this.checkExportTriggerEl = active instanceof HTMLElement ? active : null;
+    this.assistOpen.set(false);
+    this.structureOpen.set(false);
+    this.projectsOpen.set(false);
+    this.checkExportOpen.set(true);
+    this.cvDocument.refreshExportHtmlPreview();
+
+    queueMicrotask(() => {
+      const dialog = document.getElementById('cv-builder-check-export-dialog');
+      dialog?.focus();
+    });
+  }
+
+  protected closeCheckExport(): void {
+    this.checkExportOpen.set(false);
+    const trigger = this.checkExportTriggerEl;
+    this.checkExportTriggerEl = null;
+
+    queueMicrotask(() => {
+      trigger?.focus();
+    });
+  }
+
+  protected refreshCheckExport(): void {
+    this.cvDocument.refreshExportHtmlPreview();
   }
 
   protected toggleProjects(): void {
@@ -475,7 +534,7 @@ export class CvBuilderPageComponent implements OnDestroy {
     if (this.projectsOpen()) {
       this.assistOpen.set(false);
       this.structureOpen.set(false);
-      this.contentOpen.set(false);
+      this.checkExportOpen.set(false);
       this.cvProjects.loadSummaries();
     }
   }
@@ -647,11 +706,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
   }
 
-  protected refreshFidelityPreview(): void {
-    this.flushSave();
-    this.cvDocument.refreshExportHtmlPreview();
-  }
-
   protected toggleAiUpdateSection(sectionId: string): void {
     if (this.assistDisabled()) {
       return;
@@ -725,7 +779,9 @@ export class CvBuilderPageComponent implements OnDestroy {
   }
 
   private enterEdit(): void {
+    this.editCanvasNormalizedForDocumentId = null;
     this.step.set('edit');
+    this.ensureContentEditShape();
     void this.router.navigate([], { relativeTo: this.route, queryParams: { step: 'edit' } });
   }
 
@@ -737,27 +793,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.saveTimer = setTimeout(() => {
       this.persistSections(sections);
     }, 500);
-  }
-
-  private scheduleHtmlPreviewRefresh(force = false): void {
-    if (this.htmlPreviewTimer) {
-      clearTimeout(this.htmlPreviewTimer);
-    }
-
-    this.htmlPreviewTimer = setTimeout(() => {
-      // Wait for in-flight saves; skip while a local draft is unsaved (server HTML only),
-      // unless force=true after a successful latest-generation clear.
-      if (this.cvStructured.isSaving()) {
-        this.scheduleHtmlPreviewRefresh(force);
-        return;
-      }
-
-      if (!force && this.inlineDraft()) {
-        return;
-      }
-
-      this.cvDocument.refreshExportHtmlPreview();
-    }, 450);
   }
 
   private schedulePickFidelityRefresh(): void {

@@ -136,120 +136,138 @@
         }
       }
 
-      @for (entry of visibleContactEntries(section); track entry.id) {
-        <article
-          class="cv-export-preview__entry"
-          [class.cv-export-preview__entry--summary]="isSummarySection(section.sectionType)"
-          [class.cv-export-preview__entry--editable]="editable()"
-          [class.cv-export-preview__entry--contact]="isContactSection(section)">
+      @if (isContactSection(section)) {
+        @if (visibleContactName(section); as nameEntry) {
           @if (editable()) {
-            @if (isContactSection(section)) {
-              @if (isNameEntry(entry)) {
-                <p
-                  class="cv-export-preview__entry-title cv-export-preview__editable"
-                  [appInlineEditableText]="contactNameText(entry)"
-                  [enabled]="true"
-                  data-placeholder="Your name"
-                  (textChange)="emitContactName(entry, $event)"></p>
-              } @else {
-                <div class="cv-export-preview__contact-field">
-                  <span
-                    class="cv-export-preview__editable"
-                    [appInlineEditableText]="contactValue(entry)"
-                    [enabled]="true"
-                    [attr.data-placeholder]="contactPlaceholder(entry)"
-                    (textChange)="emitBullet(section.id, entry.id, 0, $event)"></span>
-                  @if (canRemoveEntry(section, entry)) {
-                    <button
-                      type="button"
-                      class="cv-export-preview__entry-remove"
-                      aria-label="Remove contact"
-                      (click)="emitRemoveEntry(section.id, entry.id)">
-                      ×
-                    </button>
-                  }
-                </div>
-              }
-            } @else if (!isSummarySection(section.sectionType)) {
-              <div class="cv-export-preview__entry-header">
-                <h3
-                  class="cv-export-preview__entry-title cv-export-preview__editable"
-                  [appInlineEditableText]="entry.title"
-                  [enabled]="true"
-                  [attr.data-placeholder]="isSkillsSection(section.sectionType) ? 'Group name' : 'Role or title'"
-                  (textChange)="emitEntryField(section.id, entry.id, 'title', $event)"></h3>
-                <div class="cv-export-preview__entry-meta">
-                  @if (!isSkillsSection(section.sectionType)) {
-                    <span
-                      class="cv-export-preview__entry-date cv-export-preview__editable"
-                      [appInlineEditableText]="entry.dateRange ?? ''"
-                      [enabled]="true"
-                      data-placeholder="Dates"
-                      (textChange)="emitEntryField(section.id, entry.id, 'dateRange', $event)"></span>
-                  }
-                  @if (canRemoveEntry(section, entry)) {
-                    <button
-                      type="button"
-                      class="cv-export-preview__entry-remove"
-                      [attr.aria-label]="'Remove item'"
-                      (click)="emitRemoveEntry(section.id, entry.id)">
-                      Remove
-                    </button>
-                  }
-                </div>
-              </div>
-              @if (!isSkillsSection(section.sectionType)) {
-                <p
-                  class="cv-export-preview__entry-subtitle cv-export-preview__editable"
-                  [appInlineEditableText]="entry.subtitle ?? ''"
-                  [enabled]="true"
-                  data-placeholder="Company or context"
-                  (textChange)="emitEntryField(section.id, entry.id, 'subtitle', $event)"></p>
-              }
-            }
+            <p
+              class="cv-export-preview__name cv-export-preview__name--in-section cv-export-preview__editable"
+              [appInlineEditableText]="contactNameText(nameEntry)"
+              [enabled]="true"
+              data-placeholder="Your name"
+              (textChange)="emitContactName(nameEntry, $event)"></p>
+          } @else if (contactNameText(nameEntry)) {
+            <p class="cv-export-preview__name cv-export-preview__name--in-section">
+              {{ contactNameText(nameEntry) }}
+            </p>
+          }
+        }
 
-            @if (isSummarySection(section.sectionType)) {
-              <p
-                class="cv-export-preview__entry-summary cv-export-preview__editable"
-                [appInlineEditableText]="entry.summary"
-                [enabled]="true"
-                data-placeholder="Write a short professional summary…"
-                (textChange)="emitEntryField(section.id, entry.id, 'summary', $event)"></p>
-            } @else if (isSkillsSection(section.sectionType)) {
-              <div
-                class="cv-export-preview__skill-line cv-export-preview__editable"
-                [appInlineEditableText]="skillsLine(entry)"
-                [enabled]="true"
-                data-placeholder="Skills, comma-separated"
-                (textChange)="emitSkillsLine(section.id, entry.id, $event)"></div>
-            } @else if (!isContactSection(section)) {
-              <p
-                class="cv-export-preview__entry-summary cv-export-preview__editable"
-                [appInlineEditableText]="entry.summary"
-                [enabled]="true"
-                data-placeholder="Optional summary"
-                (textChange)="emitEntryField(section.id, entry.id, 'summary', $event)"></p>
-              <ul class="cv-export-preview__entry-bullets">
-                @for (slot of bulletSlots(section, entry); track slot.index) {
-                  <li
-                    class="cv-export-preview__editable"
-                    [appInlineEditableText]="slot.text"
-                    [enabled]="true"
-                    data-placeholder="Achievement or responsibility"
-                    (textChange)="emitBullet(section.id, entry.id, slot.index, $event)"></li>
+        <div class="cv-export-preview__contact">
+          @for (entry of visibleContactChannels(section); track entry.id) {
+            @if (editable()) {
+              <div class="cv-export-preview__contact-field">
+                <span
+                  class="cv-export-preview__editable"
+                  [appInlineEditableText]="contactValue(entry)"
+                  [enabled]="true"
+                  [attr.data-placeholder]="contactPlaceholder(entry)"
+                  (textChange)="emitBullet(section.id, entry.id, 0, $event)"></span>
+                @if (canRemoveEntry(section, entry)) {
+                  <button
+                    type="button"
+                    class="cv-export-preview__entry-remove"
+                    aria-label="Remove contact"
+                    (click)="emitRemoveEntry(section.id, entry.id)">
+                    ×
+                  </button>
                 }
-              </ul>
-              <p
-                class="cv-export-preview__entry-tech cv-export-preview__editable"
-                [appInlineEditableText]="entry.techStack"
-                [enabled]="true"
-                data-placeholder="Technologies (optional)"
-                (textChange)="emitEntryField(section.id, entry.id, 'techStack', $event)"></p>
+              </div>
+            } @else if (contactValue(entry)) {
+              <p class="cv-export-preview__contact-line">{{ contactValue(entry) }}</p>
             }
-          } @else {
-            @if (isContactSection(section)) {
-              @if (!isNameEntry(entry) && contactValue(entry)) {
-                <p class="cv-export-preview__contact-line">{{ contactValue(entry) }}</p>
+          }
+          @if (editable()) {
+            <button
+              type="button"
+              class="cv-export-preview__contact-add-btn"
+              aria-label="Add contact"
+              (click)="emitAddEntry(section.id)">
+              +
+            </button>
+          }
+        </div>
+      } @else {
+        @for (entry of visibleContactEntries(section); track entry.id) {
+          <article
+            class="cv-export-preview__entry"
+            [class.cv-export-preview__entry--summary]="isSummarySection(section.sectionType)"
+            [class.cv-export-preview__entry--editable]="editable()">
+            @if (editable()) {
+              @if (!isSummarySection(section.sectionType)) {
+                <div class="cv-export-preview__entry-header">
+                  <h3
+                    class="cv-export-preview__entry-title cv-export-preview__editable"
+                    [appInlineEditableText]="entry.title"
+                    [enabled]="true"
+                    [attr.data-placeholder]="isSkillsSection(section.sectionType) ? 'Group name' : 'Role or title'"
+                    (textChange)="emitEntryField(section.id, entry.id, 'title', $event)"></h3>
+                  <div class="cv-export-preview__entry-meta">
+                    @if (!isSkillsSection(section.sectionType)) {
+                      <span
+                        class="cv-export-preview__entry-date cv-export-preview__editable"
+                        [appInlineEditableText]="entry.dateRange ?? ''"
+                        [enabled]="true"
+                        data-placeholder="Dates"
+                        (textChange)="emitEntryField(section.id, entry.id, 'dateRange', $event)"></span>
+                    }
+                    @if (canRemoveEntry(section, entry)) {
+                      <button
+                        type="button"
+                        class="cv-export-preview__entry-remove"
+                        [attr.aria-label]="'Remove item'"
+                        (click)="emitRemoveEntry(section.id, entry.id)">
+                        Remove
+                      </button>
+                    }
+                  </div>
+                </div>
+                @if (!isSkillsSection(section.sectionType)) {
+                  <p
+                    class="cv-export-preview__entry-subtitle cv-export-preview__editable"
+                    [appInlineEditableText]="entry.subtitle ?? ''"
+                    [enabled]="true"
+                    data-placeholder="Company or context"
+                    (textChange)="emitEntryField(section.id, entry.id, 'subtitle', $event)"></p>
+                }
+              }
+
+              @if (isSummarySection(section.sectionType)) {
+                <p
+                  class="cv-export-preview__entry-summary cv-export-preview__editable"
+                  [appInlineEditableText]="entry.summary"
+                  [enabled]="true"
+                  data-placeholder="Write a short professional summary…"
+                  (textChange)="emitEntryField(section.id, entry.id, 'summary', $event)"></p>
+              } @else if (isSkillsSection(section.sectionType)) {
+                <div
+                  class="cv-export-preview__skill-line cv-export-preview__editable"
+                  [appInlineEditableText]="skillsLine(entry)"
+                  [enabled]="true"
+                  data-placeholder="Skills, comma-separated"
+                  (textChange)="emitSkillsLine(section.id, entry.id, $event)"></div>
+              } @else {
+                <p
+                  class="cv-export-preview__entry-summary cv-export-preview__editable"
+                  [appInlineEditableText]="entry.summary"
+                  [enabled]="true"
+                  data-placeholder="Optional summary"
+                  (textChange)="emitEntryField(section.id, entry.id, 'summary', $event)"></p>
+                <ul class="cv-export-preview__entry-bullets">
+                  @for (slot of bulletSlots(section, entry); track slot.index) {
+                    <li
+                      class="cv-export-preview__editable"
+                      [appInlineEditableText]="slot.text"
+                      [enabled]="true"
+                      data-placeholder="Achievement or responsibility"
+                      (textChange)="emitBullet(section.id, entry.id, slot.index, $event)"></li>
+                  }
+                </ul>
+                <p
+                  class="cv-export-preview__entry-tech cv-export-preview__editable"
+                  [appInlineEditableText]="entry.techStack"
+                  [enabled]="true"
+                  data-placeholder="Technologies (optional)"
+                  (textChange)="emitEntryField(section.id, entry.id, 'techStack', $event)"></p>
               }
             } @else {
               @if (entry.title.trim()) {
@@ -283,19 +301,11 @@
                 <p class="cv-export-preview__entry-tech">{{ entry.techStack }}</p>
               }
             }
-          }
-        </article>
+          </article>
+        }
       }
 
-      @if (editable() && isContactSection(section)) {
-        <button
-          type="button"
-          class="cv-export-preview__contact-add-btn"
-          aria-label="Add contact"
-          (click)="emitAddEntry(section.id)">
-          +
-        </button>
-      } @else if (editable() && allowsMultipleEntries(section)) {
+      @if (editable() && !isContactSection(section) && allowsMultipleEntries(section)) {
         <button
           type="button"
           class="cv-export-preview__add-entry"

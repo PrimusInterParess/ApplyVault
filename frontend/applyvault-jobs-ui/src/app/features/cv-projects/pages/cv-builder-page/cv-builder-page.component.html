@@ -21,7 +21,8 @@
         <p class="cv-builder__eyebrow">Templates</p>
         <h1 class="cv-builder__title">Design your CV</h1>
         <p class="cv-builder__lead">
-          Choose a layout. Edit content in Structure and Content; the canvas shows an export-faithful preview.
+          Choose a layout. Gallery and stage show an export-faithful preview when you already have a CV. On the
+          edit desk you’ll edit the template layout directly.
         </p>
         @if (hasStructuredCv()) {
           <button type="button" class="cv-builder__text-btn" (click)="continueEditing()">
@@ -147,10 +148,10 @@
             <span class="cv-builder__sr-only">Template</span>
             <select
               class="cv-builder__select"
-              [value]="selectedTemplateId()"
+              [value]="'' + selectedTemplateId()"
               (change)="onTemplateSelectChange($event)">
               @for (template of templates; track template.id) {
-                <option [value]="template.id">{{ template.label }}</option>
+                <option [value]="'' + template.id">{{ template.label }}</option>
               }
             </select>
           </label>
@@ -176,14 +177,6 @@
             aria-controls="cv-builder-structure-panel"
             (click)="toggleStructure()">
             Structure
-          </button>
-          <button
-            type="button"
-            class="cv-builder__ghost-btn"
-            [attr.aria-expanded]="contentOpen()"
-            aria-controls="cv-builder-content-panel"
-            (click)="toggleContent()">
-            Content
           </button>
           <div class="cv-builder__projects">
             <button
@@ -284,13 +277,6 @@
               </div>
             }
           </div>
-          <button
-            type="button"
-            class="cv-builder__ghost-btn"
-            [disabled]="cvDocument.exportHtmlPreviewLoading()"
-            (click)="refreshFidelityPreview()">
-            {{ cvDocument.exportHtmlPreviewLoading() ? 'Refreshing…' : 'Refresh preview' }}
-          </button>
           <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
           <button
             type="button"
@@ -331,6 +317,14 @@
           </button>
           <button
             type="button"
+            class="cv-builder__ghost-btn"
+            [attr.aria-expanded]="checkExportOpen()"
+            aria-controls="cv-builder-check-export-dialog"
+            (click)="openCheckExport()">
+            Check export
+          </button>
+          <button
+            type="button"
             class="cv-builder__cta cv-builder__cta--compact"
             [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
             (click)="exportPdf()">
@@ -350,17 +344,17 @@
 
       <div class="cv-builder__desk-scroll">
         <p class="cv-builder__desk-hint">
-          Canvas is export preview · Structure / Content to edit · Projects to import · autosaves
+          Edit on the canvas · Structure for sections · Projects to import · Check export / Download PDF for
+          print fidelity · autosaves
         </p>
-        @if (cvDocument.exportHtmlPreviewNotice(); as notice) {
-          <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
-        }
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">
-            <app-cv-export-html-preview
-              [srcdoc]="cvDocument.exportHtmlPreviewSrcdoc()"
-              [loading]="cvDocument.exportHtmlPreviewLoading()"
-              [error]="cvDocument.exportHtmlPreviewError()" />
+            <app-cv-export-template-preview
+              [templateId]="selectedTemplateId()"
+              [sections]="sections()"
+              [editable]="true"
+              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
+              (inlineEdit)="onInlineEdit($event)" />
           </div>
         </div>
       </div>
@@ -368,7 +362,7 @@
       <button
         type="button"
         class="cv-builder__fab"
-        [class.cv-builder__fab--hidden]="assistOpen() || structureOpen() || contentOpen()"
+        [class.cv-builder__fab--hidden]="assistOpen() || structureOpen() || checkExportOpen()"
         (click)="openAssist()"
         aria-label="Open AI assist">
         AI
@@ -463,43 +457,61 @@
         </aside>
       }
 
-      @if (contentOpen()) {
-        <div
-          class="cv-builder__drawer-backdrop"
-          role="presentation"
-          (click)="closeContent()"></div>
-        <aside
-          id="cv-builder-content-panel"
-          class="cv-builder__drawer cv-builder__drawer--content"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit CV content">
-          <header class="cv-builder__drawer-header">
-            <div class="cv-builder__drawer-heading">
-              <p class="cv-builder__drawer-eyebrow">Content</p>
-              <h2 class="cv-builder__drawer-title">Edit content</h2>
-            </div>
-            <button
-              type="button"
-              class="cv-builder__drawer-close"
-              (click)="closeContent()"
-              aria-label="Close content editor">
-              <span aria-hidden="true">×</span>
-            </button>
-          </header>
-          <p class="cv-builder__drawer-hint">
-            Edit entries here. The canvas shows the export preview after save.
+    </div>
+  }
+
+  @if (checkExportOpen()) {
+    <div class="cv-builder__modal-backdrop" role="presentation" (click)="closeCheckExport()"></div>
+    <div
+      id="cv-builder-check-export-dialog"
+      class="cv-builder__modal cv-builder__modal--check-export"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cv-builder-check-export-title"
+      aria-describedby="cv-builder-check-export-desc"
+      tabindex="-1">
+      <header class="cv-builder__check-export-header">
+        <div class="cv-builder__check-export-heading">
+          <h2 id="cv-builder-check-export-title">Check export</h2>
+          <p id="cv-builder-check-export-desc" class="cv-builder__check-export-desc">
+            This is the saved export HTML used for PDF. Your edit canvas is an approximation — small differences
+            are expected.
           </p>
-          <div class="cv-builder__drawer-body cv-builder__content-editor">
-            <app-cv-export-template-preview
-              [templateId]="selectedTemplateId()"
-              [sections]="sections()"
-              [editable]="true"
-              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
-              (inlineEdit)="onInlineEdit($event)" />
-          </div>
-        </aside>
-      }
+        </div>
+        <button
+          type="button"
+          class="cv-builder__drawer-close"
+          (click)="closeCheckExport()"
+          aria-label="Close check export">
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <div
+        class="cv-builder__check-export-body"
+        [attr.aria-busy]="cvDocument.exportHtmlPreviewLoading() ? true : null">
+        @if (showingLastSavedExport()) {
+          <p class="cv-builder__export-notice" role="status">Showing last saved export</p>
+        }
+        @if (cvDocument.exportHtmlPreviewNotice(); as notice) {
+          <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
+        }
+        <app-cv-export-html-preview
+          [srcdoc]="cvDocument.exportHtmlPreviewSrcdoc()"
+          [loading]="cvDocument.exportHtmlPreviewLoading()"
+          [error]="cvDocument.exportHtmlPreviewError()"
+          [emptyHint]="'Save your CV sections to load the export preview.'"
+          density="stage" />
+      </div>
+      <div class="cv-builder__modal-actions cv-builder__check-export-actions">
+        <button
+          type="button"
+          class="cv-builder__ghost-btn"
+          [disabled]="cvDocument.exportHtmlPreviewLoading()"
+          (click)="refreshCheckExport()">
+          {{ cvDocument.exportHtmlPreviewLoading() ? 'Refreshing…' : 'Refresh' }}
+        </button>
+        <button type="button" class="cv-builder__ghost-btn" (click)="closeCheckExport()">Close</button>
+      </div>
     </div>
   }
 

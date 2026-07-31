@@ -9,6 +9,7 @@ import {
   CvStructuredSection
 } from '../models/cv-structured.model';
 import { toSaveRequest, hydrateStructuredDocument } from '../utils/cv-structured-draft.util';
+import { normalizeSectionsForEditing } from '../utils/cv-structured-edit-normalizer.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
 type PendingStructuredSave = {
@@ -61,7 +62,7 @@ export class CvStructuredFacade {
         }
 
         this.loading.set(false);
-        this.structured.set(hydrateStructuredDocument(document));
+        this.structured.set(this.hydrateForContentEditing(document));
       },
       error: (error) => {
         if (generation !== this.loadGeneration) {
@@ -128,7 +129,7 @@ export class CvStructuredFacade {
       .subscribe({
         next: (document) => {
           this.updatingWithAi.set(false);
-          this.structured.set(hydrateStructuredDocument(document));
+          this.structured.set(this.hydrateForContentEditing(document));
         },
         error: (error) => {
           this.updatingWithAi.set(false);
@@ -192,7 +193,22 @@ export class CvStructuredFacade {
   }
 
   setStructured(document: CvStructuredDocument): void {
-    this.structured.set(hydrateStructuredDocument(document));
+    this.structured.set(this.hydrateForContentEditing(document));
+  }
+
+  /**
+   * Hydrate API payload and normalize edit slots (Summary/Skills/Contact),
+   * including Contact modern expand + absorb/dedupe so Classic/Minimal canvases
+   * never show unlabeled orphans beside empty Email/Phone/LinkedIn starters.
+   */
+  private hydrateForContentEditing(document: CvStructuredDocument): CvStructuredDocument {
+    const hydrated = hydrateStructuredDocument(document);
+
+    return {
+      ...hydrated,
+      // Full Contact modernize + absorb/dedupe (not only per-entry summary→bullets).
+      sections: normalizeSectionsForEditing(hydrated.sections)
+    };
   }
 
   private enqueueOrStartSave(request: PendingStructuredSave): void {
@@ -228,7 +244,7 @@ export class CvStructuredFacade {
         }
 
         this.clearSavingFlags();
-        this.structured.set(hydrateStructuredDocument(document));
+        this.structured.set(this.hydrateForContentEditing(document));
         this.lastSuccessfulSaveGeneration.set(request.generation);
       },
       error: (error) => {

@@ -41,7 +41,7 @@ public sealed class GoogleAiCvExportClient(
         var endpoint =
             $"https://generativelanguage.googleapis.com/v1beta/models/{options.Model}:generateContent?key={Uri.EscapeDataString(options.ApiKey)}";
 
-        using var response = await httpClient.PostAsJsonAsync(
+            using var response = await httpClient.PostAsJsonAsync(
             endpoint,
             BuildRequest(sections),
             SerializerOptions,

@@ -1,4 +1,8 @@
-import { normalizeEntryForEditing, normalizeSectionForEditing } from './cv-structured-edit-normalizer.util';
+import {
+  normalizeEntryForEditing,
+  normalizeSectionForEditing,
+  normalizeSectionsForEditing
+} from './cv-structured-edit-normalizer.util';
 import { CvStructuredEntry } from '../models/cv-structured.model';
 
 describe('cv-structured-edit-normalizer.util', () => {
@@ -106,5 +110,83 @@ describe('cv-structured-edit-normalizer.util', () => {
     const phones = section.entries.filter((entry) => entry.title.trim().toLowerCase() === 'phone');
     expect(phones.length).toBe(1);
     expect(phones[0]?.bullets[0]).toBe('+45 12 34 56 78');
+  });
+
+  it('normalizeSectionsForEditing applies Summary title→summary and Skills bullets→techStack', () => {
+    const [summary, skills] = normalizeSectionsForEditing([
+      {
+        id: 'summary-1',
+        heading: 'Summary',
+        sectionType: 'Summary',
+        sortOrder: 0,
+        entries: [{ ...baseEntry, id: 's1', title: 'Imported blurb', summary: '' }]
+      },
+      {
+        id: 'skills-1',
+        heading: 'Skills',
+        sectionType: 'Skills',
+        sortOrder: 1,
+        entries: [{ ...baseEntry, id: 'k1', bullets: ['Angular', 'RxJS'], techStack: '' }]
+      }
+    ]);
+
+    expect(summary.entries[0]?.summary).toBe('Imported blurb');
+    expect(skills.entries[0]?.techStack).toBe('Angular, RxJS');
+    expect(skills.entries[0]?.bullets).toEqual([]);
+  });
+
+  it('normalizeSectionsForEditing expands Contact valued multi-bullet channels', () => {
+    const [contact] = normalizeSectionsForEditing([
+      {
+        id: 'contact-1',
+        heading: 'Contact',
+        sectionType: 'Contact',
+        sortOrder: 0,
+        entries: [
+          { ...baseEntry, id: 'n', title: 'Name', subtitle: 'Alex' },
+          { ...baseEntry, id: 'e', title: 'Email', bullets: ['a@b.com', 'b@b.com'], sortOrder: 1 }
+        ]
+      }
+    ]);
+
+    expect(contact.entries.map((entry) => entry.bullets[0]).filter(Boolean)).toEqual([
+      'a@b.com',
+      'b@b.com'
+    ]);
+  });
+
+  it('normalizeSectionsForEditing merges Name-bullet channels into starter Email/Phone/LinkedIn', () => {
+    const [contact] = normalizeSectionsForEditing([
+      {
+        id: 'contact-1',
+        heading: 'Contact',
+        sectionType: 'Contact',
+        sortOrder: 0,
+        entries: [
+          {
+            ...baseEntry,
+            id: 'n',
+            title: 'Name',
+            subtitle: 'Alex',
+            bullets: ['a@b.com', '+45 12 34 56 78', 'linkedin.com/in/alex']
+          },
+          { ...baseEntry, id: 'e', title: 'Email', bullets: [''], sortOrder: 1 },
+          { ...baseEntry, id: 'p', title: 'Phone', bullets: [''], sortOrder: 2 },
+          { ...baseEntry, id: 'l', title: 'LinkedIn', bullets: [''], sortOrder: 3 }
+        ]
+      }
+    ]);
+
+    const fields = contact.entries.filter((entry) => entry.title.trim().toLowerCase() !== 'name');
+    expect(fields.map((entry) => entry.title.trim().toLowerCase())).toEqual([
+      'email',
+      'phone',
+      'linkedin'
+    ]);
+    expect(fields.map((entry) => entry.bullets[0])).toEqual([
+      'a@b.com',
+      '+45 12 34 56 78',
+      'linkedin.com/in/alex'
+    ]);
   });
 });

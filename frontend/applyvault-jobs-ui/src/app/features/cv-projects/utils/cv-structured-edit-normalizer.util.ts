@@ -1,5 +1,5 @@
 import { CvSectionType, CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
-import { dedupeContactEntries } from './cv-contact-channels.util';
+import { dedupeContactEntries, ensureModernContactShape } from './cv-contact-channels.util';
 
 export function normalizeSectionForEditing(section: CvStructuredSection): CvStructuredSection {
   const isContact =
@@ -15,6 +15,32 @@ export function normalizeSectionForEditing(section: CvStructuredSection): CvStru
       ? dedupeContactEntries(entries).map((entry, index) => ({ ...entry, sortOrder: index }))
       : entries
   };
+}
+
+/**
+ * Clone + normalize every section for Content hydrate / open:
+ * Summary title→summary, Skills bullets↔techStack, Contact summary→bullets,
+ * then Contact modern expand (import-legacy + valued multi-bullet channels).
+ */
+export function normalizeSectionsForEditing(
+  sections: readonly CvStructuredSection[]
+): CvStructuredSection[] {
+  return sections.map((section) => {
+    const cloned: CvStructuredSection = {
+      ...section,
+      entries: section.entries.map((entry) => ({
+        ...entry,
+        bullets: [...entry.bullets],
+        fields: { ...(entry.fields ?? {}) }
+      }))
+    };
+
+    const normalized = normalizeSectionForEditing(cloned);
+    const isContact =
+      normalized.sectionType === 'Contact' || normalized.heading.trim().toLowerCase() === 'contact';
+
+    return isContact ? ensureModernContactShape(normalized) : normalized;
+  });
 }
 
 export function normalizeEntryForEditing(

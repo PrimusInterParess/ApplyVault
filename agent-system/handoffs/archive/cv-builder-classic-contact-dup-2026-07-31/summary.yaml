@@ -1,0 +1,32 @@
+schema_version: "1.0.0"
+archive:
+  task_id: "cv-builder-classic-contact-dup-2026-07-31"
+  closed_at: "2026-07-31T22:54:00Z"
+  final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+  parent_request: >
+    Classic template layout on the CV builder frontend duplicated Contact inputs.
+  root_cause: >
+    Draft normalize expanded Name bullets into unlabeled fields while empty
+    Email/Phone/LinkedIn starters remained; dedupe kept valued+empty same-label
+    pairs. Not header/main double-render.
+  resolution: >
+    FE absorb unlabeled valued orphans into empty starter slots and stronger
+    dedupeContactEntries; Number(templateId) Name-in-section gating for
+    Classic/Minimal.
+  agents:
+    - frontend-engineer
+    - qa-engineer
+  files_changed:
+    - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.ts
+    - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-contact-channels.util.spec.ts
+    - frontend/applyvault-jobs-ui/src/app/features/cv-projects/utils/cv-structured-edit-normalizer.util.spec.ts
+    - frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-export-template-preview/cv-export-template-preview.component.ts
+  evidence:
+    - Targeted Karma 23/23 SUCCESS (FE + QA re-runs)
+  limitations:
+    - Authenticated Classic canvas browser smoke not run
+    - Phone absorb needs ≥6 digits; unusual formats may still duplicate empty Phone
+    - No DOM field-count component specs
+  pr_links: []
+  follow_ups:
+    - Optional live Classic editable smoke: Name once + one input per channel

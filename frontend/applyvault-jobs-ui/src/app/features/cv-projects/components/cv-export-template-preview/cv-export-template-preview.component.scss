@@ -584,10 +584,19 @@
   min-width: 0;
 }
 
+/* BE .cv-contact — wrap valued lines in one row group */
+.cv-export-preview__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  align-items: baseline;
+  margin: 0;
+}
+
 .cv-export-preview__contact-line {
   margin: 0;
   font-size: 0.5rem;
-  color: #444;
+  color: #5c5c5c;
 }
 
 .cv-export-preview__contact-sep {
@@ -595,8 +604,9 @@
 }
 
 .cv-export-preview__contact-fields {
-  display: grid;
-  gap: 0.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
   margin-top: 0.35rem;
 }
 
@@ -605,6 +615,16 @@
   align-items: baseline;
   gap: 0.35rem;
   min-width: 0;
+}
+
+.cv-export-preview--editable .cv-export-preview__contact {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.cv-export-preview__name--in-section {
+  margin: 0 0 0.35rem;
 }
 
 .cv-export-preview__contact-field .cv-export-preview__editable {
@@ -712,9 +732,11 @@
   opacity: 0.85;
 }
 
-/* Template 1 — Classic accent + symmetric shell inset */
+/* Template 1 — template-classic.html */
 .cv-export-preview--template-1 {
   --cv-preview-accent: #2f5d50;
+  --cv-preview-font: 'Segoe UI', Candara, Calibri, sans-serif;
+  --cv-preview-title-font: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
 }
 
 .cv-export-preview--template-1 .cv-export-preview__main {
@@ -725,23 +747,29 @@
   padding: 0.55rem 0.6rem;
 }
 
-/* Template 2 — soft sidebar (gallery/stage chrome; export HTML owned by API) */
+/* Template 2 — template-modern.html */
 .cv-export-preview--template-2 {
   --cv-preview-sidebar-bg: #eef2f0;
   --cv-preview-sidebar-fg: #1f2a26;
   --cv-preview-accent: #2f5d50;
+  --cv-preview-font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* Template 3 — template-minimal.html */
 .cv-export-preview--template-3 {
-  --cv-preview-font: Georgia, 'Times New Roman', serif;
-  --cv-preview-main-fg: #111;
-  --cv-preview-accent: #111;
+  --cv-preview-font: 'Gill Sans', 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --cv-preview-main-fg: #1a1a1a;
+  --cv-preview-accent: #2f5d50;
 }
 
 .cv-export-preview--template-3 .cv-export-preview__main .cv-export-preview__section-title {
-  color: #111;
-  border-bottom-color: #111;
+  color: var(--cv-preview-accent);
+  border-bottom-color: #d0d0d0;
+}
+
+.cv-export-preview--template-3 .cv-export-preview__name {
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 /* Compact gallery: keep page clip for thumbs, but photo stays inside content box (no float). */

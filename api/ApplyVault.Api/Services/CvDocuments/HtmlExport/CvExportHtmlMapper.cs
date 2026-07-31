@@ -104,7 +104,15 @@ internal static class CvExportHtmlMapper
         {
             if (IsSidebarSection(section))
             {
-                AppendSection(sidebar, section, compact: true);
+                // Match Classic/Minimal contact emission: name + value lines (no Email/Phone labels).
+                if (IsContactSection(section))
+                {
+                    AppendClassicContactHeader(sidebar, section);
+                }
+                else
+                {
+                    AppendSection(sidebar, section, compact: true);
+                }
             }
             else
             {

@@ -44,6 +44,7 @@ public sealed class CvExportInlineParserTests
     [InlineData("javascript:alert(1)", null)]
     [InlineData("https://example.com", "https://example.com/")]
     [InlineData("mailto:test@example.com", "mailto:test@example.com")]
+    [InlineData("test@example.com", "mailto:test@example.com")]
     public void SanitizeLinkUrl_allows_safe_schemes(string url, string? expected)
     {
         Assert.Equal(expected, CvExportInlineParser.SanitizeLinkUrl(url));

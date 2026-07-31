@@ -20,7 +20,9 @@ public sealed class JobnetApiClientLiveTests
         JobnetHttpClientConfigurator.Configure(httpClient, options.Value);
 
         var client = new JobnetApiClient(httpClient, options);
-        var search = await client.SearchAsync("developer", pageNumber: 1, resultsPerPage: 3);
+        // English "developer" currently ranks EURES (E-prefixed) ads first; those ids do not
+        // support the native detail endpoint. Prefer a Danish occupation term and a wider page.
+        var search = await client.SearchAsync("softwareudvikler", pageNumber: 1, resultsPerPage: 20);
 
         Assert.NotNull(search);
         Assert.NotEmpty(search!.JobAds ?? []);

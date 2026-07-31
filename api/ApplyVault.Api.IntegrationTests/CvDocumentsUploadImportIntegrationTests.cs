@@ -84,8 +84,9 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
 
         Assert.Contains(skillsSection.Entries, (entry) => entry.Title == "Languages");
         Assert.Contains(
-            skillsSection.Entries.SelectMany((entry) => entry.Bullets),
-            (bullet) => bullet.Equals("English", StringComparison.OrdinalIgnoreCase));
+            skillsSection.Entries,
+            (entry) => entry.Title == "Languages"
+                && entry.TechStack.Contains("English", StringComparison.OrdinalIgnoreCase));
 
         var summarySection = structured.Sections.Single((section) =>
             section.SectionType.Equals("Summary", StringComparison.OrdinalIgnoreCase));
@@ -98,7 +99,7 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         var contactSection = structured.Sections.Single((section) =>
             section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
 
-        Assert.Equal("Custom", contactSection.SectionType, ignoreCase: true);
+        Assert.Equal("Contact", contactSection.SectionType, ignoreCase: true);
         Assert.Contains(
             contactSection.Entries.SelectMany((entry) => entry.Bullets),
             (bullet) => bullet.Contains("jane@example.com", StringComparison.OrdinalIgnoreCase));

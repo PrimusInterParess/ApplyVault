@@ -198,7 +198,8 @@ internal static class CvExportInlineParser
     }
 
     private static bool IsEmailAddress(string value) =>
-        value.Count((character) => character == '@') == 1
+        !value.Contains(':', StringComparison.Ordinal)
+        && value.Count((character) => character == '@') == 1
         && !value.Any(char.IsWhiteSpace)
         && value.Contains('.', StringComparison.Ordinal)
         && !value.Contains("://", StringComparison.Ordinal);

@@ -5,6 +5,8 @@
 **Mode:** Design only (no application code changes)  
 **Date:** 2026-08-01
 
+> **Superseded for Structure happy path:** heuristic-first + confidence gate was replaced by AI-first fill — see [ADR-0005](../docs/adr/0005-cv-pdf-import-ai-first-structure.md) and `design-cv-pdf-ai-first-import.md`. Extract / P1 / link-integrity / OCR-out bindings from this note remain in force via that ADR.
+
 ---
 
 ## Architecture design summary

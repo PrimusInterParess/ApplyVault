@@ -25,6 +25,7 @@ evidence:
   backend_phase2: "24 passed (prior focused)"
   ai_phase1: "24 passed (prior focused)"
 durable_artifacts:
+  - docs/adr/0005-cv-pdf-import-ai-first-structure.md
   - agent-system/design-cv-pdf-ai-first-import.md
   - agent-system/design-cv-pdf-section-match.md (SUPERSEDED for Structure happy path)
 limitations:

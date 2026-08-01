@@ -25,14 +25,84 @@
 
     <div class="cv-builder-assist__body">
       <section class="cv-builder-assist__block">
+        <h3 class="cv-builder-assist__block-title">Regenerate summary</h3>
+        <p class="cv-builder-assist__hint">
+          Propose a new Summary from your CV. Review side-by-side, then Approve or Discard.
+        </p>
+        <label class="cv-builder-assist__field">
+          <span>Optional instructions</span>
+          <textarea
+            rows="3"
+            [disabled]="disabled() || proposing()"
+            [value]="summaryProposeInstructions()"
+            placeholder="Emphasize backend leadership; keep under 80 words."
+            (input)="onSummaryProposeInstructionsInput($event)"></textarea>
+        </label>
+        @if (summaryProposalError(); as error) {
+          <p class="cv-builder-assist__error" role="alert">{{ error }}</p>
+        }
+        <button
+          type="button"
+          class="cv-builder-assist__primary"
+          [disabled]="disabled() || sections().length === 0 || proposing()"
+          (click)="proposeSummary.emit()">
+          {{ proposing() ? 'Regenerating…' : 'Regenerate summary' }}
+        </button>
+        @if (summaryProposal(); as proposal) {
+          <div class="cv-builder-assist__proposal">
+            <div class="cv-builder-assist__proposal-compare">
+              <div class="cv-builder-assist__proposal-pane">
+                <h4 class="cv-builder-assist__subheading">Current</h4>
+                <p class="cv-builder-assist__proposal-text">
+                  {{ proposal.currentSummaryText.trim() || 'No summary yet.' }}
+                </p>
+              </div>
+              <div class="cv-builder-assist__proposal-pane">
+                <h4 class="cv-builder-assist__subheading">Proposed</h4>
+                <p class="cv-builder-assist__proposal-text">{{ proposal.proposedSummaryText }}</p>
+              </div>
+            </div>
+            @if (proposal.changeBullets.length > 0) {
+              <h4 class="cv-builder-assist__subheading">What changed</h4>
+              <ul class="cv-builder-assist__change-bullets">
+                @for (bullet of proposal.changeBullets; track bullet) {
+                  <li>{{ bullet }}</li>
+                }
+              </ul>
+            }
+            <div class="cv-builder-assist__proposal-actions">
+              <button
+                type="button"
+                class="cv-builder-assist__primary"
+                [disabled]="disabled() || proposing()"
+                (click)="approveSummaryProposal.emit()">
+                Approve
+              </button>
+              <button
+                type="button"
+                class="cv-builder-assist__secondary"
+                [disabled]="disabled() || proposing()"
+                (click)="discardSummaryProposal.emit()">
+                Discard
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+
+      <section class="cv-builder-assist__block">
         <h3 class="cv-builder-assist__block-title">Update with instructions</h3>
+        <p class="cv-builder-assist__hint">
+          Propose section updates from your instructions. Review Current vs Proposed, then Approve or
+          Discard.
+        </p>
         <div class="cv-builder-assist__chips" role="group" aria-label="Focus sections">
           @for (section of sections(); track section.id) {
             <button
               type="button"
               class="cv-builder-assist__chip"
               [class.cv-builder-assist__chip--active]="isAiSectionSelected(section.id)"
-              [disabled]="disabled()"
+              [disabled]="disabled() || proposingUpdate()"
               (click)="toggleAiSection.emit(section.id)">
               {{ aiSectionLabel(section) }}
             </button>
@@ -43,7 +113,7 @@
           <textarea
             #aiInstructionsField
             rows="4"
-            [disabled]="disabled()"
+            [disabled]="disabled() || proposingUpdate()"
             [value]="aiUpdateInstructions()"
             placeholder="Example: Tighten experience bullets and make the summary more backend-focused."
             (input)="onInstructionsInput($event)"></textarea>
@@ -54,10 +124,58 @@
         <button
           type="button"
           class="cv-builder-assist__primary"
-          [disabled]="disabled() || !aiUpdateInstructions().trim() || updatingWithAi()"
-          (click)="updateWithAi.emit()">
-          {{ updatingWithAi() ? 'Updating…' : 'Update CV with AI' }}
+          [disabled]="disabled() || !aiUpdateInstructions().trim() || proposingUpdate()"
+          (click)="proposeUpdate.emit()">
+          {{ proposingUpdate() ? 'Proposing…' : 'Update CV with AI' }}
         </button>
+        @if (updateProposal(); as proposal) {
+          <div class="cv-builder-assist__proposal">
+            @if (proposal.changeBullets.length > 0) {
+              <h4 class="cv-builder-assist__subheading">What changed</h4>
+              <ul class="cv-builder-assist__change-bullets">
+                @for (bullet of proposal.changeBullets; track bullet) {
+                  <li>{{ bullet }}</li>
+                }
+              </ul>
+            }
+            @for (sectionId of compareSectionIds(proposal); track sectionId) {
+              <div class="cv-builder-assist__proposal-compare">
+                <div class="cv-builder-assist__proposal-pane">
+                  <h4 class="cv-builder-assist__subheading">
+                    Current — {{ sectionCompareHeading(sectionId, proposal) }}
+                  </h4>
+                  <p class="cv-builder-assist__proposal-text">
+                    {{ currentSectionText(sectionId) }}
+                  </p>
+                </div>
+                <div class="cv-builder-assist__proposal-pane">
+                  <h4 class="cv-builder-assist__subheading">
+                    Proposed — {{ sectionCompareHeading(sectionId, proposal) }}
+                  </h4>
+                  <p class="cv-builder-assist__proposal-text">
+                    {{ proposedSectionText(sectionId, proposal) }}
+                  </p>
+                </div>
+              </div>
+            }
+            <div class="cv-builder-assist__proposal-actions">
+              <button
+                type="button"
+                class="cv-builder-assist__primary"
+                [disabled]="disabled() || proposingUpdate()"
+                (click)="approveUpdateProposal.emit()">
+                Approve
+              </button>
+              <button
+                type="button"
+                class="cv-builder-assist__secondary"
+                [disabled]="disabled() || proposingUpdate()"
+                (click)="discardUpdateProposal.emit()">
+                Discard
+              </button>
+            </div>
+          </div>
+        }
       </section>
 
       <section class="cv-builder-assist__block">
@@ -90,7 +208,7 @@
         <button
           type="button"
           class="cv-builder-assist__primary"
-          [disabled]="disabled() || selectedSuggestionIds().length === 0 || updatingWithAi()"
+          [disabled]="disabled() || selectedSuggestionIds().length === 0 || proposingUpdate()"
           (click)="applySuggestions.emit()">
           Apply selected ({{ selectedSuggestionIds().length }})
         </button>

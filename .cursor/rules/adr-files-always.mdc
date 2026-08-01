@@ -1,0 +1,19 @@
+---
+description: Always file accepted architecture decisions under docs/adr/ — never leave ADR text only in design/handoff notes.
+alwaysApply: true
+---
+
+# ADR files always
+
+When an operate design, integration Close, or architecture handoff records an
+accepted (or human-approved) architectural decision:
+
+1. **Write** a numbered ADR under `docs/adr/` (next free `NNNN-kebab-title.md`).
+2. Do **not** leave the decision only as “proposed ADR text” inside
+   `agent-system/design-*.md` or handoff YAML.
+3. Use the next free number — never reuse an existing ADR id (e.g. ADR-0003 is
+   already edit-canvas vs export preview).
+4. Match existing ADR shape: Status, Context, Decision, Consequences; prefer
+   `CONTEXT.md` vocabulary for CV terms.
+5. Link the ADR from the design note / archive summary when those artifacts exist.
+6. Do **not** silently overwrite prior ADRs; supersede explicitly if needed.

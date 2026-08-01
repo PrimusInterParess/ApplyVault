@@ -229,7 +229,7 @@ Defaults below are **proposed**. Approve, change, or defer before C/D.
 | **D4** | Self-check questions | **Yes** — up to 3 CV-only probing questions |
 | **D5** | Finding → Assist bridge | **LOCKED (follow-up)** — per finding “Use in Assist”: copy title+detail into Update-with-instructions; pre-select `sectionId` chip when present; do **not** auto-run Update CV with AI |
 | **D6** | Domain term in UI | **“CV evaluation”** / “Evaluate CV” |
-| **D7** | Optional ADR | **Defer** |
+| **D7** | Optional ADR | **Accepted** — [ADR-0007](../docs/adr/0007-cv-quality-evaluation-ephemeral.md) (ephemeral evaluation; no JD in v1) |
 
 ---
 
@@ -246,8 +246,8 @@ Defaults below are **proposed**. Approve, change, or defer before C/D.
 
 ## 9. Dependencies / non-goals reminder
 
-- Reuse Gemini HTTP stack; do not add SDKs.
-- Honor ADR-0001 (catalog / structured fields) and ADR-0002 (builder sole surface).
+- Reuse Gemini HTTP stack (ADR-0008); do not add SDKs.
+- Honor ADR-0001 (catalog / structured fields), ADR-0002 (builder sole surface), and ADR-0007 (ephemeral evaluation).
 - Do not overwrite Assist suggestion prompts for this feature — new options section.
 - Delivery via project BRIDGE chain after Issue filing.
 

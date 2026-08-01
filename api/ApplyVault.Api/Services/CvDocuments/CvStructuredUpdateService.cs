@@ -35,11 +35,12 @@ public sealed class CvStructuredUpdateService(
 
         var focusSectionIds = ResolveFocusSectionIds(current, request.SectionIds);
 
-        var updated = await updateAiClient.UpdateAsync(
+        var aiResult = await updateAiClient.UpdateAsync(
             current,
             request.Instructions.Trim(),
             focusSectionIds,
             cancellationToken);
+        var updated = aiResult.Document;
 
         if (updated.Sections.Count == 0)
         {

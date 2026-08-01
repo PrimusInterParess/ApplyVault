@@ -279,7 +279,7 @@ public sealed class CvStructuredUpdateServiceTests
         public List<string> Instructions { get; } = [];
         public IReadOnlyList<Guid>? FocusSectionIds { get; private set; }
 
-        public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+        public Task<CvStructuredUpdateAiResult> UpdateAsync(
             CvStructuredDocumentDto current,
             string instructions,
             IReadOnlyList<Guid>? focusSectionIds = null,
@@ -297,18 +297,20 @@ public sealed class CvStructuredUpdateServiceTests
                     []))
                 .ToArray();
 
-            return Task.FromResult(new SaveCvStructuredDocumentRequest(sections));
+            return Task.FromResult(new CvStructuredUpdateAiResult(
+                new SaveCvStructuredDocumentRequest(sections),
+                ["Updated experience."]));
         }
     }
 
     private sealed class FixedUpdateAiClient(SaveCvStructuredDocumentRequest response) : ICvStructuredUpdateAiClient
     {
-        public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+        public Task<CvStructuredUpdateAiResult> UpdateAsync(
             CvStructuredDocumentDto current,
             string instructions,
             IReadOnlyList<Guid>? focusSectionIds = null,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(response);
+            Task.FromResult(new CvStructuredUpdateAiResult(response, ["Updated summary."]));
     }
 
     private sealed class ThrowingStructuredDocumentService : ICvStructuredDocumentService
@@ -343,7 +345,7 @@ public sealed class CvStructuredUpdateServiceTests
 
     private sealed class ThrowingUpdateAiClient : ICvStructuredUpdateAiClient
     {
-        public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+        public Task<CvStructuredUpdateAiResult> UpdateAsync(
             CvStructuredDocumentDto current,
             string instructions,
             IReadOnlyList<Guid>? focusSectionIds = null,

@@ -51,25 +51,36 @@ class StubCvBuilderAssistPanelComponent {
   readonly sections = input<CvStructuredSection[]>([]);
   readonly aiUpdateSectionIds = input<string[]>([]);
   readonly aiUpdateInstructions = input('');
+  readonly summaryProposeInstructions = input('');
   readonly selectedSuggestionIds = input<string[]>([]);
   readonly suggestions = input<unknown[]>([]);
   readonly evaluation = input<unknown>(null);
+  readonly summaryProposal = input<unknown>(null);
+  readonly updateProposal = input<unknown>(null);
   readonly disabled = input(false);
-  readonly updatingWithAi = input(false);
+  readonly proposingUpdate = input(false);
   readonly generatingSuggestions = input(false);
   readonly evaluating = input(false);
+  readonly proposing = input(false);
   readonly aiUpdateError = input<string | null>(null);
   readonly suggestionError = input<string | null>(null);
   readonly evaluationError = input<string | null>(null);
+  readonly summaryProposalError = input<string | null>(null);
   readonly closePanel = output<void>();
   readonly aiInstructionsChange = output<string>();
+  readonly summaryProposeInstructionsChange = output<string>();
   readonly toggleAiSection = output<string>();
-  readonly updateWithAi = output<void>();
+  readonly proposeUpdate = output<void>();
+  readonly approveUpdateProposal = output<void>();
+  readonly discardUpdateProposal = output<void>();
   readonly generateSuggestions = output<void>();
   readonly toggleSuggestion = output<string>();
   readonly applySuggestions = output<void>();
   readonly evaluateQuality = output<void>();
   readonly useFindingInAssist = output<unknown>();
+  readonly proposeSummary = output<void>();
+  readonly approveSummaryProposal = output<void>();
+  readonly discardSummaryProposal = output<void>();
 }
 
 describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
@@ -169,14 +180,19 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             isSaving: isSaving.asReadonly(),
             savingSectionId: signal<string | null>(null).asReadonly(),
             updatingWithAi: signal(false).asReadonly(),
+            proposingUpdate: signal(false).asReadonly(),
             generatingSuggestions: signal(false).asReadonly(),
             evaluating: signal(false).asReadonly(),
+            proposing: signal(false).asReadonly(),
             saveError: signal<string | null>(null).asReadonly(),
             aiUpdateError: signal<string | null>(null).asReadonly(),
             suggestionError: signal<string | null>(null).asReadonly(),
             evaluationError: signal<string | null>(null).asReadonly(),
+            summaryProposalError: signal<string | null>(null).asReadonly(),
             suggestions: signal([]).asReadonly(),
             evaluation: signal(null).asReadonly(),
+            summaryProposal: signal(null).asReadonly(),
+            updateProposal: signal(null).asReadonly(),
             lastSuccessfulSaveGeneration: signal(0).asReadonly(),
             load: structuredLoadSpy,
             save: jasmine.createSpy('save').and.returnValue(1),
@@ -184,7 +200,12 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             clearAiUpdateError,
             clearSuggestions: jasmine.createSpy('clearSuggestions'),
             clearEvaluation: jasmine.createSpy('clearEvaluation'),
-            updateWithAi,
+            discardSummaryProposal: jasmine.createSpy('discardSummaryProposal'),
+            discardUpdateProposal: jasmine.createSpy('discardUpdateProposal'),
+            proposeSummary: jasmine.createSpy('proposeSummary'),
+            approveSummaryProposal: jasmine.createSpy('approveSummaryProposal'),
+            approveUpdateProposal: jasmine.createSpy('approveUpdateProposal'),
+            proposeUpdate: updateWithAi,
             generateSuggestions: jasmine.createSpy('generateSuggestions'),
             evaluateQuality: jasmine.createSpy('evaluateQuality')
           }

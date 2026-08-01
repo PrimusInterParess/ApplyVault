@@ -7,14 +7,19 @@ import {
   CvImprovementSuggestion,
   CvQualityEvaluation,
   CvStructuredDocument,
-  CvStructuredSection
+  CvStructuredSection,
+  CvSummaryProposal,
+  CvUpdateProposal
 } from '../models/cv-structured.model';
+import { mergeAssistStructuredUpdate } from '../utils/cv-structured-assist-merge.util';
 import {
-  assistMergeRequiresPersist,
-  mergeAssistStructuredUpdate
-} from '../utils/cv-structured-assist-merge.util';
-import { toSaveRequest, hydrateStructuredDocument } from '../utils/cv-structured-draft.util';
+  cloneSectionsForDraft,
+  createEmptyEntry,
+  hydrateStructuredDocument,
+  toSaveRequest
+} from '../utils/cv-structured-draft.util';
 import { normalizeSectionsForEditing } from '../utils/cv-structured-edit-normalizer.util';
+import { createSectionOfType } from '../utils/cv-starter-entry.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
 type PendingStructuredSave = {
@@ -29,8 +34,10 @@ export class CvStructuredFacade {
   private loadSubscription: Subscription | null = null;
   private saveSubscription: Subscription | null = null;
   private aiUpdateSubscription: Subscription | null = null;
+  private updateProposeSubscription: Subscription | null = null;
   private suggestionsSubscription: Subscription | null = null;
   private evaluationSubscription: Subscription | null = null;
+  private summaryProposeSubscription: Subscription | null = null;
 
   private loadGeneration = 0;
   private saveGeneration = 0;
@@ -38,18 +45,26 @@ export class CvStructuredFacade {
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
+  /** @deprecated Assist uses proposingUpdate; kept false for any leftover bindings. */
   readonly updatingWithAi = signal(false);
+  readonly proposingUpdate = signal(false);
   readonly generatingSuggestions = signal(false);
   readonly evaluating = signal(false);
+  readonly proposing = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
   readonly suggestions = signal<CvImprovementSuggestion[]>([]);
   /** Session-only evaluation report — never written to storage (D2). */
   readonly evaluation = signal<CvQualityEvaluation | null>(null);
+  /** Session-only Summary proposal — Approve via local patch + save; never ai-update. */
+  readonly summaryProposal = signal<CvSummaryProposal | null>(null);
+  /** Session-only Update proposal — Approve via merge + save; never ai-update. */
+  readonly updateProposal = signal<CvUpdateProposal | null>(null);
   readonly error = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
   readonly aiUpdateError = signal<string | null>(null);
   readonly suggestionError = signal<string | null>(null);
   readonly evaluationError = signal<string | null>(null);
+  readonly summaryProposalError = signal<string | null>(null);
   /** Monotonic generation of the last successfully applied structured save. */
   readonly lastSuccessfulSaveGeneration = signal(0);
 
@@ -106,49 +121,86 @@ export class CvStructuredFacade {
     return generation;
   }
 
-  updateWithAi(instructions: string, sectionIds?: readonly string[]): void {
+  /**
+   * Ephemeral multi-section Update propose. Does not mutate Structured CV until Approve.
+   */
+  proposeUpdate(instructions: string, sectionIds?: readonly string[]): void {
     const trimmedInstructions = instructions.trim();
 
-    if (!trimmedInstructions || this.updatingWithAi()) {
+    if (!trimmedInstructions || this.proposingUpdate()) {
       return;
     }
 
-    this.cancelAiUpdate();
-    this.updatingWithAi.set(true);
+    this.cancelUpdatePropose();
+    this.proposingUpdate.set(true);
     this.aiUpdateError.set(null);
 
-    // Merge against live local state at response time (user edits during wait stay).
-    this.aiUpdateSubscription = this.apiService
-      .updateStructuredWithAi(trimmedInstructions, sectionIds)
+    this.updateProposeSubscription = this.apiService
+      .proposeStructuredUpdate(trimmedInstructions, sectionIds)
       .subscribe({
-        next: (document) => {
-          this.updatingWithAi.set(false);
-
-          // API persists the model body as a full replace; models often return a
-          // partial/focus-only document. Merge by section id so non-targeted
-          // sections (and Contact) survive, then corrective-save when needed.
-          const merged = mergeAssistStructuredUpdate(this.structured(), document, sectionIds);
-          this.setStructured(merged);
-
-          const applied = this.structured();
-          const aiNormalized = this.hydrateForContentEditing(document);
-          if (applied && assistMergeRequiresPersist(aiNormalized, applied)) {
-            const persistSectionId = sectionIds?.[0] ?? applied.sections[0]?.id ?? 'assist-merge';
-            this.save(applied.sections, persistSectionId);
-          }
+        next: (proposal) => {
+          this.proposingUpdate.set(false);
+          this.updateProposal.set({
+            ...proposal,
+            focusSectionIds: proposal.focusSectionIds ?? [],
+            changeBullets: proposal.changeBullets ?? [],
+            proposedSections: this.hydrateProposedSections(proposal.proposedSections ?? [])
+          });
+          this.discardSummaryProposal();
         },
         error: (error) => {
-          this.updatingWithAi.set(false);
+          this.proposingUpdate.set(false);
 
           if (isRequestAborted(error)) {
             return;
           }
 
           this.aiUpdateError.set(
-            this.readErrorMessage(error, 'Could not update structured CV content with AI.')
+            this.readErrorMessage(error, 'Could not propose structured CV updates with AI.')
           );
         }
       });
+  }
+
+  /** Clear in-memory Update proposal only (Discard). */
+  discardUpdateProposal(): void {
+    this.cancelUpdatePropose();
+    this.updateProposal.set(null);
+    this.aiUpdateError.set(null);
+    this.proposingUpdate.set(false);
+  }
+
+  /**
+   * Approve: merge proposed sections into local draft, persist via existing save,
+   * then clear proposal. Does not call ai-update (ADR-0011).
+   */
+  approveUpdateProposal(localSections?: readonly CvStructuredSection[]): void {
+    const proposal = this.updateProposal();
+    const document = this.structured();
+
+    if (!proposal || !document || proposal.proposedSections.length === 0) {
+      return;
+    }
+
+    const baseSections = localSections ?? document.sections;
+    const proposedDocument: CvStructuredDocument = {
+      documentId: proposal.documentId || document.documentId,
+      structuredImportedAt: document.structuredImportedAt,
+      sections: proposal.proposedSections
+    };
+    const focusIds =
+      proposal.focusSectionIds.length > 0 ? proposal.focusSectionIds : undefined;
+    const merged = mergeAssistStructuredUpdate(
+      { ...document, sections: cloneSectionsForDraft(baseSections) },
+      proposedDocument,
+      focusIds
+    );
+
+    this.setStructured(merged);
+    const persistSectionId =
+      focusIds?.[0] ?? merged.sections[0]?.id ?? 'assist-update-approve';
+    this.save(merged.sections, persistSectionId);
+    this.discardUpdateProposal();
   }
 
   generateSuggestions(sectionIds?: readonly string[], maxSuggestions = 6): void {
@@ -239,6 +291,74 @@ export class CvStructuredFacade {
     this.evaluation.set(null);
     this.evaluationError.set(null);
     this.evaluating.set(false);
+  }
+
+  /**
+   * Ephemeral Summary regeneration propose. Does not mutate Structured CV.
+   * Optional instructions; empty/omit regenerates from CV context alone.
+   */
+  proposeSummary(instructions?: string): void {
+    if (this.proposing()) {
+      return;
+    }
+
+    this.cancelSummaryPropose();
+    this.proposing.set(true);
+    this.summaryProposalError.set(null);
+
+    this.summaryProposeSubscription = this.apiService
+      .proposeSummaryRegeneration(instructions)
+      .subscribe({
+        next: (proposal) => {
+          this.proposing.set(false);
+          this.summaryProposal.set(proposal);
+          this.discardUpdateProposal();
+        },
+        error: (error) => {
+          this.proposing.set(false);
+
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          this.summaryProposalError.set(
+            this.readErrorMessage(error, 'Could not regenerate CV summary.')
+          );
+        }
+      });
+  }
+
+  /** Clear in-memory Summary proposal only (D4 Discard). */
+  discardSummaryProposal(): void {
+    this.cancelSummaryPropose();
+    this.summaryProposal.set(null);
+    this.summaryProposalError.set(null);
+    this.proposing.set(false);
+  }
+
+  /**
+   * Approve: patch Summary section only in local sections, persist via existing save,
+   * then clear proposal. Does not call ai-update (D4).
+   * Pass `localSections` (draft ?? server) so unsaved edits to other sections survive.
+   */
+  approveSummaryProposal(localSections?: readonly CvStructuredSection[]): void {
+    const proposal = this.summaryProposal();
+    const document = this.structured();
+    const proposedText = proposal?.proposedSummaryText?.trim() ?? '';
+
+    if (!proposal || !document || !proposedText) {
+      return;
+    }
+
+    const baseSections = localSections ?? document.sections;
+    const { sections, summarySectionId } = this.patchSummaryOnly(baseSections, proposedText);
+
+    this.setStructured({
+      ...document,
+      sections
+    });
+    this.save(sections, summarySectionId);
+    this.discardSummaryProposal();
   }
 
   /**
@@ -338,6 +458,11 @@ export class CvStructuredFacade {
     this.aiUpdateSubscription = null;
   }
 
+  private cancelUpdatePropose(): void {
+    this.updateProposeSubscription?.unsubscribe();
+    this.updateProposeSubscription = null;
+  }
+
   private cancelSuggestions(): void {
     this.suggestionsSubscription?.unsubscribe();
     this.suggestionsSubscription = null;
@@ -346,6 +471,59 @@ export class CvStructuredFacade {
   private cancelEvaluation(): void {
     this.evaluationSubscription?.unsubscribe();
     this.evaluationSubscription = null;
+  }
+
+  private cancelSummaryPropose(): void {
+    this.summaryProposeSubscription?.unsubscribe();
+    this.summaryProposeSubscription = null;
+  }
+
+  private hydrateProposedSections(
+    sections: readonly CvStructuredSection[]
+  ): CvStructuredSection[] {
+    return this.hydrateForContentEditing({
+      documentId: 'proposal',
+      structuredImportedAt: null,
+      sections: cloneSectionsForDraft(sections)
+    }).sections;
+  }
+
+  /**
+   * Patch first Summary section (by sortOrder) entry `summary` field, or append a starter
+   * Summary section when absent. Other sections unchanged.
+   */
+  private patchSummaryOnly(
+    sections: readonly CvStructuredSection[],
+    proposedSummaryText: string
+  ): { sections: CvStructuredSection[]; summarySectionId: string } {
+    const next = cloneSectionsForDraft(sections);
+    const summarySections = next
+      .filter((section) => section.sectionType === 'Summary')
+      .sort((left, right) => left.sortOrder - right.sortOrder);
+    const existing = summarySections[0];
+
+    if (!existing) {
+      const created = createSectionOfType('Summary', next.length);
+      const entry = created.entries[0] ?? createEmptyEntry(0);
+      created.entries = [{ ...entry, summary: proposedSummaryText }];
+      next.push(created);
+      return { sections: next, summarySectionId: created.id };
+    }
+
+    const index = next.findIndex((section) => section.id === existing.id);
+    const section = next[index];
+    const entriesByOrder = [...section.entries].sort((left, right) => left.sortOrder - right.sortOrder);
+    const firstEntry = entriesByOrder[0];
+
+    if (!firstEntry) {
+      section.entries = [{ ...createEmptyEntry(0), summary: proposedSummaryText }];
+    } else {
+      section.entries = section.entries.map((entry) =>
+        entry.id === firstEntry.id ? { ...entry, summary: proposedSummaryText } : entry
+      );
+    }
+
+    return { sections: next, summarySectionId: section.id };
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

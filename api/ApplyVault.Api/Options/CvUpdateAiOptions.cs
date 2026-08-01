@@ -13,7 +13,8 @@ public sealed class CvUpdateAiOptions
         Use only facts present in the existing structured CV or explicitly provided by the user's instructions.
         Do not invent employers, projects, dates, technologies, achievements, education, or contact details.
 
-        The response must contain the full updated CV, not a patch.
+        The response must contain the full updated CV, not a patch, plus changeBullets:
+        3–5 short plain-language bullets describing what changed for the user to review.
         Preserve section and entry ids when the item still represents the same real-world section or entry.
         Use null or omit id only for newly created sections or entries.
         Preserve sortOrder values when order is unchanged; otherwise return dense zero-based sortOrder values.

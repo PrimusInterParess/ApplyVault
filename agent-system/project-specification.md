@@ -281,6 +281,16 @@ Reading tests ≠ proving they currently pass (not executed in this research).
 | Fleet focus full product evolution | User **A** |
 | Prefer existing Matt Pocock delivery skills over replacing them | `VERIFIED_EXISTING` procedures + Architect adapt rules |
 | Preserve architecture; incremental evolution | Proposed from brownfield evidence; pending approval |
+| CV section schema catalog | [ADR-0001](../docs/adr/0001-cv-section-schema-catalog.md) |
+| CV builder sole surface | [ADR-0002](../docs/adr/0002-cv-builder-sole-surface.md) |
+| Edit canvas vs export preview | [ADR-0003](../docs/adr/0003-cv-builder-edit-canvas-vs-export-preview.md) |
+| Summary regenerate propose-then-approve | [ADR-0004](../docs/adr/0004-cv-summary-regenerate-propose-approve.md) |
+| PDF import AI-first Structure | [ADR-0005](../docs/adr/0005-cv-pdf-import-ai-first-structure.md) |
+| HTML → Puppeteer export | [ADR-0006](../docs/adr/0006-cv-export-html-puppeteer-pipeline.md) |
+| Ephemeral CV evaluation | [ADR-0007](../docs/adr/0007-cv-quality-evaluation-ephemeral.md) |
+| Gemini HTTP clients only (no SDK) | [ADR-0008](../docs/adr/0008-google-gemini-http-clients-no-sdk.md) |
+| Supabase Auth + local AppUser | [ADR-0009](../docs/adr/0009-supabase-auth-local-app-user.md) |
+| Strict per-user tenancy | [ADR-0010](../docs/adr/0010-strict-per-user-tenancy.md) |
 
 ## 30. Proposed Decisions Requiring Approval
 

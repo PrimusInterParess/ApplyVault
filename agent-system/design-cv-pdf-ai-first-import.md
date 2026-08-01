@@ -36,6 +36,10 @@
 
 Do **not** delete superseded design files; this note is the new Structure-stage source of truth for `/operate` on this task.
 
+### ADR
+
+Accepted as [ADR-0005](../docs/adr/0005-cv-pdf-import-ai-first-structure.md) (AI-first PDF import Structure; OCR out of default scope; P1 + link integrity remain).
+
 ---
 
 ## Current state (evidence)

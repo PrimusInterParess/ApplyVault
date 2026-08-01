@@ -18,7 +18,7 @@ ADR-0002 remains: `/cv-builder` is the sole CV product surface (no `/my-cv` revi
 2. **Export-faithful HTML preview** is **demoted** from the sole edit-canvas surface to **on-demand secondary “Check export”** (modal or panel) using the same preview endpoint. (Download-only was rejected; Option A.)
 3. **Pick step** may continue to use server export HTML for gallery/stage when a Structured CV exists (template selection fidelity). Empty pick may keep illustrative Angular samples.
 4. **PDF / formatted download** continues to use the **server HTML → Puppeteer** pipeline. That HTML remains the fidelity truth for export; the Angular edit canvas is an approximation for editing.
-5. This **supersedes** the M1 operate “strategy A / sole fidelity canvas = server export HTML” decision **for the edit desk only**. It does **not** revoke single-HTML-source for preview-endpoint + PDF (plan D2 as export-pipeline scope).
+5. This **supersedes** the M1 operate “strategy A / sole fidelity canvas = server export HTML” decision **for the edit desk only**. It does **not** revoke single-HTML-source for preview-endpoint + PDF (plan D2 / [ADR-0006](0006-cv-export-html-puppeteer-pipeline.md)).
 
 ## Consequences
 

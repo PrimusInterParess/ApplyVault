@@ -30,6 +30,8 @@ isProject: false
 
 **Tracker:** [production-readiness-tracker.md](production-readiness-tracker.md) · **Prerequisite:** [prod-01-scrape-ingest-auth.md](prod-01-scrape-ingest-auth.md) (done) · **Next:** [prod-03-api-integration-tests.md](prod-03-api-integration-tests.md)
 
+Recorded as [ADR-0010](../docs/adr/0010-strict-per-user-tenancy.md).
+
 ## Problem
 
 Saved jobs (`ScrapeResultEntity`) can have `UserId == null` from legacy anonymous ingest. Multiple services treat **all null-user rows as visible to every authenticated user**:

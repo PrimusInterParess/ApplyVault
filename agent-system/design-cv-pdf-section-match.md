@@ -7,6 +7,8 @@
 **Builds on:** `design-cv-pdf-structure-placement.md` (P1 residual Custom + soft headings + link integrity — shipped)  
 **Evidence probe:** `agent-system/scratch/cv-pdf-section-match-2026-08-01/probe-out/` (sample CV via Extract → Heuristic → Residual → AI gate)
 
+> **Superseded for Structure happy path:** operator chose AI-first (choice 2). SoftHeading / minimize-AI gate guidance below is historical — see [ADR-0005](../docs/adr/0005-cv-pdf-import-ai-first-structure.md) and `design-cv-pdf-ai-first-import.md`.
+
 ---
 
 ## Architecture design summary

@@ -1,0 +1,31 @@
+task_id: cv-eval-assist-bridge-2026-08-01
+closed_at: "2026-08-01"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+orchestrator: principal-software-architect
+parent_request: >
+  Make Update with instructions work with Evaluate CV (deferred D5 finding → Assist bridge).
+plan: agent-system/implementation-plan-cv-quality-evaluation.md
+milestones:
+  M1: READY (frontend D5 bridge; reconciled)
+agents:
+  - id: f33396d5-3db3-4c93-a399-b0f4f3d6237d
+    role: frontend-engineer
+    milestone: M1
+deliverables:
+  - "Per-finding Use in Assist control in Evaluate CV block"
+  - "Copies severity/dimension + title + detail into Update-with-instructions"
+  - "Pre-selects section chip when finding.sectionId is valid"
+  - "Focus/scroll instructions textarea; does not auto-run Update CV with AI"
+decisions_locked:
+  D5: "Use in Assist copy-into-instructions; no auto Update"
+issue: null
+pr: null
+limitations:
+  - Manual UI smoke (Evaluate → Use in Assist → Update) NOT_RUN
+  - No dedicated assist-panel.component.spec
+  - Full frontend-ci suite not run (focused page spec 10/10 only)
+residual_risks:
+  - Live Gemini Evaluate still required to exercise end-to-end in a running app
+follow_ups:
+  - Optional: manual smoke with GoogleAi enabled
+  - Optional: /code-review when opening a PR

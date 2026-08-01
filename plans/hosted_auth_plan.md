@@ -11,6 +11,8 @@ isProject: false
 
 Use `Supabase Auth` for app login.
 
+Recorded as [ADR-0009](../docs/adr/0009-supabase-auth-local-app-user.md).
+
 Why this is the best fit for your requirements:
 
 - no separate auth server to run

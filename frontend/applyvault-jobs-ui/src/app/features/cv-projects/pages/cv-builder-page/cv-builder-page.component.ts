@@ -83,6 +83,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly aiUpdateInstructions = signal('');
   protected readonly aiUpdateSectionIds = signal<string[]>([]);
   protected readonly selectedSuggestionIds = signal<string[]>([]);
+  protected readonly summaryProposeInstructions = signal('');
 
   protected readonly serverSections = this.editSession.serverSections;
   protected readonly sections = this.editSession.sections;
@@ -115,7 +116,7 @@ export class CvBuilderPageComponent implements OnDestroy {
       this.cvDocument.loading() ||
       this.cvStructured.loading() ||
       this.cvStructured.isSaving() ||
-      this.cvStructured.updatingWithAi()
+      this.cvStructured.proposingUpdate()
   );
 
   protected readonly canMutateStructured = computed(
@@ -150,7 +151,6 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
 
-  private wasUpdatingWithAi = false;
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
   /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
@@ -183,18 +183,6 @@ export class CvBuilderPageComponent implements OnDestroy {
     });
 
     effect(() => {
-      const updating = this.cvStructured.updatingWithAi();
-
-      if (this.wasUpdatingWithAi && !updating && !this.cvStructured.aiUpdateError()) {
-        this.selectedSuggestionIds.set([]);
-        this.setActivePanel(null);
-        this.editSession.clearDraft();
-      }
-
-      this.wasUpdatingWithAi = updating;
-    });
-
-    effect(() => {
       const saving = this.cvStructured.isSaving();
       const saveError = this.cvStructured.saveError();
       const finishedSave = this.wasSavingSection && !saving;
@@ -216,6 +204,8 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.editSession.cancelPendingSave();
     this.cvStructured.clearSuggestions();
     this.cvStructured.clearEvaluation();
+    this.cvStructured.discardSummaryProposal();
+    this.cvStructured.discardUpdateProposal();
   }
 
   protected selectTemplate(templateId: number): void {
@@ -295,7 +285,13 @@ export class CvBuilderPageComponent implements OnDestroy {
   }
 
   protected setActivePanel(panel: CvBuilderPanel | null): void {
+    const previous = this.activePanel();
     this.activePanel.set(panel);
+
+    if (previous === 'assist' && panel !== 'assist') {
+      this.cvStructured.discardSummaryProposal();
+      this.cvStructured.discardUpdateProposal();
+    }
   }
 
   protected openAssist(): void {
@@ -525,7 +521,19 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     this.editSession.flushSave();
     const sectionIds = this.validSectionIds(this.aiUpdateSectionIds());
-    this.cvStructured.updateWithAi(instructions, sectionIds.length > 0 ? sectionIds : undefined);
+    this.cvStructured.proposeUpdate(instructions, sectionIds.length > 0 ? sectionIds : undefined);
+  }
+
+  protected approveUpdateProposal(): void {
+    const sections = this.sections();
+    this.editSession.cancelPendingSave();
+    this.cvStructured.approveUpdateProposal(sections);
+    this.editSession.clearDraft();
+    this.selectedSuggestionIds.set([]);
+  }
+
+  protected discardUpdateProposal(): void {
+    this.cvStructured.discardUpdateProposal();
   }
 
   protected generateSuggestions(): void {
@@ -546,6 +554,30 @@ export class CvBuilderPageComponent implements OnDestroy {
 
     this.editSession.flushSave();
     this.cvStructured.evaluateQuality();
+  }
+
+  protected updateSummaryProposeInstructions(value: string): void {
+    this.summaryProposeInstructions.set(value);
+  }
+
+  protected proposeSummary(): void {
+    if (!this.hasSections()) {
+      return;
+    }
+
+    this.editSession.flushSave();
+    this.cvStructured.proposeSummary(this.summaryProposeInstructions());
+  }
+
+  protected approveSummaryProposal(): void {
+    const sections = this.sections();
+    this.editSession.cancelPendingSave();
+    this.cvStructured.approveSummaryProposal(sections);
+    this.editSession.clearDraft();
+  }
+
+  protected discardSummaryProposal(): void {
+    this.cvStructured.discardSummaryProposal();
   }
 
   /**
@@ -598,7 +630,7 @@ export class CvBuilderPageComponent implements OnDestroy {
         .filter((sectionId): sectionId is string => !!sectionId)
     );
 
-    this.cvStructured.updateWithAi(
+    this.cvStructured.proposeUpdate(
       `Apply these selected CV improvement suggestions:\n${instructions}`,
       sectionIds.length > 0 ? sectionIds : undefined
     );

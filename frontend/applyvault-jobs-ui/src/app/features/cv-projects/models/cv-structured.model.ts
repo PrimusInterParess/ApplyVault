@@ -113,6 +113,34 @@ export interface EvaluateCvQualityRequest {
   maxFindings?: number;
 }
 
+/** Request for ephemeral Summary regeneration proposal (instructions optional). */
+export interface ProposeCvSummaryRequest {
+  instructions?: string;
+}
+
+/**
+ * Ephemeral Summary proposal — session UI state only.
+ * Approve patches Summary locally + existing save; never persist via ai-update.
+ */
+export interface CvSummaryProposal {
+  readonly documentId: string;
+  summarySectionId: string | null;
+  currentSummaryText: string;
+  proposedSummaryText: string;
+  changeBullets: string[];
+}
+
+/**
+ * Ephemeral multi-section Update proposal — session UI state only.
+ * Approve merges proposed sections locally + existing save; never ai-update.
+ */
+export interface CvUpdateProposal {
+  readonly documentId: string;
+  focusSectionIds: string[];
+  changeBullets: string[];
+  proposedSections: CvStructuredSection[];
+}
+
 export type CvQualityEvaluationDimensionId = 'content' | 'structure' | 'format';
 
 export type CvQualityEvaluationSeverity = 'info' | 'warning' | 'critical';

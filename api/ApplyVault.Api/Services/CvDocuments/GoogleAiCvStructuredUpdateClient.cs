@@ -18,7 +18,10 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public async Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+    public const int MaxChangeBullets = 5;
+    public const int MaxBulletLength = 200;
+
+    public async Task<CvStructuredUpdateAiResult> UpdateAsync(
         CvStructuredDocumentDto current,
         string instructions,
         IReadOnlyList<Guid>? focusSectionIds = null,
@@ -55,8 +58,20 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         var result = JsonSerializer.Deserialize<CvStructuredUpdateAiResponse>(generatedJson, SerializerOptions)
             ?? throw new InvalidOperationException("Google AI returned an empty CV update payload.");
 
-        return CvStructuredUpdateNormalizer.Normalize(current, result);
+        return new CvStructuredUpdateAiResult(
+            CvStructuredUpdateNormalizer.Normalize(current, result),
+            NormalizeChangeBullets(result.ChangeBullets));
     }
+
+    internal static IReadOnlyList<string> NormalizeChangeBullets(IReadOnlyList<string>? changeBullets) =>
+        (changeBullets ?? [])
+            .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
+            .Select((bullet) => Truncate(bullet.Trim(), MaxBulletLength))
+            .Take(MaxChangeBullets)
+            .ToArray();
+
+    private static string Truncate(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[..maxLength];
 
     private object BuildRequest(
         CvStructuredDocumentDto current,

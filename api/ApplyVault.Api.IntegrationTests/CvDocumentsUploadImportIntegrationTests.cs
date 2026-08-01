@@ -486,7 +486,7 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
 
     private sealed class FakeCvStructuredUpdateAiClient : ICvStructuredUpdateAiClient
     {
-        public Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+        public Task<CvStructuredUpdateAiResult> UpdateAsync(
             CvStructuredDocumentDto current,
             string instructions,
             IReadOnlyList<Guid>? focusSectionIds = null,
@@ -517,7 +517,9 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
                         .ToArray()))
                 .ToArray();
 
-            return Task.FromResult(new SaveCvStructuredDocumentRequest(sections));
+            return Task.FromResult(new CvStructuredUpdateAiResult(
+                new SaveCvStructuredDocumentRequest(sections),
+                ["Made the main role senior."]));
         }
     }
 

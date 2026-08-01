@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    Operate agents sometimes redirect test/build output under agent-system/scratch
+    with a path relative to the project (e.g. -o agent-system/scratch/.../bin).
+    Those trees sit outside bin/obj, so SDK default globs would include them.
+    Nested Puppeteer ChromeHeadlessShell paths then exceed Windows MAX_PATH (260)
+    during DefaultItems evaluation. Keep scratch/custom out dirs out of compile items.
+  -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);agent-system/**;.cursor-test-bin/**;.cursor-test-obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

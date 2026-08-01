@@ -410,3 +410,53 @@
   color: #5b6575;
   line-height: 1.4;
 }
+
+.cv-builder-assist__proposal {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cv-builder-assist__proposal-compare {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cv-builder-assist__proposal-pane {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgb(28 35 48 / 10%);
+  background: #fafbfc;
+}
+
+.cv-builder-assist__proposal-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #1c2330;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.cv-builder-assist__change-bullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #5b6575;
+  line-height: 1.4;
+}
+
+.cv-builder-assist__proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 28rem) {
+  .cv-builder-assist__proposal-compare {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}

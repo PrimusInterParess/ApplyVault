@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { CvQualityEvaluation, CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
+import {
+  CvQualityEvaluation,
+  CvStructuredDocument,
+  CvStructuredSection,
+  CvSummaryProposal,
+  CvUpdateProposal
+} from '../models/cv-structured.model';
 import { createEmptyEntry, createEmptySection } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
@@ -10,8 +16,12 @@ describe('CvStructuredFacade save generations / coalesce', () => {
   let facade: CvStructuredFacade;
   let saveSubjects: Subject<CvStructuredDocument>[];
   let getSubjects: Subject<CvStructuredDocument>[];
-  let aiUpdateSubjects: Subject<CvStructuredDocument>[];
+  let updateProposeSubjects: Subject<CvUpdateProposal>[];
   let evaluationSubjects: Subject<CvQualityEvaluation>[];
+  let summaryProposeSubjects: Subject<CvSummaryProposal>[];
+  let proposeSummaryRegeneration: jasmine.Spy;
+  let proposeStructuredUpdate: jasmine.Spy;
+  let saveStructured: jasmine.Spy;
 
   function section(heading: string): CvStructuredSection {
     return {
@@ -32,8 +42,26 @@ describe('CvStructuredFacade save generations / coalesce', () => {
   beforeEach(() => {
     saveSubjects = [];
     getSubjects = [];
-    aiUpdateSubjects = [];
+    updateProposeSubjects = [];
     evaluationSubjects = [];
+    summaryProposeSubjects = [];
+    proposeSummaryRegeneration = jasmine
+      .createSpy('proposeSummaryRegeneration')
+      .and.callFake(() => {
+        const subject = new Subject<CvSummaryProposal>();
+        summaryProposeSubjects.push(subject);
+        return subject.asObservable();
+      });
+    proposeStructuredUpdate = jasmine.createSpy('proposeStructuredUpdate').and.callFake(() => {
+      const subject = new Subject<CvUpdateProposal>();
+      updateProposeSubjects.push(subject);
+      return subject.asObservable();
+    });
+    saveStructured = jasmine.createSpy('saveStructured').and.callFake(() => {
+      const subject = new Subject<CvStructuredDocument>();
+      saveSubjects.push(subject);
+      return subject.asObservable();
+    });
 
     TestBed.configureTestingModule({
       providers: [
@@ -46,23 +74,19 @@ describe('CvStructuredFacade save generations / coalesce', () => {
               getSubjects.push(subject);
               return subject.asObservable();
             },
-            saveStructured: () => {
-              const subject = new Subject<CvStructuredDocument>();
-              saveSubjects.push(subject);
-              return subject.asObservable();
-            },
+            saveStructured,
             updateStructuredWithAi: () => {
-              const subject = new Subject<CvStructuredDocument>();
-              aiUpdateSubjects.push(subject);
-              return subject.asObservable();
+              throw new Error('Assist must not call ai-update');
             },
+            proposeStructuredUpdate,
             generateStructuredSuggestions: () =>
               new Subject<{ suggestions: [] }>().asObservable(),
             evaluateStructuredQuality: () => {
               const subject = new Subject<CvQualityEvaluation>();
               evaluationSubjects.push(subject);
               return subject.asObservable();
-            }
+            },
+            proposeSummaryRegeneration
           }
         }
       ]
@@ -205,7 +229,75 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     expect(facade.structured()?.sections[0].entries[0].bullets).toEqual([]);
   });
 
-  it('updateWithAi merges partial AI payload so non-selected sections survive and re-saves', () => {
+  it('proposeUpdate then discardUpdateProposal leaves structured CV and save untouched', () => {
+    facade.setStructured({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [{ ...createEmptyEntry(0), id: 'sum-1', summary: 'Old summary' }]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'exp-1',
+          heading: 'Experience',
+          sectionType: 'Experience',
+          entries: [{ ...createEmptyEntry(0), id: 'exp-e1', title: 'Engineer', subtitle: 'Acme' }]
+        }
+      ]
+    });
+
+    facade.proposeUpdate('Rewrite summary for backend roles.', ['summary-1']);
+
+    expect(proposeStructuredUpdate).toHaveBeenCalledWith('Rewrite summary for backend roles.', [
+      'summary-1'
+    ]);
+    expect(updateProposeSubjects.length).toBe(1);
+
+    updateProposeSubjects[0].next({
+      documentId: 'doc-1',
+      focusSectionIds: ['summary-1'],
+      changeBullets: ['Rewrote summary tone.'],
+      proposedSections: [
+        {
+          ...createEmptySection(0),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'sum-1',
+              summary: 'Backend-focused summary for smoke test.'
+            }
+          ]
+        }
+      ]
+    });
+    updateProposeSubjects[0].complete();
+
+    expect(facade.updateProposal()?.proposedSections[0].entries[0].summary).toBe(
+      'Backend-focused summary for smoke test.'
+    );
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Old summary'
+    );
+    expect(saveSubjects.length).toBe(0);
+
+    facade.discardUpdateProposal();
+
+    expect(facade.updateProposal()).toBeNull();
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Old summary'
+    );
+    expect(saveSubjects.length).toBe(0);
+  });
+
+  it('proposeUpdate then approveUpdateProposal merges focus sections and saves once', () => {
     facade.setStructured({
       documentId: 'doc-1',
       structuredImportedAt: null,
@@ -229,53 +321,32 @@ describe('CvStructuredFacade save generations / coalesce', () => {
           id: 'summary-1',
           heading: 'Summary',
           sectionType: 'Summary',
-          entries: [
-            {
-              ...createEmptyEntry(0),
-              id: 'sum-1',
-              summary: 'Old summary'
-            }
-          ]
+          entries: [{ ...createEmptyEntry(0), id: 'sum-1', summary: 'Old summary' }]
         },
         {
           ...createEmptySection(2),
           id: 'exp-1',
           heading: 'Experience',
           sectionType: 'Experience',
-          entries: [
-            {
-              ...createEmptyEntry(0),
-              id: 'exp-e1',
-              title: 'Engineer',
-              subtitle: 'Acme'
-            }
-          ]
+          entries: [{ ...createEmptyEntry(0), id: 'exp-e1', title: 'Engineer', subtitle: 'Acme' }]
         },
         {
           ...createEmptySection(3),
           id: 'edu-1',
           heading: 'Education',
           sectionType: 'Education',
-          entries: [
-            {
-              ...createEmptyEntry(0),
-              id: 'edu-e1',
-              title: 'BSc',
-              subtitle: 'Uni'
-            }
-          ]
+          entries: [{ ...createEmptyEntry(0), id: 'edu-e1', title: 'BSc', subtitle: 'Uni' }]
         }
       ]
     });
 
-    facade.updateWithAi('Rewrite summary for backend roles.', ['summary-1']);
+    facade.proposeUpdate('Rewrite summary for backend roles.', ['summary-1']);
 
-    expect(aiUpdateSubjects.length).toBe(1);
-
-    aiUpdateSubjects[0].next({
+    updateProposeSubjects[0].next({
       documentId: 'doc-1',
-      structuredImportedAt: null,
-      sections: [
+      focusSectionIds: ['summary-1'],
+      changeBullets: ['Rewrote summary.'],
+      proposedSections: [
         {
           ...createEmptySection(0),
           id: 'contact-1',
@@ -305,7 +376,14 @@ describe('CvStructuredFacade save generations / coalesce', () => {
         }
       ]
     });
-    aiUpdateSubjects[0].complete();
+    updateProposeSubjects[0].complete();
+
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Old summary'
+    );
+    expect(saveSubjects.length).toBe(0);
+
+    facade.approveUpdateProposal();
 
     const ids = facade.structured()?.sections.map((item) => item.id);
     expect(ids).toEqual(['contact-1', 'summary-1', 'exp-1', 'edu-1']);
@@ -323,8 +401,7 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     expect(facade.structured()?.sections.find((item) => item.id === 'edu-1')?.entries[0].title).toBe(
       'BSc'
     );
-
-    // Server already saved the partial AI body — corrective PUT restores preserved sections.
+    expect(facade.updateProposal()).toBeNull();
     expect(saveSubjects.length).toBe(1);
     expect(facade.savingSectionId()).toBe('summary-1');
   });
@@ -372,5 +449,152 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     facade.clearEvaluation();
     expect(facade.evaluation()).toBeNull();
     expect(facade.evaluationError()).toBeNull();
+  });
+
+  it('proposeSummary then discardSummaryProposal leaves structured CV and save untouched', () => {
+    facade.setStructured({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'sum-1',
+              summary: 'Original summary stays'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'exp-1',
+          heading: 'Experience',
+          sectionType: 'Experience',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'exp-e1',
+              title: 'Engineer',
+              subtitle: 'Acme'
+            }
+          ]
+        }
+      ]
+    });
+
+    facade.proposeSummary('Emphasize backend');
+
+    expect(proposeSummaryRegeneration).toHaveBeenCalledWith('Emphasize backend');
+    expect(facade.proposing()).toBeTrue();
+
+    summaryProposeSubjects[0].next({
+      documentId: 'doc-1',
+      summarySectionId: 'summary-1',
+      currentSummaryText: 'Original summary stays',
+      proposedSummaryText: 'Proposed backend summary',
+      changeBullets: ['Tightened wording']
+    });
+    summaryProposeSubjects[0].complete();
+
+    expect(facade.proposing()).toBeFalse();
+    expect(facade.summaryProposal()?.proposedSummaryText).toBe('Proposed backend summary');
+
+    facade.discardSummaryProposal();
+
+    expect(facade.summaryProposal()).toBeNull();
+    expect(facade.summaryProposalError()).toBeNull();
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Original summary stays'
+    );
+    expect(facade.structured()?.sections.find((item) => item.id === 'exp-1')?.entries[0].title).toBe(
+      'Engineer'
+    );
+    expect(saveSubjects.length).toBe(0);
+  });
+
+  it('proposeSummary then approveSummaryProposal saves Summary-only patch', () => {
+    facade.setStructured({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'name-1',
+              title: 'Name',
+              subtitle: 'Ada Lovelace'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'sum-1',
+              summary: 'Old summary'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(2),
+          id: 'exp-1',
+          heading: 'Experience',
+          sectionType: 'Experience',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'exp-e1',
+              title: 'Engineer',
+              subtitle: 'Acme'
+            }
+          ]
+        }
+      ]
+    });
+
+    facade.proposeSummary();
+    summaryProposeSubjects[0].next({
+      documentId: 'doc-1',
+      summarySectionId: 'summary-1',
+      currentSummaryText: 'Old summary',
+      proposedSummaryText: 'Approved backend-focused summary.',
+      changeBullets: ['Added backend focus']
+    });
+    summaryProposeSubjects[0].complete();
+
+    facade.approveSummaryProposal();
+
+    expect(facade.summaryProposal()).toBeNull();
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Approved backend-focused summary.'
+    );
+    expect(
+      facade.structured()?.sections.find((item) => item.id === 'contact-1')?.entries.find(
+        (entry) => entry.title === 'Name'
+      )?.subtitle
+    ).toBe('Ada Lovelace');
+    expect(facade.structured()?.sections.find((item) => item.id === 'exp-1')?.entries[0].title).toBe(
+      'Engineer'
+    );
+    expect(facade.structured()?.sections.map((item) => item.id)).toEqual([
+      'contact-1',
+      'summary-1',
+      'exp-1'
+    ]);
+    expect(saveSubjects.length).toBe(1);
+    expect(facade.savingSectionId()).toBe('summary-1');
   });
 });

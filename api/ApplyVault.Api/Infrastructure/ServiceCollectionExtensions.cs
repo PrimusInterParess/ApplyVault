@@ -120,6 +120,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(CvEvaluationAiOptions.SectionName));
 
         services
+            .AddOptions<CvSummaryProposeAiOptions>()
+            .Bind(configuration.GetSection(CvSummaryProposeAiOptions.SectionName));
+
+        services
             .AddOptions<CvExportAiOptions>()
             .Bind(configuration.GetSection(CvExportAiOptions.SectionName));
 
@@ -242,6 +246,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ICvStructuredUpdateAiClient, GoogleAiCvStructuredUpdateClient>();
         services.AddHttpClient<ICvStructuredSuggestionsAiClient, GoogleAiCvStructuredSuggestionsClient>();
         services.AddHttpClient<ICvStructuredEvaluationAiClient, GoogleAiCvStructuredEvaluationClient>();
+        services.AddHttpClient<ICvStructuredSummaryProposeAiClient, GoogleAiCvStructuredSummaryProposeClient>();
         services.AddHttpClient<ICvExportAiClient, GoogleAiCvExportClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
@@ -289,8 +294,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredDocumentService, CvStructuredDocumentService>();
         services.AddScoped<ICvStructuredImportService, CvStructuredImportService>();
         services.AddScoped<ICvStructuredUpdateService, CvStructuredUpdateService>();
+        services.AddScoped<ICvStructuredUpdateProposeService, CvStructuredUpdateProposeService>();
         services.AddScoped<ICvStructuredSuggestionsService, CvStructuredSuggestionsService>();
         services.AddScoped<ICvStructuredEvaluationService, CvStructuredEvaluationService>();
+        services.AddScoped<ICvStructuredSummaryProposeService, CvStructuredSummaryProposeService>();
         services.AddScoped<ICvPdfPageCounter, CvPdfPageCounter>();
         services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
         services.AddCvHtmlExport(configuration);

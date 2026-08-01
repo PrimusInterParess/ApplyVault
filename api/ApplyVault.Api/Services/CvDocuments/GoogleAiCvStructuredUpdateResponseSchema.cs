@@ -9,7 +9,7 @@ internal static class GoogleAiCvStructuredUpdateResponseSchema
             responseSchema = new
             {
                 type = "OBJECT",
-                required = new[] { "sections" },
+                required = new[] { "sections", "changeBullets" },
                 properties = new
                 {
                     sections = new
@@ -61,6 +61,11 @@ internal static class GoogleAiCvStructuredUpdateResponseSchema
                                 }
                             }
                         }
+                    },
+                    changeBullets = new
+                    {
+                        type = "ARRAY",
+                        items = new { type = "STRING" }
                     }
                 }
             }

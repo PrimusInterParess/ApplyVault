@@ -20,5 +20,6 @@ key_paths:
   - "api/ApplyVault.Api/wwwroot/cv-export-templates/template-classic.html"
   - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/"
 reference_artifacts:
+  - "docs/adr/0006-cv-export-html-puppeteer-pipeline.md"
   - "agent-system/implementation-plan.md"
   - "agent-system/handoffs/archive/cv-builder-v1-m1-2026-07-31/summary.yaml"

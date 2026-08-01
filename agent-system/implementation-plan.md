@@ -73,7 +73,7 @@ Prior phase 1–2d handoffs under legacy `agent-system/handoffs/cv-builder-phase
 | ID | Decision | **Amended default** | Blocks |
 |---|---|---|---|
 | D1 | Scope | **Stable v1 only** (3 templates + fidelity + persist). No FlowCV parity program. | Plan shape |
-| D2 | Preview architecture | **Single HTML source** for all 3 templates (preview + PDF). | M1 |
+| D2 | Preview architecture | **Single HTML source** for all 3 templates (preview + PDF). Recorded as [ADR-0006](../docs/adr/0006-cv-export-html-puppeteer-pipeline.md). | M1 |
 | D3 | Theme / design tokens | **Defer** — templates ship with fixed simple styling. | — |
 | D4 | Multi-version CVs | **Defer** | — |
 | D5 | Cover letters | **Defer** | — |

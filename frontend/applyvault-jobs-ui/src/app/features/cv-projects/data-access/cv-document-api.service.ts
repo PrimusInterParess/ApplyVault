@@ -13,8 +13,11 @@ import {
   CvImprovementSuggestions,
   CvQualityEvaluation,
   CvStructuredDocument,
+  CvSummaryProposal,
+  CvUpdateProposal,
   EvaluateCvQualityRequest,
   GenerateCvImprovementSuggestionsRequest,
+  ProposeCvSummaryRequest,
   SaveCvStructuredDocumentRequest,
   UpdateCvStructuredWithAiRequest
 } from '../models/cv-structured.model';
@@ -180,6 +183,26 @@ export class CvDocumentApiService {
     );
   }
 
+  /**
+   * Ephemeral multi-section Update proposal — does not persist.
+   * Approve uses local merge + existing PUT save (not ai-update).
+   */
+  proposeStructuredUpdate(
+    instructions: string,
+    sectionIds?: readonly string[]
+  ): Observable<CvUpdateProposal> {
+    const request: UpdateCvStructuredWithAiRequest = { instructions };
+
+    if (sectionIds && sectionIds.length > 0) {
+      request.sectionIds = [...sectionIds];
+    }
+
+    return this.httpClient.post<CvUpdateProposal>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-update-propose`,
+      request
+    );
+  }
+
   generateStructuredSuggestions(
     sectionIds?: readonly string[],
     maxSuggestions = 6
@@ -202,6 +225,24 @@ export class CvDocumentApiService {
 
     return this.httpClient.post<CvQualityEvaluation>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-evaluation`,
+      request
+    );
+  }
+
+  /**
+   * Ephemeral Summary regeneration proposal — does not persist.
+   * Approve uses local Summary patch + existing PUT save (not ai-update).
+   */
+  proposeSummaryRegeneration(instructions?: string): Observable<CvSummaryProposal> {
+    const trimmed = instructions?.trim();
+    const request: ProposeCvSummaryRequest = {};
+
+    if (trimmed) {
+      request.instructions = trimmed;
+    }
+
+    return this.httpClient.post<CvSummaryProposal>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-summary-propose`,
       request
     );
   }

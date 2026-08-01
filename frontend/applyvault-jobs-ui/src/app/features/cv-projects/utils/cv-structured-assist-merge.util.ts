@@ -2,11 +2,10 @@ import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structur
 import { cloneSectionForDraft, toSaveRequest } from './cv-structured-draft.util';
 
 /**
- * Merge an Assist (AI update) API document into the locally known structured CV.
+ * Merge an Assist (AI update) proposal into the locally known structured CV.
  *
- * Decision: API `ai-update` is contracted to return a full document and persists
- * whatever the model returns before responding. Models often return only focus
- * sections (or empty Contact). FE therefore merges by section id:
+ * Decision: `ai-update-propose` returns proposed sections without persisting.
+ * Approve merges by section id then saves via existing PUT:
  * - With focus ids: replace only those sections from the AI payload; keep all
  *   other local sections (order preserved). Ignore non-focused AI sections.
  * - Without focus: treat AI sections as authoritative by id; preserve any local

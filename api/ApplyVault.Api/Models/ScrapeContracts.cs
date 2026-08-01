@@ -296,6 +296,16 @@ public sealed record UpdateCvStructuredWithAiRequest(
     IReadOnlyList<Guid>? SectionIds = null
 );
 
+/// <summary>
+/// Ephemeral CV update proposal. Not persisted — Approve uses existing PUT save.
+/// </summary>
+public sealed record CvUpdateProposalDto(
+    Guid DocumentId,
+    IReadOnlyList<Guid> FocusSectionIds,
+    IReadOnlyList<string> ChangeBullets,
+    IReadOnlyList<CvStructuredSectionDto> ProposedSections
+);
+
 public sealed record GenerateCvImprovementSuggestionsRequest(
     IReadOnlyList<Guid>? SectionIds = null,
     int MaxSuggestions = 6
@@ -316,6 +326,24 @@ public sealed record CvImprovementSuggestionDto(
     Guid? EntryId,
     string Category,
     string Impact
+);
+
+/// <summary>
+/// Request for ephemeral CV summary regeneration proposal. Instructions optional.
+/// </summary>
+public sealed record ProposeCvSummaryRequest(
+    string? Instructions = null
+);
+
+/// <summary>
+/// Ephemeral CV summary proposal response. Not persisted — Approve uses existing PUT save.
+/// </summary>
+public sealed record CvSummaryProposalDto(
+    Guid DocumentId,
+    Guid? SummarySectionId,
+    string CurrentSummaryText,
+    string ProposedSummaryText,
+    IReadOnlyList<string> ChangeBullets
 );
 
 /// <summary>

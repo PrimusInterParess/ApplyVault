@@ -24,6 +24,8 @@
 | **P1** | Unplaced / unmatched extracted text | **MUST** persist as `Custom` (Additional) sections — never silent drop. Short `Notice` only when Custom catch-all is used **or** structure is weak. Quiet success (`Notice = null`) when placement is good. |
 | **Link integrity** | URLs / hyperlinks | **REQUIRED.** Full URLs (and PDF link text when available) must survive extract → heuristic/AI → normalizer → persist. |
 
+Recorded in [ADR-0005](../docs/adr/0005-cv-pdf-import-ai-first-structure.md) (still in force after AI-first Structure).
+
 ---
 
 ## Current state

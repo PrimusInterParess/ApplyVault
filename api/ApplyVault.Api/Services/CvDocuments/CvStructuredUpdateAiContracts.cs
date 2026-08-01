@@ -4,15 +4,20 @@ namespace ApplyVault.Api.Services;
 
 public interface ICvStructuredUpdateAiClient
 {
-    Task<SaveCvStructuredDocumentRequest> UpdateAsync(
+    Task<CvStructuredUpdateAiResult> UpdateAsync(
         CvStructuredDocumentDto current,
         string instructions,
         IReadOnlyList<Guid>? focusSectionIds = null,
         CancellationToken cancellationToken = default);
 }
 
+public sealed record CvStructuredUpdateAiResult(
+    SaveCvStructuredDocumentRequest Document,
+    IReadOnlyList<string> ChangeBullets);
+
 internal sealed record CvStructuredUpdateAiResponse(
-    IReadOnlyList<CvStructuredUpdateAiSection> Sections);
+    IReadOnlyList<CvStructuredUpdateAiSection> Sections,
+    IReadOnlyList<string>? ChangeBullets = null);
 
 internal sealed record CvStructuredUpdateAiSection(
     string? Id,

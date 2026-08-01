@@ -24,6 +24,7 @@ deliverables:
   - "Assist panel Evaluate CV (content/structure/format) — session signals only"
 decisions_locked:
   D2: no persistence
+  D7: ADR-0007 accepted (docs/adr/0007-cv-quality-evaluation-ephemeral.md)
 issue: null
 pr: null
 limitations:

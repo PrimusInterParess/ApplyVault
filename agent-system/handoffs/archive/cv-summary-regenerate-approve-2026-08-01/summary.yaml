@@ -1,0 +1,45 @@
+schema_version: "1.0.0"
+task_id: "cv-summary-regenerate-approve-2026-08-01"
+closed_at: "2026-08-01"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+orchestrator: principal-software-architect
+parent_request: >
+  Regenerate Structured CV Summary using rest of CV + user/contact info;
+  show what changed; replace only after explicit approval.
+design: agent-system/design-cv-summary-regenerate-approve.md
+agents:
+  - architecture-engineer
+  - ai-llm-engineer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer
+deliverables:
+  - "POST /api/cv-documents/current/structured/ai-summary-propose (ephemeral; never persists)"
+  - "GoogleAiCvStructuredSummaryProposeClient + CvSummaryProposeAiOptions (D3 context packing)"
+  - "Assist Regenerate summary block: Current vs Proposed + change bullets + Approve/Discard"
+  - "Approve = Summary-only local patch + existing structured save; never ai-update"
+evidence:
+  - "API CvStructuredSummaryProposeServiceTests 9/9 (incl. save-not-called)"
+  - "API GoogleAiCvStructuredSummaryProposeClientTests 7/7"
+  - "FE cv-structured.facade.spec.ts 9/9 (discard + Summary-only approve)"
+  - "FE cv-builder-page.component.spec.ts 10/10 (wiring regression)"
+decisions_locked:
+  D1: "Dedicated Regenerate summary in Assist"
+  D2: "Side-by-side + what-changed bullets"
+  D3: "Full CV + Contact + AppUser identity + optional instructions"
+  D4: "Approve Summary only; Discard drops proposal"
+issue: null
+pr: null
+limitations:
+  - "Live Gemini e2e NOT_RUN (stub/fake HTTP only)"
+  - "No dedicated Assist-panel presentational component specs"
+  - "No dedicated controller/integration 401 host test for ai-summary-propose"
+residual_risks:
+  - "Approve overwrites in-progress Summary edits while proposal open (intended)"
+  - "Multiple Summary sections: first by sortOrder only"
+follow_ups:
+  - "Optional: assist-panel.component.spec for side-by-side render"
+  - "Optional: live Gemini smoke with GoogleAi enabled"
+  - "Optional: /code-review when opening a PR"
+adr:
+  - "docs/adr/0004-cv-summary-regenerate-propose-approve.md"

@@ -16,9 +16,9 @@ milestones:
 limitations:
   - "Projects import never smoke-tested (no saved summaries on smoke account)"
   - "M5/M6 not executed (optional by plan)"
-  - "API Assist ai-update still persists model body as full replace; FE merges and corrective-saves"
+  - "API Assist ai-update full-replace addressed in follow-up cv-builder-assist-api-merge-2026-08-01; FE merge may remain defense in depth"
   - "No dedicated panel-shell unit specs; coverage via page/facade/session"
 follow_ups:
-  - "Optional: API-side merge before persist (backend/ai-llm)"
+  - "DONE: API-side merge before persist — see archive cv-builder-assist-api-merge-2026-08-01"
   - "Optional: M5 CvExportPreviewService if document facade still unwieldy"
   - "Optional: Projects import smoke when summaries exist"

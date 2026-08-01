@@ -46,9 +46,14 @@ public sealed class CvStructuredUpdateService(
             throw new InvalidOperationException("AI did not return any structured CV sections.");
         }
 
+        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(
+            current,
+            updated,
+            focusSectionIds);
+
         return await structuredDocumentService.SaveStructuredAsync(
             user,
-            updated,
+            merged,
             markImported: false,
             cancellationToken);
     }

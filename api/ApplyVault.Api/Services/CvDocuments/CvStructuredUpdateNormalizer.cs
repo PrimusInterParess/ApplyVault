@@ -37,6 +37,106 @@ internal static class CvStructuredUpdateNormalizer
         return new SaveCvStructuredDocumentRequest(sections);
     }
 
+    /// <summary>
+    /// Merge a normalized AI update into the current structured CV before persist.
+    /// Matches FE <c>mergeAssistStructuredUpdate</c>: with focus, replace only those
+    /// sections and ignore non-focused AI sections; without focus, AI wins by id while
+    /// omitted current sections are preserved and AI-only sections are appended.
+    /// </summary>
+    public static SaveCvStructuredDocumentRequest MergeAssistUpdate(
+        CvStructuredDocumentDto current,
+        SaveCvStructuredDocumentRequest aiResult,
+        IReadOnlyList<Guid>? focusSectionIds)
+    {
+        if (current.Sections.Count == 0)
+        {
+            return Reindex(aiResult.Sections);
+        }
+
+        var aiById = aiResult.Sections
+            .Where((section) => section.Id is not null)
+            .GroupBy((section) => section.Id!.Value)
+            .ToDictionary((group) => group.Key, (group) => group.First());
+
+        var focusSet = focusSectionIds is { Count: > 0 }
+            ? focusSectionIds.ToHashSet()
+            : null;
+
+        List<CvStructuredSectionWriteDto> mergedSections;
+
+        if (focusSet is not null)
+        {
+            mergedSections = current.Sections
+                .Select((section) =>
+                {
+                    if (!focusSet.Contains(section.Id))
+                    {
+                        return ToWriteDto(section);
+                    }
+
+                    return aiById.TryGetValue(section.Id, out var fromAi)
+                        ? fromAi
+                        : ToWriteDto(section);
+                })
+                .ToList();
+        }
+        else
+        {
+            var previousIds = current.Sections.Select((section) => section.Id).ToHashSet();
+
+            mergedSections = current.Sections
+                .Select((section) =>
+                    aiById.TryGetValue(section.Id, out var fromAi)
+                        ? fromAi
+                        : ToWriteDto(section))
+                .ToList();
+
+            foreach (var section in aiResult.Sections)
+            {
+                if (section.Id is null || !previousIds.Contains(section.Id.Value))
+                {
+                    mergedSections.Add(section);
+                }
+            }
+        }
+
+        return Reindex(mergedSections);
+    }
+
+    private static SaveCvStructuredDocumentRequest Reindex(
+        IReadOnlyList<CvStructuredSectionWriteDto> sections) =>
+        new(
+            sections
+                .Select((section, sectionIndex) => section with
+                {
+                    SortOrder = sectionIndex,
+                    Entries = section.Entries
+                        .Select((entry, entryIndex) => entry with { SortOrder = entryIndex })
+                        .ToArray()
+                })
+                .ToArray());
+
+    private static CvStructuredSectionWriteDto ToWriteDto(CvStructuredSectionDto section) =>
+        new(
+            section.Id,
+            section.Heading,
+            section.SectionType,
+            section.SortOrder,
+            section.Entries
+                .OrderBy((entry) => entry.SortOrder)
+                .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
+                    entry.Id,
+                    entry.Title,
+                    entry.Subtitle,
+                    entry.DateRange,
+                    entry.Summary,
+                    entry.Bullets,
+                    entry.TechStack,
+                    entry.Source,
+                    entry.SourceSummaryId,
+                    entryIndex))
+                .ToArray());
+
     private static CvStructuredEntryWriteDto NormalizeEntry(
         string sectionType,
         CvStructuredUpdateAiEntry entry,

@@ -1,0 +1,20 @@
+schema_version: "1.0.0"
+task_id: "cv-builder-assist-api-merge-2026-08-01"
+final_status: "REQUEST COMPLETE"
+closed_at: "2026-08-01"
+github_issue: "https://github.com/PrimusInterParess/ApplyVault/issues/2"
+related_prior: "cv-builder-edit-arch-simplify-2026-08-01 (FE defense-in-depth merge)"
+summary: >
+  Assist ai-update merges normalized AI payload with current structured CV
+  before SaveStructuredAsync (FE-aligned focus / omit-preserve). Partial Gemini
+  bodies no longer wipe non-targeted sections on first persist.
+evidence:
+  - "dotnet test filter CvStructuredUpdate → Passed: 15, Failed: 0"
+files:
+  - "api/ApplyVault.Api/Services/CvDocuments/CvStructuredUpdateNormalizer.cs"
+  - "api/ApplyVault.Api/Services/CvDocuments/CvStructuredUpdateService.cs"
+  - "api/ApplyVault.Api.Tests/CvStructuredUpdateNormalizerTests.cs"
+  - "api/ApplyVault.Api.Tests/CvStructuredUpdateServiceTests.cs"
+limitations:
+  - "No live Gemini e2e in this turn (unit fakes only)"
+  - "FE merge / corrective PUT may remain as defense in depth"

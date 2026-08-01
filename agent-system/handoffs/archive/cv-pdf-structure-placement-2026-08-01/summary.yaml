@@ -1,0 +1,42 @@
+task_id: "cv-pdf-structure-placement-2026-08-01"
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-01"
+request: >-
+  After full PDF text extract, structure failed to match catalog templates;
+  define unplaced-text behavior; keep process simple (few AI trips, no
+  false-positive notices); preserve whole URLs (not shredded on '/').
+approvals:
+  P1: Custom / Additional catch-all for unplaced text — approved
+  link_integrity: REQUIRED — approved
+  I1: implement Phase 1 then Phase 2 (+ Phase 3 prompts) — approved
+delivered:
+  - "CvImportLinkIntegrity + SplitContactTokens URL-safe (no / \\ delimiters)"
+  - "Extract Y-cluster join omits mid-URL spaces"
+  - "Soft Custom heading promotion + residual→Additional information"
+  - "AI gate/notices per P1; coverage false-positive notices not restored"
+  - "Phase 3 Gemini import prompts: Contact first-class, never omit, URLs atomic"
+agents:
+  - architecture-engineer
+  - product-manager
+  - backend-engineer
+  - ai-llm-engineer
+  - qa-engineer
+evidence:
+  qa_broad_filter: "101 passed (CvStructured|CvPdf|CvImport) — QA re-run"
+  qa_focused: "31 passed (link/residual/notices/gate)"
+  principal_spot: "15 passed (CvImportAiOptions|CvImportLinkIntegrity|CvStructuredImportResidual)"
+  ai_prompt_tests: "6 passed (CvImportAiOptions Phase 3)"
+durable_artifacts:
+  - agent-system/design-cv-pdf-structure-placement.md
+  - agent-system/design-cv-pdf-import-pipeline.md
+limitations:
+  - Live Gemini HTTP path NOT_EXECUTED
+  - Authenticated builder upload / clickable-link smoke NOT_EXECUTED
+  - PdfPig annotation URI enrichment deferred (text-path URLs only)
+  - Optional FE notice copy polish not done (DTO unchanged; facade may already store notice)
+follow_ups:
+  - "Optional: smoke upload a real CV with LinkedIn/GitHub URLs in builder after API restart"
+  - "Optional: FE surface importSummary.notice if not already visible"
+  - "Optional: PdfPig link-annotation enrichment"
+pr_links: []
+github_issue: null

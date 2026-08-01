@@ -77,10 +77,16 @@ public sealed class CvPdfImportPipelineTests
 
         Assert.True(aiClient.WasCalled);
         Assert.True(preview.UsedAi);
-        Assert.Null(preview.Notice);
+        // Narrow AI output leaves residual lines → P1 catch-all Custom notice (not quiet).
+        Assert.Equal(CvStructuredImportNotices.IncompleteReview, preview.Notice);
         Assert.Contains(
             preview.Sections,
             (section) => section.Entries.Any((entry) => entry.Title == "AI Title"));
+        Assert.Contains(
+            preview.Sections,
+            (section) => section.Heading.Equals(
+                CvStructuredImportResidualPlacement.CatchAllHeading,
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

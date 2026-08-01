@@ -21,6 +21,29 @@ public sealed class CvImportAiOptionsTests
     }
 
     [Fact]
+    public void Defaults_Phase3PromptAlignment_ContactCustomAndAtomicLinks()
+    {
+        var options = new CvImportAiOptions();
+
+        Assert.Contains("Contact is a first-class sectionType", options.SystemPromptPreface, StringComparison.Ordinal);
+        Assert.Contains("Never omit source lines", options.SystemPromptPreface, StringComparison.Ordinal);
+        Assert.Contains("Additional information", options.SystemPromptPreface, StringComparison.Ordinal);
+        Assert.Contains("single atomic tokens", options.SystemPromptPreface, StringComparison.Ordinal);
+        Assert.Contains("never split on \"/\"", options.SystemPromptPreface, StringComparison.Ordinal);
+
+        Assert.Contains("sectionType must be one of: Experience, Projects, Education, Skills, Summary, Contact, Custom", options.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("contact/contact information -> Contact (first-class", options.SystemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("contact/contact information -> Custom with heading \"Contact\"", options.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("sectionType Contact", options.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("single atomic tokens", options.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("Additional information", options.SystemPrompt, StringComparison.Ordinal);
+
+        Assert.Contains("sectionType Contact", options.UserPromptTemplate, StringComparison.Ordinal);
+        Assert.Contains("Never omit source lines", options.UserPromptTemplate, StringComparison.Ordinal);
+        Assert.Contains("single atomic tokens", options.UserPromptTemplate, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ConfigurationBind_ReadsAdditiveGateKeys()
     {
         var configuration = new ConfigurationBuilder()
@@ -50,6 +73,20 @@ public sealed class CvImportAiOptionsTests
         Assert.StartsWith("Gated preface. Use only source facts.", composed, StringComparison.Ordinal);
         Assert.Contains("Catalog rules: sectionType must be one of Experience.", composed, StringComparison.Ordinal);
         Assert.Contains("\n\n", composed, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ComposeSystemPrompt_DefaultPreface_CarriesPhase3PlacementRules()
+    {
+        var composed = GoogleAiCvStructuredImportClient.ComposeSystemPrompt(
+            CvImportAiOptions.DefaultSystemPromptPreface,
+            "Catalog rules follow.");
+
+        Assert.StartsWith(CvImportAiOptions.DefaultSystemPromptPreface.Trim(), composed, StringComparison.Ordinal);
+        Assert.Contains("Contact is a first-class sectionType", composed, StringComparison.Ordinal);
+        Assert.Contains("Never omit source lines", composed, StringComparison.Ordinal);
+        Assert.Contains("single atomic tokens", composed, StringComparison.Ordinal);
+        Assert.Contains("Catalog rules follow.", composed, StringComparison.Ordinal);
     }
 
     [Fact]

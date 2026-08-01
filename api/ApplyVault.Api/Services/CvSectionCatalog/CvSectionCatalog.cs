@@ -182,6 +182,9 @@ public sealed class CvSectionCatalogProvider : ICvSectionCatalog
             - Put dates only in dateRange, never in title or subtitle
             - Put bullet-like lines in bullets, not in summary
             - Do not use markdown, HTML, or bold markers in any field
+            - Contact is a first-class sectionType; never emit Custom with heading "Contact" for contact details
+            - Keep URLs and emails as single atomic tokens; never split on "/"
+            - Never omit source lines; park unmapped or uncertain lines in Custom (catch-all heading "Additional information" when no better heading fits)
             - If contact lines appear before summary/profile text, split them into Contact and keep prose in Summary
             - If a raw section mixes experience and projects, split into separate sections with correct sectionType
             - Do not invent facts; improve structure only

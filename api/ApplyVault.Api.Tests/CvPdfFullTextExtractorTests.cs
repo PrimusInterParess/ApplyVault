@@ -3,6 +3,8 @@ using ApplyVault.Api.Services.CvSectionCatalog;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using PdfPigDocument = UglyToad.PdfPig.PdfDocument;
 
 namespace ApplyVault.Api.Tests;
 
@@ -84,6 +86,40 @@ public sealed class CvPdfFullTextExtractorTests
         var quality = CvPdfFullTextExtractor.ClassifyQuality(pageCount, charCount, wordCount);
 
         Assert.Equal(expected, quality);
+    }
+
+    [Fact]
+    public void Extract_DesktopSampleCv_IfPresent_CoversNearlyAllReadableText()
+    {
+        // Local feedback loop against a real multi-column CV. Not checked into the repo (PII).
+        const string samplePath = @"C:\Users\yborisov\Desktop\Yordan-Borisov.pdf";
+        if (!File.Exists(samplePath))
+        {
+            return;
+        }
+
+        using var stream = File.OpenRead(samplePath);
+        var extractor = new CvPdfFullTextExtractor(CvSectionCatalogProvider.LoadFromDefaultPath());
+        var result = extractor.Extract(stream);
+        var joined = string.Join('\n', result.Lines.Select((line) => line.Text));
+
+        using var document = PdfPigDocument.Open(samplePath);
+        var contentOrder = string.Join(
+            '\n',
+            document.GetPages().Select((page) => ContentOrderTextExtractor.GetText(page) ?? string.Empty));
+        var contentChars = contentOrder.Count(static (ch) => !char.IsWhiteSpace(ch));
+        var extractedChars = joined.Count(static (ch) => !char.IsWhiteSpace(ch));
+
+        Assert.Equal(CvPdfExtractionQuality.Good, result.Quality);
+        Assert.True(contentChars > 0);
+        Assert.True(
+            extractedChars >= contentChars * 0.95,
+            $"Expected >=95% content-order coverage, got {extractedChars}/{contentChars}.");
+        Assert.Contains("Yordan Borisov", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Experience", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ApplyVault", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("SoftUni", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("About Me", joined, StringComparison.OrdinalIgnoreCase);
     }
 
     private static byte[] CreateStructuredCvPdf()

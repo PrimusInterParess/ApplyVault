@@ -16,7 +16,8 @@ internal static class CvStructuredImportNotices
         IReadOnlyList<CvStructuredSectionWriteDto> finalSections,
         bool usedAi,
         bool aiAttempted,
-        bool aiFailed)
+        bool aiFailed,
+        bool usedCatchAllCustom = false)
     {
         if (extractionQuality == CvPdfExtractionQuality.Empty)
         {
@@ -24,6 +25,13 @@ internal static class CvStructuredImportNotices
         }
 
         if (finalSections.Count == 0)
+        {
+            return IncompleteReview;
+        }
+
+        // P1: short notice when Custom catch-all ("Additional information") was used.
+        // Do not emit coverage "N lines missing" notices (false positives).
+        if (usedCatchAllCustom)
         {
             return IncompleteReview;
         }

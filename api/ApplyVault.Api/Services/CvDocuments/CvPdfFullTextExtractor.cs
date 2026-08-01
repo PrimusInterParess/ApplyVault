@@ -1,5 +1,7 @@
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.CvSectionCatalog;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
@@ -16,12 +18,19 @@ public interface ICvPdfFullTextExtractor
 
 public sealed class CvPdfFullTextExtractor(
     ICvSectionCatalog sectionCatalog,
+    ILogger<CvPdfFullTextExtractor>? logger = null,
     IOptions<CvImportAiOptions>? importAiOptions = null) : ICvPdfFullTextExtractor
 {
+    /// <summary>Console/log filter token — grep or search for this exact tag.</summary>
+    public const string LogTag = "[CvPdfExtract]";
+
     internal const double YTolerancePoints = 2.0;
     internal const double ColumnGapMinWidthPoints = 24.0;
     internal const int DefaultSparseCharsPerPageThreshold = 120;
     internal const int SparseWordsPerPageThreshold = 20;
+    internal const double MinLetterCoverageRatio = 0.90;
+
+    private readonly ILogger _logger = logger ?? NullLogger<CvPdfFullTextExtractor>.Instance;
 
     public CvPdfExtractionResult Extract(Stream pdfStream)
     {
@@ -29,6 +38,8 @@ public sealed class CvPdfFullTextExtractor(
         {
             pdfStream.Position = 0;
         }
+
+        WriteConsole(LogTag + " BEGIN PdfPig text extraction");
 
         var orderedLines = new List<CvPdfExtractedLine>();
         var pageCount = 0;
@@ -60,11 +71,59 @@ public sealed class CvPdfFullTextExtractor(
 
         if (orderedLines.Count == 0)
         {
+            WriteConsole(
+                $"{LogTag} END quality={quality} pages={pageCount} words={wordCount} chars=0 lines=0 sections=0 (no readable text)");
             return new CvPdfExtractionResult([], [], pageCount, 0, wordCount, CvPdfExtractionQuality.Empty);
         }
 
         var sections = Sectionize(orderedLines);
+        WriteExtractedText(orderedLines, quality, pageCount, wordCount, charCount, sections);
+
         return new CvPdfExtractionResult(orderedLines, sections, pageCount, charCount, wordCount, quality);
+    }
+
+    private void WriteExtractedText(
+        IReadOnlyList<CvPdfExtractedLine> orderedLines,
+        CvPdfExtractionQuality quality,
+        int pageCount,
+        int wordCount,
+        int charCount,
+        IReadOnlyList<CvPdfRawSection> sections)
+    {
+        WriteConsole(
+            $"{LogTag} SUMMARY quality={quality} pages={pageCount} words={wordCount} chars={charCount} lines={orderedLines.Count} sections={sections.Count}");
+        WriteConsole($"{LogTag} SECTIONS " + string.Join(" | ", sections.Select(static (s) => s.Heading)));
+
+        WriteConsole(LogTag + " TEXT_START");
+        foreach (var line in orderedLines)
+        {
+            // Console.WriteLine — not ILogger — so the API process console always shows full text.
+            Console.WriteLine($"{LogTag} P{line.PageIndex + 1} | {line.Text}");
+        }
+
+        WriteConsole(LogTag + " TEXT_END");
+
+        try
+        {
+            var dumpPath = Path.Combine(
+                Path.GetTempPath(),
+                $"applyvault-cv-pdf-extract-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Environment.ProcessId}.txt");
+            var extractedText = string.Join('\n', orderedLines.Select(static (line) => line.Text));
+            File.WriteAllText(dumpPath, extractedText);
+            WriteConsole($"{LogTag} FULL_TEXT_FILE {dumpPath}");
+        }
+        catch (Exception ex)
+        {
+            WriteConsole($"{LogTag} FULL_TEXT_FILE write failed: {ex.Message}");
+        }
+
+        WriteConsole(LogTag + " END PdfPig text extraction complete");
+    }
+
+    private void WriteConsole(string message)
+    {
+        Console.WriteLine(message);
+        _logger.LogInformation("{Message}", message);
     }
 
     internal static CvPdfExtractionQuality ClassifyQuality(
@@ -111,6 +170,20 @@ public sealed class CvPdfFullTextExtractor(
                 continue;
             }
 
+            if (CvStructuredImportSoftHeading.LooksLikePromotableHeading(
+                    line.Text,
+                    currentNormalizedKey,
+                    sectionCatalog))
+            {
+                FlushSection();
+
+                currentHeading = line.Text.Trim();
+                currentNormalizedKey = CvStructuredImportSoftHeading.ToNormalizedKey(currentHeading);
+                currentPageIndex = line.PageIndex;
+                currentBody = [];
+                continue;
+            }
+
             currentBody ??= [];
             currentBody.Add(line.Text);
         }
@@ -139,49 +212,94 @@ public sealed class CvPdfFullTextExtractor(
 
     private static IReadOnlyList<TextToken> GetPageTokens(Page page)
     {
-        var words = page.GetWords().ToArray();
-
-        if (words.Length > 0)
-        {
-            return words
-                .Select(static (word) => new TextToken(
-                    word.Text,
-                    word.BoundingBox.Left,
-                    word.BoundingBox.Right,
-                    word.BoundingBox.Bottom,
-                    word.BoundingBox.Top))
-                .Where(static (token) => !string.IsNullOrWhiteSpace(token.Text))
-                .ToArray();
-        }
-
-        if (page.Letters.Count == 0)
+        var letterChars = CountNonWhitespaceChars(page.Letters);
+        if (letterChars == 0)
         {
             return [];
         }
 
+        // Default word extractor first — stable for typical digital CVs.
+        var defaultWords = ToTokens(page.GetWords());
+        if (HasGoodCoverage(defaultWords, letterChars))
+        {
+            return defaultWords;
+        }
+
         try
         {
-            var nearestWords = page.GetWords(NearestNeighbourWordExtractor.Instance).ToArray();
-
-            if (nearestWords.Length > 0)
+            var nearestWords = ToTokens(page.GetWords(NearestNeighbourWordExtractor.Instance));
+            if (HasGoodCoverage(nearestWords, letterChars)
+                && nearestWords.Count <= Math.Max(defaultWords.Count * 3, letterChars))
             {
-                return nearestWords
-                    .Select(static (word) => new TextToken(
-                        word.Text,
-                        word.BoundingBox.Left,
-                        word.BoundingBox.Right,
-                        word.BoundingBox.Bottom,
-                        word.BoundingBox.Top))
-                    .Where(static (token) => !string.IsNullOrWhiteSpace(token.Text))
-                    .ToArray();
+                // Reject NN when it explodes into letter-sized tokens.
+                var avgLen = nearestWords.Average(static (token) => token.Text.Length);
+                if (avgLen >= 2.0)
+                {
+                    return nearestWords;
+                }
             }
         }
         catch
         {
-            // Fall through to letter clustering.
+            // Fall through.
+        }
+
+        if (defaultWords.Count > 0)
+        {
+            return defaultWords;
         }
 
         return AssembleTokensFromLetters(page.Letters);
+    }
+
+    private static bool HasGoodCoverage(IReadOnlyList<TextToken> tokens, int letterChars)
+    {
+        if (tokens.Count == 0 || letterChars <= 0)
+        {
+            return false;
+        }
+
+        var chars = tokens.Sum(static (token) => CountNonWhitespaceChars(token.Text));
+        return chars >= letterChars * MinLetterCoverageRatio;
+    }
+
+    private static IReadOnlyList<TextToken> ToTokens(IEnumerable<Word> words)
+    {
+        return words
+            .Select(static (word) => new TextToken(
+                word.Text,
+                word.BoundingBox.Left,
+                word.BoundingBox.Right,
+                word.BoundingBox.Bottom,
+                word.BoundingBox.Top))
+            .Where(static (token) => !string.IsNullOrWhiteSpace(token.Text))
+            .ToArray();
+    }
+
+    private static int CountNonWhitespaceChars(IEnumerable<Letter> letters)
+    {
+        return letters
+            .Where(static (letter) => !string.IsNullOrWhiteSpace(letter.Value))
+            .Sum(static (letter) => letter.Value.Count(static (ch) => !char.IsWhiteSpace(ch)));
+    }
+
+    private static int CountNonWhitespaceChars(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        foreach (var ch in text)
+        {
+            if (!char.IsWhiteSpace(ch))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static IReadOnlyList<TextToken> AssembleTokensFromLetters(IReadOnlyList<Letter> letters)
@@ -365,12 +483,11 @@ public sealed class CvPdfFullTextExtractor(
         foreach (var cluster in clusters)
         {
             var y = cluster.Average(static (token) => token.Bottom);
-            var text = string.Join(
-                    " ",
-                    cluster
-                        .OrderBy(static (token) => token.Left)
-                        .Select(static (token) => token.Text))
-                .Trim();
+            var orderedTexts = cluster
+                .OrderBy(static (token) => token.Left)
+                .Select(static (token) => token.Text)
+                .ToArray();
+            var text = CvImportLinkIntegrity.JoinAdjacentTokens(orderedTexts);
 
             if (!string.IsNullOrWhiteSpace(text))
             {

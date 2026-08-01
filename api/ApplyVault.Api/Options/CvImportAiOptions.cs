@@ -21,6 +21,9 @@ public sealed class CvImportAiOptions
         Improve structure into editable sections and entries. Return JSON only.
         Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
         Do not claim or imply that AI assistance was used.
+        Contact is a first-class sectionType (ADR-0001); never emit Custom with heading "Contact" for contact details.
+        Never omit source lines; park unmapped or uncertain lines in Custom (catch-all heading "Additional information" when no better heading fits).
+        Keep URLs and emails as single atomic tokens; never split on "/".
         """;
 
     /// <summary>
@@ -36,20 +39,20 @@ public sealed class CvImportAiOptions
         Preserve the original order of sections and entries when possible.
         Do not claim or imply that AI assistance was used.
 
-        sectionType must be one of: Experience, Projects, Education, Skills, Summary, Custom.
+        sectionType must be one of: Experience, Projects, Education, Skills, Summary, Contact, Custom.
         Map headings using these rules:
         - work/professional/employment/career history -> Experience (normalize heading to "Experience" when appropriate)
         - projects/personal projects/side projects -> Projects
         - education/degrees -> Education
         - skills/technical skills/competencies -> Skills
         - summary/profile/about/objective -> Summary
-        - contact/contact information -> Custom with heading "Contact"
+        - contact/contact information -> Contact (first-class; heading "Contact")
         - certifications, awards, honors, languages, volunteer, publications, references -> Custom
         - anything else -> Custom
 
         For every section return:
         - heading: concise section title
-        - sectionType: Experience | Projects | Education | Skills | Summary | Custom
+        - sectionType: Experience | Projects | Education | Skills | Summary | Contact | Custom
         - entries: array of structured items with:
           - title: role, project, degree, or skill group name
           - subtitle: employer, institution, or context (optional)
@@ -65,10 +68,12 @@ public sealed class CvImportAiOptions
         - For Skills sections, put skills in techStack as a comma-separated string; use title for skill groups only; leave bullets empty
         - For Summary sections, use a single entry with prose in summary; title may be empty or "Summary"
         - Do not use markdown, HTML, or bold markers in any field
-        - Preserve contact details (email, phone, LinkedIn, GitHub, website, location) in a Custom section with heading "Contact"
+        - Preserve contact details (email, phone, LinkedIn, GitHub, website, location) in a Contact section (sectionType Contact)
         - Contact section must include every email, phone, LinkedIn, GitHub, website, and location line from the header block
         - Put contact details in bullets when there are multiple items; keep page numbers out
-        - Choose field placement by sectionType context, but never omit source lines; move uncertain lines to Custom
+        - Prefer Contact bullets for full URLs and profile links
+        - Keep URLs and emails as single atomic tokens; never split on "/"
+        - Choose field placement by sectionType context, but never omit source lines; park unmapped or uncertain lines in Custom (catch-all heading "Additional information" when no better heading fits)
         - If contact lines appear before summary/profile text, split them into a Contact section and keep the prose in Summary
         - If a raw section mixes experience and projects, split into separate sections with correct sectionType
         - Do not invent facts; improve structure only
@@ -79,6 +84,8 @@ public sealed class CvImportAiOptions
         Deterministic structuring was insufficient for a confident import.
         Structure the following CV sections extracted from a PDF into JSON.
         Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
+        Use sectionType Contact for contact details (not Custom). Never omit source lines; park unmapped content in Custom.
+        Keep URLs and emails as single atomic tokens; never split on "/".
 
         Each item in the payload has:
         - heading: section heading from the PDF

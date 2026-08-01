@@ -59,7 +59,42 @@ public sealed class CvStructuredImportAiGateTests
     }
 
     [Fact]
-    public void Decide_CallsWhenSparse()
+    public void Decide_CallsWhenSparseAndTypedStructureThin()
+    {
+        var weak = new[]
+        {
+            new CvStructuredSectionWriteDto(
+                null,
+                "Summary",
+                CvSectionTypes.Summary,
+                0,
+                [
+                    new CvStructuredEntryWriteDto(
+                        null,
+                        string.Empty,
+                        null,
+                        null,
+                        "Sparse text",
+                        [],
+                        string.Empty,
+                        CvEntrySources.Import,
+                        null,
+                        0)
+                ])
+        };
+
+        var decision = CvStructuredImportAiGate.Decide(
+            googleAiEnabled: true,
+            CvPdfExtractionQuality.Sparse,
+            [new CvPdfRawSection("Profile", "summary", 0, "Sparse text")],
+            weak,
+            new CvImportAiOptions());
+
+        Assert.Equal(CvStructuredImportAiGateDecision.CallAi, decision);
+    }
+
+    [Fact]
+    public void Decide_SkipsWhenSparseButStrongTypedSections()
     {
         var decision = CvStructuredImportAiGate.Decide(
             googleAiEnabled: true,
@@ -68,7 +103,27 @@ public sealed class CvStructuredImportAiGateTests
             CreateStrongHeuristicSections(),
             new CvImportAiOptions());
 
-        Assert.Equal(CvStructuredImportAiGateDecision.CallAi, decision);
+        Assert.Equal(CvStructuredImportAiGateDecision.SkipAi, decision);
+    }
+
+    [Fact]
+    public void Decide_SkipsWhenOnlyCatchAllResidualUsed()
+    {
+        var residual = new CvStructuredImportResidualPlacement.Result(
+            CreateStrongHeuristicSections(),
+            ResidualLineCountBeforeSpill: 1,
+            ConsideredSourceLineCount: 20,
+            UsedCatchAll: true);
+
+        var decision = CvStructuredImportAiGate.Decide(
+            googleAiEnabled: true,
+            CvPdfExtractionQuality.Good,
+            CreateStrongRawSections(),
+            CreateStrongHeuristicSections(),
+            new CvImportAiOptions(),
+            residual);
+
+        Assert.Equal(CvStructuredImportAiGateDecision.SkipAi, decision);
     }
 
     [Fact]

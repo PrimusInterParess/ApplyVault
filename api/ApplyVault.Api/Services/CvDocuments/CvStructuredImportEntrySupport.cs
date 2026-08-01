@@ -60,13 +60,7 @@ internal static class CvStructuredImportEntrySupport
     }
 
     public static IReadOnlyList<string> SplitContactTokens(string line) =>
-        line.Split(['|', '·', '•', '/', '\\'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .SelectMany((token) =>
-                token.Contains(',', StringComparison.Ordinal) && LooksLikeContactLine(token)
-                    ? token.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                    : [token])
-            .Where((token) => !string.IsNullOrWhiteSpace(token))
-            .ToArray();
+        CvImportLinkIntegrity.SplitContactTokens(line);
 
     public static (string? NameLine, IReadOnlyList<string> ContactLines, IReadOnlyList<string> RemainingLines)
         SplitLeadingContactBlock(IReadOnlyList<string> lines)
@@ -236,8 +230,15 @@ internal static class CvStructuredImportEntrySupport
         }
 
         var existingContactSectionIndex = sections.ToList().FindIndex((section) =>
-            section.SectionType == CvSectionTypes.Custom
-            && section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
+            section.SectionType.Equals(CvSectionTypes.Contact, StringComparison.OrdinalIgnoreCase));
+
+        // Legacy AI drift: Contact content parked as Custom headed "Contact".
+        if (existingContactSectionIndex < 0)
+        {
+            existingContactSectionIndex = sections.ToList().FindIndex((section) =>
+                section.SectionType.Equals(CvSectionTypes.Custom, StringComparison.OrdinalIgnoreCase)
+                && section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
+        }
 
         if (existingContactSectionIndex >= 0)
         {
@@ -268,7 +269,12 @@ internal static class CvStructuredImportEntrySupport
             return sections
                 .Select((section, index) =>
                     index == existingContactSectionIndex
-                        ? section with { Entries = [updatedEntry] }
+                        ? section with
+                        {
+                            SectionType = CvSectionTypes.Contact,
+                            Heading = string.IsNullOrWhiteSpace(section.Heading) ? "Contact" : section.Heading,
+                            Entries = [updatedEntry]
+                        }
                         : section)
                 .ToArray();
         }

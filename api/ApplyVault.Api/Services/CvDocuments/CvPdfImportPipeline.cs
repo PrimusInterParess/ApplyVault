@@ -4,7 +4,7 @@ using ApplyVault.Api.Options;
 namespace ApplyVault.Api.Services;
 
 /// <summary>
-/// Internal PDF import orchestration: Extract → Heuristic → gated AI → Notice.
+/// Internal PDF import orchestration: Extract → Heuristic → Residual → gated AI → Notice.
 /// </summary>
 internal static class CvPdfImportPipeline
 {
@@ -32,14 +32,20 @@ internal static class CvPdfImportPipeline
             CvStructuredImportHeuristic.Parse(rawSections),
             rawSections);
 
+        var residualAfterHeuristic = CvStructuredImportResidualPlacement.Apply(
+            heuristicSections,
+            rawSections);
+
         var gate = CvStructuredImportAiGate.Decide(
             googleAiEnabled,
             extraction.Quality,
             rawSections,
-            heuristicSections,
-            importAiOptions);
+            residualAfterHeuristic.Sections,
+            importAiOptions,
+            residualAfterHeuristic);
 
-        var sections = heuristicSections;
+        var sections = residualAfterHeuristic.Sections;
+        var usedCatchAll = residualAfterHeuristic.UsedCatchAll;
         var usedAi = false;
         var aiAttempted = false;
         var aiFailed = false;
@@ -81,7 +87,9 @@ internal static class CvPdfImportPipeline
 
                 if (aiSections.Count > 0)
                 {
-                    sections = aiSections;
+                    var residualAfterAi = CvStructuredImportResidualPlacement.Apply(aiSections, rawSections);
+                    sections = residualAfterAi.Sections;
+                    usedCatchAll = residualAfterAi.UsedCatchAll;
                     usedAi = true;
                 }
                 else
@@ -101,11 +109,12 @@ internal static class CvPdfImportPipeline
 
         var notice = CvStructuredImportNotices.Build(
             extraction.Quality,
-            heuristicSections,
+            residualAfterHeuristic.Sections,
             sections,
             usedAi,
             aiAttempted,
-            aiFailed);
+            aiFailed,
+            usedCatchAll);
 
         return new CvStructuredImportPreviewDto(sections, usedAi, notice);
     }

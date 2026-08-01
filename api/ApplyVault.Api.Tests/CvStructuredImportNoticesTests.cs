@@ -92,6 +92,24 @@ public sealed class CvStructuredImportNoticesTests
     }
 
     [Fact]
+    public void Build_CatchAllCustom_ReturnsIncompleteNotice()
+    {
+        var sections = CreateStrongSections();
+
+        var notice = CvStructuredImportNotices.Build(
+            CvPdfExtractionQuality.Good,
+            sections,
+            sections,
+            usedAi: false,
+            aiAttempted: false,
+            aiFailed: false,
+            usedCatchAllCustom: true);
+
+        Assert.Equal(CvStructuredImportNotices.IncompleteReview, notice);
+        Assert.DoesNotContain("lines missing", notice, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Build_AiFailedWithWeakHeuristic_ReturnsIncompleteNotice()
     {
         var weak = new[]

@@ -80,7 +80,7 @@ public sealed class GoogleAiCvStructuredImportClient(
     {
         var prompts = importAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(sections, SerializerOptions);
-        // Catalog owns ADR-0001 section/field rules; preface frames gated (not always-on) invocation.
+        // Catalog owns ADR-0001 section/field rules; preface frames gated invocation + Contact/Custom/link integrity.
         var systemPrompt = ComposeSystemPrompt(prompts.SystemPromptPreface, sectionCatalog.BuildImportSystemPrompt());
 
         return new

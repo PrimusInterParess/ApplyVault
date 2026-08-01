@@ -53,11 +53,14 @@ class StubCvBuilderAssistPanelComponent {
   readonly aiUpdateInstructions = input('');
   readonly selectedSuggestionIds = input<string[]>([]);
   readonly suggestions = input<unknown[]>([]);
+  readonly evaluation = input<unknown>(null);
   readonly disabled = input(false);
   readonly updatingWithAi = input(false);
   readonly generatingSuggestions = input(false);
+  readonly evaluating = input(false);
   readonly aiUpdateError = input<string | null>(null);
   readonly suggestionError = input<string | null>(null);
+  readonly evaluationError = input<string | null>(null);
   readonly closePanel = output<void>();
   readonly aiInstructionsChange = output<string>();
   readonly toggleAiSection = output<string>();
@@ -65,6 +68,8 @@ class StubCvBuilderAssistPanelComponent {
   readonly generateSuggestions = output<void>();
   readonly toggleSuggestion = output<string>();
   readonly applySuggestions = output<void>();
+  readonly evaluateQuality = output<void>();
+  readonly useFindingInAssist = output<unknown>();
 }
 
 describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
@@ -78,6 +83,8 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
   >;
   let structuredLoadSpy: jasmine.Spy;
   let isSaving: ReturnType<typeof signal<boolean>>;
+  let clearAiUpdateError: jasmine.Spy;
+  let updateWithAi: jasmine.Spy;
 
   const sections: CvStructuredSection[] = [
     {
@@ -116,6 +123,8 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     });
     structuredLoadSpy = jasmine.createSpy('load');
     isSaving = signal(false);
+    clearAiUpdateError = jasmine.createSpy('clearAiUpdateError');
+    updateWithAi = jasmine.createSpy('updateWithAi');
 
     await TestBed.configureTestingModule({
       imports: [CvBuilderPageComponent],
@@ -161,18 +170,23 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             savingSectionId: signal<string | null>(null).asReadonly(),
             updatingWithAi: signal(false).asReadonly(),
             generatingSuggestions: signal(false).asReadonly(),
+            evaluating: signal(false).asReadonly(),
             saveError: signal<string | null>(null).asReadonly(),
             aiUpdateError: signal<string | null>(null).asReadonly(),
             suggestionError: signal<string | null>(null).asReadonly(),
+            evaluationError: signal<string | null>(null).asReadonly(),
             suggestions: signal([]).asReadonly(),
+            evaluation: signal(null).asReadonly(),
             lastSuccessfulSaveGeneration: signal(0).asReadonly(),
             load: structuredLoadSpy,
             save: jasmine.createSpy('save').and.returnValue(1),
             clearSaveError: jasmine.createSpy('clearSaveError'),
-            clearAiUpdateError: jasmine.createSpy('clearAiUpdateError'),
+            clearAiUpdateError,
             clearSuggestions: jasmine.createSpy('clearSuggestions'),
-            updateWithAi: jasmine.createSpy('updateWithAi'),
-            generateSuggestions: jasmine.createSpy('generateSuggestions')
+            clearEvaluation: jasmine.createSpy('clearEvaluation'),
+            updateWithAi,
+            generateSuggestions: jasmine.createSpy('generateSuggestions'),
+            evaluateQuality: jasmine.createSpy('evaluateQuality')
           }
         },
         {
@@ -351,5 +365,72 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     TestBed.flushEffects();
 
     expect(structuredLoadSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('useFindingInAssist copies title+detail into instructions and focuses section chip (D5)', () => {
+    const page = component as unknown as {
+      aiUpdateInstructions: () => string;
+      aiUpdateSectionIds: () => string[];
+      useFindingInAssist: (finding: {
+        id: string;
+        dimension: string;
+        severity: string;
+        title: string;
+        detail: string;
+        sectionId: string | null;
+        entryId: string | null;
+      }) => void;
+    };
+
+    page.useFindingInAssist({
+      id: 'f-1',
+      dimension: 'content',
+      severity: 'warning',
+      title: 'Weak summary',
+      detail: 'Add concrete outcomes to the summary.',
+      sectionId: 'sec-1',
+      entryId: null
+    });
+
+    expect(page.aiUpdateInstructions()).toContain('Weak summary');
+    expect(page.aiUpdateInstructions()).toContain('Add concrete outcomes to the summary.');
+    expect(page.aiUpdateInstructions()).toContain('Severity: warning');
+    expect(page.aiUpdateInstructions()).toContain('Dimension: content');
+    expect(page.aiUpdateSectionIds()).toEqual(['sec-1']);
+    expect(clearAiUpdateError).toHaveBeenCalled();
+    expect(updateWithAi).not.toHaveBeenCalled();
+  });
+
+  it('useFindingInAssist leaves section chips unchanged when sectionId is missing or invalid', () => {
+    const page = component as unknown as {
+      aiUpdateInstructions: (() => string) & { set: (value: string) => void };
+      aiUpdateSectionIds: (() => string[]) & { set: (value: string[]) => void };
+      useFindingInAssist: (finding: {
+        id: string;
+        dimension: string;
+        severity: string;
+        title: string;
+        detail: string;
+        sectionId: string | null;
+        entryId: string | null;
+      }) => void;
+    };
+
+    page.aiUpdateSectionIds.set(['sec-1']);
+    page.aiUpdateInstructions.set('prior notes');
+
+    page.useFindingInAssist({
+      id: 'f-2',
+      dimension: 'structure',
+      severity: 'info',
+      title: 'Add skills coverage',
+      detail: 'Consider a dedicated Skills section.',
+      sectionId: 'missing-section',
+      entryId: null
+    });
+
+    expect(page.aiUpdateInstructions()).toContain('Add skills coverage');
+    expect(page.aiUpdateSectionIds()).toEqual(['sec-1']);
+    expect(updateWithAi).not.toHaveBeenCalled();
   });
 });

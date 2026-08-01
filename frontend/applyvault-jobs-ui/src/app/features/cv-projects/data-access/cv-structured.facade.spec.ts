@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
+import { CvQualityEvaluation, CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
 import { createEmptyEntry, createEmptySection } from '../utils/cv-structured-draft.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
@@ -11,6 +11,7 @@ describe('CvStructuredFacade save generations / coalesce', () => {
   let saveSubjects: Subject<CvStructuredDocument>[];
   let getSubjects: Subject<CvStructuredDocument>[];
   let aiUpdateSubjects: Subject<CvStructuredDocument>[];
+  let evaluationSubjects: Subject<CvQualityEvaluation>[];
 
   function section(heading: string): CvStructuredSection {
     return {
@@ -32,6 +33,7 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     saveSubjects = [];
     getSubjects = [];
     aiUpdateSubjects = [];
+    evaluationSubjects = [];
 
     TestBed.configureTestingModule({
       providers: [
@@ -55,7 +57,12 @@ describe('CvStructuredFacade save generations / coalesce', () => {
               return subject.asObservable();
             },
             generateStructuredSuggestions: () =>
-              new Subject<{ suggestions: [] }>().asObservable()
+              new Subject<{ suggestions: [] }>().asObservable(),
+            evaluateStructuredQuality: () => {
+              const subject = new Subject<CvQualityEvaluation>();
+              evaluationSubjects.push(subject);
+              return subject.asObservable();
+            }
           }
         }
       ]
@@ -320,5 +327,50 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     // Server already saved the partial AI body — corrective PUT restores preserved sections.
     expect(saveSubjects.length).toBe(1);
     expect(facade.savingSectionId()).toBe('summary-1');
+  });
+
+  it('evaluateQuality stores session report without mutating structured CV', () => {
+    facade.setStructured(documentWith('Keep me'));
+
+    facade.evaluateQuality();
+
+    expect(evaluationSubjects.length).toBe(1);
+    expect(facade.evaluating()).toBeTrue();
+
+    const report: CvQualityEvaluation = {
+      documentId: 'doc-1',
+      overallScore: 72,
+      summary: 'Solid structure; tighten outcomes.',
+      dimensions: [
+        { id: 'content', score: 70, summary: 'Need more metrics.' },
+        { id: 'structure', score: 80, summary: 'Good coverage.' },
+        { id: 'format', score: 65, summary: 'Date styles vary.' }
+      ],
+      findings: [
+        {
+          id: 'f1',
+          dimension: 'content',
+          severity: 'warning',
+          title: 'Vague bullets',
+          detail: 'Experience bullets lack outcomes.',
+          sectionId: null,
+          entryId: null
+        }
+      ],
+      selfCheckQuestions: ['What is your strongest outcome?']
+    };
+
+    evaluationSubjects[0].next(report);
+    evaluationSubjects[0].complete();
+
+    expect(facade.evaluating()).toBeFalse();
+    expect(facade.evaluation()?.overallScore).toBe(72);
+    expect(facade.evaluation()?.findings.length).toBe(1);
+    expect(facade.structured()?.sections[0].heading).toBe('Keep me');
+    expect(saveSubjects.length).toBe(0);
+
+    facade.clearEvaluation();
+    expect(facade.evaluation()).toBeNull();
+    expect(facade.evaluationError()).toBeNull();
   });
 });

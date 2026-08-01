@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import {
   CvImprovementSuggestion,
+  CvQualityEvaluation,
   CvStructuredDocument,
   CvStructuredSection
 } from '../models/cv-structured.model';
@@ -29,6 +30,7 @@ export class CvStructuredFacade {
   private saveSubscription: Subscription | null = null;
   private aiUpdateSubscription: Subscription | null = null;
   private suggestionsSubscription: Subscription | null = null;
+  private evaluationSubscription: Subscription | null = null;
 
   private loadGeneration = 0;
   private saveGeneration = 0;
@@ -38,12 +40,16 @@ export class CvStructuredFacade {
   readonly savingSectionId = signal<string | null>(null);
   readonly updatingWithAi = signal(false);
   readonly generatingSuggestions = signal(false);
+  readonly evaluating = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
   readonly suggestions = signal<CvImprovementSuggestion[]>([]);
+  /** Session-only evaluation report — never written to storage (D2). */
+  readonly evaluation = signal<CvQualityEvaluation | null>(null);
   readonly error = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
   readonly aiUpdateError = signal<string | null>(null);
   readonly suggestionError = signal<string | null>(null);
+  readonly evaluationError = signal<string | null>(null);
   /** Monotonic generation of the last successfully applied structured save. */
   readonly lastSuccessfulSaveGeneration = signal(0);
 
@@ -175,6 +181,38 @@ export class CvStructuredFacade {
       });
   }
 
+  /**
+   * Run ephemeral CV quality evaluation. Does not mutate Structured CV.
+   * Result stays in memory only — never localStorage / IndexedDB / backend save (D2).
+   */
+  evaluateQuality(maxFindings = 8): void {
+    if (this.evaluating()) {
+      return;
+    }
+
+    this.cancelEvaluation();
+    this.evaluating.set(true);
+    this.evaluationError.set(null);
+
+    this.evaluationSubscription = this.apiService.evaluateStructuredQuality(maxFindings).subscribe({
+      next: (result) => {
+        this.evaluating.set(false);
+        this.evaluation.set(result);
+      },
+      error: (error) => {
+        this.evaluating.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.evaluationError.set(
+          this.readErrorMessage(error, 'Could not evaluate CV quality.')
+        );
+      }
+    });
+  }
+
   clearSaveError(): void {
     this.saveError.set(null);
   }
@@ -190,6 +228,17 @@ export class CvStructuredFacade {
   clearSuggestions(): void {
     this.suggestions.set([]);
     this.suggestionError.set(null);
+  }
+
+  clearEvaluationError(): void {
+    this.evaluationError.set(null);
+  }
+
+  clearEvaluation(): void {
+    this.cancelEvaluation();
+    this.evaluation.set(null);
+    this.evaluationError.set(null);
+    this.evaluating.set(false);
   }
 
   /**
@@ -292,6 +341,11 @@ export class CvStructuredFacade {
   private cancelSuggestions(): void {
     this.suggestionsSubscription?.unsubscribe();
     this.suggestionsSubscription = null;
+  }
+
+  private cancelEvaluation(): void {
+    this.evaluationSubscription?.unsubscribe();
+    this.evaluationSubscription = null;
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

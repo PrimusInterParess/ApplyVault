@@ -41,6 +41,7 @@
         <label class="cv-builder-assist__field">
           <span>Instructions</span>
           <textarea
+            #aiInstructionsField
             rows="4"
             [disabled]="disabled()"
             [value]="aiUpdateInstructions()"
@@ -93,6 +94,77 @@
           (click)="applySuggestions.emit()">
           Apply selected ({{ selectedSuggestionIds().length }})
         </button>
+      </section>
+
+      <section class="cv-builder-assist__block">
+        <h3 class="cv-builder-assist__block-title">Evaluate CV</h3>
+        <p class="cv-builder-assist__hint">
+          Advisory review of content, structure, and format of your content. Does not change your CV.
+        </p>
+        <button
+          type="button"
+          class="cv-builder-assist__secondary"
+          [disabled]="disabled() || evaluating()"
+          (click)="evaluateQuality.emit()">
+          {{ evaluating() ? 'Evaluating…' : 'Evaluate CV' }}
+        </button>
+        @if (evaluationError(); as error) {
+          <p class="cv-builder-assist__error" role="alert">{{ error }}</p>
+        }
+        @if (evaluation(); as report) {
+          <div class="cv-builder-assist__eval-summary">
+            <p class="cv-builder-assist__eval-score">
+              <span class="cv-builder-assist__eval-score-value">{{ report.overallScore }}</span>
+              <span class="cv-builder-assist__eval-score-label">Overall</span>
+            </p>
+            <p class="cv-builder-assist__eval-blurb">{{ report.summary }}</p>
+          </div>
+          <ul class="cv-builder-assist__eval-dimensions">
+            @for (dimension of report.dimensions; track dimension.id) {
+              <li>
+                <strong>{{ dimensionLabel(dimension.id) }}</strong>
+                <span class="cv-builder-assist__eval-dim-score">{{ dimension.score }}</span>
+                <span>{{ dimension.summary }}</span>
+              </li>
+            }
+          </ul>
+          @if (report.findings.length > 0) {
+            <h4 class="cv-builder-assist__subheading">Findings</h4>
+            <ul class="cv-builder-assist__findings">
+              @for (finding of report.findings; track finding.id) {
+                <li
+                  class="cv-builder-assist__finding"
+                  [attr.data-severity]="finding.severity">
+                  <div class="cv-builder-assist__finding-meta">
+                    <span class="cv-builder-assist__finding-severity">{{
+                      severityLabel(finding.severity)
+                    }}</span>
+                    <span class="cv-builder-assist__finding-dim">{{
+                      dimensionLabel(finding.dimension)
+                    }}</span>
+                  </div>
+                  <strong>{{ finding.title }}</strong>
+                  <span>{{ finding.detail }}</span>
+                  <button
+                    type="button"
+                    class="cv-builder-assist__finding-assist"
+                    [disabled]="disabled()"
+                    (click)="onUseFindingInAssist(finding)">
+                    Use in Assist
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (report.selfCheckQuestions.length > 0) {
+            <h4 class="cv-builder-assist__subheading">Self-check questions</h4>
+            <ol class="cv-builder-assist__self-check">
+              @for (question of report.selfCheckQuestions; track question) {
+                <li>{{ question }}</li>
+              }
+            </ol>
+          }
+        }
       </section>
     </div>
   </aside>

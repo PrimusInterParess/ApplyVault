@@ -67,8 +67,9 @@ public sealed class HtmlCvPdfExporter(
 
         await page.SetContentAsync(finalHtml).ConfigureAwait(false);
 
-        // Document templates own page inset via CSS padding; @page margin is 0.
-        // Keep Puppeteer margins at 0 so PDF does not double-inset vs preview.
+        // Document templates own page inset via CSS padding (.cv-body / .cv-page-pad);
+        // @page + Puppeteer margins stay 0 so PDF matches preview and sidebar can full-bleed.
+        // Print CSS clones that padding onto each page fragment (multi-page overflow).
         // CompactLevel spacing is applied in HTML CSS (CvExportCompactCssBuilder), not browser margins.
         _ = options;
 

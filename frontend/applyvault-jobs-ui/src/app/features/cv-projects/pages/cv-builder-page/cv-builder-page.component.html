@@ -233,16 +233,21 @@
     [aiUpdateInstructions]="aiUpdateInstructions()"
     [selectedSuggestionIds]="selectedSuggestionIds()"
     [suggestions]="cvStructured.suggestions()"
+    [evaluation]="cvStructured.evaluation()"
     [disabled]="assistDisabled()"
     [updatingWithAi]="cvStructured.updatingWithAi()"
     [generatingSuggestions]="cvStructured.generatingSuggestions()"
+    [evaluating]="cvStructured.evaluating()"
     [aiUpdateError]="cvStructured.aiUpdateError()"
     [suggestionError]="cvStructured.suggestionError()"
+    [evaluationError]="cvStructured.evaluationError()"
     (closePanel)="closeAssist()"
     (aiInstructionsChange)="updateAiInstructions($event)"
     (toggleAiSection)="toggleAiUpdateSection($event)"
     (updateWithAi)="updateStructuredWithAi()"
     (generateSuggestions)="generateSuggestions()"
     (toggleSuggestion)="toggleSuggestion($event)"
-    (applySuggestions)="applySelectedSuggestions()" />
+    (applySuggestions)="applySelectedSuggestions()"
+    (evaluateQuality)="evaluateQuality()"
+    (useFindingInAssist)="useFindingInAssist($event)" />
 </main>

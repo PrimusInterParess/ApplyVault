@@ -1,6 +1,9 @@
 /* Shared print/PDF rules for Chromium (Puppeteer) multi-page CV export.
-   Page inset is owned by each template shell (document padding / cell padding).
-   @page margin stays 0 so iframe preview and PDF share the same breathing room. */
+   Page inset is owned by each template shell (.cv-body / .cv-page-pad).
+   @page margin stays 0 so iframe preview and PDF share the same breathing room,
+   and Modern sidebar backgrounds can still bleed to the paper edge.
+   box-decoration-break: clone re-applies shell padding on every page fragment
+   so page 2+ keeps the same top/edge inset as page 1 (default export stays 1 page). */
 
 :root {
   --cv-page-pad-y: 14mm;
@@ -15,6 +18,13 @@
 @page {
   size: A4;
   margin: 0;
+}
+
+/* Clone padding/borders onto each printed page fragment (not only page 1). */
+.cv-body,
+.cv-page-pad {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 html,

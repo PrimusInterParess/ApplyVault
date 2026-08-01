@@ -33,14 +33,21 @@
       width: 34%;
       background: var(--cv-sidebar-bg);
       color: var(--cv-sidebar-ink);
-      padding: 16mm 12mm 16mm 18mm;
+      padding: 0;
       vertical-align: top;
     }
     .cv-main {
       width: 66%;
       background: #fff;
-      padding: 16mm 18mm 16mm 14mm;
+      padding: 0;
       vertical-align: top;
+    }
+    /* Padding lives on an inner block so print can clone it onto page 2+ fragments. */
+    .cv-sidebar > .cv-page-pad {
+      padding: 16mm 12mm 16mm 18mm;
+    }
+    .cv-main > .cv-page-pad {
+      padding: 16mm 18mm 16mm 14mm;
     }
     .cv-photo {
       flex: 0 0 auto;
@@ -111,11 +118,15 @@
     <tbody>
       <tr>
         <td class="cv-sidebar">
-          {{ProfilePhotoHtml}}
-          {{SidebarHtml}}
+          <div class="cv-page-pad">
+            {{ProfilePhotoHtml}}
+            {{SidebarHtml}}
+          </div>
         </td>
         <td class="cv-main">
-          {{MainHtml}}
+          <div class="cv-page-pad">
+            {{MainHtml}}
+          </div>
         </td>
       </tr>
     </tbody>

@@ -108,6 +108,41 @@ export interface CvImprovementSuggestion {
   impact: string;
 }
 
+/** Request for ephemeral CV quality evaluation (no JD; not persisted). */
+export interface EvaluateCvQualityRequest {
+  maxFindings?: number;
+}
+
+export type CvQualityEvaluationDimensionId = 'content' | 'structure' | 'format';
+
+export type CvQualityEvaluationSeverity = 'info' | 'warning' | 'critical';
+
+export interface CvQualityEvaluationDimension {
+  readonly id: string;
+  score: number;
+  summary: string;
+}
+
+export interface CvQualityEvaluationFinding {
+  readonly id: string;
+  dimension: string;
+  severity: string;
+  title: string;
+  detail: string;
+  sectionId: string | null;
+  entryId: string | null;
+}
+
+/** Ephemeral evaluation response — session UI state only (D2: do not persist). */
+export interface CvQualityEvaluation {
+  readonly documentId: string;
+  overallScore: number;
+  summary: string;
+  dimensions: CvQualityEvaluationDimension[];
+  findings: CvQualityEvaluationFinding[];
+  selfCheckQuestions: string[];
+}
+
 export const CV_SECTION_TYPES: readonly CvSectionType[] = [
   'Experience',
   'Projects',

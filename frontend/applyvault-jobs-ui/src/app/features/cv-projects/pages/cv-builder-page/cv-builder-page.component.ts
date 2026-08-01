@@ -27,6 +27,7 @@ import {
 } from '../../models/cv-export-template.model';
 import {
   CvImprovementSuggestion,
+  CvQualityEvaluationFinding,
   CvSectionType
 } from '../../models/cv-structured.model';
 import {
@@ -214,6 +215,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.editSession.cancelPendingSave();
     this.cvStructured.clearSuggestions();
+    this.cvStructured.clearEvaluation();
   }
 
   protected selectTemplate(templateId: number): void {
@@ -537,6 +539,37 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.cvStructured.generateSuggestions(sectionIds.length > 0 ? sectionIds : undefined);
   }
 
+  protected evaluateQuality(): void {
+    if (!this.hasSections()) {
+      return;
+    }
+
+    this.editSession.flushSave();
+    this.cvStructured.evaluateQuality();
+  }
+
+  /**
+   * D5: copy evaluation finding into Update-with-instructions; pre-select section chip.
+   * Does not invoke Update CV with AI.
+   */
+  protected useFindingInAssist(finding: CvQualityEvaluationFinding): void {
+    if (this.assistDisabled()) {
+      return;
+    }
+
+    this.aiUpdateInstructions.set(this.findingAssistInstruction(finding));
+
+    const sectionId = finding.sectionId?.trim();
+    if (sectionId) {
+      const matched = this.validSectionIds([sectionId]);
+      if (matched.length > 0) {
+        this.aiUpdateSectionIds.set(matched);
+      }
+    }
+
+    this.cvStructured.clearAiUpdateError();
+  }
+
   protected toggleSuggestion(suggestionId: string): void {
     if (this.assistDisabled()) {
       return;
@@ -588,5 +621,19 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   private suggestionApplyInstruction(suggestion: CvImprovementSuggestion): string {
     return suggestion.suggestedInstruction?.trim() || suggestion.title.trim();
+  }
+
+  private findingAssistInstruction(finding: CvQualityEvaluationFinding): string {
+    const title = finding.title.trim();
+    const detail = finding.detail.trim();
+    const severity = finding.severity.trim();
+    const dimension = finding.dimension.trim();
+    const metaParts = [
+      severity ? `Severity: ${severity}` : '',
+      dimension ? `Dimension: ${dimension}` : ''
+    ].filter(Boolean);
+    const meta = metaParts.length > 0 ? `${metaParts.join(' · ')}\n` : '';
+    const body = detail && detail !== title ? `${title}\n\n${detail}` : title || detail;
+    return `${meta}${body}`.trim();
   }
 }

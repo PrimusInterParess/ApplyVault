@@ -18,6 +18,7 @@ public sealed class CvDocumentsController(
     ICvStructuredImportService cvStructuredImportService,
     ICvStructuredUpdateService cvStructuredUpdateService,
     ICvStructuredSuggestionsService cvStructuredSuggestionsService,
+    ICvStructuredEvaluationService cvStructuredEvaluationService,
     ICvDocumentExportService cvDocumentExportService,
     ICvSectionCatalog sectionCatalog) : ControllerBase
 {
@@ -364,6 +365,27 @@ public sealed class CvDocumentsController(
         try
         {
             return Ok(await cvStructuredSuggestionsService.GenerateAsync(user, request, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("current/structured/ai-evaluation")]
+    public async Task<ActionResult<CvQualityEvaluationDto>> EvaluateStructuredWithAi(
+        [FromBody] EvaluateCvQualityRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await appUserService.GetRequiredUserAsync(cancellationToken);
+
+        try
+        {
+            return Ok(await cvStructuredEvaluationService.EvaluateAsync(user, request, cancellationToken));
         }
         catch (KeyNotFoundException)
         {

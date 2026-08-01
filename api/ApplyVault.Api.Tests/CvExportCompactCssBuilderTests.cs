@@ -25,7 +25,7 @@ public sealed class CvExportCompactCssBuilderTests
         Assert.Contains("--cv-space-section: 4pt !important;", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".cv-classic", css, StringComparison.Ordinal);
         Assert.Contains(".cv-body {\n  padding: 8mm 10mm 8mm 10mm !important;\n}", css, StringComparison.Ordinal);
-        Assert.Contains(".cv-layout .cv-sidebar {\n  padding: 8mm 7mm 8mm 9mm !important;\n}", css, StringComparison.Ordinal);
+        Assert.Contains(".cv-layout .cv-sidebar > .cv-page-pad {\n  padding: 8mm 7mm 8mm 9mm !important;\n}", css, StringComparison.Ordinal);
         Assert.Contains(".cv-layout .cv-sidebar .cv-photo {\n  width: 96px !important;", css, StringComparison.Ordinal);
         Assert.Contains(".cv-body .cv-photo {\n  width: 104px !important;", css, StringComparison.Ordinal);
         Assert.DoesNotContain("width: 80px !important;", css, StringComparison.Ordinal);

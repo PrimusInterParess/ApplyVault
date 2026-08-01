@@ -69,11 +69,11 @@ html body {
   padding: {{level.MinimalPadY}}mm {{level.MinimalPadRight}}mm {{level.MinimalPadY}}mm {{level.MinimalPadX}}mm !important;
 }
 
-.cv-layout .cv-sidebar {
+.cv-layout .cv-sidebar > .cv-page-pad {
   padding: {{level.PadY}}mm {{level.InnerGutterMm}}mm {{level.PadY}}mm {{level.PadX}}mm !important;
 }
 
-.cv-layout .cv-main {
+.cv-layout .cv-main > .cv-page-pad {
   padding: {{level.PadY}}mm {{level.PadX}}mm {{level.PadY}}mm {{level.MainInnerGutterMm}}mm !important;
 }
 

@@ -318,6 +318,45 @@ public sealed record CvImprovementSuggestionDto(
     string Impact
 );
 
+/// <summary>
+/// Request for ephemeral CV quality evaluation (content / structure / format).
+/// Reserved for later JD matching: JobDescription (unused in v1 — do not send).
+/// </summary>
+public sealed record EvaluateCvQualityRequest(
+    int MaxFindings = 8
+    // Reserved later: string? JobDescription = null
+);
+
+/// <summary>
+/// Ephemeral CV quality evaluation response. Not persisted.
+/// Reserved for later JD matching: JobFit (unused in v1).
+/// </summary>
+public sealed record CvQualityEvaluationDto(
+    Guid DocumentId,
+    int OverallScore,
+    string Summary,
+    IReadOnlyList<CvQualityEvaluationDimensionDto> Dimensions,
+    IReadOnlyList<CvQualityEvaluationFindingDto> Findings,
+    IReadOnlyList<string> SelfCheckQuestions
+    // Reserved later: CvQualityJobFitDto? JobFit = null
+);
+
+public sealed record CvQualityEvaluationDimensionDto(
+    string Id,
+    int Score,
+    string Summary
+);
+
+public sealed record CvQualityEvaluationFindingDto(
+    string Id,
+    string Dimension,
+    string Severity,
+    string Title,
+    string Detail,
+    Guid? SectionId,
+    Guid? EntryId
+);
+
 public sealed record CvStructuredSectionWriteDto(
     Guid? Id,
     string Heading,

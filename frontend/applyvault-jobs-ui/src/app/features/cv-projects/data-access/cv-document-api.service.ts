@@ -11,7 +11,9 @@ import {
 } from '../models/cv-document.model';
 import {
   CvImprovementSuggestions,
+  CvQualityEvaluation,
   CvStructuredDocument,
+  EvaluateCvQualityRequest,
   GenerateCvImprovementSuggestionsRequest,
   SaveCvStructuredDocumentRequest,
   UpdateCvStructuredWithAiRequest
@@ -190,6 +192,16 @@ export class CvDocumentApiService {
 
     return this.httpClient.post<CvImprovementSuggestions>(
       `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-suggestions`,
+      request
+    );
+  }
+
+  /** Ephemeral quality evaluation — response must stay in-memory only (D2). */
+  evaluateStructuredQuality(maxFindings = 8): Observable<CvQualityEvaluation> {
+    const request: EvaluateCvQualityRequest = { maxFindings };
+
+    return this.httpClient.post<CvQualityEvaluation>(
+      `${this.apiConfig.baseUrl}/cv-documents/current/structured/ai-evaluation`,
       request
     );
   }

@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
@@ -20,7 +20,7 @@ import {
   resolveCvExportPersonName,
   resolveCvExportTemplateLabel
 } from '../utils/cv-export-download-file-name.util';
-import { hydrateStructuredDocument, toSaveRequest } from '../utils/cv-structured-draft.util';
+import { toSaveRequest } from '../utils/cv-structured-draft.util';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentFacade {
@@ -30,11 +30,7 @@ export class CvDocumentFacade {
   private readonly sanitizer = inject(DomSanitizer);
   private loadSubscription: Subscription | null = null;
   private uploadSubscription: Subscription | null = null;
-  private reimportSubscription: Subscription | null = null;
-  private deleteSubscription: Subscription | null = null;
   private startBlankSubscription: Subscription | null = null;
-  private downloadOriginalSubscription: Subscription | null = null;
-  private downloadFormattedSubscription: Subscription | null = null;
   private downloadFormattedFileSubscription: Subscription | null = null;
   private exportHtmlPreviewSubscription: Subscription | null = null;
   private exportHtmlPreviewGeneration = 0;
@@ -46,17 +42,11 @@ export class CvDocumentFacade {
   private profilePhotoDeleteSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private profilePhotoObjectUrl: string | null = null;
-  private previewObjectUrl: string | null = null;
-  private previewBlob: Blob | null = null;
 
   readonly loading = signal(false);
   readonly uploading = signal(false);
-  readonly reimporting = signal(false);
-  readonly deleting = signal(false);
   readonly startingBlank = signal(false);
-  readonly downloadingOriginal = signal(false);
   readonly downloadingFormatted = signal(false);
-  readonly previewLoading = signal(false);
   readonly exportHtmlPreviewLoading = signal(false);
   readonly loadingProfilePhoto = signal(false);
   readonly uploadingProfilePhoto = signal(false);
@@ -65,22 +55,13 @@ export class CvDocumentFacade {
   readonly importSummary = signal<CvStructuredImportSummary | null>(null);
   readonly error = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
-  readonly reimportError = signal<string | null>(null);
-  readonly deleteError = signal<string | null>(null);
   readonly startBlankError = signal<string | null>(null);
-  readonly downloadOriginalError = signal<string | null>(null);
   readonly downloadFormattedError = signal<string | null>(null);
-  readonly previewError = signal<string | null>(null);
   readonly exportHtmlPreviewError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
   readonly selectedExportTemplateId = signal(this.readStoredExportTemplateId());
-  readonly previewOpen = signal(false);
-  readonly previewPageCount = signal<number | null>(null);
-  readonly previewExceedsLimit = signal(false);
-  readonly previewNotice = signal<string | null>(null);
-  readonly previewBlobUrl = signal<SafeResourceUrl | null>(null);
-  /** Sandboxed iframe srcdoc for M1 fidelity preview (strategy A). */
+  /** Sandboxed iframe srcdoc for Check-export fidelity preview. */
   readonly exportHtmlPreviewSrcdoc = signal<SafeHtml | null>(null);
   /** Additive preview notice from X-Cv-Export-Notice (canvas). */
   readonly exportHtmlPreviewNotice = signal<string | null>(null);
@@ -88,8 +69,6 @@ export class CvDocumentFacade {
   readonly exportHtmlPreviewCompactLevel = signal<number | null>(null);
 
   readonly hasDocument = computed(() => this.document() !== null);
-
-  readonly extracting = computed(() => this.uploading() || this.reimporting());
 
   constructor() {
     effect(() => {
@@ -111,13 +90,6 @@ export class CvDocumentFacade {
         this.resetState();
         this.load();
       }
-    });
-
-    effect(() => {
-      // Structured updates invalidate PDF cache; keep last export HTML until the
-      // next preview response arrives (avoid blank canvas during save/refresh).
-      this.cvStructured.structured();
-      this.clearFormattedPreview();
     });
   }
 
@@ -155,7 +127,6 @@ export class CvDocumentFacade {
     this.uploading.set(true);
     this.uploadError.set(null);
     this.importSummary.set(null);
-    this.clearFormattedPreview();
     this.clearProfilePhoto();
 
     this.uploadSubscription = this.apiService
@@ -174,7 +145,8 @@ export class CvDocumentFacade {
       .subscribe({
         next: ({ structured }) => {
           this.uploading.set(false);
-          this.cvStructured.setStructured(hydrateStructuredDocument(structured));
+          // Raw DTO — setStructured / hydrateForContentEditing is the sole hydrate+normalize ingress.
+          this.cvStructured.setStructured(structured);
           this.persistExportPrefs();
           onComplete?.();
         },
@@ -190,102 +162,11 @@ export class CvDocumentFacade {
       });
   }
 
-  reimportStructured(): void {
-    if (!this.document()) {
-      return;
-    }
-
-    this.cancelReimport();
-    this.reimporting.set(true);
-    this.reimportError.set(null);
-
-    this.reimportSubscription = this.apiService.reimportStructured().subscribe({
-      next: (result) => {
-        this.reimporting.set(false);
-        this.importSummary.set(result.import);
-        this.clearFormattedPreview();
-
-        if (result.structured) {
-          this.cvStructured.setStructured(result.structured);
-        } else {
-          this.cvStructured.load();
-        }
-      },
-      error: (error) => {
-        this.reimporting.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.reimportError.set(this.readErrorMessage(error, 'Could not re-import CV sections.'));
-      }
-    });
-  }
-
-  delete(): void {
-    this.cancelDelete();
-    this.deleting.set(true);
-    this.deleteError.set(null);
-
-    this.deleteSubscription = this.apiService.delete().subscribe({
-      next: () => {
-        this.deleting.set(false);
-        this.document.set(null);
-        this.importSummary.set(null);
-        this.clearFormattedPreview();
-        this.clearProfilePhoto();
-      },
-      error: (error) => {
-        this.deleting.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.deleteError.set(this.readErrorMessage(error, 'Could not delete your CV.'));
-      }
-    });
-  }
-
-  startBlank(): void {
-    this.cancelStartBlank();
-    this.startingBlank.set(true);
-    this.startBlankError.set(null);
-    this.importSummary.set(null);
-    this.clearFormattedPreview();
-    this.clearProfilePhoto();
-
-    this.startBlankSubscription = this.apiService.startBlank().subscribe({
-      next: (document) => {
-        this.startingBlank.set(false);
-        // Keep optimistic gallery/edit Template selection; blank docs default to Modern.
-        this.setDocument(document, { applyExportPrefs: false });
-        this.cvStructured.setStructured({
-          documentId: document.id,
-          structuredImportedAt: null,
-          sections: []
-        });
-        this.persistExportPrefs();
-      },
-      error: (error) => {
-        this.startingBlank.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.startBlankError.set(this.readErrorMessage(error, 'Could not start a new CV.'));
-      }
-    });
-  }
-
   startBlankWithStarterSections(onComplete?: () => void): void {
     this.cancelStartBlank();
     this.startingBlank.set(true);
     this.startBlankError.set(null);
     this.importSummary.set(null);
-    this.clearFormattedPreview();
     this.clearProfilePhoto();
 
     this.startBlankSubscription = this.apiService
@@ -300,7 +181,8 @@ export class CvDocumentFacade {
       .subscribe({
         next: (structured) => {
           this.startingBlank.set(false);
-          this.cvStructured.setStructured(hydrateStructuredDocument(structured));
+          // Raw DTO — setStructured / hydrateForContentEditing is the sole hydrate+normalize ingress.
+          this.cvStructured.setStructured(structured);
           const current = this.document();
 
           if (current) {
@@ -329,40 +211,9 @@ export class CvDocumentFacade {
       });
   }
 
-  downloadOriginal(): void {
-    const document = this.document();
-
-    if (!document) {
-      return;
-    }
-
-    this.cancelDownloadOriginal();
-    this.downloadingOriginal.set(true);
-    this.downloadOriginalError.set(null);
-
-    this.downloadOriginalSubscription = this.apiService.downloadOriginalContent().subscribe({
-      next: (blob) => {
-        this.downloadingOriginal.set(false);
-        this.triggerDownload(blob, document.originalFileName);
-      },
-      error: (error) => {
-        this.downloadingOriginal.set(false);
-
-        if (isRequestAborted(error)) {
-          return;
-        }
-
-        this.downloadOriginalError.set(
-          this.readErrorMessage(error, 'Could not download your original CV PDF.')
-        );
-      }
-    });
-  }
-
   setExportTemplateId(templateId: number): void {
     const normalized = normalizeCvExportTemplateId(templateId);
     this.selectedExportTemplateId.set(normalized);
-    this.clearFormattedPreview();
     // Keep last HTML srcdoc until refreshExportHtmlPreview replaces it.
     this.writeTemplateCache(normalized);
     this.persistExportPrefs();
@@ -430,11 +281,7 @@ export class CvDocumentFacade {
       });
   }
 
-  downloadFormatted(): void {
-    this.previewFormatted();
-  }
-
-  /** Fetch and save the formatted PDF to disk (does not require the preview modal). */
+  /** Fetch and save the formatted PDF to disk (does not require a preview modal). */
   downloadFormattedFile(): void {
     const document = this.document();
 
@@ -475,72 +322,6 @@ export class CvDocumentFacade {
       });
   }
 
-  previewFormatted(): void {
-    const document = this.document();
-
-    if (!this.canExportFormatted()) {
-      this.previewError.set(
-        document
-          ? 'Save your CV sections before previewing a PDF.'
-          : 'Create or upload a CV before previewing a PDF.'
-      );
-      this.downloadFormattedError.set(this.previewError());
-      return;
-    }
-
-    const templateId = this.selectedExportTemplateId();
-
-    this.cancelDownloadFormatted();
-    this.clearFormattedPreviewBlob();
-    this.previewOpen.set(true);
-    this.previewLoading.set(true);
-    this.downloadingFormatted.set(true);
-    this.downloadFormattedError.set(null);
-    this.previewError.set(null);
-    this.previewPageCount.set(null);
-    this.previewExceedsLimit.set(false);
-    this.previewNotice.set(null);
-
-    this.downloadFormattedSubscription = this.apiService
-      .downloadFormattedPdf({ templateId })
-      .subscribe({
-        next: (result) => {
-          this.previewLoading.set(false);
-          this.downloadingFormatted.set(false);
-          this.previewPageCount.set(result.pageCount);
-          this.previewExceedsLimit.set(result.exceedsLimit);
-          this.previewNotice.set(result.notice);
-          this.setFormattedPreviewBlob(result.blob);
-        },
-        error: (error) => {
-          this.previewLoading.set(false);
-          this.downloadingFormatted.set(false);
-
-          if (isRequestAborted(error)) {
-            return;
-          }
-
-          const message = this.readErrorMessage(error, 'Could not preview your formatted CV PDF.');
-          this.previewError.set(message);
-          this.downloadFormattedError.set(message);
-        }
-      });
-  }
-
-  downloadFormattedFromPreview(): void {
-    const document = this.document();
-
-    if (!document || !this.previewBlob) {
-      return;
-    }
-
-    this.triggerDownload(this.previewBlob, this.buildFormattedExportFileName(this.selectedExportTemplateId()));
-  }
-
-  closePreview(): void {
-    this.clearFormattedPreview();
-  }
-
   uploadProfilePhoto(file: File): void {
     if (!this.document()) {
       return;
@@ -549,7 +330,6 @@ export class CvDocumentFacade {
     this.cancelProfilePhotoUpload();
     this.uploadingProfilePhoto.set(true);
     this.profilePhotoError.set(null);
-    this.clearFormattedPreview();
     this.clearExportHtmlPreview();
 
     this.profilePhotoUploadSubscription = this.apiService.uploadProfilePhoto(file).subscribe({
@@ -579,7 +359,6 @@ export class CvDocumentFacade {
     this.cancelProfilePhotoDelete();
     this.deletingProfilePhoto.set(true);
     this.profilePhotoError.set(null);
-    this.clearFormattedPreview();
     this.clearExportHtmlPreview();
 
     this.profilePhotoDeleteSubscription = this.apiService.deleteProfilePhoto().subscribe({
@@ -650,13 +429,6 @@ export class CvDocumentFacade {
     }
   }
 
-  private setFormattedPreviewBlob(blob: Blob): void {
-    this.clearFormattedPreviewBlob();
-    this.previewBlob = blob;
-    this.previewObjectUrl = URL.createObjectURL(blob);
-    this.previewBlobUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.previewObjectUrl));
-  }
-
   private canExportFormatted(): boolean {
     const document = this.document();
 
@@ -671,17 +443,6 @@ export class CvDocumentFacade {
     return (this.cvStructured.structured()?.sections.length ?? 0) > 0;
   }
 
-  private clearFormattedPreview(): void {
-    this.cancelDownloadFormatted();
-    this.previewOpen.set(false);
-    this.previewLoading.set(false);
-    this.previewError.set(null);
-    this.previewPageCount.set(null);
-    this.previewExceedsLimit.set(false);
-    this.previewNotice.set(null);
-    this.clearFormattedPreviewBlob();
-  }
-
   private clearExportHtmlPreview(): void {
     this.exportHtmlPreviewGeneration++;
     this.cancelExportHtmlPreview();
@@ -692,40 +453,21 @@ export class CvDocumentFacade {
     this.exportHtmlPreviewCompactLevel.set(null);
   }
 
-  private clearFormattedPreviewBlob(): void {
-    if (this.previewObjectUrl) {
-      URL.revokeObjectURL(this.previewObjectUrl);
-      this.previewObjectUrl = null;
-    }
-
-    this.previewBlob = null;
-    this.previewBlobUrl.set(null);
-  }
-
   private resetState(): void {
     this.cancelLoad();
     this.cancelUpload();
-    this.cancelReimport();
-    this.cancelDelete();
     this.cancelStartBlank();
-    this.cancelDownloadOriginal();
-    this.cancelDownloadFormatted();
     this.cancelDownloadFormattedFile();
     this.cancelExportHtmlPreview();
     this.cancelExportPrefs();
     this.cancelProfilePhotoUpload();
     this.cancelProfilePhotoDelete();
-    this.clearFormattedPreview();
     this.clearExportHtmlPreview();
     this.clearProfilePhoto();
     this.loading.set(false);
     this.uploading.set(false);
-    this.reimporting.set(false);
-    this.deleting.set(false);
     this.startingBlank.set(false);
-    this.downloadingOriginal.set(false);
     this.downloadingFormatted.set(false);
-    this.previewLoading.set(false);
     this.exportHtmlPreviewLoading.set(false);
     this.uploadingProfilePhoto.set(false);
     this.deletingProfilePhoto.set(false);
@@ -733,12 +475,8 @@ export class CvDocumentFacade {
     this.importSummary.set(null);
     this.error.set(null);
     this.uploadError.set(null);
-    this.reimportError.set(null);
-    this.deleteError.set(null);
     this.startBlankError.set(null);
-    this.downloadOriginalError.set(null);
     this.downloadFormattedError.set(null);
-    this.previewError.set(null);
     this.exportHtmlPreviewError.set(null);
   }
 
@@ -752,29 +490,9 @@ export class CvDocumentFacade {
     this.uploadSubscription = null;
   }
 
-  private cancelReimport(): void {
-    this.reimportSubscription?.unsubscribe();
-    this.reimportSubscription = null;
-  }
-
-  private cancelDelete(): void {
-    this.deleteSubscription?.unsubscribe();
-    this.deleteSubscription = null;
-  }
-
   private cancelStartBlank(): void {
     this.startBlankSubscription?.unsubscribe();
     this.startBlankSubscription = null;
-  }
-
-  private cancelDownloadOriginal(): void {
-    this.downloadOriginalSubscription?.unsubscribe();
-    this.downloadOriginalSubscription = null;
-  }
-
-  private cancelDownloadFormatted(): void {
-    this.downloadFormattedSubscription?.unsubscribe();
-    this.downloadFormattedSubscription = null;
   }
 
   private cancelDownloadFormattedFile(): void {

@@ -18,9 +18,13 @@ export function normalizeSectionForEditing(section: CvStructuredSection): CvStru
 }
 
 /**
- * Clone + normalize every section for Content hydrate / open:
+ * Clone + normalize every section for Structured CV edit hydrate (ADR-0003 edit shapes):
  * Summary title→summary, Skills bullets↔techStack, Contact summary→bullets,
  * then Contact modern expand (import-legacy + valued multi-bullet channels).
+ *
+ * Single ingress: call only via `CvStructuredFacade.hydrateForContentEditing` /
+ * `setStructured` (not from the page). Must be idempotent: normalize(normalize(x))
+ * is comparable-equal to normalize(x) (see util spec).
  */
 export function normalizeSectionsForEditing(
   sections: readonly CvStructuredSection[]

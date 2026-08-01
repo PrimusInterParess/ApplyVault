@@ -1,0 +1,89 @@
+@if (open()) {
+  <div
+    class="cv-builder__drawer-backdrop"
+    role="presentation"
+    (click)="closePanel.emit()"></div>
+  <aside
+    id="cv-builder-structure-panel"
+    class="cv-builder__drawer cv-builder__drawer--structure"
+    role="dialog"
+    aria-modal="true"
+    aria-label="CV section structure">
+    <header class="cv-builder__drawer-header">
+      <div class="cv-builder__drawer-heading">
+        <p class="cv-builder__drawer-eyebrow">Structure</p>
+        <h2 class="cv-builder__drawer-title">Sections</h2>
+      </div>
+      <button
+        type="button"
+        class="cv-builder__drawer-close"
+        (click)="closePanel.emit()"
+        aria-label="Close structure">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <div class="cv-builder__drawer-body">
+      @if (sections().length === 0) {
+        <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
+      } @else {
+        <ul class="cv-builder__structure-list">
+          @for (section of sections(); track section.id) {
+            <li class="cv-builder__structure-item">
+              <span class="cv-builder__structure-label">
+                <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
+                <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
+              </span>
+              <span class="cv-builder__structure-actions">
+                <button
+                  type="button"
+                  class="cv-builder__icon-btn"
+                  [disabled]="!canMutate() || !canMoveSectionUp(section.id)"
+                  aria-label="Move section up"
+                  (click)="moveSection.emit({ sectionId: section.id, direction: -1 })">
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  class="cv-builder__icon-btn"
+                  [disabled]="!canMutate() || !canMoveSectionDown(section.id)"
+                  aria-label="Move section down"
+                  (click)="moveSection.emit({ sectionId: section.id, direction: 1 })">
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  class="cv-builder__structure-remove"
+                  [disabled]="!canMutate()"
+                  aria-label="Remove section"
+                  (click)="removeSection.emit(section.id)">
+                  Remove
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+      <div class="cv-builder__structure-add">
+        <label class="cv-builder__structure-add-field">
+          <span class="cv-builder__sr-only">Section type</span>
+          <select
+            class="cv-builder__structure-select"
+            [value]="pendingAddSectionType()"
+            [disabled]="!canMutate() || structureSectionTypes().length === 0"
+            (change)="onPendingAddSectionTypeChange($event)">
+            @for (sectionType of structureSectionTypes(); track sectionType) {
+              <option [value]="sectionType">{{ sectionType }}</option>
+            }
+          </select>
+        </label>
+        <button
+          type="button"
+          class="cv-builder__structure-add-btn"
+          [disabled]="!canMutate() || structureSectionTypes().length === 0"
+          (click)="addSection.emit()">
+          Add section
+        </button>
+      </div>
+    </div>
+  </aside>
+}

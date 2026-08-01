@@ -8,6 +8,10 @@ import {
   CvStructuredDocument,
   CvStructuredSection
 } from '../models/cv-structured.model';
+import {
+  assistMergeRequiresPersist,
+  mergeAssistStructuredUpdate
+} from '../utils/cv-structured-assist-merge.util';
 import { toSaveRequest, hydrateStructuredDocument } from '../utils/cv-structured-draft.util';
 import { normalizeSectionsForEditing } from '../utils/cv-structured-edit-normalizer.util';
 import { CvDocumentApiService } from './cv-document-api.service';
@@ -15,7 +19,6 @@ import { CvDocumentApiService } from './cv-document-api.service';
 type PendingStructuredSave = {
   sections: readonly CvStructuredSection[];
   sectionId: string | null;
-  orderOnly: boolean;
   generation: number;
 };
 
@@ -33,7 +36,6 @@ export class CvStructuredFacade {
 
   readonly loading = signal(false);
   readonly savingSectionId = signal<string | null>(null);
-  readonly savingSectionOrder = signal(false);
   readonly updatingWithAi = signal(false);
   readonly generatingSuggestions = signal(false);
   readonly structured = signal<CvStructuredDocument | null>(null);
@@ -45,9 +47,7 @@ export class CvStructuredFacade {
   /** Monotonic generation of the last successfully applied structured save. */
   readonly lastSuccessfulSaveGeneration = signal(0);
 
-  readonly isSaving = computed(
-    () => this.savingSectionId() !== null || this.savingSectionOrder()
-  );
+  readonly isSaving = computed(() => this.savingSectionId() !== null);
 
   load(): void {
     const generation = ++this.loadGeneration;
@@ -62,7 +62,7 @@ export class CvStructuredFacade {
         }
 
         this.loading.set(false);
-        this.structured.set(this.hydrateForContentEditing(document));
+        this.setStructured(document);
       },
       error: (error) => {
         if (generation !== this.loadGeneration) {
@@ -95,19 +95,6 @@ export class CvStructuredFacade {
     this.enqueueOrStartSave({
       sections,
       sectionId,
-      orderOnly: false,
-      generation
-    });
-    return generation;
-  }
-
-  saveSectionOrder(sections: readonly CvStructuredSection[]): number {
-    const generation = ++this.saveGeneration;
-    this.saveError.set(null);
-    this.enqueueOrStartSave({
-      sections,
-      sectionId: null,
-      orderOnly: true,
       generation
     });
     return generation;
@@ -124,12 +111,25 @@ export class CvStructuredFacade {
     this.updatingWithAi.set(true);
     this.aiUpdateError.set(null);
 
+    // Merge against live local state at response time (user edits during wait stay).
     this.aiUpdateSubscription = this.apiService
       .updateStructuredWithAi(trimmedInstructions, sectionIds)
       .subscribe({
         next: (document) => {
           this.updatingWithAi.set(false);
-          this.structured.set(this.hydrateForContentEditing(document));
+
+          // API persists the model body as a full replace; models often return a
+          // partial/focus-only document. Merge by section id so non-targeted
+          // sections (and Contact) survive, then corrective-save when needed.
+          const merged = mergeAssistStructuredUpdate(this.structured(), document, sectionIds);
+          this.setStructured(merged);
+
+          const applied = this.structured();
+          const aiNormalized = this.hydrateForContentEditing(document);
+          if (applied && assistMergeRequiresPersist(aiNormalized, applied)) {
+            const persistSectionId = sectionIds?.[0] ?? applied.sections[0]?.id ?? 'assist-merge';
+            this.save(applied.sections, persistSectionId);
+          }
         },
         error: (error) => {
           this.updatingWithAi.set(false);
@@ -192,6 +192,10 @@ export class CvStructuredFacade {
     this.suggestionError.set(null);
   }
 
+  /**
+   * Single Structured CV edit ingress: pass the raw API DTO (do not pre-hydrate).
+   * Applies `hydrateForContentEditing` (hydrate + ADR-0003 edit normalize).
+   */
   setStructured(document: CvStructuredDocument): void {
     this.structured.set(this.hydrateForContentEditing(document));
   }
@@ -200,8 +204,9 @@ export class CvStructuredFacade {
    * Hydrate API payload and normalize edit slots (Summary/Skills/Contact),
    * including Contact modern expand + absorb/dedupe so Minimal/Modern canvases
    * never show unlabeled orphans beside empty Email/Phone/LinkedIn starters.
+   * Sole normalize path for edit (ADR-0003); keep idempotent — see util specs.
    */
-  private hydrateForContentEditing(document: CvStructuredDocument): CvStructuredDocument {
+  hydrateForContentEditing(document: CvStructuredDocument): CvStructuredDocument {
     const hydrated = hydrateStructuredDocument(document);
 
     return {
@@ -215,7 +220,7 @@ export class CvStructuredFacade {
     if (this.saveSubscription) {
       // Keep only the latest intent; let the in-flight PUT finish, then send coalesced payload.
       this.pendingSave = request;
-      this.applySavingFlags(request);
+      this.savingSectionId.set(request.sectionId);
       return;
     }
 
@@ -223,7 +228,7 @@ export class CvStructuredFacade {
   }
 
   private startSave(request: PendingStructuredSave): void {
-    this.applySavingFlags(request);
+    this.savingSectionId.set(request.sectionId);
 
     this.saveSubscription = this.apiService.saveStructured(toSaveRequest(request.sections)).subscribe({
       next: (document) => {
@@ -239,12 +244,12 @@ export class CvStructuredFacade {
         }
 
         if (request.generation !== this.saveGeneration) {
-          this.clearSavingFlags();
+          this.savingSectionId.set(null);
           return;
         }
 
-        this.clearSavingFlags();
-        this.structured.set(this.hydrateForContentEditing(document));
+        this.savingSectionId.set(null);
+        this.setStructured(document);
         this.lastSuccessfulSaveGeneration.set(request.generation);
       },
       error: (error) => {
@@ -259,7 +264,7 @@ export class CvStructuredFacade {
           return;
         }
 
-        this.clearSavingFlags();
+        this.savingSectionId.set(null);
 
         if (isRequestAborted(error)) {
           return;
@@ -269,30 +274,9 @@ export class CvStructuredFacade {
           return;
         }
 
-        this.saveError.set(
-          this.readErrorMessage(
-            error,
-            request.orderOnly ? 'Could not save section order.' : 'Could not save structured CV content.'
-          )
-        );
+        this.saveError.set(this.readErrorMessage(error, 'Could not save structured CV content.'));
       }
     });
-  }
-
-  private applySavingFlags(request: PendingStructuredSave): void {
-    if (request.orderOnly) {
-      this.savingSectionId.set(null);
-      this.savingSectionOrder.set(true);
-      return;
-    }
-
-    this.savingSectionId.set(request.sectionId);
-    this.savingSectionOrder.set(false);
-  }
-
-  private clearSavingFlags(): void {
-    this.savingSectionId.set(null);
-    this.savingSectionOrder.set(false);
   }
 
   private cancelLoadSubscription(): void {

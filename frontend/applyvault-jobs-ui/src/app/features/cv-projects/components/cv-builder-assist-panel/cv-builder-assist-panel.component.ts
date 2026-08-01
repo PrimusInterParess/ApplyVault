@@ -1,7 +1,6 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
-import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import { CvImprovementSuggestion, CvStructuredSection } from '../../models/cv-structured.model';
 
 @Component({
@@ -11,8 +10,6 @@ import { CvImprovementSuggestion, CvStructuredSection } from '../../models/cv-st
   styleUrl: './cv-builder-assist-panel.component.scss'
 })
 export class CvBuilderAssistPanelComponent {
-  protected readonly cvStructured = inject(CvStructuredFacade);
-
   readonly open = input(false);
   readonly sections = input<readonly CvStructuredSection[]>([]);
   readonly aiUpdateSectionIds = input<readonly string[]>([]);
@@ -20,6 +17,10 @@ export class CvBuilderAssistPanelComponent {
   readonly selectedSuggestionIds = input<readonly string[]>([]);
   readonly suggestions = input<readonly CvImprovementSuggestion[]>([]);
   readonly disabled = input(false);
+  readonly updatingWithAi = input(false);
+  readonly generatingSuggestions = input(false);
+  readonly aiUpdateError = input<string | null>(null);
+  readonly suggestionError = input<string | null>(null);
 
   readonly closePanel = output<void>();
   readonly aiInstructionsChange = output<string>();

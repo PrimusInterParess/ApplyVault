@@ -1,0 +1,89 @@
+@if (open()) {
+  <div
+    id="cv-builder-projects-panel"
+    class="cv-builder__projects-panel"
+    role="dialog"
+    aria-label="Add project summaries">
+    <div class="cv-builder__structure-head">
+      <p class="cv-builder__structure-title">Add projects</p>
+      <button type="button" class="cv-builder__icon-btn" (click)="closePanel.emit()" aria-label="Close projects">
+        ×
+      </button>
+    </div>
+    <p class="cv-builder__projects-hint">
+      Select saved summaries to add as Projects entries.
+    </p>
+    <div class="cv-builder__projects-actions">
+      <button
+        type="button"
+        class="cv-builder__projects-secondary"
+        [disabled]="loadingSummaries()"
+        (click)="refresh.emit()">
+        {{ loadingSummaries() ? 'Refreshing…' : 'Refresh' }}
+      </button>
+      <button
+        type="button"
+        class="cv-builder__structure-add-btn"
+        [disabled]="!canImportSelected()"
+        (click)="importSelected.emit()">
+        {{
+          importingBusy()
+            ? 'Adding…'
+            : selectedImportableCount() > 0
+              ? `Add selected (${selectedImportableCount()})`
+              : 'Add selected'
+        }}
+      </button>
+    </div>
+    @if (saveError(); as projectImportError) {
+      <p class="cv-builder__error" role="alert">{{ projectImportError }}</p>
+    }
+    @if (summariesError(); as summariesError) {
+      <p class="cv-builder__error" role="alert">{{ summariesError }}</p>
+    }
+    @if (loadingSummaries() && summaries().length === 0) {
+      <p class="cv-builder__structure-empty" aria-busy="true">Loading summaries…</p>
+    } @else if (summaries().length === 0) {
+      <p class="cv-builder__structure-empty">
+        No saved summaries yet.
+        <a routerLink="/cv-projects" class="cv-builder__projects-link">Generate on Projects</a>
+      </p>
+    } @else {
+      <ul class="cv-builder__projects-list" aria-label="Saved project summaries">
+        @for (summary of summaries(); track summary.id) {
+          <li>
+            <button
+              type="button"
+              class="cv-builder__projects-item"
+              [class.cv-builder__projects-item--selected]="isSelected(summary.id)"
+              [class.cv-builder__projects-item--imported]="isImported(summary.id)"
+              [disabled]="isImported(summary.id) || !canToggleSelection()"
+              [attr.aria-pressed]="isSelected(summary.id)"
+              (click)="toggleSelection.emit(summary.id)">
+              <span class="cv-builder__projects-item-top">
+                <span class="cv-builder__projects-item-copy">
+                  <span class="cv-builder__projects-item-title">{{ summary.cvTitle }}</span>
+                  <span class="cv-builder__projects-item-source">{{ summary.fullName }}</span>
+                </span>
+                @if (isImported(summary.id)) {
+                  <span class="cv-builder__projects-badge">Added</span>
+                } @else if (isSelected(summary.id)) {
+                  <span class="cv-builder__projects-badge">Selected</span>
+                }
+              </span>
+              <span class="cv-builder__projects-item-meta">
+                @if (summary.primaryLanguage) {
+                  <span>{{ summary.primaryLanguage }}</span>
+                }
+                <span>{{ summary.cvBullets.length }} bullets</span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+      <a routerLink="/cv-projects" class="cv-builder__projects-link cv-builder__projects-link--footer">
+        Manage on Projects
+      </a>
+    }
+  </div>
+}

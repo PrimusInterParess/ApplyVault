@@ -24,8 +24,6 @@
           </div>
           @if (profilePhotoUrl()) {
             <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
-          } @else if (sampleMode() && !editable()) {
-            <div class="cv-export-preview__photo cv-export-preview__photo--placeholder" aria-hidden="true"></div>
           }
         </header>
         <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
@@ -35,8 +33,6 @@
         <aside class="cv-export-preview__sidebar">
           @if (profilePhotoUrl()) {
             <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
-          } @else if (sampleMode() && !editable()) {
-            <div class="cv-export-preview__photo cv-export-preview__photo--placeholder" aria-hidden="true"></div>
           }
           <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().sidebar }" />
         </aside>
@@ -46,7 +42,7 @@
       </div>
     }
 
-    @if (editable() && !sampleMode() && addableTypes().length > 0) {
+    @if (editable() && addableTypes().length > 0) {
       <div class="cv-export-preview__add-section">
         <label class="cv-export-preview__add-section-label">
           <span class="cv-export-preview__sr-only">Section type</span>

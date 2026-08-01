@@ -47,15 +47,15 @@
             placeholder="Example: Tighten experience bullets and make the summary more backend-focused."
             (input)="onInstructionsInput($event)"></textarea>
         </label>
-        @if (cvStructured.aiUpdateError(); as error) {
+        @if (aiUpdateError(); as error) {
           <p class="cv-builder-assist__error" role="alert">{{ error }}</p>
         }
         <button
           type="button"
           class="cv-builder-assist__primary"
-          [disabled]="disabled() || !aiUpdateInstructions().trim() || cvStructured.updatingWithAi()"
+          [disabled]="disabled() || !aiUpdateInstructions().trim() || updatingWithAi()"
           (click)="updateWithAi.emit()">
-          {{ cvStructured.updatingWithAi() ? 'Updating…' : 'Update CV with AI' }}
+          {{ updatingWithAi() ? 'Updating…' : 'Update CV with AI' }}
         </button>
       </section>
 
@@ -64,11 +64,11 @@
         <button
           type="button"
           class="cv-builder-assist__secondary"
-          [disabled]="disabled() || cvStructured.generatingSuggestions()"
+          [disabled]="disabled() || generatingSuggestions()"
           (click)="generateSuggestions.emit()">
-          {{ cvStructured.generatingSuggestions() ? 'Generating…' : 'Generate suggestions' }}
+          {{ generatingSuggestions() ? 'Generating…' : 'Generate suggestions' }}
         </button>
-        @if (cvStructured.suggestionError(); as error) {
+        @if (suggestionError(); as error) {
           <p class="cv-builder-assist__error" role="alert">{{ error }}</p>
         }
         <ul class="cv-builder-assist__suggestions">
@@ -89,7 +89,7 @@
         <button
           type="button"
           class="cv-builder-assist__primary"
-          [disabled]="disabled() || selectedSuggestionIds().length === 0 || cvStructured.updatingWithAi()"
+          [disabled]="disabled() || selectedSuggestionIds().length === 0 || updatingWithAi()"
           (click)="applySuggestions.emit()">
           Apply selected ({{ selectedSuggestionIds().length }})
         </button>

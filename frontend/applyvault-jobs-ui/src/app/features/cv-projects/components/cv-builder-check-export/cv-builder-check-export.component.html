@@ -1,0 +1,54 @@
+@if (open()) {
+  <div class="cv-builder__modal-backdrop" role="presentation" (click)="closePanel.emit()"></div>
+  <div
+    id="cv-builder-check-export-dialog"
+    class="cv-builder__modal cv-builder__modal--check-export"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cv-builder-check-export-title"
+    aria-describedby="cv-builder-check-export-desc"
+    tabindex="-1">
+    <header class="cv-builder__check-export-header">
+      <div class="cv-builder__check-export-heading">
+        <h2 id="cv-builder-check-export-title">Check export</h2>
+        <p id="cv-builder-check-export-desc" class="cv-builder__check-export-desc">
+          This is the saved export HTML used for PDF. Your edit canvas is an approximation — small differences
+          are expected.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="cv-builder__drawer-close"
+        (click)="closePanel.emit()"
+        aria-label="Close check export">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <div
+      class="cv-builder__check-export-body"
+      [attr.aria-busy]="loading() ? true : null">
+      @if (showingLastSavedExport()) {
+        <p class="cv-builder__export-notice" role="status">Showing last saved export</p>
+      }
+      @if (notice(); as noticeText) {
+        <p class="cv-builder__export-notice" role="status">{{ noticeText }}</p>
+      }
+      <app-cv-export-html-preview
+        [srcdoc]="srcdoc()"
+        [loading]="loading()"
+        [error]="error()"
+        [emptyHint]="'Save your CV sections to load the export preview.'"
+        density="stage" />
+    </div>
+    <div class="cv-builder__modal-actions cv-builder__check-export-actions">
+      <button
+        type="button"
+        class="cv-builder__ghost-btn"
+        [disabled]="loading()"
+        (click)="refresh.emit()">
+        {{ loading() ? 'Refreshing…' : 'Refresh' }}
+      </button>
+      <button type="button" class="cv-builder__ghost-btn" (click)="closePanel.emit()">Close</button>
+    </div>
+  </div>
+}

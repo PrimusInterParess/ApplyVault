@@ -3,7 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 
+import { CvBuilderCheckExportComponent } from '../../components/cv-builder-check-export/cv-builder-check-export.component';
+import { CvBuilderEmptyStartComponent } from '../../components/cv-builder-empty-start/cv-builder-empty-start.component';
+import { CvBuilderProjectsPanelComponent } from '../../components/cv-builder-projects-panel/cv-builder-projects-panel.component';
+import { CvBuilderStructurePanelComponent } from '../../components/cv-builder-structure-panel/cv-builder-structure-panel.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
+import { CvEditSession } from '../../data-access/cv-edit-session';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import { CvStructuredSection } from '../../models/cv-structured.model';
@@ -18,7 +23,6 @@ class StubCvExportTemplatePreviewComponent {
   readonly templateId = input(2);
   readonly sections = input<CvStructuredSection[]>([]);
   readonly editable = input(false);
-  readonly sampleMode = input(false);
   readonly compact = input(false);
   readonly profilePhotoUrl = input<string | null>(null);
   readonly inlineEdit = output<unknown>();
@@ -50,6 +54,10 @@ class StubCvBuilderAssistPanelComponent {
   readonly selectedSuggestionIds = input<string[]>([]);
   readonly suggestions = input<unknown[]>([]);
   readonly disabled = input(false);
+  readonly updatingWithAi = input(false);
+  readonly generatingSuggestions = input(false);
+  readonly aiUpdateError = input<string | null>(null);
+  readonly suggestionError = input<string | null>(null);
   readonly closePanel = output<void>();
   readonly aiInstructionsChange = output<string>();
   readonly toggleAiSection = output<string>();
@@ -65,6 +73,11 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
   let refreshExportHtmlPreview: jasmine.Spy;
   let selectedExportTemplateId: ReturnType<typeof signal<number>>;
   let setExportTemplateId: jasmine.Spy;
+  let documentSignal: ReturnType<
+    typeof signal<{ id: string; hasStructuredContent: boolean; hasProfilePhoto: boolean } | null>
+  >;
+  let structuredLoadSpy: jasmine.Spy;
+  let isSaving: ReturnType<typeof signal<boolean>>;
 
   const sections: CvStructuredSection[] = [
     {
@@ -96,19 +109,23 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     setExportTemplateId = jasmine
       .createSpy('setExportTemplateId')
       .and.callFake((templateId: number) => selectedExportTemplateId.set(templateId));
+    documentSignal = signal({
+      id: 'doc-1',
+      hasStructuredContent: true,
+      hasProfilePhoto: false
+    });
+    structuredLoadSpy = jasmine.createSpy('load');
+    isSaving = signal(false);
 
     await TestBed.configureTestingModule({
       imports: [CvBuilderPageComponent],
       providers: [
+        CvEditSession,
         {
           provide: CvDocumentFacade,
           useValue: {
             loading: signal(false).asReadonly(),
-            document: signal({
-              id: 'doc-1',
-              hasStructuredContent: true,
-              hasProfilePhoto: false
-            }).asReadonly(),
+            document: documentSignal.asReadonly(),
             hasDocument: signal(true).asReadonly(),
             selectedExportTemplateId,
             uploading: signal(false).asReadonly(),
@@ -140,15 +157,16 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
           useValue: {
             loading: signal(false).asReadonly(),
             structured: signal({ documentId: 'doc-1', structuredImportedAt: null, sections }).asReadonly(),
-            isSaving: signal(false).asReadonly(),
+            isSaving: isSaving.asReadonly(),
             savingSectionId: signal<string | null>(null).asReadonly(),
-            savingSectionOrder: signal(false).asReadonly(),
             updatingWithAi: signal(false).asReadonly(),
+            generatingSuggestions: signal(false).asReadonly(),
             saveError: signal<string | null>(null).asReadonly(),
             aiUpdateError: signal<string | null>(null).asReadonly(),
+            suggestionError: signal<string | null>(null).asReadonly(),
             suggestions: signal([]).asReadonly(),
             lastSuccessfulSaveGeneration: signal(0).asReadonly(),
-            load: jasmine.createSpy('load'),
+            load: structuredLoadSpy,
             save: jasmine.createSpy('save').and.returnValue(1),
             clearSaveError: jasmine.createSpy('clearSaveError'),
             clearAiUpdateError: jasmine.createSpy('clearAiUpdateError'),
@@ -173,9 +191,17 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
           imports: [
             RouterLink,
             StubCvExportTemplatePreviewComponent,
-            StubCvExportHtmlPreviewComponent,
-            StubCvBuilderAssistPanelComponent
+            StubCvBuilderAssistPanelComponent,
+            CvBuilderEmptyStartComponent,
+            CvBuilderStructurePanelComponent,
+            CvBuilderProjectsPanelComponent,
+            CvBuilderCheckExportComponent
           ]
+        }
+      })
+      .overrideComponent(CvBuilderCheckExportComponent, {
+        set: {
+          imports: [StubCvExportHtmlPreviewComponent]
         }
       })
       .compileComponents();
@@ -246,6 +272,32 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(refreshExportHtmlPreview).toHaveBeenCalledTimes(1);
   });
 
+  it('uses exclusive activePanel mutex for Structure / Projects / Assist / Check export', () => {
+    const page = component as unknown as {
+      activePanel: () => string | null;
+      openAssist: () => void;
+      toggleStructure: () => void;
+      toggleProjects: () => void;
+      openCheckExport: () => void;
+      closeCheckExport: () => void;
+    };
+
+    page.openAssist();
+    expect(page.activePanel()).toBe('assist');
+
+    page.toggleStructure();
+    expect(page.activePanel()).toBe('structure');
+
+    page.toggleProjects();
+    expect(page.activePanel()).toBe('projects');
+
+    page.openCheckExport();
+    expect(page.activePanel()).toBe('checkExport');
+
+    page.closeCheckExport();
+    expect(page.activePanel()).toBeNull();
+  });
+
   it('updates edit canvas templateId when topbar Template select changes (2 → 3)', () => {
     const select = (fixture.nativeElement as HTMLElement).querySelector(
       '.cv-builder__topbar select.cv-builder__select'
@@ -274,5 +326,30 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
         .withContext(`selected option after choosing ${templateId}`)
         .toBe(String(templateId));
     }
+  });
+
+  it('loads structured only when document id changes (prefs echo reload gate)', () => {
+    expect(structuredLoadSpy).toHaveBeenCalledTimes(1);
+
+    // Same document id with metadata echo (export prefs) must not reload structured.
+    documentSignal.set({
+      id: 'doc-1',
+      hasStructuredContent: true,
+      hasProfilePhoto: true
+    });
+    fixture.detectChanges();
+    TestBed.flushEffects();
+
+    expect(structuredLoadSpy).toHaveBeenCalledTimes(1);
+
+    documentSignal.set({
+      id: 'doc-2',
+      hasStructuredContent: true,
+      hasProfilePhoto: false
+    });
+    fixture.detectChanges();
+    TestBed.flushEffects();
+
+    expect(structuredLoadSpy).toHaveBeenCalledTimes(2);
   });
 });

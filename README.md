@@ -362,6 +362,17 @@ In your Supabase project's `Magic Link` email template, include `{{ .Token }}` i
 
 The dashboard uses email/password sign-in through Supabase Auth. After sign-in, it calls `GET /api/auth/session` to create or load the local app user record.
 
+### Local / authenticated smoke test account
+
+Use this shared Supabase user for local dashboard sign-in and authenticated smoke checks (for example `/cv-builder`). Do not invent other credentials.
+
+| Field | Value |
+|-------|-------|
+| Email | `apply@tests.com` |
+| Password | `apply@tests.com` |
+
+This account must exist in the Supabase project configured by the dashboard and API. Extension sign-in still uses email OTP for that same address when needed.
+
 ## Troubleshooting dashboard/API auth
 
 Symptoms in the browser Network tab:

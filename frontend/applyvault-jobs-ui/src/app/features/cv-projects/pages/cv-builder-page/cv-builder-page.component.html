@@ -50,7 +50,7 @@
           <button
             type="button"
             class="cv-builder__ghost-btn"
-            [attr.aria-expanded]="structureOpen()"
+            [attr.aria-expanded]="activePanel() === 'structure'"
             aria-controls="cv-builder-structure-panel"
             (click)="toggleStructure()">
             Structure
@@ -59,100 +59,27 @@
             <button
               type="button"
               class="cv-builder__ghost-btn"
-              [attr.aria-expanded]="projectsOpen()"
+              [attr.aria-expanded]="activePanel() === 'projects'"
               aria-controls="cv-builder-projects-panel"
               (click)="toggleProjects()">
               Projects
             </button>
-            @if (projectsOpen()) {
-              <div
-                id="cv-builder-projects-panel"
-                class="cv-builder__projects-panel"
-                role="dialog"
-                aria-label="Add project summaries">
-                <div class="cv-builder__structure-head">
-                  <p class="cv-builder__structure-title">Add projects</p>
-                  <button type="button" class="cv-builder__icon-btn" (click)="closeProjects()" aria-label="Close projects">
-                    ×
-                  </button>
-                </div>
-                <p class="cv-builder__projects-hint">
-                  Select saved summaries to add as Projects entries.
-                </p>
-                <div class="cv-builder__projects-actions">
-                  <button
-                    type="button"
-                    class="cv-builder__projects-secondary"
-                    [disabled]="cvProjects.loadingSummaries()"
-                    (click)="cvProjects.loadSummaries()">
-                    {{ cvProjects.loadingSummaries() ? 'Refreshing…' : 'Refresh' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="cv-builder__structure-add-btn"
-                    [disabled]="!canImportSelectedProjectSummaries()"
-                    (click)="importSelectedProjectSummaries()">
-                    {{
-                      importingProjectsBusy()
-                        ? 'Adding…'
-                        : selectedImportableProjectSummaries().length > 0
-                          ? `Add selected (${selectedImportableProjectSummaries().length})`
-                          : 'Add selected'
-                    }}
-                  </button>
-                </div>
-                @if (cvStructured.saveError(); as projectImportError) {
-                  <p class="cv-builder__error" role="alert">{{ projectImportError }}</p>
-                }
-                @if (cvProjects.summariesError(); as summariesError) {
-                  <p class="cv-builder__error" role="alert">{{ summariesError }}</p>
-                }
-                @if (cvProjects.loadingSummaries() && cvProjects.savedSummaries().length === 0) {
-                  <p class="cv-builder__structure-empty" aria-busy="true">Loading summaries…</p>
-                } @else if (cvProjects.savedSummaries().length === 0) {
-                  <p class="cv-builder__structure-empty">
-                    No saved summaries yet.
-                    <a routerLink="/cv-projects" class="cv-builder__projects-link">Generate on Projects</a>
-                  </p>
-                } @else {
-                  <ul class="cv-builder__projects-list" aria-label="Saved project summaries">
-                    @for (summary of cvProjects.savedSummaries(); track summary.id) {
-                      <li>
-                        <button
-                          type="button"
-                          class="cv-builder__projects-item"
-                          [class.cv-builder__projects-item--selected]="isProjectSummarySelected(summary.id)"
-                          [class.cv-builder__projects-item--imported]="isProjectSummaryImported(summary.id)"
-                          [disabled]="isProjectSummaryImported(summary.id) || !canToggleProjectSummarySelection()"
-                          [attr.aria-pressed]="isProjectSummarySelected(summary.id)"
-                          (click)="toggleProjectSummarySelection(summary.id)">
-                          <span class="cv-builder__projects-item-top">
-                            <span class="cv-builder__projects-item-copy">
-                              <span class="cv-builder__projects-item-title">{{ summary.cvTitle }}</span>
-                              <span class="cv-builder__projects-item-source">{{ summary.fullName }}</span>
-                            </span>
-                            @if (isProjectSummaryImported(summary.id)) {
-                              <span class="cv-builder__projects-badge">Added</span>
-                            } @else if (isProjectSummarySelected(summary.id)) {
-                              <span class="cv-builder__projects-badge">Selected</span>
-                            }
-                          </span>
-                          <span class="cv-builder__projects-item-meta">
-                            @if (summary.primaryLanguage) {
-                              <span>{{ summary.primaryLanguage }}</span>
-                            }
-                            <span>{{ summary.cvBullets.length }} bullets</span>
-                          </span>
-                        </button>
-                      </li>
-                    }
-                  </ul>
-                  <a routerLink="/cv-projects" class="cv-builder__projects-link cv-builder__projects-link--footer">
-                    Manage on Projects
-                  </a>
-                }
-              </div>
-            }
+            <app-cv-builder-projects-panel
+              [open]="activePanel() === 'projects'"
+              [summaries]="cvProjects.savedSummaries()"
+              [loadingSummaries]="cvProjects.loadingSummaries()"
+              [summariesError]="cvProjects.summariesError()"
+              [saveError]="cvStructured.saveError()"
+              [importingBusy]="importingProjectsBusy()"
+              [selectedImportableCount]="selectedImportableProjectSummaries().length"
+              [canImportSelected]="canImportSelectedProjectSummaries()"
+              [canToggleSelection]="canToggleProjectSummarySelection()"
+              [selectedSummaryIds]="selectedProjectSummaryIds()"
+              [importedSummaryIds]="importedProjectSummaryIds()"
+              (closePanel)="closeProjects()"
+              (refresh)="cvProjects.loadSummaries()"
+              (importSelected)="importSelectedProjectSummaries()"
+              (toggleSelection)="toggleProjectSummarySelection($event)" />
           </div>
           <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
           <button
@@ -195,7 +122,7 @@
           <button
             type="button"
             class="cv-builder__ghost-btn"
-            [attr.aria-expanded]="checkExportOpen()"
+            [attr.aria-expanded]="activePanel() === 'checkExport'"
             aria-controls="cv-builder-check-export-dialog"
             (click)="openCheckExport()">
             Check export
@@ -224,34 +151,13 @@
       @if (cvDocument.loading() || cvStructured.loading()) {
         <p class="cv-builder__desk-hint" aria-busy="true">Loading your CV…</p>
       } @else if (!hasStructuredCv()) {
-        <section class="cv-builder__empty" aria-labelledby="cv-builder-empty-title">
-          <h1 id="cv-builder-empty-title" class="cv-builder__empty-title">Start your CV</h1>
-          <p class="cv-builder__empty-lead">
-            Choose a template above, then start blank or upload a PDF. You’ll edit on the canvas.
-          </p>
-          <div class="cv-builder__empty-actions">
-            <button
-              type="button"
-              class="cv-builder__cta"
-              [disabled]="cvDocument.startingBlank() || cvDocument.uploading()"
-              (click)="startBlank()">
-              {{ cvDocument.startingBlank() ? 'Setting up…' : 'Start blank' }}
-            </button>
-            <button
-              type="button"
-              class="cv-builder__ghost-btn"
-              [disabled]="cvDocument.uploading() || cvDocument.startingBlank()"
-              (click)="openPdfPicker()">
-              {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
-            </button>
-          </div>
-          @if (cvDocument.startBlankError(); as error) {
-            <p class="cv-builder__error" role="alert">{{ error }}</p>
-          }
-          @if (cvDocument.uploadError(); as error) {
-            <p class="cv-builder__error" role="alert">{{ error }}</p>
-          }
-        </section>
+        <app-cv-builder-empty-start
+          [startingBlank]="cvDocument.startingBlank()"
+          [uploading]="cvDocument.uploading()"
+          [startBlankError]="cvDocument.startBlankError()"
+          [uploadError]="cvDocument.uploadError()"
+          (startBlank)="startBlank()"
+          (uploadPdf)="openPdfPicker()" />
       } @else {
         <p class="cv-builder__desk-hint">
           Edit on the canvas · Structure for sections · Projects to import · Check export / Download PDF for
@@ -274,157 +180,37 @@
       <button
         type="button"
         class="cv-builder__fab"
-        [class.cv-builder__fab--hidden]="assistOpen() || structureOpen() || checkExportOpen()"
+        [class.cv-builder__fab--hidden]="
+          activePanel() === 'assist' || activePanel() === 'structure' || activePanel() === 'checkExport'
+        "
         (click)="openAssist()"
         aria-label="Open AI assist">
         AI
       </button>
     }
 
-    @if (structureOpen()) {
-      <div
-        class="cv-builder__drawer-backdrop"
-        role="presentation"
-        (click)="closeStructure()"></div>
-      <aside
-        id="cv-builder-structure-panel"
-        class="cv-builder__drawer cv-builder__drawer--structure"
-        role="dialog"
-        aria-modal="true"
-        aria-label="CV section structure">
-        <header class="cv-builder__drawer-header">
-          <div class="cv-builder__drawer-heading">
-            <p class="cv-builder__drawer-eyebrow">Structure</p>
-            <h2 class="cv-builder__drawer-title">Sections</h2>
-          </div>
-          <button
-            type="button"
-            class="cv-builder__drawer-close"
-            (click)="closeStructure()"
-            aria-label="Close structure">
-            <span aria-hidden="true">×</span>
-          </button>
-        </header>
-        <div class="cv-builder__drawer-body">
-          @if (sections().length === 0) {
-            <p class="cv-builder__structure-empty">No sections yet. Add one below.</p>
-          } @else {
-            <ul class="cv-builder__structure-list">
-              @for (section of sections(); track section.id) {
-                <li class="cv-builder__structure-item">
-                  <span class="cv-builder__structure-label">
-                    <span class="cv-builder__structure-heading">{{ section.heading || section.sectionType }}</span>
-                    <span class="cv-builder__structure-type">{{ section.sectionType }}</span>
-                  </span>
-                  <span class="cv-builder__structure-actions">
-                    <button
-                      type="button"
-                      class="cv-builder__icon-btn"
-                      [disabled]="!canMoveSectionUp(section.id)"
-                      aria-label="Move section up"
-                      (click)="moveSection(section.id, -1)">
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      class="cv-builder__icon-btn"
-                      [disabled]="!canMoveSectionDown(section.id)"
-                      aria-label="Move section down"
-                      (click)="moveSection(section.id, 1)">
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      class="cv-builder__structure-remove"
-                      aria-label="Remove section"
-                      (click)="removeSection(section.id)">
-                      Remove
-                    </button>
-                  </span>
-                </li>
-              }
-            </ul>
-          }
-          <div class="cv-builder__structure-add">
-            <label class="cv-builder__structure-add-field">
-              <span class="cv-builder__sr-only">Section type</span>
-              <select
-                class="cv-builder__structure-select"
-                [value]="pendingAddSectionType()"
-                [disabled]="structureSectionTypes().length === 0"
-                (change)="onPendingAddSectionTypeChange($event)">
-                @for (sectionType of structureSectionTypes(); track sectionType) {
-                  <option [value]="sectionType">{{ sectionType }}</option>
-                }
-              </select>
-            </label>
-            <button
-              type="button"
-              class="cv-builder__structure-add-btn"
-              [disabled]="structureSectionTypes().length === 0"
-              (click)="addSectionFromStructure()">
-              Add section
-            </button>
-          </div>
-        </div>
-      </aside>
-    }
+    <app-cv-builder-structure-panel
+      [open]="activePanel() === 'structure'"
+      [sections]="sections()"
+      [structureSectionTypes]="structureSectionTypes()"
+      [pendingAddSectionType]="pendingAddSectionType()"
+      [canMutate]="canMutateStructured()"
+      (closePanel)="closeStructure()"
+      (pendingAddSectionTypeChange)="onPendingAddSectionTypeChange($event)"
+      (addSection)="addSectionFromStructure()"
+      (moveSection)="onStructureMoveSection($event)"
+      (removeSection)="removeSection($event)" />
   </div>
 
-  @if (checkExportOpen()) {
-    <div class="cv-builder__modal-backdrop" role="presentation" (click)="closeCheckExport()"></div>
-    <div
-      id="cv-builder-check-export-dialog"
-      class="cv-builder__modal cv-builder__modal--check-export"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cv-builder-check-export-title"
-      aria-describedby="cv-builder-check-export-desc"
-      tabindex="-1">
-      <header class="cv-builder__check-export-header">
-        <div class="cv-builder__check-export-heading">
-          <h2 id="cv-builder-check-export-title">Check export</h2>
-          <p id="cv-builder-check-export-desc" class="cv-builder__check-export-desc">
-            This is the saved export HTML used for PDF. Your edit canvas is an approximation — small differences
-            are expected.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="cv-builder__drawer-close"
-          (click)="closeCheckExport()"
-          aria-label="Close check export">
-          <span aria-hidden="true">×</span>
-        </button>
-      </header>
-      <div
-        class="cv-builder__check-export-body"
-        [attr.aria-busy]="cvDocument.exportHtmlPreviewLoading() ? true : null">
-        @if (showingLastSavedExport()) {
-          <p class="cv-builder__export-notice" role="status">Showing last saved export</p>
-        }
-        @if (cvDocument.exportHtmlPreviewNotice(); as notice) {
-          <p class="cv-builder__export-notice" role="status">{{ notice }}</p>
-        }
-        <app-cv-export-html-preview
-          [srcdoc]="cvDocument.exportHtmlPreviewSrcdoc()"
-          [loading]="cvDocument.exportHtmlPreviewLoading()"
-          [error]="cvDocument.exportHtmlPreviewError()"
-          [emptyHint]="'Save your CV sections to load the export preview.'"
-          density="stage" />
-      </div>
-      <div class="cv-builder__modal-actions cv-builder__check-export-actions">
-        <button
-          type="button"
-          class="cv-builder__ghost-btn"
-          [disabled]="cvDocument.exportHtmlPreviewLoading()"
-          (click)="refreshCheckExport()">
-          {{ cvDocument.exportHtmlPreviewLoading() ? 'Refreshing…' : 'Refresh' }}
-        </button>
-        <button type="button" class="cv-builder__ghost-btn" (click)="closeCheckExport()">Close</button>
-      </div>
-    </div>
-  }
+  <app-cv-builder-check-export
+    [open]="activePanel() === 'checkExport'"
+    [showingLastSavedExport]="showingLastSavedExport()"
+    [srcdoc]="cvDocument.exportHtmlPreviewSrcdoc()"
+    [loading]="cvDocument.exportHtmlPreviewLoading()"
+    [error]="cvDocument.exportHtmlPreviewError()"
+    [notice]="cvDocument.exportHtmlPreviewNotice()"
+    (closePanel)="closeCheckExport()"
+    (refresh)="refreshCheckExport()" />
 
   @if (replaceConfirmOpen()) {
     <div class="cv-builder__modal-backdrop" role="presentation" (click)="cancelReplaceConfirm()"></div>
@@ -441,13 +227,17 @@
   }
 
   <app-cv-builder-assist-panel
-    [open]="assistOpen()"
+    [open]="activePanel() === 'assist'"
     [sections]="sections()"
     [aiUpdateSectionIds]="aiUpdateSectionIds()"
     [aiUpdateInstructions]="aiUpdateInstructions()"
     [selectedSuggestionIds]="selectedSuggestionIds()"
     [suggestions]="cvStructured.suggestions()"
     [disabled]="assistDisabled()"
+    [updatingWithAi]="cvStructured.updatingWithAi()"
+    [generatingSuggestions]="cvStructured.generatingSuggestions()"
+    [aiUpdateError]="cvStructured.aiUpdateError()"
+    [suggestionError]="cvStructured.suggestionError()"
     (closePanel)="closeAssist()"
     (aiInstructionsChange)="updateAiInstructions($event)"
     (toggleAiSection)="toggleAiUpdateSection($event)"

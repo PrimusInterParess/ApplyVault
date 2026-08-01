@@ -10,6 +10,7 @@ describe('CvStructuredFacade save generations / coalesce', () => {
   let facade: CvStructuredFacade;
   let saveSubjects: Subject<CvStructuredDocument>[];
   let getSubjects: Subject<CvStructuredDocument>[];
+  let aiUpdateSubjects: Subject<CvStructuredDocument>[];
 
   function section(heading: string): CvStructuredSection {
     return {
@@ -30,6 +31,7 @@ describe('CvStructuredFacade save generations / coalesce', () => {
   beforeEach(() => {
     saveSubjects = [];
     getSubjects = [];
+    aiUpdateSubjects = [];
 
     TestBed.configureTestingModule({
       providers: [
@@ -47,7 +49,11 @@ describe('CvStructuredFacade save generations / coalesce', () => {
               saveSubjects.push(subject);
               return subject.asObservable();
             },
-            updateStructuredWithAi: () => new Subject<CvStructuredDocument>().asObservable(),
+            updateStructuredWithAi: () => {
+              const subject = new Subject<CvStructuredDocument>();
+              aiUpdateSubjects.push(subject);
+              return subject.asObservable();
+            },
             generateStructuredSuggestions: () =>
               new Subject<{ suggestions: [] }>().asObservable()
           }
@@ -164,5 +170,155 @@ describe('CvStructuredFacade save generations / coalesce', () => {
     expect(summary?.entries[0].summary).toBe('Imported profile text');
     expect(skills?.entries[0].techStack).toBe('TypeScript, Angular');
     expect(skills?.entries[0].bullets).toEqual([]);
+  });
+
+  it('setStructured hydrates+normalizes without requiring a pre-hydrate from callers', () => {
+    facade.setStructured({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'skills-1',
+          heading: 'Skills',
+          sectionType: 'Skills',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'k1',
+              bullets: ['RxJS'],
+              techStack: ''
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(facade.structured()?.sections[0].entries[0].techStack).toBe('RxJS');
+    expect(facade.structured()?.sections[0].entries[0].bullets).toEqual([]);
+  });
+
+  it('updateWithAi merges partial AI payload so non-selected sections survive and re-saves', () => {
+    facade.setStructured({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'name-1',
+              title: 'Name',
+              subtitle: 'Ada Lovelace'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'sum-1',
+              summary: 'Old summary'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(2),
+          id: 'exp-1',
+          heading: 'Experience',
+          sectionType: 'Experience',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'exp-e1',
+              title: 'Engineer',
+              subtitle: 'Acme'
+            }
+          ]
+        },
+        {
+          ...createEmptySection(3),
+          id: 'edu-1',
+          heading: 'Education',
+          sectionType: 'Education',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'edu-e1',
+              title: 'BSc',
+              subtitle: 'Uni'
+            }
+          ]
+        }
+      ]
+    });
+
+    facade.updateWithAi('Rewrite summary for backend roles.', ['summary-1']);
+
+    expect(aiUpdateSubjects.length).toBe(1);
+
+    aiUpdateSubjects[0].next({
+      documentId: 'doc-1',
+      structuredImportedAt: null,
+      sections: [
+        {
+          ...createEmptySection(0),
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'name-1',
+              title: 'Name',
+              subtitle: ''
+            }
+          ]
+        },
+        {
+          ...createEmptySection(1),
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          entries: [
+            {
+              ...createEmptyEntry(0),
+              id: 'sum-1',
+              summary: 'Backend-focused summary for smoke test M7.'
+            }
+          ]
+        }
+      ]
+    });
+    aiUpdateSubjects[0].complete();
+
+    const ids = facade.structured()?.sections.map((item) => item.id);
+    expect(ids).toEqual(['contact-1', 'summary-1', 'exp-1', 'edu-1']);
+    expect(facade.structured()?.sections.find((item) => item.id === 'summary-1')?.entries[0].summary).toBe(
+      'Backend-focused summary for smoke test M7.'
+    );
+    expect(
+      facade.structured()?.sections.find((item) => item.id === 'contact-1')?.entries.find(
+        (entry) => entry.title === 'Name'
+      )?.subtitle
+    ).toBe('Ada Lovelace');
+    expect(facade.structured()?.sections.find((item) => item.id === 'exp-1')?.entries[0].title).toBe(
+      'Engineer'
+    );
+    expect(facade.structured()?.sections.find((item) => item.id === 'edu-1')?.entries[0].title).toBe(
+      'BSc'
+    );
+
+    // Server already saved the partial AI body — corrective PUT restores preserved sections.
+    expect(saveSubjects.length).toBe(1);
+    expect(facade.savingSectionId()).toBe('summary-1');
   });
 });

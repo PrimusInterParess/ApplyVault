@@ -1,0 +1,28 @@
+<section class="cv-builder__empty" aria-labelledby="cv-builder-empty-title">
+  <h1 id="cv-builder-empty-title" class="cv-builder__empty-title">Start your CV</h1>
+  <p class="cv-builder__empty-lead">
+    Choose a template above, then start blank or upload a PDF. You’ll edit on the canvas.
+  </p>
+  <div class="cv-builder__empty-actions">
+    <button
+      type="button"
+      class="cv-builder__cta"
+      [disabled]="startingBlank() || uploading()"
+      (click)="startBlank.emit()">
+      {{ startingBlank() ? 'Setting up…' : 'Start blank' }}
+    </button>
+    <button
+      type="button"
+      class="cv-builder__ghost-btn"
+      [disabled]="uploading() || startingBlank()"
+      (click)="uploadPdf.emit()">
+      {{ uploading() ? 'Uploading…' : 'Upload PDF' }}
+    </button>
+  </div>
+  @if (startBlankError(); as error) {
+    <p class="cv-builder__error" role="alert">{{ error }}</p>
+  }
+  @if (uploadError(); as error) {
+    <p class="cv-builder__error" role="alert">{{ error }}</p>
+  }
+</section>

@@ -14,10 +14,7 @@ import {
   findContactNameEntry,
   isContactNameEntry
 } from '../../utils/cv-contact-channels.util';
-import {
-  createSamplePreviewSections,
-  partitionSectionsForTemplate
-} from '../../utils/cv-export-template-layout.util';
+import { partitionSectionsForTemplate } from '../../utils/cv-export-template-layout.util';
 import {
   CvTemplateInlineEdit,
   addEntryLabelForSection,
@@ -39,7 +36,6 @@ import {
 export class CvExportTemplatePreviewComponent {
   readonly templateId = input.required<number>();
   readonly sections = input<readonly CvStructuredSection[]>([]);
-  readonly sampleMode = input(false);
   readonly compact = input(false);
   readonly editable = input(false);
   readonly profilePhotoUrl = input<string | null>(null);
@@ -47,16 +43,12 @@ export class CvExportTemplatePreviewComponent {
   readonly inlineEdit = output<CvTemplateInlineEdit>();
 
   protected readonly displayName = computed(() => {
-    if (this.sampleMode()) {
-      return 'Alex Jensen';
-    }
-
-    const contact = this.effectiveSections().find((section) => this.isContactSection(section));
+    const contact = this.sections().find((section) => this.isContactSection(section));
     return resolveContactDisplayName(contact);
   });
 
   protected readonly contactNameEntry = computed(() => {
-    const contact = this.effectiveSections().find((section) => this.isContactSection(section));
+    const contact = this.sections().find((section) => this.isContactSection(section));
     return contact ? findContactNameEntry(contact) : null;
   });
 
@@ -66,8 +58,9 @@ export class CvExportTemplatePreviewComponent {
   );
 
   protected readonly layout = computed(() =>
-    partitionSectionsForTemplate(this.resolvedTemplateId(), this.effectiveSections(), {
-      includeEmpty: this.editable() || !this.sampleMode()
+    partitionSectionsForTemplate(this.resolvedTemplateId(), this.sections(), {
+      // Always include empty shells so the editable desk (and non-sample preview) stay stable.
+      includeEmpty: true
     })
   );
 
@@ -75,15 +68,7 @@ export class CvExportTemplatePreviewComponent {
     () => `cv-export-preview--template-${this.resolvedTemplateId()}`
   );
 
-  protected readonly addableTypes = computed(() => addableSectionTypes(this.effectiveSections()));
-
-  private readonly effectiveSections = computed(() => {
-    if (this.sampleMode()) {
-      return createSamplePreviewSections();
-    }
-
-    return this.sections();
-  });
+  protected readonly addableTypes = computed(() => addableSectionTypes(this.sections()));
 
   protected isSummarySection(sectionType: string): boolean {
     return sectionType === 'Summary';
@@ -122,7 +107,7 @@ export class CvExportTemplatePreviewComponent {
       return false;
     }
 
-    const firstContact = this.effectiveSections().find((item) => this.isContactSection(item));
+    const firstContact = this.sections().find((item) => this.isContactSection(item));
     return firstContact?.id === section.id;
   }
 
@@ -171,7 +156,7 @@ export class CvExportTemplatePreviewComponent {
       return false;
     }
 
-    return !this.effectiveSections().some(
+    return !this.sections().some(
       (item) =>
         item.id !== section.id &&
         this.isContactSection(item) &&
@@ -189,13 +174,13 @@ export class CvExportTemplatePreviewComponent {
       return true;
     }
 
-    const primary = this.effectiveSections().find((item) => this.isContactSection(item));
+    const primary = this.sections().find((item) => this.isContactSection(item));
 
     if (primary && this.showContactBlock(primary)) {
       return false;
     }
 
-    const firstWithChannels = this.effectiveSections().find(
+    const firstWithChannels = this.sections().find(
       (item) => this.isContactSection(item) && this.visibleContactChannels(item).length > 0
     );
 
@@ -303,7 +288,7 @@ export class CvExportTemplatePreviewComponent {
   }
 
   protected emitContactName(entry: CvStructuredEntry, value: string): void {
-    const section = this.effectiveSections().find((item) => this.isContactSection(item));
+    const section = this.sections().find((item) => this.isContactSection(item));
 
     if (!section) {
       return;
@@ -342,7 +327,7 @@ export class CvExportTemplatePreviewComponent {
   }
 
   protected sectionIndex(sectionId: string): number {
-    return this.effectiveSections().findIndex((section) => section.id === sectionId);
+    return this.sections().findIndex((section) => section.id === sectionId);
   }
 
   protected canMoveSectionUp(sectionId: string): boolean {
@@ -351,14 +336,14 @@ export class CvExportTemplatePreviewComponent {
 
   protected canMoveSectionDown(sectionId: string): boolean {
     const index = this.sectionIndex(sectionId);
-    return index >= 0 && index < this.effectiveSections().length - 1;
+    return index >= 0 && index < this.sections().length - 1;
   }
 
   protected emitMoveSection(sectionId: string, direction: -1 | 1): void {
     const fromIndex = this.sectionIndex(sectionId);
     const toIndex = fromIndex + direction;
 
-    if (fromIndex < 0 || toIndex < 0 || toIndex >= this.effectiveSections().length) {
+    if (fromIndex < 0 || toIndex < 0 || toIndex >= this.sections().length) {
       return;
     }
 

@@ -3,7 +3,8 @@ import {
   normalizeSectionForEditing,
   normalizeSectionsForEditing
 } from './cv-structured-edit-normalizer.util';
-import { CvStructuredEntry } from '../models/cv-structured.model';
+import { CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
+import { sectionsAreEqual } from './cv-structured-draft.util';
 
 describe('cv-structured-edit-normalizer.util', () => {
   const baseEntry: CvStructuredEntry = {
@@ -188,5 +189,105 @@ describe('cv-structured-edit-normalizer.util', () => {
       '+45 12 34 56 78',
       'linkedin.com/in/alex'
     ]);
+  });
+
+  describe('normalizeSectionsForEditing idempotence', () => {
+    function expectIdempotent(sections: readonly CvStructuredSection[]): void {
+      const once = normalizeSectionsForEditing(sections);
+      const twice = normalizeSectionsForEditing(once);
+
+      expect(sectionsAreEqual(once, twice))
+        .withContext('comparable shape must be stable after second normalize')
+        .toBeTrue();
+      expect(twice.map((section) => section.entries.map((entry) => entry.id)))
+        .withContext('entry ids must not churn on second normalize')
+        .toEqual(once.map((section) => section.entries.map((entry) => entry.id)));
+    }
+
+    it('is idempotent for Summary title→summary and Skills bullets→techStack', () => {
+      expectIdempotent([
+        {
+          id: 'summary-1',
+          heading: 'Summary',
+          sectionType: 'Summary',
+          sortOrder: 0,
+          entries: [{ ...baseEntry, id: 's1', title: 'Imported blurb', summary: '' }]
+        },
+        {
+          id: 'skills-1',
+          heading: 'Skills',
+          sectionType: 'Skills',
+          sortOrder: 1,
+          entries: [{ ...baseEntry, id: 'k1', bullets: ['Angular', 'RxJS'], techStack: '' }]
+        }
+      ]);
+    });
+
+    it('is idempotent for Contact valued multi-bullet expand', () => {
+      expectIdempotent([
+        {
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          sortOrder: 0,
+          entries: [
+            { ...baseEntry, id: 'n', title: 'Name', subtitle: 'Alex' },
+            { ...baseEntry, id: 'e', title: 'Email', bullets: ['a@b.com', 'b@b.com'], sortOrder: 1 }
+          ]
+        }
+      ]);
+    });
+
+    it('is idempotent for Name-bullet absorb into Email/Phone/LinkedIn starters', () => {
+      expectIdempotent([
+        {
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          sortOrder: 0,
+          entries: [
+            {
+              ...baseEntry,
+              id: 'n',
+              title: 'Name',
+              subtitle: 'Alex',
+              bullets: ['a@b.com', '+45 12 34 56 78', 'linkedin.com/in/alex']
+            },
+            { ...baseEntry, id: 'e', title: 'Email', bullets: [''], sortOrder: 1 },
+            { ...baseEntry, id: 'p', title: 'Phone', bullets: [''], sortOrder: 2 },
+            { ...baseEntry, id: 'l', title: 'LinkedIn', bullets: [''], sortOrder: 3 }
+          ]
+        }
+      ]);
+    });
+
+    it('is idempotent for already-canonical starter Contact', () => {
+      expectIdempotent([
+        {
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          sortOrder: 0,
+          entries: [
+            { ...baseEntry, id: 'n', title: 'Name', subtitle: 'Alex' },
+            { ...baseEntry, id: 'e', title: 'Email', bullets: ['a@b.com'], sortOrder: 1 },
+            { ...baseEntry, id: 'p', title: 'Phone', bullets: [''], sortOrder: 2 },
+            { ...baseEntry, id: 'l', title: 'LinkedIn', bullets: [''], sortOrder: 3 }
+          ]
+        }
+      ]);
+    });
+
+    it('is idempotent for empty Contact (starter seed)', () => {
+      expectIdempotent([
+        {
+          id: 'contact-1',
+          heading: 'Contact',
+          sectionType: 'Contact',
+          sortOrder: 0,
+          entries: []
+        }
+      ]);
+    });
   });
 });

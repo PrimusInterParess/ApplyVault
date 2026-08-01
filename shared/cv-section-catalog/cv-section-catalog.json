@@ -80,7 +80,7 @@
         { "id": "subtitle", "label": "Name", "kind": "string", "importKey": "subtitle" },
         { "id": "lines", "label": "Value", "kind": "stringList", "importKey": "bullets" }
       ],
-      "importHints": "Prefer one entry per contact detail (optional label in title, value in bullets). Legacy imports may use one entry with all lines in bullets. Use title Name + subtitle for the display name."
+      "importHints": "REQUIRED when header exists: entry title Name + subtitle = display name; separate entries Email/Phone/Address|Location/LinkedIn/GitHub/Website with value in bullets. Never bury contact in Summary. Keep full addresses and URLs as single bullet values."
     },
     {
       "id": "Custom",

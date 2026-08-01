@@ -1,7 +1,5 @@
 namespace ApplyVault.Api.Services;
 
-public sealed record CvImportSectionInput(string Heading, string NormalizedKey, string Text);
-
 public sealed record CvStructuredImportEntryResult(
     string Title,
     string? Subtitle,
@@ -19,13 +17,16 @@ public sealed record CvStructuredImportResult(
     IReadOnlyList<CvStructuredImportSectionResult> Sections);
 
 /// <summary>
-/// Optional Gemini structuring for PDF CV import. Callers (CvStructuredImportService) must gate
-/// invocation — heuristic-first; call only when GoogleAi:Enabled, extraction is not Empty, and the
-/// import gate fails (or CvImportAi:ForceAi). Not an always-on import path.
+/// Gemini structuring for PDF CV import (AI-first when GoogleAi:Enabled).
+/// Call with full ordered extracted text (join extract lines with \n).
+/// Heuristic remains a thin fallback when AI is off or fails (backend orchestration).
 /// </summary>
 public interface ICvStructuredImportAiClient
 {
+    /// <summary>
+    /// Structure a CV from full ordered extracted text (join extract lines with \n).
+    /// </summary>
     Task<CvStructuredImportResult> ParseAsync(
-        IReadOnlyList<CvImportSectionInput> sections,
+        string extractedFullText,
         CancellationToken cancellationToken = default);
 }

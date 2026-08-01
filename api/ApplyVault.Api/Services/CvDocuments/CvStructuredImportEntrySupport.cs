@@ -3,6 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace ApplyVault.Api.Services;
 
+/// <summary>
+/// Shared helpers for heuristic Contact parsing, entry content checks, and post-AI Contact reshape.
+/// AI prompts request Contact shape; the normalizer still remaps misfiled summary → subtitle/bullets.
+/// </summary>
 internal static class CvStructuredImportEntrySupport
 {
     private static readonly Regex PhonePattern = new(
@@ -56,7 +60,8 @@ internal static class CvStructuredImportEntrySupport
             || trimmed.StartsWith("tlf.", StringComparison.OrdinalIgnoreCase)
             || PostalCodePattern.IsMatch(trimmed)
             || LooksLikeLocationLine(trimmed)
-            || IsContactLabelLine(trimmed);
+            || IsContactLabelLine(trimmed)
+            || HasAddressOrLocationLabel(trimmed);
     }
 
     public static IReadOnlyList<string> SplitContactTokens(string line) =>
@@ -81,9 +86,19 @@ internal static class CvStructuredImportEntrySupport
 
             if (inContactBlock)
             {
-                if (LooksLikeContactLine(trimmed) || LooksLikeLocationLine(trimmed) && (contactLines.Count > 0 || nameLine is not null))
+                // Keep street/city addresses atomic — never comma-split them into contact tokens.
+                if (LooksLikeLocationLine(trimmed)
+                    && (contactLines.Count > 0
+                        || nameLine is not null
+                        || HasAddressOrLocationLabel(trimmed)))
                 {
-                    contactLines.AddRange(LooksLikeContactLine(trimmed) ? SplitContactTokens(trimmed) : [trimmed]);
+                    contactLines.Add(CvExportTextNormalizer.Field(trimmed));
+                    continue;
+                }
+
+                if (LooksLikeContactLine(trimmed) && !LooksLikeLocationLine(trimmed))
+                {
+                    contactLines.AddRange(SplitContactTokens(trimmed));
                     continue;
                 }
 
@@ -119,6 +134,8 @@ internal static class CvStructuredImportEntrySupport
             .Where((line) => line.Length > 0)
             .ToArray();
 
+        var hasName = !string.IsNullOrWhiteSpace(nameLine);
+
         return new CvStructuredSectionWriteDto(
             null,
             "Contact",
@@ -127,8 +144,8 @@ internal static class CvStructuredImportEntrySupport
             [
                 new CvStructuredEntryWriteDto(
                     null,
-                    nameLine ?? string.Empty,
-                    null,
+                    hasName ? "Name" : string.Empty,
+                    hasName ? nameLine!.Trim() : null,
                     null,
                     string.Empty,
                     bullets,
@@ -139,166 +156,87 @@ internal static class CvStructuredImportEntrySupport
             ]);
     }
 
-    public static IReadOnlyList<string> ExtractContactLinesFromSource(IReadOnlyList<CvPdfRawSection> sourceSections)
+    /// <summary>
+    /// Street / city / postal address lines (kept atomic — never comma-split).
+    /// </summary>
+    public static bool LooksLikeLocationLine(string line)
     {
-        var contactLines = new List<string>();
-
-        foreach (var section in sourceSections)
+        if (string.IsNullOrWhiteSpace(line) || line.Length > 120)
         {
-            if (IsContactSection(section))
-            {
-                contactLines.AddRange(
-                    section.Text
-                        .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                        .SelectMany(SplitContactTokens));
-
-                continue;
-            }
-
-            if (!IsHeaderProfileSection(section, sourceSections))
-            {
-                continue;
-            }
-
-            var lines = section.Text
-                .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .ToArray();
-            var (_, extractedContactLines, _) = SplitLeadingContactBlock(lines);
-            contactLines.AddRange(extractedContactLines);
+            return false;
         }
 
-        return contactLines
-            .Select(CvExportTextNormalizer.Field)
-            .Where((line) => line.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
+        var trimmed = line.Trim();
 
-    public static bool IsContactRepresented(
-        IReadOnlyList<CvStructuredSectionWriteDto> sections,
-        string contactLine)
-    {
-        var normalizedContact = CvExportTextNormalizer.Field(contactLine);
+        if (CvStructuredImportHeuristic.LooksLikeDateLine(trimmed)
+            || trimmed.Contains('@', StringComparison.Ordinal)
+            || CvImportLinkIntegrity.LooksLikeUrlLine(trimmed)
+            || PhonePattern.IsMatch(trimmed) && !HasAddressOrLocationLabel(trimmed) && !PostalCodePattern.IsMatch(trimmed))
+        {
+            return false;
+        }
 
-        if (normalizedContact.Length == 0)
+        if (HasAddressOrLocationLabel(trimmed))
         {
             return true;
         }
 
-        foreach (var section in sections)
+        if (PostalCodePattern.IsMatch(trimmed))
         {
-            foreach (var entry in section.Entries)
-            {
-                if (FieldContains(normalizedContact, entry.Title)
-                    || FieldContains(normalizedContact, entry.Subtitle)
-                    || FieldContains(normalizedContact, entry.Summary)
-                    || FieldContains(normalizedContact, entry.DateRange)
-                    || FieldContains(normalizedContact, entry.TechStack)
-                    || entry.Bullets.Any((bullet) => FieldContains(normalizedContact, bullet)))
-                {
-                    return true;
-                }
-            }
+            return true;
+        }
+
+        if (trimmed.Contains(',', StringComparison.Ordinal)
+            && trimmed.Any(char.IsDigit)
+            && trimmed.Count(char.IsLetter) >= 4)
+        {
+            return true;
+        }
+
+        var parts = trimmed.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 2
+            && parts.All(static (part) =>
+                part.Length >= 2
+                && part.Count(char.IsLetter) >= 2
+                && part.All(static (ch) => char.IsLetter(ch) || ch is ' ' or '-' or '\'')))
+        {
+            return true;
         }
 
         return false;
     }
 
-    public static IReadOnlyList<CvStructuredSectionWriteDto> RestoreMissingContactFromSource(
-        IReadOnlyList<CvStructuredSectionWriteDto> sections,
-        IReadOnlyList<CvPdfRawSection>? sourceSections)
+    public static bool HasAddressOrLocationLabel(string line)
     {
-        if (sourceSections is null || sourceSections.Count == 0)
+        ReadOnlySpan<string> labels =
+        [
+            "address",
+            "addr",
+            "location",
+            "lokation",
+            "bopæl",
+            "bopael",
+            "residence"
+        ];
+
+        var trimmed = line.Trim();
+
+        foreach (var label in labels)
         {
-            return sections;
-        }
-
-        var sourceContactLines = ExtractContactLinesFromSource(sourceSections);
-
-        if (sourceContactLines.Count == 0)
-        {
-            return sections;
-        }
-
-        var missingContactLines = sourceContactLines
-            .Where((line) => !IsContactRepresented(sections, line))
-            .ToArray();
-
-        if (missingContactLines.Length == 0)
-        {
-            return sections;
-        }
-
-        var existingContactSectionIndex = sections.ToList().FindIndex((section) =>
-            section.SectionType.Equals(CvSectionTypes.Contact, StringComparison.OrdinalIgnoreCase));
-
-        // Legacy AI drift: Contact content parked as Custom headed "Contact".
-        if (existingContactSectionIndex < 0)
-        {
-            existingContactSectionIndex = sections.ToList().FindIndex((section) =>
-                section.SectionType.Equals(CvSectionTypes.Custom, StringComparison.OrdinalIgnoreCase)
-                && section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (existingContactSectionIndex >= 0)
-        {
-            var existingContactSection = sections[existingContactSectionIndex];
-            var existingEntry = existingContactSection.Entries.FirstOrDefault();
-            var mergedBullets = (existingEntry?.Bullets ?? [])
-                .Concat(missingContactLines)
-                .Select(CvExportTextNormalizer.Field)
-                .Where((line) => line.Length > 0)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            var updatedEntry = (existingEntry ?? new CvStructuredEntryWriteDto(
-                null,
-                string.Empty,
-                null,
-                null,
-                string.Empty,
-                [],
-                string.Empty,
-                CvEntrySources.Import,
-                null,
-                0)) with
+            if (trimmed.Equals(label, StringComparison.OrdinalIgnoreCase))
             {
-                Bullets = mergedBullets
-            };
+                return true;
+            }
 
-            return sections
-                .Select((section, index) =>
-                    index == existingContactSectionIndex
-                        ? section with
-                        {
-                            SectionType = CvSectionTypes.Contact,
-                            Heading = string.IsNullOrWhiteSpace(section.Heading) ? "Contact" : section.Heading,
-                            Entries = [updatedEntry]
-                        }
-                        : section)
-                .ToArray();
+            if (trimmed.StartsWith(label + ":", StringComparison.OrdinalIgnoreCase)
+                || trimmed.StartsWith(label + " ", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
-        var contactSection = CreateContactSection(missingContactLines);
-
-        return sections
-            .Prepend(contactSection)
-            .Select((section, index) => section with { SortOrder = index })
-            .ToArray();
+        return false;
     }
-
-    private static bool IsContactSection(CvPdfRawSection section) =>
-        section.NormalizedKey.Equals("contact", StringComparison.OrdinalIgnoreCase)
-        || section.NormalizedKey.Equals("contact information", StringComparison.OrdinalIgnoreCase)
-        || CvPdfSectionDetector.NormalizeHeading(section.Heading)
-            .Equals("contact", StringComparison.OrdinalIgnoreCase)
-        || CvPdfSectionDetector.NormalizeHeading(section.Heading)
-            .Equals("contact information", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsHeaderProfileSection(CvPdfRawSection section, IReadOnlyList<CvPdfRawSection> sourceSections) =>
-        section.Heading.Equals("Profile", StringComparison.OrdinalIgnoreCase)
-        || (ReferenceEquals(section, sourceSections[0])
-            && CvStructuredImportSectionTypeMapping.MapSectionType(section.NormalizedKey) == CvSectionTypes.Summary);
 
     private static bool CouldBeNameLine(string line)
     {
@@ -321,33 +259,216 @@ internal static class CvStructuredImportEntrySupport
         line.StartsWith("contact", StringComparison.OrdinalIgnoreCase)
         && line.Length <= 32;
 
-    private static bool LooksLikeLocationLine(string line)
+    public static bool IsContactNameTitle(string? title) =>
+        !string.IsNullOrWhiteSpace(title)
+        && title.Trim().Equals("name", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsKnownContactChannelLabel(string? title)
     {
-        if (string.IsNullOrWhiteSpace(line) || line.Length > 80)
+        if (string.IsNullOrWhiteSpace(title))
         {
             return false;
         }
 
-        if (!line.Contains(',', StringComparison.Ordinal))
+        return title.Trim().ToLowerInvariant() switch
         {
-            return false;
-        }
-
-        if (CvStructuredImportHeuristic.LooksLikeDateLine(line))
-        {
-            return false;
-        }
-
-        return line.Count(char.IsLetter) >= 4;
+            "email" or "e-mail" or "phone" or "mobile" or "tel" or "telephone"
+                or "linkedin" or "github" or "location" or "address"
+                or "website" or "web" or "url" => true,
+            _ => false
+        };
     }
 
-    private static bool FieldContains(string needle, string? haystack)
+    /// <summary>
+    /// Section headings the model sometimes misfiles as Contact Name (e.g. "SUMMARY").
+    /// </summary>
+    public static bool LooksLikeSectionHeadingAsName(string? value)
     {
-        if (string.IsNullOrWhiteSpace(haystack))
+        if (string.IsNullOrWhiteSpace(value))
         {
             return false;
         }
 
-        return haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+        var trimmed = value.Trim();
+
+        if (trimmed.Length > 48 || trimmed.Contains('@', StringComparison.Ordinal) || trimmed.Any(char.IsDigit))
+        {
+            return false;
+        }
+
+        var normalized = trimmed.TrimEnd(':').ToLowerInvariant();
+
+        return normalized is "summary" or "profile" or "about" or "about me" or "objective"
+            or "experience" or "education" or "skills" or "projects" or "contact"
+            or "contact information" or "languages" or "interests" or "personal interests";
+    }
+
+    /// <summary>
+    /// Reject sentence fragments the model invents when the PDF text has no person name
+    /// (e.g. "A mother of three" from Personal Interests).
+    /// </summary>
+    public static bool LooksLikePlausiblePersonName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || LooksLikeSectionHeadingAsName(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+
+        if (trimmed.Length > 64
+            || trimmed.Contains('@', StringComparison.Ordinal)
+            || trimmed.Any(char.IsDigit)
+            || LooksLikeContactLine(trimmed))
+        {
+            return false;
+        }
+
+        var words = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (words.Length is < 1 or > 5)
+        {
+            return false;
+        }
+
+        // Require Title Case / all-caps tokens (allow particles like van/de/da/von).
+        ReadOnlySpan<string> particles = ["van", "von", "de", "da", "del", "della", "di", "la", "le", "du"];
+        ReadOnlySpan<string> jobTokens =
+        [
+            "developer", "engineer", "manager", "designer", "analyst", "consultant",
+            "specialist", "architect", "intern", "student", "director", "officer",
+            "lead", "senior", "junior", "full-stack", "fullstack", "software",
+            "frontend", "backend", "devops", "founder", "ceo", "cto", "coo"
+        ];
+
+        for (var i = 0; i < words.Length; i++)
+        {
+            var word = words[i];
+            var lower = word.ToLowerInvariant();
+
+            foreach (var job in jobTokens)
+            {
+                if (lower.Equals(job, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            var isParticle = false;
+
+            foreach (var particle in particles)
+            {
+                if (word.Equals(particle, StringComparison.OrdinalIgnoreCase))
+                {
+                    isParticle = true;
+                    break;
+                }
+            }
+
+            if (isParticle && i > 0)
+            {
+                continue;
+            }
+
+            if (word.Length == 0 || !char.IsLetter(word[0]))
+            {
+                return false;
+            }
+
+            // Reject lowercase-leading tokens ("mother", "of", "three").
+            if (char.IsLower(word[0]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gemini often puts Name in summary and channel values in summary instead of
+    /// subtitle / bullets. Reshape to the wire shape FE + export expect.
+    /// </summary>
+    public static (string? Subtitle, string Summary, IReadOnlyList<string> Bullets)
+        ReshapeContactEntryFields(
+            string title,
+            string? subtitle,
+            string summary,
+            IReadOnlyList<string> bullets)
+    {
+        var valuedBullets = bullets
+            .Where(static (line) => !string.IsNullOrWhiteSpace(line))
+            .Select(static (line) => line.Trim())
+            .ToArray();
+
+        if (IsContactNameTitle(title))
+        {
+            var nameCandidate = !string.IsNullOrWhiteSpace(subtitle)
+                ? subtitle.Trim()
+                : !string.IsNullOrWhiteSpace(summary)
+                    ? summary.Trim()
+                    : valuedBullets.FirstOrDefault();
+
+            if (LooksLikeSectionHeadingAsName(nameCandidate)
+                || !LooksLikePlausiblePersonName(nameCandidate))
+            {
+                // Drop fake name; leave any non-prose channel bullets (phones/emails) if present.
+                var channelLikeBullets = valuedBullets
+                    .Where(static (line) =>
+                        !LooksLikeSectionHeadingAsName(line)
+                        && (line.Contains('@', StringComparison.Ordinal)
+                            || LooksLikeContactLine(line)))
+                    .ToArray();
+
+                return (null, string.Empty, channelLikeBullets);
+            }
+
+            if (!string.IsNullOrWhiteSpace(nameCandidate))
+            {
+                // If the name was promoted from the first bullet, drop that bullet only.
+                // Keep remaining channel bullets (heuristic legacy Name+bullets shape).
+                IReadOnlyList<string> leftoverBullets;
+                if (string.IsNullOrWhiteSpace(subtitle)
+                    && string.IsNullOrWhiteSpace(summary)
+                    && valuedBullets.Length > 0
+                    && valuedBullets[0].Equals(nameCandidate, StringComparison.OrdinalIgnoreCase))
+                {
+                    leftoverBullets = valuedBullets.Skip(1).ToArray();
+                }
+                else if (!string.IsNullOrWhiteSpace(subtitle) || !string.IsNullOrWhiteSpace(summary))
+                {
+                    // Name came from subtitle/summary — keep all channel bullets.
+                    leftoverBullets = valuedBullets;
+                }
+                else
+                {
+                    leftoverBullets = valuedBullets;
+                }
+
+                return (nameCandidate, string.Empty, leftoverBullets);
+            }
+
+            return (null, string.Empty, valuedBullets);
+        }
+
+        if (IsKnownContactChannelLabel(title))
+        {
+            if (valuedBullets.Length == 0 && !string.IsNullOrWhiteSpace(summary))
+            {
+                return (subtitle, string.Empty, [summary.Trim()]);
+            }
+
+            if (valuedBullets.Length > 0)
+            {
+                var deduped = valuedBullets
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                // Prefer bullets; drop summary duplicate / leftover from Gemini.
+                return (subtitle, string.Empty, deduped);
+            }
+        }
+
+        return (subtitle, summary, valuedBullets.Length > 0 ? valuedBullets : bullets);
     }
 }

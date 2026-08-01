@@ -30,7 +30,9 @@ public sealed class CvPdfFullTextExtractorTests
         Assert.Equal(CvPdfExtractionQuality.Good, result.Quality);
         Assert.True(result.CharCount > 120);
         Assert.True(result.WordCount > 20);
-        Assert.Contains(result.Sections, (section) =>
+        Assert.Empty(result.Sections); // Sectionize deferred off extract happy path
+        var sections = extractor.SectionizeForFallback(result.Lines);
+        Assert.Contains(sections, (section) =>
             section.NormalizedKey.Equals("experience", StringComparison.OrdinalIgnoreCase)
             || section.Heading.Equals("Experience", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(

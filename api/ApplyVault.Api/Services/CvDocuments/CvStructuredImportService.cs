@@ -28,8 +28,7 @@ public sealed class CvStructuredImportService(
     ICvPdfProfilePhotoExtractor profilePhotoExtractor,
     ICvStructuredImportAiClient importAiClient,
     ICvStructuredDocumentService structuredDocumentService,
-    IOptions<GoogleAiOptions> googleAiOptions,
-    IOptions<CvImportAiOptions> importAiOptions) : ICvStructuredImportService
+    IOptions<GoogleAiOptions> googleAiOptions) : ICvStructuredImportService
 {
     public async Task<CvStructuredImportPreviewDto> PreviewImportAsync(
         AppUserEntity user,
@@ -159,7 +158,6 @@ public sealed class CvStructuredImportService(
             fullTextExtractor,
             importAiClient,
             googleAiOptions.Value.Enabled,
-            importAiOptions.Value,
             cancellationToken);
 
     private async Task<bool> PersistProfilePhotoAsync(

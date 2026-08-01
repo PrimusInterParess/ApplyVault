@@ -1,0 +1,38 @@
+task_id: "cv-pdf-section-match-2026-08-01"
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-01"
+request: >-
+  After PDF extract, structuring failed to match template sections. Operator
+  chose option 2: AI-first fill from full extracted text with catalog schema;
+  then remove minimize-AI / SoftHeading pollution.
+approvals:
+  operator_choice_2: AI-first extract → Gemini fills template — approved
+  pollution_cleanup: SoftHeading / confidence gate / ForceAi removal — approved
+delivered:
+  - "ICvStructuredImportAiClient.ParseAsync(string) full-text primary + AI-first prompts"
+  - "CvPdfImportPipeline AI-first happy path; heuristic only on AI off/fail"
+  - "Deleted SoftHeading + SoftHeading tests; simplified AiGate to enabled check"
+  - "Removed ForceAi / LowConfidenceMinBodyChars + appsettings keys + section-list ParseAsync"
+  - "QA matrix + FallsBackWhenAiThrows gap test"
+agents:
+  - architecture-engineer
+  - ai-llm-engineer
+  - backend-engineer
+  - qa-engineer
+evidence:
+  qa_focused: "54 passed (import matrix)"
+  qa_broad: "99 passed (CvStructured|CvPdf|CvImport)"
+  backend_phase2: "24 passed (prior focused)"
+  ai_phase1: "24 passed (prior focused)"
+durable_artifacts:
+  - agent-system/design-cv-pdf-ai-first-import.md
+  - agent-system/design-cv-pdf-section-match.md (SUPERSEDED for Structure happy path)
+limitations:
+  - Live Gemini HTTP path NOT_EXECUTED — full-text quality on real CVs unverified
+  - Heuristic fallback without SoftHeading may bury unknown mid-CV headings (P1 residual still required)
+  - Authenticated builder upload smoke NOT_EXECUTED
+follow_ups:
+  - "Optional: live Gemini smoke with sample PDF after API restart (GoogleAi:Enabled + ApiKey)"
+  - "Optional: if full-text quality fails live, revisit ARCHITECT_PROPOSED catalog-chunk hints (not SoftHeading)"
+pr_links: []
+github_issue: null

@@ -3,9 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace ApplyVault.Api.Options;
 
 /// <summary>
-/// Prompt and gate knobs for optional Gemini structuring during PDF CV import.
-/// Orchestration (heuristic-first + when to call AI) lives in CvStructuredImportService;
-/// this section only supplies additive options the backend gate reads and prompt text the import client uses.
+/// Prompt knobs for Gemini structuring during PDF CV import (AI-first when GoogleAi:Enabled).
+/// Pipeline: Extract full text → this prompt fills Structured CV JSON → light normalize.
 /// </summary>
 public sealed class CvImportAiOptions
 {
@@ -13,26 +12,35 @@ public sealed class CvImportAiOptions
 
     /// <summary>
     /// Prefixed to the catalog-generated system prompt at call time.
-    /// Frames Gemini as a gated fallback structurer (not always-on).
     /// </summary>
     public const string DefaultSystemPromptPreface =
         """
-        You are invoked only when deterministic PDF CV import structuring needs help.
-        Improve structure into editable sections and entries. Return JSON only.
-        Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
+        You structure CV/resume text extracted from a PDF into editable sections and entries.
+        Return JSON only. Use only facts present in the source text. Do not invent content.
         Do not claim or imply that AI assistance was used.
-        Contact is a first-class sectionType (ADR-0001); never emit Custom with heading "Contact" for contact details.
-        Never omit source lines; park unmapped or uncertain lines in Custom (catch-all heading "Additional information" when no better heading fits).
+
+        CONTACT IS MANDATORY when the source has a header block (name / email / phone / address / LinkedIn / GitHub).
+        Emit a section with sectionType Contact and heading "Contact". Never put contact details only inside Summary.
+        Never emit Custom with heading "Contact".
+
+        Contact entries (one channel per entry; value in bullets unless Name):
+        - title "Name", subtitle = person's full name (required when a name appears at the top of the CV)
+        - title "Email", bullets: ["email@domain"]
+        - title "Phone", bullets: ["+45 …"]
+        - title "Address" or "Location", bullets: ["full street, postal city, country"] — keep commas; do not split the address
+        - title "LinkedIn", bullets: ["www.linkedin.com/in/…"] — full URL/path as one token
+        - title "GitHub", bullets: ["github.com/…"] — full URL/path as one token
+        - title "Website" for other sites
+
         Keep URLs and emails as single atomic tokens; never split on "/".
+        Park anything else that does not fit a typed section in Custom (heading "Additional information" when needed).
         """;
 
     /// <summary>
-    /// Full system-prompt intent for documentation / optional config override of the preface+rules narrative.
-    /// Runtime system instruction is SystemPromptPreface + catalog-generated section/field rules (ADR-0001).
+    /// Documented full system-prompt narrative. Runtime uses SystemPromptPreface + catalog rules.
     /// </summary>
     public const string DefaultSystemPrompt =
         """
-        You are invoked only when deterministic PDF CV import structuring needs help.
         You structure CV/resume text extracted from a PDF into editable sections and entries.
         Return JSON only. Do not wrap in markdown fences.
         Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
@@ -41,95 +49,57 @@ public sealed class CvImportAiOptions
 
         sectionType must be one of: Experience, Projects, Education, Skills, Summary, Contact, Custom.
         Map headings using these rules:
-        - work/professional/employment/career history -> Experience (normalize heading to "Experience" when appropriate)
+        - work/professional/employment/career history -> Experience
         - projects/personal projects/side projects -> Projects
         - education/degrees -> Education
         - skills/technical skills/competencies -> Skills
-        - summary/profile/about/objective -> Summary
-        - contact/contact information -> Contact (first-class; heading "Contact")
+        - summary/profile/about/objective -> Summary (prose only — not email/phone/links/name)
+        - contact/contact information -> Contact
         - certifications, awards, honors, languages, volunteer, publications, references -> Custom
         - anything else -> Custom
 
-        For every section return:
-        - heading: concise section title
-        - sectionType: Experience | Projects | Education | Skills | Summary | Contact | Custom
-        - entries: array of structured items with:
-          - title: role, project, degree, or skill group name
-          - subtitle: employer, institution, or context (optional)
-          - dateRange: plain text dates such as "Jan 2020 – Present" (optional)
-          - summary: short prose paragraph(s); use a single string, not markdown
-          - bullets: achievement bullets as plain strings without leading "-" or "*"; leave empty for Skills
-          - techStack: comma-separated technologies or skills when relevant; empty string otherwise
+        For every section return heading, sectionType, and entries with:
+        title, subtitle, dateRange, summary, bullets, techStack.
 
         Decisive rules:
-        - One entry per job, project, or degree — never merge multiple roles into one entry
-        - Put dates only in dateRange, never in title or subtitle
-        - Put bullet-like lines in bullets, not in summary
-        - For Skills sections, put skills in techStack as a comma-separated string; use title for skill groups only; leave bullets empty
-        - For Summary sections, use a single entry with prose in summary; title may be empty or "Summary"
-        - Do not use markdown, HTML, or bold markers in any field
-        - Preserve contact details (email, phone, LinkedIn, GitHub, website, location) in a Contact section (sectionType Contact)
-        - Contact section must include every email, phone, LinkedIn, GitHub, website, and location line from the header block
-        - Put contact details in bullets when there are multiple items; keep page numbers out
-        - Prefer Contact bullets for full URLs and profile links
-        - Keep URLs and emails as single atomic tokens; never split on "/"
-        - Choose field placement by sectionType context, but never omit source lines; park unmapped or uncertain lines in Custom (catch-all heading "Additional information" when no better heading fits)
-        - If contact lines appear before summary/profile text, split them into a Contact section and keep the prose in Summary
-        - If a raw section mixes experience and projects, split into separate sections with correct sectionType
+        - One entry per job, project, or degree
+        - Put dates only in dateRange
+        - Skills: techStack comma-separated; title for skill groups; bullets empty
+        - Summary: single entry with prose in summary only
+        - Contact: REQUIRED separate section whenever name/email/phone/address/LinkedIn/GitHub appear in the source header
+        - Contact Name: title exactly "Name", subtitle = full name
+        - Contact channels: separate entries titled Email, Phone, Address (or Location), LinkedIn, GitHub, Website — each value in bullets[0]
+        - Never bury Contact fields inside Summary.summary
+        - Never split URLs or street addresses on "/" or commas
+        - Never omit source lines; use Custom "Additional information" for leftovers
         - Do not invent facts; improve structure only
         """;
 
+    /// <summary>
+    /// User message template. Replace <c>{{payload}}</c> with the full ordered extracted CV text.
+    /// </summary>
     public const string DefaultUserPromptTemplate =
         """
-        Deterministic structuring was insufficient for a confident import.
-        Structure the following CV sections extracted from a PDF into JSON.
-        Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
-        Use sectionType Contact for contact details (not Custom). Never omit source lines; park unmapped content in Custom.
-        Keep URLs and emails as single atomic tokens; never split on "/".
+        Structure the following extracted CV text into JSON sections and entries.
+        Use only facts from the source.
 
-        Each item in the payload has:
-        - heading: section heading from the PDF
-        - normalizedKey: detected section category hint (use as guidance, not the final sectionType)
-        - text: raw section body text
+        First, extract Contact from the header (name, address, phone, email, LinkedIn, GitHub) into sectionType Contact
+        with separate entries (Name subtitle + Email/Phone/Address/LinkedIn/GitHub bullets). Do not leave Contact empty
+        if those lines exist. Do not put them only in Summary.
 
-        Return sections with entries containing title, subtitle, dateRange, summary, bullets, and techStack.
-        Apply the field-placement rules from the system prompt decisively.
+        Then structure Experience, Projects, Education, Skills, Summary, and Custom as needed.
+        Keep URLs and full addresses as single values.
 
-        Payload:
-        {{payloadJson}}
+        Extracted CV text:
+        {{payload}}
         """;
 
-    /// <summary>
-    /// When true (and GoogleAi:Enabled with non-Empty extraction), the import gate should call Gemini
-    /// even if heuristic confidence is high. Default false — product path is heuristic-first with gated AI.
-    /// </summary>
-    public bool ForceAi { get; set; }
-
-    /// <summary>
-    /// Gate tuning (read by CvStructuredImportAiGate): minimum combined raw section body characters for the
-    /// "only default Profile/Summary bucket + large body" low-confidence signal.
-    /// </summary>
-    [Range(1, 100_000)]
-    public int LowConfidenceMinBodyChars { get; set; } = 400;
-
-    /// <summary>
-    /// Optional extract/gate tuning: average extracted characters per page at or below this may be treated as Sparse.
-    /// Backend extractor currently uses an in-code constant; this key is additive for config-driven tuning.
-    /// Empty extraction remains a hard fail — AI must not invent text.
-    /// </summary>
     [Range(1, 10_000)]
     public int SparseMaxAverageCharsPerPage { get; set; } = 120;
 
-    /// <summary>
-    /// Prefixed to the ADR-0001 catalog-generated system prompt when calling Gemini.
-    /// </summary>
     [Required]
     public string SystemPromptPreface { get; set; } = DefaultSystemPromptPreface;
 
-    /// <summary>
-    /// Documented full system-prompt narrative. Not used alone at runtime; catalog rules are appended via the import client.
-    /// Kept for config discoverability and parity with other *Ai options sections.
-    /// </summary>
     [Required]
     public string SystemPrompt { get; set; } = DefaultSystemPrompt;
 

@@ -1,6 +1,5 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
-using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Tests;
 
@@ -66,7 +65,7 @@ public sealed class CvStructuredImportResidualPlacementTests
     }
 
     [Fact]
-    public void Apply_AppendsResidualToSoftPromotedCustomHeading()
+    public void Apply_AppendsResidualToMatchingCustomHeading()
     {
         var raw = new[]
         {
@@ -77,7 +76,7 @@ public sealed class CvStructuredImportResidualPlacementTests
                 "Hiking and open-source mentoring on weekends.")
         };
 
-        // Empty Custom shell for the soft-promoted heading (body not yet placed).
+        // Empty Custom shell for a catalog/custom heading (body not yet placed).
         var sections = new[]
         {
             new CvStructuredSectionWriteDto(
@@ -116,29 +115,5 @@ public sealed class CvStructuredImportResidualPlacementTests
         var joined = string.Join(' ', catchAll.Entries.SelectMany((entry) => entry.Bullets));
         Assert.Contains(url, joined, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("https:", catchAll.Entries.SelectMany((entry) => entry.Bullets));
-    }
-
-    [Fact]
-    public void SoftHeading_PromotesUnknownTitleCaseOutsideExperience()
-    {
-        var catalog = CvSectionCatalogProvider.LoadFromDefaultPath();
-
-        Assert.True(
-            CvStructuredImportSoftHeading.LooksLikePromotableHeading(
-                "Tech stack",
-                currentNormalizedKey: "summary",
-                catalog));
-
-        Assert.False(
-            CvStructuredImportSoftHeading.LooksLikePromotableHeading(
-                "Tech stack",
-                currentNormalizedKey: "experience",
-                catalog));
-
-        Assert.False(
-            CvStructuredImportSoftHeading.LooksLikePromotableHeading(
-                "https://example.com/path",
-                currentNormalizedKey: "summary",
-                catalog));
     }
 }

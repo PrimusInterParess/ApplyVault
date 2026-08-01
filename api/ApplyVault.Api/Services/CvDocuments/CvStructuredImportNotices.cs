@@ -12,7 +12,7 @@ internal static class CvStructuredImportNotices
 
     public static string? Build(
         CvPdfExtractionQuality extractionQuality,
-        IReadOnlyList<CvStructuredSectionWriteDto> heuristicSections,
+        IReadOnlyList<CvStructuredSectionWriteDto> structureBaseline,
         IReadOnlyList<CvStructuredSectionWriteDto> finalSections,
         bool usedAi,
         bool aiAttempted,
@@ -36,18 +36,18 @@ internal static class CvStructuredImportNotices
             return IncompleteReview;
         }
 
-        var heuristicWeak = IsWeak(heuristicSections, extractionQuality);
+        var baselineWeak = IsWeak(structureBaseline, extractionQuality);
 
         // Sparse extract with weak structure and AI skipped or failed → ask user to review.
         if (extractionQuality == CvPdfExtractionQuality.Sparse
-            && heuristicWeak
+            && baselineWeak
             && (!aiAttempted || aiFailed || !usedAi))
         {
             return IncompleteReview;
         }
 
-        // AI failed and heuristic is also weak → high-signal review notice.
-        if (aiFailed && heuristicWeak)
+        // AI failed and fallback/baseline is also weak → high-signal review notice.
+        if (aiFailed && baselineWeak)
         {
             return IncompleteReview;
         }

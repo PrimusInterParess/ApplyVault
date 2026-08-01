@@ -1,5 +1,4 @@
 using ApplyVault.Api.Models;
-using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.CvSectionCatalog;
 using PdfSharp.Drawing;
@@ -19,32 +18,7 @@ public sealed class CvPdfImportPipelineTests
     }
 
     [Fact]
-    public async Task BuildPreviewAsync_DoesNotCallAiWhenHeuristicConfidenceHigh()
-    {
-        var pdfBytes = CreateStructuredCvPdf();
-        var aiClient = new SpyImportAiClient();
-        var extractor = new CvPdfFullTextExtractor(CvSectionCatalogProvider.LoadFromDefaultPath());
-
-        var preview = await CvPdfImportPipeline.BuildPreviewAsync(
-            pdfBytes,
-            extractor,
-            aiClient,
-            googleAiEnabled: true,
-            new CvImportAiOptions(),
-            CancellationToken.None);
-
-        Assert.False(aiClient.WasCalled);
-        Assert.False(preview.UsedAi);
-        Assert.True(preview.Sections.Count > 0);
-        Assert.Null(preview.Notice);
-        Assert.DoesNotContain(
-            "Google AI",
-            preview.Notice ?? string.Empty,
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task BuildPreviewAsync_CallsAiWhenForceAi()
+    public async Task BuildPreviewAsync_CallsAiWhenGoogleAiEnabled()
     {
         var pdfBytes = CreateStructuredCvPdf();
         var aiClient = new SpyImportAiClient
@@ -72,10 +46,11 @@ public sealed class CvPdfImportPipelineTests
             extractor,
             aiClient,
             googleAiEnabled: true,
-            new CvImportAiOptions { ForceAi = true },
             CancellationToken.None);
 
         Assert.True(aiClient.WasCalled);
+        Assert.False(string.IsNullOrWhiteSpace(aiClient.LastFullText));
+        Assert.Contains("Experience", aiClient.LastFullText!, StringComparison.OrdinalIgnoreCase);
         Assert.True(preview.UsedAi);
         // Narrow AI output leaves residual lines → P1 catch-all Custom notice (not quiet).
         Assert.Equal(CvStructuredImportNotices.IncompleteReview, preview.Notice);
@@ -87,6 +62,76 @@ public sealed class CvPdfImportPipelineTests
             (section) => section.Heading.Equals(
                 CvStructuredImportResidualPlacement.CatchAllHeading,
                 StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task BuildPreviewAsync_DoesNotCallAiWhenGoogleAiDisabled()
+    {
+        var pdfBytes = CreateStructuredCvPdf();
+        var aiClient = new SpyImportAiClient();
+        var extractor = new CvPdfFullTextExtractor(CvSectionCatalogProvider.LoadFromDefaultPath());
+
+        var preview = await CvPdfImportPipeline.BuildPreviewAsync(
+            pdfBytes,
+            extractor,
+            aiClient,
+            googleAiEnabled: false,
+            CancellationToken.None);
+
+        Assert.False(aiClient.WasCalled);
+        Assert.False(preview.UsedAi);
+        Assert.True(preview.Sections.Count > 0);
+        Assert.Null(preview.Notice);
+    }
+
+    [Fact]
+    public async Task BuildPreviewAsync_FallsBackWhenAiReturnsEmpty()
+    {
+        var pdfBytes = CreateStructuredCvPdf();
+        var aiClient = new SpyImportAiClient
+        {
+            ResultFactory = () => new CvStructuredImportResult([])
+        };
+        var extractor = new CvPdfFullTextExtractor(CvSectionCatalogProvider.LoadFromDefaultPath());
+
+        var preview = await CvPdfImportPipeline.BuildPreviewAsync(
+            pdfBytes,
+            extractor,
+            aiClient,
+            googleAiEnabled: true,
+            CancellationToken.None);
+
+        Assert.True(aiClient.WasCalled);
+        Assert.False(preview.UsedAi);
+        Assert.True(preview.Sections.Count > 0);
+        // Strong heuristic baseline → quiet notice even though AI failed (aiFailed+weak covered in NoticesTests).
+        Assert.Null(preview.Notice);
+    }
+
+    [Fact]
+    public async Task BuildPreviewAsync_FallsBackWhenAiThrows()
+    {
+        var pdfBytes = CreateStructuredCvPdf();
+        var aiClient = new SpyImportAiClient
+        {
+            ResultFactory = () => throw new HttpRequestException("Gemini unavailable")
+        };
+        var extractor = new CvPdfFullTextExtractor(CvSectionCatalogProvider.LoadFromDefaultPath());
+
+        var preview = await CvPdfImportPipeline.BuildPreviewAsync(
+            pdfBytes,
+            extractor,
+            aiClient,
+            googleAiEnabled: true,
+            CancellationToken.None);
+
+        Assert.True(aiClient.WasCalled);
+        Assert.False(preview.UsedAi);
+        Assert.True(preview.Sections.Count > 0);
+        Assert.Contains(
+            preview.Sections,
+            (section) => section.SectionType.Equals(CvSectionTypes.Experience, StringComparison.OrdinalIgnoreCase)
+                || section.Heading.Equals("Experience", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -102,7 +147,6 @@ public sealed class CvPdfImportPipelineTests
                 extractor,
                 aiClient,
                 googleAiEnabled: true,
-                new CvImportAiOptions(),
                 CancellationToken.None));
 
         Assert.False(aiClient.WasCalled);
@@ -169,13 +213,16 @@ public sealed class CvPdfImportPipelineTests
     {
         public bool WasCalled { get; private set; }
 
+        public string? LastFullText { get; private set; }
+
         public Func<CvStructuredImportResult>? ResultFactory { get; init; }
 
         public Task<CvStructuredImportResult> ParseAsync(
-            IReadOnlyList<CvImportSectionInput> sections,
+            string extractedFullText,
             CancellationToken cancellationToken = default)
         {
             WasCalled = true;
+            LastFullText = extractedFullText;
             return Task.FromResult(
                 ResultFactory?.Invoke()
                 ?? new CvStructuredImportResult([]));

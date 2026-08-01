@@ -16,8 +16,8 @@ internal static class CvStructuredImportNormalizer
         var sourceHints = BuildSourceHints(sourceSections);
 
         var normalizedSections = sections
-            .Select((section) => NormalizeSection(section, sourceHints))
             .SelectMany(ExtractContactFromSummarySection)
+            .Select((section) => NormalizeSection(section, sourceHints))
             .Where((section) =>
                 !string.IsNullOrWhiteSpace(section.Heading)
                 || section.Entries.Count > 0)
@@ -30,7 +30,7 @@ internal static class CvStructuredImportNormalizer
             })
             .ToArray();
 
-        return CvStructuredImportEntrySupport.RestoreMissingContactFromSource(normalizedSections, sourceSections);
+        return normalizedSections;
     }
 
     private static Dictionary<string, string> BuildSourceHints(IReadOnlyList<CvPdfRawSection>? sourceSections)
@@ -120,6 +120,15 @@ internal static class CvStructuredImportNormalizer
 
         (title, subtitle, dateRange) = RelocateEmbeddedDates(title, subtitle, dateRange);
         (dateRange, summary) = SalvageMisfiledDateRange(dateRange, summary);
+
+        if (sectionType == CvSectionTypes.Contact)
+        {
+            (subtitle, summary, bullets) = CvStructuredImportEntrySupport.ReshapeContactEntryFields(
+                title,
+                subtitle,
+                summary,
+                bullets);
+        }
 
         if (sectionType == CvSectionTypes.Skills)
         {

@@ -19,17 +19,29 @@ public sealed class GoogleAiCvStructuredImportClient(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public async Task<CvStructuredImportResult> ParseAsync(
-        IReadOnlyList<CvImportSectionInput> sections,
+    public Task<CvStructuredImportResult> ParseAsync(
+        string extractedFullText,
         CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(extractedFullText))
+        {
+            throw new InvalidOperationException(
+                "Extracted CV text is empty. PDF import must hard-fail empty extraction before calling AI.");
+        }
+
+        return ParseCoreAsync(extractedFullText, cancellationToken);
+    }
+
+    private async Task<CvStructuredImportResult> ParseCoreAsync(
+        string extractedFullText,
+        CancellationToken cancellationToken)
     {
         var options = googleAiOptions.Value;
 
         if (!options.Enabled)
         {
-            // Import is heuristic-first; Gemini is optional and only called when the backend gate requests it.
             throw new InvalidOperationException(
-                "Google AI is disabled. PDF import uses heuristic structuring unless GoogleAi:Enabled and the import gate requests AI.");
+                "Google AI is disabled. PDF import uses heuristic structuring when GoogleAi:Enabled is false.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ApiKey))
@@ -45,7 +57,7 @@ public sealed class GoogleAiCvStructuredImportClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(sections),
+            BuildRequest(extractedFullText),
             SerializerOptions,
             timeoutCts.Token);
 
@@ -76,11 +88,10 @@ public sealed class GoogleAiCvStructuredImportClient(
         };
     }
 
-    private object BuildRequest(IReadOnlyList<CvImportSectionInput> sections)
+    private object BuildRequest(string extractedFullText)
     {
         var prompts = importAiOptions.Value;
-        var payloadJson = JsonSerializer.Serialize(sections, SerializerOptions);
-        // Catalog owns ADR-0001 section/field rules; preface frames gated invocation + Contact/Custom/link integrity.
+        // Catalog owns ADR-0001 section/field rules; preface frames AI-first fill + Contact/Custom/link integrity.
         var systemPrompt = ComposeSystemPrompt(prompts.SystemPromptPreface, sectionCatalog.BuildImportSystemPrompt());
 
         return new
@@ -97,16 +108,27 @@ public sealed class GoogleAiCvStructuredImportClient(
                     {
                         new
                         {
-                            text = prompts.UserPromptTemplate.Replace(
-                                "{{payloadJson}}",
-                                payloadJson,
-                                StringComparison.Ordinal)
+                            text = ApplyUserPayload(prompts.UserPromptTemplate, extractedFullText)
                         }
                     }
                 }
             },
             generationConfig = GoogleAiCvSectionsResponseSchema.Create(sectionCatalog)
         };
+    }
+
+    /// <summary>
+    /// Substitutes <c>{{payload}}</c> (preferred) or legacy <c>{{payloadJson}}</c> with full extracted text.
+    /// </summary>
+    internal static string ApplyUserPayload(string template, string extractedFullText)
+    {
+        var text = template ?? string.Empty;
+        if (text.Contains("{{payload}}", StringComparison.Ordinal))
+        {
+            return text.Replace("{{payload}}", extractedFullText, StringComparison.Ordinal);
+        }
+
+        return text.Replace("{{payloadJson}}", extractedFullText, StringComparison.Ordinal);
     }
 
     internal static string ComposeSystemPrompt(string preface, string catalogPrompt)

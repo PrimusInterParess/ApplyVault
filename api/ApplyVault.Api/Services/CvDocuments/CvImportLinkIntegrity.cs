@@ -270,6 +270,15 @@ internal static class CvImportLinkIntegrity
         }
 
         var whole = line.Trim();
+
+        // Street/city addresses must stay one token (e.g. "Fruenshave 24, 8541 Skødstrup").
+        if (CvStructuredImportEntrySupport.LooksLikeLocationLine(whole)
+            || CvStructuredImportEntrySupport.LooksLikeLocationLine(soFar)
+            || CvStructuredImportEntrySupport.HasAddressOrLocationLabel(whole))
+        {
+            return false;
+        }
+
         return CvStructuredImportEntrySupport.LooksLikeContactLine(whole)
             || CvStructuredImportEntrySupport.LooksLikeContactLine(soFar)
             || CvStructuredImportEntrySupport.LooksLikeContactLine(remainder);

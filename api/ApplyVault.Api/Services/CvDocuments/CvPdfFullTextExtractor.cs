@@ -39,8 +39,6 @@ public sealed class CvPdfFullTextExtractor(
             pdfStream.Position = 0;
         }
 
-        WriteConsole(LogTag + " BEGIN PdfPig text extraction");
-
         var orderedLines = new List<CvPdfExtractedLine>();
         var pageCount = 0;
         var wordCount = 0;
@@ -57,7 +55,13 @@ public sealed class CvPdfFullTextExtractor(
 
                 foreach (var line in BuildReadingOrderLines(tokens, page.Width))
                 {
-                    orderedLines.Add(new CvPdfExtractedLine(pageIndex, line.YPoints, line.Text));
+                    var text = NormalizeExtractedText(line.Text);
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        continue;
+                    }
+
+                    orderedLines.Add(new CvPdfExtractedLine(pageIndex, line.YPoints, text));
                 }
             }
         }
@@ -71,59 +75,52 @@ public sealed class CvPdfFullTextExtractor(
 
         if (orderedLines.Count == 0)
         {
-            WriteConsole(
-                $"{LogTag} END quality={quality} pages={pageCount} words={wordCount} chars=0 lines=0 sections=0 (no readable text)");
+            _logger.LogInformation(
+                "{Tag} empty extraction pages={PageCount} words={WordCount}",
+                LogTag,
+                pageCount,
+                wordCount);
             return new CvPdfExtractionResult([], [], pageCount, 0, wordCount, CvPdfExtractionQuality.Empty);
         }
 
-        var sections = Sectionize(orderedLines);
-        WriteExtractedText(orderedLines, quality, pageCount, wordCount, charCount, sections);
+        // AI-first: return ordered lines only. Sectionize is deferred to pipeline fallback/residual.
+        _logger.LogInformation(
+            "{Tag} quality={Quality} pages={PageCount} words={WordCount} chars={CharCount} lines={LineCount}",
+            LogTag,
+            quality,
+            pageCount,
+            wordCount,
+            charCount,
+            orderedLines.Count);
 
-        return new CvPdfExtractionResult(orderedLines, sections, pageCount, charCount, wordCount, quality);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            foreach (var line in orderedLines)
+            {
+                _logger.LogDebug("{Tag} P{Page} | {Text}", LogTag, line.PageIndex + 1, line.Text);
+            }
+        }
+
+        return new CvPdfExtractionResult(orderedLines, [], pageCount, charCount, wordCount, quality);
     }
 
-    private void WriteExtractedText(
-        IReadOnlyList<CvPdfExtractedLine> orderedLines,
-        CvPdfExtractionQuality quality,
-        int pageCount,
-        int wordCount,
-        int charCount,
-        IReadOnlyList<CvPdfRawSection> sections)
+    /// <summary>
+    /// Normalize PdfPig quirks so AI/heuristic see clean text: ligatures, soft hyphens, NULs.
+    /// </summary>
+    internal static string NormalizeExtractedText(string text)
     {
-        WriteConsole(
-            $"{LogTag} SUMMARY quality={quality} pages={pageCount} words={wordCount} chars={charCount} lines={orderedLines.Count} sections={sections.Count}");
-        WriteConsole($"{LogTag} SECTIONS " + string.Join(" | ", sections.Select(static (s) => s.Heading)));
-
-        WriteConsole(LogTag + " TEXT_START");
-        foreach (var line in orderedLines)
+        if (string.IsNullOrEmpty(text))
         {
-            // Console.WriteLine — not ILogger — so the API process console always shows full text.
-            Console.WriteLine($"{LogTag} P{line.PageIndex + 1} | {line.Text}");
+            return text;
         }
 
-        WriteConsole(LogTag + " TEXT_END");
-
-        try
-        {
-            var dumpPath = Path.Combine(
-                Path.GetTempPath(),
-                $"applyvault-cv-pdf-extract-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Environment.ProcessId}.txt");
-            var extractedText = string.Join('\n', orderedLines.Select(static (line) => line.Text));
-            File.WriteAllText(dumpPath, extractedText);
-            WriteConsole($"{LogTag} FULL_TEXT_FILE {dumpPath}");
-        }
-        catch (Exception ex)
-        {
-            WriteConsole($"{LogTag} FULL_TEXT_FILE write failed: {ex.Message}");
-        }
-
-        WriteConsole(LogTag + " END PdfPig text extraction complete");
-    }
-
-    private void WriteConsole(string message)
-    {
-        Console.WriteLine(message);
-        _logger.LogInformation("{Message}", message);
+        return text
+            .Replace("\0", string.Empty, StringComparison.Ordinal)
+            .Replace("\u00AD", string.Empty, StringComparison.Ordinal) // soft hyphen
+            .Replace("\uFB01", "fi", StringComparison.Ordinal) // ﬁ
+            .Replace("\uFB02", "fl", StringComparison.Ordinal) // ﬂ
+            .Replace("\u2013", "-", StringComparison.Ordinal) // en dash → ASCII (keep readable)
+            .Replace("\u2014", "-", StringComparison.Ordinal);
     }
 
     internal static CvPdfExtractionQuality ClassifyQuality(
@@ -149,6 +146,12 @@ public sealed class CvPdfFullTextExtractor(
         return CvPdfExtractionQuality.Good;
     }
 
+    /// <summary>
+    /// Catalog-alias sectionize for heuristic fallback and P1 residual only (not on extract happy path).
+    /// </summary>
+    internal IReadOnlyList<CvPdfRawSection> SectionizeForFallback(IReadOnlyList<CvPdfExtractedLine> orderedLines) =>
+        Sectionize(orderedLines);
+
     private IReadOnlyList<CvPdfRawSection> Sectionize(IReadOnlyList<CvPdfExtractedLine> orderedLines)
     {
         var sections = new List<(string Heading, string NormalizedKey, int PageIndex, List<string> BodyLines)>();
@@ -165,20 +168,6 @@ public sealed class CvPdfFullTextExtractor(
 
                 currentHeading = line.Text.Trim();
                 currentNormalizedKey = normalizedKey;
-                currentPageIndex = line.PageIndex;
-                currentBody = [];
-                continue;
-            }
-
-            if (CvStructuredImportSoftHeading.LooksLikePromotableHeading(
-                    line.Text,
-                    currentNormalizedKey,
-                    sectionCatalog))
-            {
-                FlushSection();
-
-                currentHeading = line.Text.Trim();
-                currentNormalizedKey = CvStructuredImportSoftHeading.ToNormalizedKey(currentHeading);
                 currentPageIndex = line.PageIndex;
                 currentBody = [];
                 continue;

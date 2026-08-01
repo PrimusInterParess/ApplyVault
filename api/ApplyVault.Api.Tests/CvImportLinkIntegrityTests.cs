@@ -49,9 +49,27 @@ public sealed class CvImportLinkIntegrityTests
     }
 
     [Fact]
-    public void ShouldJoinWithoutSpace_WhenSchemePrefixMeetsHost()
+    public void SplitContactTokens_DoesNotSplitStreetAddressOnCommas()
     {
-        Assert.True(CvImportLinkIntegrity.ShouldJoinWithoutSpace("https://", "github.com/org/repo"));
-        Assert.False(CvImportLinkIntegrity.ShouldJoinWithoutSpace("Jane", "Doe"));
+        var tokens = CvImportLinkIntegrity.SplitContactTokens(
+            "Address: Fruenshave 24, 8541 Skødstrup, Denmark");
+
+        Assert.Equal(
+            ["Address: Fruenshave 24, 8541 Skødstrup, Denmark"],
+            tokens);
+    }
+
+    [Fact]
+    public void LooksLikeLocationLine_MatchesLabeledAndPostalStreetLines()
+    {
+        Assert.True(
+            CvStructuredImportEntrySupport.LooksLikeLocationLine(
+                "Address: Fruenshave 24, 8541 Skødstrup, Denmark"));
+        Assert.True(
+            CvStructuredImportEntrySupport.LooksLikeLocationLine("8541 Skødstrup"));
+        Assert.True(
+            CvStructuredImportEntrySupport.LooksLikeLocationLine("Aarhus, Denmark"));
+        Assert.False(
+            CvStructuredImportEntrySupport.LooksLikeLocationLine("Backend, Frontend, Cloud"));
     }
 }

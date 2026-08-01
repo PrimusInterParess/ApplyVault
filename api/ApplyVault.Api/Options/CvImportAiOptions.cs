@@ -2,16 +2,39 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ApplyVault.Api.Options;
 
+/// <summary>
+/// Prompt and gate knobs for optional Gemini structuring during PDF CV import.
+/// Orchestration (heuristic-first + when to call AI) lives in CvStructuredImportService;
+/// this section only supplies additive options the backend gate reads and prompt text the import client uses.
+/// </summary>
 public sealed class CvImportAiOptions
 {
     public const string SectionName = "CvImportAi";
 
+    /// <summary>
+    /// Prefixed to the catalog-generated system prompt at call time.
+    /// Frames Gemini as a gated fallback structurer (not always-on).
+    /// </summary>
+    public const string DefaultSystemPromptPreface =
+        """
+        You are invoked only when deterministic PDF CV import structuring needs help.
+        Improve structure into editable sections and entries. Return JSON only.
+        Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
+        Do not claim or imply that AI assistance was used.
+        """;
+
+    /// <summary>
+    /// Full system-prompt intent for documentation / optional config override of the preface+rules narrative.
+    /// Runtime system instruction is SystemPromptPreface + catalog-generated section/field rules (ADR-0001).
+    /// </summary>
     public const string DefaultSystemPrompt =
         """
+        You are invoked only when deterministic PDF CV import structuring needs help.
         You structure CV/resume text extracted from a PDF into editable sections and entries.
         Return JSON only. Do not wrap in markdown fences.
         Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
         Preserve the original order of sections and entries when possible.
+        Do not claim or imply that AI assistance was used.
 
         sectionType must be one of: Experience, Projects, Education, Skills, Summary, Custom.
         Map headings using these rules:
@@ -53,7 +76,9 @@ public sealed class CvImportAiOptions
 
     public const string DefaultUserPromptTemplate =
         """
+        Deterministic structuring was insufficient for a confident import.
         Structure the following CV sections extracted from a PDF into JSON.
+        Use only facts present in the source text. Do not invent employers, projects, dates, technologies, or achievements.
 
         Each item in the payload has:
         - heading: section heading from the PDF
@@ -67,6 +92,37 @@ public sealed class CvImportAiOptions
         {{payloadJson}}
         """;
 
+    /// <summary>
+    /// When true (and GoogleAi:Enabled with non-Empty extraction), the import gate should call Gemini
+    /// even if heuristic confidence is high. Default false — product path is heuristic-first with gated AI.
+    /// </summary>
+    public bool ForceAi { get; set; }
+
+    /// <summary>
+    /// Gate tuning (read by CvStructuredImportAiGate): minimum combined raw section body characters for the
+    /// "only default Profile/Summary bucket + large body" low-confidence signal.
+    /// </summary>
+    [Range(1, 100_000)]
+    public int LowConfidenceMinBodyChars { get; set; } = 400;
+
+    /// <summary>
+    /// Optional extract/gate tuning: average extracted characters per page at or below this may be treated as Sparse.
+    /// Backend extractor currently uses an in-code constant; this key is additive for config-driven tuning.
+    /// Empty extraction remains a hard fail — AI must not invent text.
+    /// </summary>
+    [Range(1, 10_000)]
+    public int SparseMaxAverageCharsPerPage { get; set; } = 120;
+
+    /// <summary>
+    /// Prefixed to the ADR-0001 catalog-generated system prompt when calling Gemini.
+    /// </summary>
+    [Required]
+    public string SystemPromptPreface { get; set; } = DefaultSystemPromptPreface;
+
+    /// <summary>
+    /// Documented full system-prompt narrative. Not used alone at runtime; catalog rules are appended via the import client.
+    /// Kept for config discoverability and parity with other *Ai options sections.
+    /// </summary>
     [Required]
     public string SystemPrompt { get; set; } = DefaultSystemPrompt;
 

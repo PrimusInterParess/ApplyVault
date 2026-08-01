@@ -2,31 +2,15 @@ using ApplyVault.Api.Models;
 
 namespace ApplyVault.Api.Services;
 
+/// <summary>
+/// Internal diagnostics for source-line coverage. Not used for user-facing import notices
+/// (substring matching produced noisy false positives).
+/// </summary>
 internal static class CvStructuredImportCoverageAudit
 {
     private const int MinimumLineLength = 12;
 
-    public static string? BuildNotice(
-        IReadOnlyList<CvPdfRawSection> rawSections,
-        IReadOnlyList<CvStructuredSectionWriteDto> sections,
-        string? existingNotice)
-    {
-        var missingLineCount = CountMissingSourceLines(rawSections, sections);
-
-        if (missingLineCount <= 0)
-        {
-            return existingNotice;
-        }
-
-        var coverageNotice =
-            $"{missingLineCount} line{(missingLineCount == 1 ? string.Empty : "s")} from the PDF may not have been imported. Review Contact and Custom sections.";
-
-        return string.IsNullOrWhiteSpace(existingNotice)
-            ? coverageNotice
-            : $"{existingNotice} {coverageNotice}";
-    }
-
-    private static int CountMissingSourceLines(
+    public static int CountMissingSourceLines(
         IReadOnlyList<CvPdfRawSection> rawSections,
         IReadOnlyList<CvStructuredSectionWriteDto> sections)
     {

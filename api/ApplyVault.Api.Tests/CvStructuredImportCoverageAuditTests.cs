@@ -6,9 +6,9 @@ namespace ApplyVault.Api.Tests;
 public sealed class CvStructuredImportCoverageAuditTests
 {
     [Fact]
-    public void BuildNotice_AppendsWarningWhenSourceLinesAreMissing()
+    public void CountMissingSourceLines_DetectsUnmappedLinesForDiagnostics()
     {
-        var notice = CvStructuredImportCoverageAudit.BuildNotice(
+        var missing = CvStructuredImportCoverageAudit.CountMissingSourceLines(
         [
             new CvPdfRawSection(
                 "Profile",
@@ -39,17 +39,15 @@ public sealed class CvStructuredImportCoverageAuditTests
                         null,
                         0)
                 ])
-        ],
-        null);
+        ]);
 
-        Assert.NotNull(notice);
-        Assert.Contains("may not have been imported", notice, StringComparison.OrdinalIgnoreCase);
+        Assert.True(missing > 0);
     }
 
     [Fact]
-    public void BuildNotice_PreservesExistingNotice()
+    public void CountMissingSourceLines_ReturnsZeroWhenLinesAreRepresented()
     {
-        var notice = CvStructuredImportCoverageAudit.BuildNotice(
+        var missing = CvStructuredImportCoverageAudit.CountMissingSourceLines(
         [
             new CvPdfRawSection("Summary", "summary", 0, "Experienced software engineer focused on backend.")
         ],
@@ -72,9 +70,8 @@ public sealed class CvStructuredImportCoverageAuditTests
                         null,
                         0)
                 ])
-        ],
-        "Google AI is disabled; a basic structure was generated.");
+        ]);
 
-        Assert.Contains("Google AI is disabled", notice);
+        Assert.Equal(0, missing);
     }
 }

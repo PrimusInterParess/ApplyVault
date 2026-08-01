@@ -18,6 +18,11 @@ public sealed record CvStructuredImportSectionResult(
 public sealed record CvStructuredImportResult(
     IReadOnlyList<CvStructuredImportSectionResult> Sections);
 
+/// <summary>
+/// Optional Gemini structuring for PDF CV import. Callers (CvStructuredImportService) must gate
+/// invocation — heuristic-first; call only when GoogleAi:Enabled, extraction is not Empty, and the
+/// import gate fails (or CvImportAi:ForceAi). Not an always-on import path.
+/// </summary>
 public interface ICvStructuredImportAiClient
 {
     Task<CvStructuredImportResult> ParseAsync(

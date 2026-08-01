@@ -1,0 +1,36 @@
+task_id: "cv-pdf-import-simplify-2026-08-01"
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-01"
+request: >-
+  Improve PDF CV import: fuller text extraction, simpler maintainable pipeline,
+  fewer unnecessary AI trips, fewer false-positive evaluation notices.
+approvals:
+  D1: staged heuristic-first pipeline + PdfPig hardening — approved
+  D2: OCR out of scope — approved
+  D3: Notice string only — approved
+  D4: omit AI-assisted user notice — approved
+delivered:
+  - "Extract: Y-tolerance, column bands, letter fallback, ExtractionQuality"
+  - "CvPdfImportPipeline: heuristic-first → gated Gemini → Persist"
+  - "CvImportAi: ForceAi + threshold options; gated prompts"
+  - "High-signal notices; coverage audit diagnostics-only"
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - ai-llm-engineer
+  - qa-engineer
+evidence:
+  unit_matrix: "42 passed (QA re-run)"
+  upload_import_integration: "6 passed (QA re-run)"
+durable_artifacts:
+  - agent-system/design-cv-pdf-import-pipeline.md
+limitations:
+  - Authenticated browser builder upload/notice UX NOT_EXECUTED
+  - Live Gemini HTTP path NOT_EXECUTED (spy/fake only)
+  - Scan-only/image PDFs remain Empty without OCR (by design D2)
+  - Complex multi-column/table layouts may still mis-order
+follow_ups:
+  - "Optional: smoke upload a real multi-column CV in builder after API restart"
+  - "Optional: OCR follow-up only if scan PDFs are a measured failure share"
+  - "Tune CvImportAi thresholds / ForceAi if gate over- or under-calls in production"
+pr_links: []

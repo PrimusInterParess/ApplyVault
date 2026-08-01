@@ -93,16 +93,18 @@ public sealed class CvStructuredDocumentService(
                     Id = entryWrite.Id ?? Guid.NewGuid(),
                     UserId = user.Id,
                     SectionId = sectionEntity.Id,
-                    Title = projected.Title.Trim(),
-                    Subtitle = string.IsNullOrWhiteSpace(projected.Subtitle) ? null : projected.Subtitle.Trim(),
-                    DateRange = string.IsNullOrWhiteSpace(projected.DateRange) ? null : projected.DateRange.Trim(),
+                    Title = ClampRequired(projected.Title, 256),
+                    Subtitle = ClampOptional(projected.Subtitle, 512),
+                    DateRange = ClampOptional(projected.DateRange, 128),
                     Summary = projected.Summary?.Trim() ?? string.Empty,
                     BulletsJson = CvStructuredJson.SerializeBullets(projected.Bullets),
-                    TechStack = projected.TechStack?.Trim() ?? string.Empty,
+                    TechStack = ClampRequired(projected.TechStack, 512),
                     FieldsJson = CvEntryFieldsCodec.SerializeFields(fields),
-                    Source = string.IsNullOrWhiteSpace(entryWrite.Source)
-                        ? CvEntrySources.Manual
-                        : entryWrite.Source,
+                    Source = ClampRequired(
+                        string.IsNullOrWhiteSpace(entryWrite.Source)
+                            ? CvEntrySources.Manual
+                            : entryWrite.Source,
+                        32),
                     SourceSummaryId = entryWrite.SourceSummaryId,
                     SortOrder = entryWrite.SortOrder
                 });
@@ -162,5 +164,22 @@ public sealed class CvStructuredDocumentService(
             entry.SortOrder);
 
         return readDto;
+    }
+
+    private static string ClampRequired(string? value, int maxLength)
+    {
+        var trimmed = value?.Trim() ?? string.Empty;
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string? ClampOptional(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 }

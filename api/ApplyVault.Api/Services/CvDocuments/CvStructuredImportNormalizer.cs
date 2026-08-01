@@ -119,6 +119,7 @@ internal static class CvStructuredImportNormalizer
         var bullets = CvExportTextNormalizer.Bullets(entry.Bullets.Select(StripBulletMarkers).ToArray());
 
         (title, subtitle, dateRange) = RelocateEmbeddedDates(title, subtitle, dateRange);
+        (dateRange, summary) = SalvageMisfiledDateRange(dateRange, summary);
 
         if (sectionType == CvSectionTypes.Skills)
         {
@@ -149,6 +150,25 @@ internal static class CvStructuredImportNormalizer
             Bullets = bullets,
             TechStack = techStack
         };
+    }
+
+    /// <summary>
+    /// DateRange is nvarchar(128). Prose misfiled there (heuristic false positive or AI) must move to Summary.
+    /// </summary>
+    private static (string? DateRange, string Summary) SalvageMisfiledDateRange(string? dateRange, string summary)
+    {
+        if (string.IsNullOrWhiteSpace(dateRange))
+        {
+            return (null, summary);
+        }
+
+        if (CvStructuredImportHeuristic.LooksLikeDateLine(dateRange) && dateRange.Length <= 128)
+        {
+            return (dateRange, summary);
+        }
+
+        var folded = string.IsNullOrWhiteSpace(summary) ? dateRange : $"{dateRange}\n{summary}";
+        return (null, folded);
     }
 
     private static (string Title, string? Subtitle, string? DateRange) RelocateEmbeddedDates(

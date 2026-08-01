@@ -27,7 +27,9 @@ public sealed class GoogleAiCvStructuredImportClient(
 
         if (!options.Enabled)
         {
-            throw new InvalidOperationException("Google AI is disabled. Enable GoogleAi:Enabled to import CV structure.");
+            // Import is heuristic-first; Gemini is optional and only called when the backend gate requests it.
+            throw new InvalidOperationException(
+                "Google AI is disabled. PDF import uses heuristic structuring unless GoogleAi:Enabled and the import gate requests AI.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ApiKey))
@@ -78,7 +80,8 @@ public sealed class GoogleAiCvStructuredImportClient(
     {
         var prompts = importAiOptions.Value;
         var payloadJson = JsonSerializer.Serialize(sections, SerializerOptions);
-        var systemPrompt = sectionCatalog.BuildImportSystemPrompt();
+        // Catalog owns ADR-0001 section/field rules; preface frames gated (not always-on) invocation.
+        var systemPrompt = ComposeSystemPrompt(prompts.SystemPromptPreface, sectionCatalog.BuildImportSystemPrompt());
 
         return new
         {
@@ -104,6 +107,24 @@ public sealed class GoogleAiCvStructuredImportClient(
             },
             generationConfig = GoogleAiCvSectionsResponseSchema.Create(sectionCatalog)
         };
+    }
+
+    internal static string ComposeSystemPrompt(string preface, string catalogPrompt)
+    {
+        var trimmedPreface = preface?.Trim() ?? string.Empty;
+        var trimmedCatalog = catalogPrompt?.Trim() ?? string.Empty;
+
+        if (trimmedPreface.Length == 0)
+        {
+            return trimmedCatalog;
+        }
+
+        if (trimmedCatalog.Length == 0)
+        {
+            return trimmedPreface;
+        }
+
+        return $"{trimmedPreface}\n\n{trimmedCatalog}";
     }
 
     private static string ExtractGeneratedJson(string responsePayload)

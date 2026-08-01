@@ -132,6 +132,40 @@ public sealed class CvStructuredImportNormalizerTests
     }
 
     [Fact]
+    public void Normalize_MovesMisfiledProseOutOfDateRangeIntoSummary()
+    {
+        var prose =
+            "A full-stack job tracking ecosystem featuring a Chrome Manifest V3 extension, an ASP.NET Core API, and a web app.";
+
+        var sections = CvStructuredImportNormalizer.Normalize(
+        [
+            new CvStructuredSectionWriteDto(
+                null,
+                "Projects",
+                CvSectionTypes.Projects,
+                0,
+                [
+                    new CvStructuredEntryWriteDto(
+                        null,
+                        "ApplyVault",
+                        null,
+                        prose,
+                        string.Empty,
+                        [],
+                        string.Empty,
+                        CvEntrySources.Import,
+                        null,
+                        0)
+                ])
+        ]);
+
+        var entry = Assert.Single(Assert.Single(sections).Entries);
+
+        Assert.Null(entry.DateRange);
+        Assert.Equal(prose, entry.Summary);
+    }
+
+    [Fact]
     public void Normalize_DropsEmptyEntriesAndReindexesSortOrder()
     {
         var sections = CvStructuredImportNormalizer.Normalize(

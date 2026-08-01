@@ -23,8 +23,41 @@
       </button>
     </header>
 
+    <div
+      class="cv-builder-assist__tabs"
+      role="tablist"
+      aria-label="AI assist tools">
+      @for (tab of toolTabs; track tab.id) {
+        <button
+          type="button"
+          role="tab"
+          class="cv-builder-assist__tab"
+          [id]="'cv-assist-tab-' + tab.id"
+          [class.cv-builder-assist__tab--active]="activeToolTab() === tab.id"
+          [attr.aria-selected]="activeToolTab() === tab.id"
+          [attr.aria-controls]="'cv-assist-panel-' + tab.id"
+          [attr.tabindex]="activeToolTab() === tab.id ? 0 : -1"
+          [attr.aria-label]="tabAriaLabel(tab)"
+          (click)="selectToolTab(tab.id)"
+          (keydown)="onToolTabKeydown($event, tab.id)">
+          <span class="cv-builder-assist__tab-label">{{ tab.shortLabel }}</span>
+          @if (tabHasPending(tab.id)) {
+            <span
+              class="cv-builder-assist__tab-pending"
+              aria-hidden="true"
+              title="Pending"></span>
+          }
+        </button>
+      }
+    </div>
+
     <div class="cv-builder-assist__body">
-      <section class="cv-builder-assist__block">
+      <section
+        class="cv-builder-assist__block"
+        role="tabpanel"
+        id="cv-assist-panel-summary"
+        aria-labelledby="cv-assist-tab-summary"
+        [hidden]="activeToolTab() !== 'summary'">
         <h3 class="cv-builder-assist__block-title">Regenerate summary</h3>
         <p class="cv-builder-assist__hint">
           Propose a new Summary from your CV. Review side-by-side, then Approve or Discard.
@@ -90,7 +123,12 @@
         }
       </section>
 
-      <section class="cv-builder-assist__block">
+      <section
+        class="cv-builder-assist__block"
+        role="tabpanel"
+        id="cv-assist-panel-update"
+        aria-labelledby="cv-assist-tab-update"
+        [hidden]="activeToolTab() !== 'update'">
         <h3 class="cv-builder-assist__block-title">Update with instructions</h3>
         <p class="cv-builder-assist__hint">
           Propose section updates from your instructions. Review Current vs Proposed, then Approve or
@@ -178,7 +216,12 @@
         }
       </section>
 
-      <section class="cv-builder-assist__block">
+      <section
+        class="cv-builder-assist__block"
+        role="tabpanel"
+        id="cv-assist-panel-suggestions"
+        aria-labelledby="cv-assist-tab-suggestions"
+        [hidden]="activeToolTab() !== 'suggestions'">
         <h3 class="cv-builder-assist__block-title">Suggestions</h3>
         <button
           type="button"
@@ -214,7 +257,12 @@
         </button>
       </section>
 
-      <section class="cv-builder-assist__block">
+      <section
+        class="cv-builder-assist__block"
+        role="tabpanel"
+        id="cv-assist-panel-evaluate"
+        aria-labelledby="cv-assist-tab-evaluate"
+        [hidden]="activeToolTab() !== 'evaluate'">
         <h3 class="cv-builder-assist__block-title">Evaluate CV</h3>
         <p class="cv-builder-assist__hint">
           Advisory review of content, structure, and format of your content. Does not change your CV.

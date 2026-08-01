@@ -1,0 +1,22 @@
+task_id: "cv-assist-panel-wider-2026-08-01"
+closed_at: "2026-08-01"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+summary: >
+  Widened CV Builder AI assist drawer from 24rem to 40rem, reorganized four
+  tools into Summary/Update/Suggestions/Evaluate tabs, and fixed Current vs
+  Proposed side-by-side via panel container query (≥28rem inline).
+agents:
+  - ui-ux-designer
+  - frontend-engineer
+  - qa-engineer
+artifacts:
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-builder-assist-panel/cv-builder-assist-panel.component.ts"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-builder-assist-panel/cv-builder-assist-panel.component.html"
+  - "frontend/applyvault-jobs-ui/src/app/features/cv-projects/components/cv-builder-assist-panel/cv-builder-assist-panel.component.scss"
+limitations:
+  - "Browser visual smoke (width, compare columns, pending dots, Use in Assist focus) not executed in-agent; recommend brief human check in CV Builder → AI assist."
+  - "Production ng build still fails on pre-existing anyComponentStyle budgets in unrelated files; assist-panel itself is under the 8kB error budget."
+  - "Wider drawer covers more edit canvas on ~1024–1280 viewports (accepted UX trade-off)."
+follow_ups: []
+pr_links: []
+adr_written: false

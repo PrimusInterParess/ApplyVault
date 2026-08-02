@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -57,9 +67,25 @@ export class InterviewPrepPageComponent implements OnInit {
       this.hiringMarkets.find((option) => option.id === this.facade.hiringMarket())
   );
 
+  @ViewChild('messagesList') private messagesList?: ElementRef<HTMLElement>;
+  @ViewChild('composerInput') private composerInput?: ElementRef<HTMLTextAreaElement>;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    effect(() => {
+      const messageCount = this.facade.messages().length;
+      const sending = this.facade.sending();
+
+      if (messageCount === 0 && !sending) {
+        return;
+      }
+
+      setTimeout(() => this.scrollMessagesToEnd());
+    });
+  }
 
   ngOnInit(): void {
     this.facade.loadCvGate();
@@ -133,6 +159,24 @@ export class InterviewPrepPageComponent implements OnInit {
     }
   }
 
+  protected confirmNewRound(): void {
+    if (this.facade.messages().length > 0) {
+      const confirmed = window.confirm(
+        'Start a new round? This clears the current conversation in this tab.'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    this.facade.resetSession();
+  }
+
+  protected insertFollowUp(text: string): void {
+    this.facade.insertFollowUp(text);
+    setTimeout(() => this.composerInput?.nativeElement.focus());
+  }
+
   private dismissChipHelp(key: InterviewPrepHelpKey, event: Event): void {
     this.suppressedHelpKey.set(key);
 
@@ -140,6 +184,15 @@ export class InterviewPrepPageComponent implements OnInit {
     if (target instanceof HTMLElement) {
       target.blur();
     }
+  }
+
+  private scrollMessagesToEnd(): void {
+    const list = this.messagesList?.nativeElement;
+    if (!list) {
+      return;
+    }
+
+    list.scrollTop = list.scrollHeight;
   }
 
   private syncJobIdQuery(jobId: string | null): void {

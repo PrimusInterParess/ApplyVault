@@ -79,11 +79,14 @@ export class InterviewPrepFacade {
 
     return this.jobOptions().find((job) => job.id === id) ?? null;
   });
+  readonly isDebrief = computed(() => this.phase() === 'debrief');
+
   readonly canSend = computed(() => {
     const draft = this.draftMessage().trim();
     return (
       this.cvGateStatus() === 'ready' &&
       !this.sending() &&
+      !this.isDebrief() &&
       (this.sessionStarted() ? draft.length > 0 : true)
     );
   });
@@ -227,18 +230,38 @@ export class InterviewPrepFacade {
       return;
     }
 
-    this.sendTurn(INTERVIEW_PREP_START_MESSAGE);
+    // Bootstrap phrase is API-only — do not render as a "You" chat bubble.
+    this.sendTurn(INTERVIEW_PREP_START_MESSAGE, { showUserMessage: false });
   }
 
   sendDraft(): void {
     const text = this.draftMessage().trim();
 
-    if (!text || this.sending() || this.cvGateStatus() !== 'ready') {
+    if (
+      !text ||
+      this.sending() ||
+      this.cvGateStatus() !== 'ready' ||
+      this.phase() === 'debrief'
+    ) {
       return;
     }
 
     this.draftMessage.set('');
     this.sendTurn(text);
+  }
+
+  /** Insert a suggested follow-up into the composer (does not send). */
+  insertFollowUp(text: string): void {
+    if (this.sending() || this.phase() === 'debrief') {
+      return;
+    }
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    this.draftMessage.set(trimmed);
   }
 
   resetSession(): void {
@@ -259,14 +282,24 @@ export class InterviewPrepFacade {
     this.turnError.set(null);
   }
 
-  private sendTurn(userMessage: string): void {
+  private sendTurn(
+    userMessage: string,
+    options: { readonly showUserMessage?: boolean } = {}
+  ): void {
+    const showUserMessage = options.showUserMessage !== false;
+
     this.cancelTurn();
     this.sending.set(true);
     this.turnError.set(null);
 
     const priorSnapshot = this.priorTurns();
-    const userChat = this.createChatMessage('user', userMessage, this.phase());
-    this.messages.update((current) => [...current, userChat]);
+    const userChat = showUserMessage
+      ? this.createChatMessage('user', userMessage, this.phase())
+      : null;
+
+    if (userChat) {
+      this.messages.update((current) => [...current, userChat]);
+    }
 
     this.turnSubscription = this.apiService
       .createTurn({
@@ -284,7 +317,11 @@ export class InterviewPrepFacade {
           this.turnSubscription = null;
         },
         error: (error: unknown) => {
-          this.messages.update((current) => current.filter((message) => message.id !== userChat.id));
+          if (userChat) {
+            this.messages.update((current) =>
+              current.filter((message) => message.id !== userChat.id)
+            );
+          }
           this.sending.set(false);
           this.turnSubscription = null;
 
@@ -309,7 +346,10 @@ export class InterviewPrepFacade {
     ]);
     this.phase.set(coachPhase);
     this.inference.set(response.inference);
-    this.scorecard.set(response.scorecard);
+    // Null scorecard on setup/continuation turns must not wipe a prior scorecard.
+    if (response.scorecard) {
+      this.scorecard.set(response.scorecard);
+    }
     this.followUps.set(response.followUps);
     this.debriefBullets.set(response.debriefBullets);
   }

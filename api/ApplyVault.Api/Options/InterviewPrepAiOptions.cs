@@ -48,7 +48,11 @@ public sealed class InterviewPrepAiOptions
           and isTechnicalContext (boolean).
         - phase must be interview or debrief.
         - coachMessage is the coach reply for chat (plain text; no markdown fences).
-        - followUps and debriefBullets are string arrays (use [] when none).
+        - followUps: short coach tips the candidate can use BEFORE answering the current question
+          (e.g. structure cues, what to emphasize, a clarifying angle). 2–4 items when phase is interview
+          and coachMessage asks or continues a question. Do not wait for the candidate to answer first.
+          Use [] only in debrief, or when no useful tip applies.
+        - debriefBullets is a string array (use [] when none / not in debrief).
         - scorecard may be null on setup / pure interview turns. When scoring an answer or ending a round, return
           scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:
           clarity, evidence, structure, role_fit, language. Each dimension needs score (0–100) and note.

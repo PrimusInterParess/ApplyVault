@@ -1,24 +1,17 @@
 <main class="interview-prep">
-  <section class="interview-prep__hero">
-    <p class="interview-prep__eyebrow">Practice</p>
+  <header class="interview-prep__hero">
     <h1>Interview Prep</h1>
-    <p class="interview-prep__subtitle">
-      Practice interviews grounded in your Structured CV. Chat is session-only — refresh clears the
-      conversation.
-    </p>
-  </section>
+    <p class="interview-prep__subtitle">Practice from your Structured CV · session clears on refresh</p>
+  </header>
 
   @if (facade.cvGateStatus() === 'loading' || facade.cvGateStatus() === 'unknown') {
-    <section class="interview-prep__panel" aria-busy="true" aria-label="Checking Structured CV">
-      <p class="interview-prep__muted">Checking your Structured CV…</p>
+    <section class="interview-prep__panel interview-prep__panel--quiet" aria-busy="true" aria-label="Checking Structured CV">
+      <p class="interview-prep__muted">Checking Structured CV…</p>
     </section>
   } @else if (facade.cvGateStatus() === 'missing') {
     <section class="interview-prep__panel interview-prep__gate" aria-labelledby="cv-gate-heading">
       <h2 id="cv-gate-heading">Structured CV required</h2>
-      <p class="interview-prep__muted">
-        Interview Prep uses your Structured CV to infer role and craft practice questions. Build or
-        import a CV first — this page does not edit it.
-      </p>
+      <p class="interview-prep__muted">Build or import a CV first — Prep reads it; it does not edit it.</p>
       <a routerLink="/cv-builder" class="interview-prep__cta">Open CV Builder</a>
     </section>
   } @else if (facade.cvGateStatus() === 'error') {
@@ -32,205 +25,168 @@
   } @else {
     <section class="interview-prep__layout">
       <div class="interview-prep__main">
-        <section class="interview-prep__panel" aria-labelledby="setup-heading">
-          <div class="interview-prep__section-header">
-            <div>
-              <p class="interview-prep__label">Setup</p>
-              <h2 id="setup-heading">Mode &amp; language</h2>
+        @if (!facade.sessionStarted() && !facade.isDebrief()) {
+          <section class="interview-prep__setup" aria-labelledby="setup-heading">
+            <div class="interview-prep__setup-top">
+              <h2 id="setup-heading" class="interview-prep__setup-title">Setup</h2>
+              <p class="interview-prep__setup-cue">Hover any option for details</p>
             </div>
-            @if (facade.sessionStarted()) {
-              <button type="button" class="interview-prep__secondary" (click)="facade.resetSession()">
-                New round
-              </button>
-            }
-          </div>
 
-          <fieldset
-            class="interview-prep__fieldset"
-            [disabled]="facade.sessionStarted() || facade.sending() || facade.jobLinkStatus() === 'loading'">
-            <legend class="interview-prep__legend">Saved job (optional)</legend>
-            <p class="interview-prep__muted interview-prep__job-help">
-              Target practice to a saved role, or leave general prep grounded only in your Structured CV.
-            </p>
-
-            @if (facade.jobLinkStatus() === 'loading') {
-              <p class="interview-prep__muted" aria-busy="true">Loading saved jobs…</p>
-            } @else {
-              <label class="interview-prep__job-select-wrap">
-                <span class="interview-prep__sr-only">Choose a saved job</span>
-                <select
-                  class="interview-prep__select"
-                  (change)="onJobSelect(readInputValue($event))"
-                  [disabled]="facade.sessionStarted() || facade.sending()">
-                  <option value="" [selected]="!facade.scrapeResultId()">No job — general prep</option>
-                  @for (job of facade.jobOptions(); track job.id) {
-                    <option [value]="job.id" [selected]="facade.scrapeResultId() === job.id">
-                      {{ job.label }}
-                    </option>
-                  }
-                </select>
-              </label>
-            }
-
-            @if (facade.linkedJob(); as linked) {
-              <p class="interview-prep__job-hint" aria-live="polite">
-                Practicing for <strong>{{ linked.company }}</strong> · {{ linked.title }}
-              </p>
-            } @else if (facade.jobLinkStatus() !== 'invalid' && !facade.scrapeResultId()) {
-              <p class="interview-prep__job-hint interview-prep__muted" aria-live="polite">
-                General prep — no saved job linked.
-              </p>
-            }
-
-            @if (facade.jobLinkStatus() === 'invalid') {
-              <div class="interview-prep__job-alert" role="alert">
-                <p>{{ facade.jobLinkError() }}</p>
-                <button
-                  type="button"
-                  class="interview-prep__text-btn"
-                  [disabled]="facade.sessionStarted() || facade.sending()"
-                  (click)="continueAsGeneralPrep()">
-                  Continue as general prep
-                </button>
-              </div>
-            } @else if (facade.jobLinkStatus() === 'error') {
-              <div class="interview-prep__job-alert" role="status">
-                <p>{{ facade.jobLinkError() }}</p>
-                <button type="button" class="interview-prep__text-btn" (click)="facade.loadOwnedJobs()">
-                  Retry loading jobs
-                </button>
-              </div>
-            }
-          </fieldset>
-
-          <fieldset
-            class="interview-prep__fieldset"
-            [disabled]="facade.sessionStarted() || facade.sending()">
-            <legend class="interview-prep__legend">Practice mode</legend>
-            <p class="interview-prep__option-help">
-              Each mode is a different interview round. Hover a mode for the full explanation; click to select (the tip closes).
-            </p>
-            <div class="interview-prep__chips" role="list">
-              @for (mode of modes; track mode.id) {
-                <div
-                  class="interview-prep__chip-wrap"
-                  [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(modeHelpKey(mode.id))"
-                  role="listitem"
-                  (mouseleave)="onChipHelpMouseLeave(modeHelpKey(mode.id))">
-                  <button
-                    type="button"
-                    class="interview-prep__chip"
-                    [class.interview-prep__chip--active]="facade.mode() === mode.id"
-                    [attr.aria-pressed]="facade.mode() === mode.id"
-                    [attr.aria-describedby]="'mode-help-' + mode.id"
-                    (click)="selectMode(mode.id, $event)">
-                    {{ mode.label }}
-                  </button>
-                  <div
-                    class="interview-prep__chip-popover"
-                    role="tooltip"
-                    [id]="'mode-help-' + mode.id">
-                    <p class="interview-prep__chip-popover-title">{{ mode.label }}</p>
-                    <p class="interview-prep__chip-popover-lead">{{ mode.description }}</p>
-                    <p>{{ mode.detail }}</p>
-                    <p class="interview-prep__chip-popover-example">
-                      <span class="interview-prep__chip-popover-kicker">Example questions</span>
-                      {{ mode.example }}
+            <div class="interview-prep__setup-grid">
+              <fieldset
+                class="interview-prep__row"
+                [disabled]="facade.sending() || facade.jobLinkStatus() === 'loading'">
+                <legend class="interview-prep__legend">Job</legend>
+                @if (facade.jobLinkStatus() === 'loading') {
+                  <p class="interview-prep__muted" aria-busy="true">Loading…</p>
+                } @else {
+                  <label class="interview-prep__job-select-wrap">
+                    <span class="interview-prep__sr-only">Choose a saved job</span>
+                    <select
+                      class="interview-prep__select"
+                      (change)="onJobSelect(readInputValue($event))"
+                      [disabled]="facade.sending()">
+                      <option value="" [selected]="!facade.scrapeResultId()">General prep</option>
+                      @for (job of facade.jobOptions(); track job.id) {
+                        <option [value]="job.id" [selected]="facade.scrapeResultId() === job.id">
+                          {{ job.label }}
+                        </option>
+                      }
+                    </select>
+                  </label>
+                  @if (facade.jobLinkStatus() === 'ready' && facade.jobOptions().length === 0) {
+                    <p class="interview-prep__micro">
+                      No saved jobs —
+                      <a routerLink="/jobs" class="interview-prep__inline-link">browse Jobs</a>
                     </p>
-                  </div>
-                </div>
-              }
-            </div>
-            @if (selectedMode(); as mode) {
-              <p id="mode-hint" class="interview-prep__option-hint" aria-live="polite">
-                <strong>{{ mode.label }}.</strong> {{ mode.description }}
-              </p>
-            }
-          </fieldset>
+                  }
+                }
 
-          <fieldset
-            class="interview-prep__fieldset"
-            [disabled]="facade.sessionStarted() || facade.sending()">
-            <legend class="interview-prep__legend">Language mix</legend>
-            <p class="interview-prep__option-help">
-              Language for questions and feedback only — not the interview style. Hover for details; click to select (the tip closes).
-            </p>
-            <div class="interview-prep__chips interview-prep__chips--compact" role="list">
-              @for (option of languageMixes; track option.id) {
-                <div
-                  class="interview-prep__chip-wrap"
-                  [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(languageHelpKey(option.id))"
-                  role="listitem"
-                  (mouseleave)="onChipHelpMouseLeave(languageHelpKey(option.id))">
-                  <button
-                    type="button"
-                    class="interview-prep__chip"
-                    [class.interview-prep__chip--active]="facade.languageMix() === option.id"
-                    [attr.aria-pressed]="facade.languageMix() === option.id"
-                    [attr.aria-describedby]="'language-help-' + option.id"
-                    (click)="selectLanguageMix(option.id, $event)">
-                    {{ option.label }}
-                  </button>
-                  <div
-                    class="interview-prep__chip-popover"
-                    role="tooltip"
-                    [id]="'language-help-' + option.id">
-                    <p class="interview-prep__chip-popover-title">{{ option.label }}</p>
-                    <p class="interview-prep__chip-popover-lead">{{ option.description }}</p>
-                    <p>{{ option.detail }}</p>
-                  </div>
-                </div>
-              }
-            </div>
-            @if (selectedLanguageMix(); as language) {
-              <p id="language-hint" class="interview-prep__option-hint" aria-live="polite">
-                <strong>{{ language.label }}.</strong> {{ language.description }}
-              </p>
-            }
-          </fieldset>
+                @if (facade.linkedJob(); as linked) {
+                  <p class="interview-prep__micro interview-prep__micro--emphasis" aria-live="polite">
+                    {{ linked.company }} · {{ linked.title }}
+                  </p>
+                }
 
-          <fieldset
-            class="interview-prep__fieldset"
-            [disabled]="facade.sessionStarted() || facade.sending()">
-            <legend class="interview-prep__legend">Hiring market</legend>
-            <p class="interview-prep__option-help">
-              Hiring norms for coaching cues — independent of Language mix. Hover for details; click to select (the tip closes).
-            </p>
-            <div class="interview-prep__chips interview-prep__chips--compact" role="list">
-              @for (option of hiringMarkets; track option.id) {
-                <div
-                  class="interview-prep__chip-wrap"
-                  [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(hiringHelpKey(option.id))"
-                  role="listitem"
-                  (mouseleave)="onChipHelpMouseLeave(hiringHelpKey(option.id))">
-                  <button
-                    type="button"
-                    class="interview-prep__chip"
-                    [class.interview-prep__chip--active]="facade.hiringMarket() === option.id"
-                    [attr.aria-pressed]="facade.hiringMarket() === option.id"
-                    [attr.aria-describedby]="'hiring-help-' + option.id"
-                    (click)="selectHiringMarket(option.id, $event)">
-                    {{ option.label }}
-                  </button>
-                  <div
-                    class="interview-prep__chip-popover"
-                    role="tooltip"
-                    [id]="'hiring-help-' + option.id">
-                    <p class="interview-prep__chip-popover-title">{{ option.label }}</p>
-                    <p class="interview-prep__chip-popover-lead">{{ option.description }}</p>
-                    <p>{{ option.detail }}</p>
+                @if (facade.jobLinkStatus() === 'invalid') {
+                  <div class="interview-prep__job-alert" role="alert">
+                    <p>{{ facade.jobLinkError() }}</p>
+                    <button
+                      type="button"
+                      class="interview-prep__text-btn"
+                      [disabled]="facade.sending()"
+                      (click)="continueAsGeneralPrep()">
+                      Continue as general prep
+                    </button>
                   </div>
-                </div>
-              }
-            </div>
-            @if (selectedHiringMarket(); as market) {
-              <p id="hiring-hint" class="interview-prep__option-hint" aria-live="polite">
-                <strong>{{ market.label }}.</strong> {{ market.description }}
-              </p>
-            }
-          </fieldset>
+                } @else if (facade.jobLinkStatus() === 'error') {
+                  <div class="interview-prep__job-alert" role="status">
+                    <p>{{ facade.jobLinkError() }}</p>
+                    <button type="button" class="interview-prep__text-btn" (click)="facade.loadOwnedJobs()">
+                      Retry
+                    </button>
+                  </div>
+                }
+              </fieldset>
 
-          @if (!facade.sessionStarted()) {
+              <fieldset class="interview-prep__row" [disabled]="facade.sending()">
+                <legend class="interview-prep__legend">Mode</legend>
+                <div class="interview-prep__chips" role="list">
+                  @for (mode of modes; track mode.id) {
+                    <div
+                      class="interview-prep__chip-wrap"
+                      [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(modeHelpKey(mode.id))"
+                      role="listitem"
+                      (mouseleave)="onChipHelpMouseLeave(modeHelpKey(mode.id))">
+                      <button
+                        type="button"
+                        class="interview-prep__chip"
+                        [class.interview-prep__chip--active]="facade.mode() === mode.id"
+                        [attr.aria-pressed]="facade.mode() === mode.id"
+                        [attr.aria-describedby]="'mode-help-' + mode.id"
+                        (click)="selectMode(mode.id, $event)">
+                        {{ mode.label }}
+                      </button>
+                      <div
+                        class="interview-prep__chip-popover"
+                        role="tooltip"
+                        [id]="'mode-help-' + mode.id">
+                        <p class="interview-prep__chip-popover-title">{{ mode.label }}</p>
+                        <p class="interview-prep__chip-popover-lead">{{ mode.description }}</p>
+                        <p>{{ mode.detail }}</p>
+                        <p class="interview-prep__chip-popover-example">
+                          <span class="interview-prep__chip-popover-kicker">Example</span>
+                          {{ mode.example }}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </fieldset>
+
+              <fieldset class="interview-prep__row" [disabled]="facade.sending()">
+                <legend class="interview-prep__legend">Language</legend>
+                <div class="interview-prep__chips interview-prep__chips--compact" role="list">
+                  @for (option of languageMixes; track option.id) {
+                    <div
+                      class="interview-prep__chip-wrap"
+                      [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(languageHelpKey(option.id))"
+                      role="listitem"
+                      (mouseleave)="onChipHelpMouseLeave(languageHelpKey(option.id))">
+                      <button
+                        type="button"
+                        class="interview-prep__chip"
+                        [class.interview-prep__chip--active]="facade.languageMix() === option.id"
+                        [attr.aria-pressed]="facade.languageMix() === option.id"
+                        [attr.aria-describedby]="'language-help-' + option.id"
+                        (click)="selectLanguageMix(option.id, $event)">
+                        {{ option.label }}
+                      </button>
+                      <div
+                        class="interview-prep__chip-popover"
+                        role="tooltip"
+                        [id]="'language-help-' + option.id">
+                        <p class="interview-prep__chip-popover-title">{{ option.label }}</p>
+                        <p class="interview-prep__chip-popover-lead">{{ option.description }}</p>
+                        <p>{{ option.detail }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </fieldset>
+
+              <fieldset class="interview-prep__row" [disabled]="facade.sending()">
+                <legend class="interview-prep__legend">Market</legend>
+                <div class="interview-prep__chips interview-prep__chips--compact" role="list">
+                  @for (option of hiringMarkets; track option.id) {
+                    <div
+                      class="interview-prep__chip-wrap"
+                      [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(hiringHelpKey(option.id))"
+                      role="listitem"
+                      (mouseleave)="onChipHelpMouseLeave(hiringHelpKey(option.id))">
+                      <button
+                        type="button"
+                        class="interview-prep__chip"
+                        [class.interview-prep__chip--active]="facade.hiringMarket() === option.id"
+                        [attr.aria-pressed]="facade.hiringMarket() === option.id"
+                        [attr.aria-describedby]="'hiring-help-' + option.id"
+                        (click)="selectHiringMarket(option.id, $event)">
+                        {{ option.label }}
+                      </button>
+                      <div
+                        class="interview-prep__chip-popover"
+                        role="tooltip"
+                        [id]="'hiring-help-' + option.id">
+                        <p class="interview-prep__chip-popover-title">{{ option.label }}</p>
+                        <p class="interview-prep__chip-popover-lead">{{ option.description }}</p>
+                        <p>{{ option.detail }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </fieldset>
+            </div>
+
             <div class="interview-prep__start-row">
               <button
                 type="button"
@@ -239,13 +195,39 @@
                 (click)="facade.startSession()">
                 {{ facade.sending() ? 'Starting…' : 'Start practice' }}
               </button>
-              <p class="interview-prep__muted interview-prep__start-hint">
-                The coach adapts to the profession inferred from your CV — not a fixed developer
-                script.
-              </p>
             </div>
-          }
-        </section>
+          </section>
+        } @else {
+          <div class="interview-prep__session-bar">
+            <div class="interview-prep__session-meta">
+              @if (selectedMode(); as mode) {
+                <span class="interview-prep__pill">{{ mode.label }}</span>
+              }
+              @if (selectedLanguageMix(); as language) {
+                <span class="interview-prep__pill">{{ language.label }}</span>
+              }
+              @if (selectedHiringMarket(); as market) {
+                <span class="interview-prep__pill">{{ market.label }}</span>
+              }
+              @if (facade.linkedJob(); as linked) {
+                <span class="interview-prep__pill interview-prep__pill--soft">
+                  {{ linked.company }}
+                </span>
+              }
+              @if (facade.inference(); as inference) {
+                <span class="interview-prep__pill interview-prep__pill--soft">
+                  {{ inference.role }}
+                  @if (inference.seniority) {
+                    · {{ inference.seniority }}
+                  }
+                </span>
+              }
+            </div>
+            <button type="button" class="interview-prep__secondary" (click)="confirmNewRound()">
+              New round
+            </button>
+          </div>
+        }
 
         @if (facade.turnError(); as turnError) {
           <div class="interview-prep__alert" role="alert">
@@ -256,31 +238,28 @@
           </div>
         }
 
-        <section class="interview-prep__panel interview-prep__chat" aria-labelledby="chat-heading">
-          <div class="interview-prep__section-header">
-            <div>
-              <p class="interview-prep__label">Session</p>
+        @if (facade.sending() || facade.sessionStarted() || facade.isDebrief()) {
+          <section
+            class="interview-prep__chat"
+            aria-labelledby="chat-heading"
+            [attr.aria-busy]="facade.sending() ? true : null">
+            <div class="interview-prep__chat-head">
               <h2 id="chat-heading">Mock interview</h2>
+              @if (facade.isDebrief()) {
+                <span class="interview-prep__status-chip">Round ended</span>
+              }
             </div>
-            @if (facade.inference(); as inference) {
-              <p class="interview-prep__inference">
-                Inferred: {{ inference.role }}
-                @if (inference.seniority) {
-                  · {{ inference.seniority }}
-                }
-                @if (selectedMode(); as mode) {
-                  · {{ mode.label }}
-                }
-              </p>
-            }
-          </div>
 
-          @if (facade.messages().length === 0) {
-            <p class="interview-prep__empty-chat interview-prep__muted">
-              Choose a mode and language, then start. Your answers stay in this browser tab only.
-            </p>
-          } @else {
-            <ul class="interview-prep__messages" aria-live="polite">
+            @if (facade.isDebrief()) {
+              <div class="interview-prep__debrief-banner" role="status">
+                <p>Review the scorecard, then start a new round when ready.</p>
+                <button type="button" class="interview-prep__secondary" (click)="confirmNewRound()">
+                  New round
+                </button>
+              </div>
+            }
+
+            <ul #messagesList class="interview-prep__messages" aria-live="polite">
               @for (message of facade.messages(); track message.id) {
                 <li
                   class="interview-prep__message"
@@ -292,94 +271,126 @@
                   <p class="interview-prep__message-text">{{ message.text }}</p>
                 </li>
               }
+              @if (facade.sending()) {
+                <li
+                  class="interview-prep__message interview-prep__message--waiting"
+                  role="status"
+                  aria-live="polite">
+                  <span class="interview-prep__message-role">Coach</span>
+                  <p class="interview-prep__message-text interview-prep__typing">
+                    <span></span><span></span><span></span>
+                  </p>
+                </li>
+              }
             </ul>
-          }
 
-          @if (facade.followUps().length > 0) {
-            <div class="interview-prep__aside-list">
-              <p class="interview-prep__label">Suggested follow-ups</p>
-              <ul>
-                @for (item of facade.followUps(); track item) {
-                  <li>{{ item }}</li>
+            @if (!facade.isDebrief()) {
+              <div class="interview-prep__composer">
+                <label class="interview-prep__sr-only" for="interview-prep-composer">Your answer</label>
+                <textarea
+                  #composerInput
+                  id="interview-prep-composer"
+                  class="interview-prep__textarea"
+                  rows="2"
+                  [ngModel]="facade.draftMessage()"
+                  (ngModelChange)="facade.setDraftMessage($event)"
+                  (keydown)="onComposerKeydown($event)"
+                  [disabled]="facade.sending()"
+                  placeholder="Your answer… Enter to send"></textarea>
+                <button
+                  type="button"
+                  class="interview-prep__cta"
+                  [disabled]="!facade.canSend()"
+                  (click)="facade.sendDraft()">
+                  {{ facade.sending() ? '…' : 'Send' }}
+                </button>
+              </div>
+            }
+          </section>
+        }
+      </div>
+
+      @if (facade.sending() || facade.sessionStarted() || facade.isDebrief()) {
+        <aside class="interview-prep__side" aria-label="Feedback">
+          @if (facade.scorecard(); as scorecard) {
+            <section class="interview-prep__scorecard" aria-labelledby="scorecard-heading">
+              <div class="interview-prep__scorecard-head">
+                <h2 id="scorecard-heading">Scorecard</h2>
+                <p class="interview-prep__overall">
+                  <span class="interview-prep__overall-value">{{ scorecard.overall }}</span>
+                  <span class="interview-prep__muted">/100</span>
+                </p>
+              </div>
+              @if (scorecard.summary) {
+                <p class="interview-prep__score-summary">{{ scorecard.summary }}</p>
+              }
+              <ul class="interview-prep__dimensions">
+                @for (dimension of scorecard.dimensions; track dimension.id) {
+                  <li class="interview-prep__dimension">
+                    <div class="interview-prep__dimension-head">
+                      <strong>{{ dimensionLabel(dimension.id) }}</strong>
+                      <span>{{ dimension.score }}</span>
+                    </div>
+                    <div class="interview-prep__dimension-bar" aria-hidden="true">
+                      <span [style.width.%]="dimension.score"></span>
+                    </div>
+                    @if (dimension.note) {
+                      <p class="interview-prep__muted interview-prep__dimension-note">{{ dimension.note }}</p>
+                    }
+                  </li>
                 }
               </ul>
-            </div>
+            </section>
+          }
+
+          @if (facade.followUps().length > 0 && !facade.isDebrief()) {
+            <section class="interview-prep__side-block" aria-labelledby="follow-ups-heading">
+              <h2 id="follow-ups-heading" class="interview-prep__side-title">Try next</h2>
+              <ul class="interview-prep__follow-ups">
+                @for (item of facade.followUps(); track item) {
+                  <li>
+                    <button
+                      type="button"
+                      class="interview-prep__follow-up-btn"
+                      [disabled]="facade.sending()"
+                      (click)="insertFollowUp(item)">
+                      {{ item }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
           }
 
           @if (facade.debriefBullets().length > 0) {
-            <div class="interview-prep__aside-list">
-              <p class="interview-prep__label">Debrief</p>
-              <ul>
+            <section class="interview-prep__side-block" aria-labelledby="debrief-heading">
+              <h2 id="debrief-heading" class="interview-prep__side-title">Debrief</h2>
+              <ul class="interview-prep__side-list">
                 @for (item of facade.debriefBullets(); track item) {
                   <li>{{ item }}</li>
                 }
               </ul>
-            </div>
+            </section>
           }
 
-          @if (facade.sessionStarted()) {
-            <div class="interview-prep__composer">
-              <label class="interview-prep__sr-only" for="interview-prep-composer">Your answer</label>
-              <textarea
-                id="interview-prep-composer"
-                class="interview-prep__textarea"
-                rows="3"
-                [ngModel]="facade.draftMessage()"
-                (ngModelChange)="facade.setDraftMessage($event)"
-                (keydown)="onComposerKeydown($event)"
-                [disabled]="facade.sending()"
-                placeholder="Type your answer… (Enter to send, Shift+Enter for new line)"></textarea>
-              <button
-                type="button"
-                class="interview-prep__cta"
-                [disabled]="!facade.canSend()"
-                (click)="facade.sendDraft()">
-                {{ facade.sending() ? 'Sending…' : 'Send' }}
-              </button>
-            </div>
+          @if (
+            !facade.scorecard() &&
+            facade.followUps().length === 0 &&
+            facade.debriefBullets().length === 0
+          ) {
+            <section class="interview-prep__scorecard interview-prep__scorecard--empty">
+              <h2>Feedback</h2>
+              <p class="interview-prep__muted">
+                @if (facade.sending()) {
+                  Scoring your answer…
+                } @else {
+                  Tips for the current question and scores after you answer show up here.
+                }
+              </p>
+            </section>
           }
-        </section>
-      </div>
-
-      <aside class="interview-prep__side">
-        @if (facade.scorecard(); as scorecard) {
-          <section class="interview-prep__panel interview-prep__scorecard" aria-labelledby="scorecard-heading">
-            <p class="interview-prep__label">Scorecard</p>
-            <h2 id="scorecard-heading">Round feedback</h2>
-            <p class="interview-prep__overall">
-              <span class="interview-prep__overall-value">{{ scorecard.overall }}</span>
-              <span class="interview-prep__muted"> / 100 overall</span>
-            </p>
-            @if (scorecard.summary) {
-              <p class="interview-prep__score-summary">{{ scorecard.summary }}</p>
-            }
-            <ul class="interview-prep__dimensions">
-              @for (dimension of scorecard.dimensions; track dimension.id) {
-                <li class="interview-prep__dimension">
-                  <div class="interview-prep__dimension-head">
-                    <strong>{{ dimensionLabel(dimension.id) }}</strong>
-                    <span>{{ dimension.score }}</span>
-                  </div>
-                  <div class="interview-prep__dimension-bar" aria-hidden="true">
-                    <span [style.width.%]="dimension.score"></span>
-                  </div>
-                  @if (dimension.note) {
-                    <p class="interview-prep__muted">{{ dimension.note }}</p>
-                  }
-                </li>
-              }
-            </ul>
-          </section>
-        } @else {
-          <section class="interview-prep__panel interview-prep__scorecard-placeholder">
-            <p class="interview-prep__label">Scorecard</p>
-            <h2>Waiting for scores</h2>
-            <p class="interview-prep__muted">
-              A scorecard appears when the coach scores an answer or ends a round.
-            </p>
-          </section>
-        }
-      </aside>
+        </aside>
+      }
     </section>
   }
 </main>

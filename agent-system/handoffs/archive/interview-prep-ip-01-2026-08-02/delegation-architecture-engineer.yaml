@@ -1,0 +1,56 @@
+schema_version: "1.0.0"
+envelope:
+  task_id: interview-prep-ip-01-2026-08-02
+  parent_request: >
+    /operate C — next approved milestone M0 / IP-01 (#67): lock Interview Prep
+    session & scoring contracts; write accepted ADR under docs/adr/.
+  assigned_agent: architecture-engineer
+  objective: >
+    Complete GitHub #67 / IP-01. Write docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md
+    (next free ADR number is 0012). Freeze API/DTO/mode/scorecard contracts for M1
+    implementers. Align with approved plan + archive architecture-design.md.
+    Do not implement controller/FE application feature code beyond ADR + contract
+    registry / design note updates required for lock-in.
+  scope:
+    include_paths:
+      - docs/adr/
+      - agent-system/handoffs/archive/interview-prep-2026-08-02/
+      - agent-system/implementation-plan-interview-prep.md
+      - agent-system/governance/contract-registry.yaml
+      - agent-system/governance/ownership-matrix.md
+      - agent-system/scratch/interview-prep-ip-01-2026-08-02/
+      - agent-system/handoffs/active/interview-prep-ip-01-2026-08-02/
+      - CONTEXT.md
+    exclude_paths:
+      - frontend/applyvault-jobs-ui/src/
+      - api/ApplyVault.Api/Controllers/
+      - api/ApplyVault.Api/Services/
+      - extension/
+  contracts:
+    must_respect:
+      - ADR-0001 ADR-0002 ADR-0007 spirit ADR-0008 ADR-0009 ADR-0010 ADR-0011
+      - Approved plan agent-system/implementation-plan-interview-prep.md
+      - Archive design agent-system/handoffs/archive/interview-prep-2026-08-02/architecture-design.md
+  constraints:
+    - No secrets
+    - Do not invent providers
+    - Prefer promoting archive design decisions; note deltas explicitly
+    - ADR Status must be Accepted with date and issue #67 reference when decisions are locked
+    - Mode catalog must stay profession-agnostic (role-agnostic labels from plan)
+    - Deep-link param: jobId = scrape result guid (plan default)
+    - Scorecard: fixed dimension ids + model notes (plan lean)
+    - Thin handoff under handoff_dir; working notes under scratch_dir
+  definition_of_done:
+    - ADR-0012 written under docs/adr/ matching existing ADR shape
+    - Frozen contract note in scratch (or ADR Consequences) covering POST turns request/response, modes, languageMix, scorecard dimensions, error mapping
+    - contract-registry.yaml updated with proposed→accepted additive Interview Prep API entry if appropriate
+    - ownership-matrix note if new primary ownership for interview-prep paths needed (propose only; do not invent dual owners)
+    - Thin READY handoff YAML for Principal
+    - List any follow-ups for M1 (backend/ai-llm) clearly
+  dependencies:
+    - "GitHub #67"
+    - "Approved Interview Prep plan"
+  handoff_required: true
+  approval_gates: []
+  scratch_dir: agent-system/scratch/interview-prep-ip-01-2026-08-02/
+  handoff_dir: agent-system/handoffs/active/interview-prep-ip-01-2026-08-02/

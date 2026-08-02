@@ -1,0 +1,25 @@
+task_id: interview-prep-m4-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+milestone: M4
+summary: >-
+  QA evidence for Interview Prep MVP (M0–M3): auth/tenancy/no-mutation/error map/
+  FE contracts/profession-agnostic static checks PASS. API 15/15 and FE 11/11
+  re-verified by Principal. Live Gemini SKIP (env WebException despite Enabled+key).
+  MVP ship gate satisfied with documented limitations.
+agents:
+  - qa-engineer
+  - principal-software-architect
+validation:
+  - "dotnet test ~InterviewPrep → 15 PASSED (Principal re-verify)"
+  - "ng test interview-prep → 11 SUCCESS (Principal re-verify)"
+artifacts:
+  - agent-system/handoffs/archive/interview-prep-m4-2026-08-02/qa-report.md
+limitations:
+  - "Live Gemini outbound not green in this environment"
+  - "No WebApplicationFactory 401 controller test (nit)"
+  - "IP-12 full_loop orchestration still Later/stretch (#78)"
+  - "IP-13…15 Later (#79–#81)"
+mvp_status: >
+  Interview Prep MVP (M0–M4) COMPLETE WITH DOCUMENTED LIMITATIONS.
+  Remaining GitHub issues are stretch/Later only.

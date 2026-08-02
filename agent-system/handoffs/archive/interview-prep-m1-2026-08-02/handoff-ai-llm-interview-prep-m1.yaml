@@ -1,0 +1,95 @@
+schema_version: "1.0.0"
+status: READY
+task_id: interview-prep-m1-2026-08-02
+assigned_agent: ai-llm-engineer
+completed_at: "2026-08-02"
+objective: >
+  Interview Prep Gemini client + profession-agnostic prompts + scorecard
+  normalization (IP-04, IP-06 AI, IP-08 scorecard).
+
+executive_summary: >
+  Delivered GoogleAiInterviewPrepClient with InterviewPrepAiOptions, JSON response
+  schema, DI registration, and unit tests. Prompts forbid software/coding defaults;
+  scorecard normalizes to clarity/evidence/structure/role_fit/language. Backend
+  consumes IInterviewPrepAiClient (shared contracts under Services/InterviewPrep/).
+
+scope_confirmation:
+  included:
+    - Options/InterviewPrepAiOptions.cs
+    - Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+    - Services/InterviewPrep/GoogleAiInterviewPrepResponseSchema.cs
+    - Services/InterviewPrep/InterviewPrepAiContracts.cs (shared with backend)
+    - ServiceCollectionExtensions options + AddHttpClient registration
+    - appsettings.example.json InterviewPrepAi keys (no secrets)
+    - GoogleAiInterviewPrepClientTests
+  excluded:
+    - InterviewPrepController / InterviewPrepService orchestration (backend)
+    - Live Gemini calls / API keys
+
+verified_facts:
+  - Mirror pattern: GoogleAiCvStructuredEvaluationClient (raw HTTP generateContent)
+  - Gate: GoogleAi:Enabled=false or missing ApiKey/Model → InvalidOperationException
+  - Scorecard dims fixed: clarity, evidence, structure, role_fit, language
+  - languageMix: en | da | mixed (maps legacy en+da → mixed)
+  - Job context record fields: CompanyName, JobTitle, Location, PositionSummary, JobDescription
+
+assumptions:
+  - Backend owns HTTP DTO mapping from InterviewPrepAiTurnResult
+  - Prompt quality vs professions remains M4 evidence (no live model eval here)
+
+decisions:
+  - Prompt placeholders: {{mode}} {{languageMix}} {{userMessage}} {{priorTurnsJson}} {{jobJson}} {{cvJson}}
+  - Optional InterviewPrepAi:TimeoutSeconds falls back to GoogleAi:TimeoutSeconds
+  - Client also truncates priorTurns / userMessage using options caps (defense in depth)
+
+deliverables:
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepResponseSchema.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+  - api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs (additive)
+  - api/ApplyVault.Api/appsettings.example.json
+  - api/ApplyVault.Api.Tests/GoogleAiInterviewPrepClientTests.cs
+
+contracts_schemas:
+  request_input: InterviewPrepAiTurnRequest
+  result: InterviewPrepAiTurnResult (phase, inference, coachMessage, scorecard?, followUps, debriefBullets)
+  gemini_response_schema: GoogleAiInterviewPrepResponseSchema
+
+security:
+  - No API keys in source; config names only
+  - Prompts/logs must not embed secrets (same pattern as other GoogleAi clients)
+
+validation:
+  command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter "FullyQualifiedName~GoogleAiInterviewPrepClientTests"
+    -p:OutputPath="$PWD/artifacts/interview-prep-ai-test/"
+    -p:UseAppHost=false
+  result: "Passed 7 / Failed 0"
+  note: >
+    Default bin/ path was locked by a running ApplyVault.Api process; tests ran via
+    alternate OutputPath. Also fixed Options.Create shadowing in InterviewPrepServiceTests
+    so the test project compiles.
+
+config_notes:
+  section: InterviewPrepAi
+  keys:
+    - SystemPrompt / UserPromptTemplate (defaults in options class)
+    - MaxPriorTurns (12)
+    - MaxUserMessageChars (4000)
+    - MaxPriorTurnChars (2000)
+    - DefaultLanguageMix (en)
+    - TimeoutSeconds (optional)
+  shared: GoogleAi:Enabled, ApiKey, Model, TimeoutSeconds
+
+risks:
+  - Profession-agnostic quality depends on model compliance with system prompt (no live eval)
+  - Concurrent backend edits to InterviewPrepAiContracts / Options — keep property names aligned
+  - Running API locks bin/; stop process or use alternate OutputPath for local test builds
+
+handoffs:
+  - backend-engineer: IInterviewPrepAiClient registered; consume InterviewPrepAiTurnRequest/Result
+  - qa-engineer: unit evidence above; live Gemini smoke later in M4
+
+status_ready: true

@@ -1,0 +1,23 @@
+task_id: interview-prep-m3-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+milestone: M3
+summary: >-
+  IP-09 job targeting: Interview Prep optional saved-job picker + URL ?jobId=
+  sync with company/title labels; Jobs detail Prepare for interview CTA.
+  General prep remains default. FE specs 11/11 (Principal re-verified).
+  Code-review Task skipped (host usage limit); Principal spot-checked CTA + facade.
+github_issues_closed: [75]
+agents:
+  - frontend-engineer
+  - principal-software-architect
+validation:
+  - "ng test interview-prep specs → 11 SUCCESS"
+feature_paths:
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+  - frontend/applyvault-jobs-ui/src/app/features/job-results/presentation/job-result-detail/
+limitations:
+  - "Dedicated code-review-engineer Task unavailable (usage limit); Principal integration only"
+  - "Large job lists load fully for picker"
+  - "M4 QA (live Gemini / profession-agnostic / authz) still pending"
+next_milestone: M4 — qa-engineer evidence

@@ -59,4 +59,17 @@ contracts:
     secondary: backend-engineer
     evidence: WebApplicationExtensions; HealthController
 
+  - id: interview-prep-turns
+    status: APPROVED
+    description: >
+      Ephemeral profession-agnostic Interview Prep coach turns
+      (POST /api/interview-prep/turns). Design locked ADR-0012; M1 code landed.
+    owner: backend-engineer
+    secondary: ai-llm-engineer
+    evidence: >
+      docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md;
+      agent-system/handoffs/archive/interview-prep-ip-01-2026-08-02/frozen-contracts.md;
+      api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
+      api/ApplyVault.Api/Services/InterviewPrep/
+
 proposed_contracts: []

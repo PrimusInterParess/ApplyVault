@@ -10,6 +10,8 @@
 | `api/ApplyVault.Api/` | backend-engineer | ai-llm-engineer, platform-engineer, qa-engineer | net10.0 |
 | `shared/cv-section-catalog/` | backend-engineer | frontend-engineer, ai-llm-engineer | ADR-0001 |
 | Gemini / GoogleAi* services | ai-llm-engineer | backend-engineer | No secret values in output |
+| Interview Prep API (`api/interview-prep/*`) | backend-engineer | ai-llm-engineer | ADR-0012; controller/service/DTO primary backend; Gemini client stays under Gemini / GoogleAi* |
+| Interview Prep UI (`features/interview-prep/`) | frontend-engineer | ui-ux-designer | Route `/interview-prep`; deep-link `jobId` |
 | Dashboard UX | ui-ux-designer | frontend-engineer | Respect job-results rule |
 | Tests & quality evidence | qa-engineer | relevant engineer | Extension CI gap known |
 | PR/diff review / `/architect-review` | code-review-engineer | principal-software-architect | Split from QA; no host publish |

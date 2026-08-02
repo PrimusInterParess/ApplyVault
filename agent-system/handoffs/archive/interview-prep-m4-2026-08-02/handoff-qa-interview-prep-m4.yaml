@@ -1,0 +1,107 @@
+schema_version: "1.0.0"
+task_id: interview-prep-m4-2026-08-02
+from_agent: qa-engineer
+to_agent: principal-software-architect
+status: READY
+completed_at: "2026-08-02"
+
+objective_met: true
+
+summary: >
+  Interview Prep MVP QA gate complete. API InterviewPrep filter 15/15 pass;
+  Angular interview-prep specs 11/11 SUCCESS. Static + unit evidence for
+  Authorize, scrape tenancy (id+user.Id → 404 family), no CV/scrape mutation,
+  error mapping (missing CV 404 / empty CV 400 / AI off 400), FE gate/modes/
+  languageMix/priorTurns/jobId mapping/scorecard dims, and profession-agnostic
+  prompt + scorecard dimension tests. Live Gemini: Development config proves
+  Enabled + non-empty key; outbound probe failed with WebException (environment);
+  not treated as product blocker. No product code or new tests added.
+
+qa_report: agent-system/scratch/interview-prep-m4-2026-08-02/qa-report.md
+
+checklist_summary:
+  - id: A1-auth-authorize
+    result: PASS
+    note: "[Authorize] on InterviewPrepController (static)"
+  - id: T1-tenancy-scrape
+    result: PASS
+    note: "GetByIdAsync(id, user.Id); miss/foreign → KeyNotFound → 404"
+  - id: M1-no-cv-mutation
+    result: PASS
+    note: "static grep + CreateTurnAsync_PassesCappedInputsAndDoesNotSave"
+  - id: M2-no-scrape-mutation
+    result: PASS
+    note: "static + SaveWasCalled false"
+  - id: E1-missing-cv-404
+    result: PASS
+  - id: E2-empty-cv-400
+    result: PASS
+  - id: E3-ai-disabled-400
+    result: PASS
+  - id: F1-cv-gate
+    result: PASS
+  - id: F2-modes-languageMix
+    result: PASS
+  - id: F3-ephemeral-priorTurns
+    result: PASS
+  - id: F4-jobId-scrapeResultId
+    result: PASS
+  - id: F5-scorecard-dims-fe
+    result: PASS
+  - id: P1-profession-agnostic-prompt
+    result: PASS
+  - id: P2-scorecard-dims-unit
+    result: PASS
+  - id: L1-live-gemini
+    result: SKIP
+    note: >
+      Config proven (GoogleAi.Enabled=true, ApiKey non-empty in local
+      appsettings.Development.json, model gemini-2.5-flash-lite). One outbound
+      probe → System.Net.WebException (no HTTP status). Further credentialed
+      probes not re-authorized. Environment — not MVP product blocker.
+
+validation_executed:
+  - command: >
+      dotnet test api/ApplyVault.Api.Tests
+      --filter FullyQualifiedName~InterviewPrep
+      -p:UseAppHost=false
+      -p:OutputPath=agent-system/scratch/interview-prep-m4-2026-08-02/api-test-out/
+    cwd: C:\Users\yborisov\Desktop\jobapplications
+    result: "15 passed / 0 failed"
+  - command: >
+      npx ng test --no-watch --browsers=ChromeHeadlessCI
+      --include=src/app/features/interview-prep/**/*.spec.ts
+    cwd: C:\Users\yborisov\Desktop\jobapplications\frontend\applyvault-jobs-ui
+    result: "11 SUCCESS"
+
+contracts_checked:
+  - docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md
+  - agent-system/handoffs/archive/interview-prep-ip-01-2026-08-02/frozen-contracts.md
+  - ADR-0008
+  - ADR-0009 / ADR-0010
+
+blockers: []
+
+non_blocking_gaps:
+  - No WebApplicationFactory controller tests for 401/404/400 HTTP codes
+  - priorTurns invalid role/phase lack dedicated unit tests
+  - Live Gemini not green in this environment
+  - Known M1 nit: Gemini HTTP/JSON errors may surface as 500
+
+tests_authored: []
+
+handoff_path: agent-system/handoffs/active/interview-prep-m4-2026-08-02/
+scratch_dir: agent-system/scratch/interview-prep-m4-2026-08-02/
+
+principal_summary_table: |
+  | Check | Result |
+  |---|---|
+  | Auth [Authorize] | PASS |
+  | Tenancy scrape (id, user.Id) → 404 family | PASS |
+  | No CV/scrape mutation | PASS |
+  | Error map missing CV / empty CV / AI off | PASS |
+  | FE gate / modes / languageMix / priorTurns / jobId / scorecard | PASS |
+  | Profession-agnostic prompt + scorecard dims units | PASS |
+  | API InterviewPrep tests | PASS (15/15) |
+  | FE interview-prep specs | PASS (11/11) |
+  | Live Gemini | SKIP (config proven; outbound WebException) |

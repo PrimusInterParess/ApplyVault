@@ -128,6 +128,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(CvExportAiOptions.SectionName));
 
         services
+            .AddOptions<InterviewPrepAiOptions>()
+            .Bind(configuration.GetSection(InterviewPrepAiOptions.SectionName));
+
+        services
             .AddOptions<CvHtmlExportOptions>()
             .Bind(configuration.GetSection(CvHtmlExportOptions.SectionName));
 
@@ -248,6 +252,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ICvStructuredEvaluationAiClient, GoogleAiCvStructuredEvaluationClient>();
         services.AddHttpClient<ICvStructuredSummaryProposeAiClient, GoogleAiCvStructuredSummaryProposeClient>();
         services.AddHttpClient<ICvExportAiClient, GoogleAiCvExportClient>();
+        services.AddHttpClient<IInterviewPrepAiClient, GoogleAiInterviewPrepClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddExceptionHandler<JobnetJobClientExceptionHandler>();
@@ -298,6 +303,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredSuggestionsService, CvStructuredSuggestionsService>();
         services.AddScoped<ICvStructuredEvaluationService, CvStructuredEvaluationService>();
         services.AddScoped<ICvStructuredSummaryProposeService, CvStructuredSummaryProposeService>();
+        services.AddScoped<IInterviewPrepService, InterviewPrepService>();
         services.AddScoped<ICvPdfPageCounter, CvPdfPageCounter>();
         services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
         services.AddCvHtmlExport(configuration);

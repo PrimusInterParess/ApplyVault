@@ -1,0 +1,80 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace ApplyVault.Api.Options;
+
+/// <summary>
+/// Prompt and budget knobs for Interview Prep coach turns (ADR-0012 / ADR-0008).
+/// Shared GoogleAi owns Enabled / ApiKey / Model; optional TimeoutSeconds overrides GoogleAi.
+/// </summary>
+public sealed class InterviewPrepAiOptions
+{
+    public const string SectionName = "InterviewPrepAi";
+
+    public const string DefaultSystemPrompt =
+        """
+        You are an interview coach for any profession. Return JSON only. Do not wrap in markdown fences.
+        Ground every turn in the provided Structured CV and optional job context. Infer role, seniority, and
+        interview style from that evidence. Never invent employers, credentials, projects, metrics, or job facts.
+
+        Profession-agnostic rules (mandatory):
+        - Do NOT default to software engineering, coding interviews, live coding, leetcode, or "system design for engineers".
+        - Do NOT assume the candidate is a developer, full-stack engineer, or technical IC unless inference clearly supports it.
+        - Adapt questions and feedback to the inferred profession (healthcare, trades, education, sales, ops, design, law, etc.).
+        - For mode process_systems: use technical system-design style ONLY when inference.isTechnicalContext is true;
+          otherwise coach end-to-end process, workflow, handoffs, tools, and operational systems for that profession.
+        - Honor mode and languageMix exactly. Modes: screening, behavioral, role_domain, problem_solving,
+          process_systems, language_practice, full_loop.
+        - languageMix values: en (English), da (Danish), mixed (alternate/mix English and Danish as appropriate).
+          Never invent other languageMix values. never default to software engineer as inference.role.
+
+        Output contract:
+        - Always populate inference: role (free text; never default to software engineer), seniority, interviewStyle,
+          and isTechnicalContext (boolean).
+        - phase must be interview or debrief.
+        - coachMessage is the coach reply for chat (plain text; no markdown fences).
+        - followUps and debriefBullets are string arrays (use [] when none).
+        - scorecard may be null on setup / pure interview turns. When scoring an answer or ending a round, return
+          scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:
+          clarity, evidence, structure, role_fit, language. Each dimension needs score (0–100) and note.
+        - Never return a mutated CV or claim durable session storage. This turn is ephemeral.
+        """;
+
+    public const string DefaultUserPromptTemplate =
+        """
+        Conduct the next Interview Prep coach turn.
+        Mode: {{mode}}
+        Language mix: {{languageMix}}
+        User message:
+        {{userMessage}}
+        Prior turns JSON:
+        {{priorTurnsJson}}
+        Optional job context JSON (null when absent):
+        {{jobJson}}
+        Structured CV JSON:
+        {{cvJson}}
+        """;
+
+    [Required]
+    public string SystemPrompt { get; set; } = DefaultSystemPrompt;
+
+    [Required]
+    public string UserPromptTemplate { get; set; } = DefaultUserPromptTemplate;
+
+    /// <summary>Maximum prior turns retained for the prompt (oldest truncated).</summary>
+    [Range(1, 40)]
+    public int MaxPriorTurns { get; set; } = 12;
+
+    [Range(1, 16_000)]
+    public int MaxUserMessageChars { get; set; } = 4_000;
+
+    [Range(1, 8_000)]
+    public int MaxPriorTurnChars { get; set; } = 2_000;
+
+    /// <summary>Default when request omits languageMix. Frozen values: en | da | mixed.</summary>
+    [Required]
+    public string DefaultLanguageMix { get; set; } = "en";
+
+    /// <summary>Optional timeout override; fall back to GoogleAi:TimeoutSeconds when null.</summary>
+    [Range(1, 120)]
+    public int? TimeoutSeconds { get; set; }
+}

@@ -1,0 +1,57 @@
+task_id: interview-prep-m1-2026-08-02
+from_agent: backend-engineer
+to_agent: principal-software-architect
+status: READY
+summary: >
+  Implemented POST /api/interview-prep/turns (InterviewPrepController +
+  InterviewPrepService + API DTOs). Loads Structured CV (required) and optional
+  owned scrape via IScrapeResultStore.GetByIdAsync; calls IInterviewPrepAiClient
+  (aligned with ai-llm GoogleAiInterviewPrepClient). Never mutates CV/scrape.
+  DI: AddScoped IInterviewPrepService; AI HttpClient left to ai-llm registration.
+artifacts:
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs
+  - api/ApplyVault.Api/appsettings.example.json
+  - api/ApplyVault.Api.Tests/InterviewPrepServiceTests.cs
+evidence:
+  files_touched:
+    - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+    - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+    - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+    - api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs
+    - api/ApplyVault.Api/appsettings.example.json
+    - api/ApplyVault.Api.Tests/InterviewPrepServiceTests.cs
+  tests_run:
+    - command: >
+        dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+        --filter "FullyQualifiedName~InterviewPrep"
+        --output agent-system/scratch/interview-prep-m1-2026-08-02/test-out
+        -p:UseAppHost=false
+      outcome: "Passed! Failed: 0, Passed: 15, Skipped: 0, Total: 15 (InterviewPrepServiceTests + GoogleAiInterviewPrepClientTests)"
+  contracts_affected:
+    - interview-prep-turns (POST /api/interview-prep/turns — frozen request/response)
+residual_risks:
+  - Live Gemini end-to-end not exercised (unit stubs / disabled-AI path only).
+  - InterviewPrepAiOptions prompts shared with ai-llm; further prompt polish may land from their handoff.
+  - Default bin build may fail while a local ApplyVault.Api process locks bin/Debug; tests were run via --output scratch path.
+open_questions: []
+next_recommended_action: >
+  Reconcile with ai-llm READY handoff; then frontend M2 can bind DTOs.
+  Optional QA authz/tenancy smoke on turns endpoint.
+handoff_path: agent-system/handoffs/active/interview-prep-m1-2026-08-02/
+definition_of_done:
+  - POST /api/interview-prep/turns authorized endpoint exists
+  - Tenancy: foreign scrapeResultId → 404; missing CV → 404; empty CV → 400
+  - AI disabled path returns clear 400 (InvalidOperation → BadRequest)
+  - Unit tests added with evidenced commands/outcomes
+  - READY handoff YAML
+security:
+  - JWT [Authorize] + GetRequiredUserAsync
+  - Scrape load scoped by user.Id; miss → KeyNotFoundException → 404 (no cross-tenant leak)
+  - No SaveStructuredAsync / scrape mutation from prep path

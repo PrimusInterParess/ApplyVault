@@ -1,0 +1,38 @@
+task_id: interview-prep-m1-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+milestone: M1
+summary: >-
+  Shipped POST /api/interview-prep/turns with InterviewPrepService,
+  GoogleAiInterviewPrepClient, profession-agnostic prompts, scorecard
+  normalization. Unit tests 15/15 passed (Principal re-verified). Code review
+  APPROVE WITH NITS (no blockers). Closed #69 #70 #72; #74 left open for FE scorecard.
+github_issues:
+  - { id: IP-03, number: 69, state: closed }
+  - { id: IP-04, number: 70, state: closed }
+  - { id: IP-06, number: 72, state: closed }
+  - { id: IP-08, number: 74, state: open, note: "API done; FE scorecard remains M2" }
+artifacts:
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api.Tests/InterviewPrepServiceTests.cs
+  - api/ApplyVault.Api.Tests/GoogleAiInterviewPrepClientTests.cs
+agents:
+  - backend-engineer
+  - ai-llm-engineer
+  - code-review-engineer
+  - principal-software-architect
+validation:
+  - command: >
+      dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+      --filter FullyQualifiedName~InterviewPrep -p:UseAppHost=false
+      -p:OutputPath=agent-system/scratch/interview-prep-m1-2026-08-02/test-verify/
+    outcome: "Passed 15 / Failed 0"
+limitations:
+  - "Live Gemini E2E not exercised"
+  - "Gemini HTTP/JsonException may still surface as 500 (sibling GoogleAi pattern); contract prefers 400 — follow-up optional"
+  - "IP-08 FE scorecard UI deferred to M2"
+  - "Profession-agnostic quality needs M4 smoke with non-tech CV fixtures"
+next_milestone: M2 — /interview-prep FE route, chat UI, scorecard, modes (IP-02, IP-05, IP-07, IP-08 FE, IP-10, IP-11)

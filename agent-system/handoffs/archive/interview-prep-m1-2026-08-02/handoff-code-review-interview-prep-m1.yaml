@@ -1,0 +1,132 @@
+schema_version: "1.0.0"
+task_id: interview-prep-m1-2026-08-02
+from_agent: code-review-engineer
+to_agent: principal-software-architect
+status: READY
+completed_at: "2026-08-02"
+
+recommendation: APPROVE WITH NITS
+
+review_summary: >
+  M1 Interview Prep backend + AI surface matches ADR-0012 and frozen contracts
+  on the focus axes (tenancy, no CV/scrape mutation, profession-agnostic prompts,
+  mode/languageMix freeze, scorecard dims, error mapping, ADR-0008 HttpClient).
+  No blockers. Residual nits only; authors' unit-test claims not re-executed here.
+
+range: uncommitted M1 Interview Prep scope (scoped file list; not a git base...HEAD)
+ticket: "#67 / M1 interview-prep-m1-2026-08-02"
+contracts_checked:
+  - docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md
+  - agent-system/handoffs/archive/interview-prep-ip-01-2026-08-02/frozen-contracts.md
+  - docs/adr/0008-google-gemini-http-clients-no-sdk.md
+  - ADR-0009 / ADR-0010 (auth + tenancy via Authorize + GetRequiredUserAsync + scrape user.Id)
+
+scope_reviewed:
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/*
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs (InterviewPrep parts)
+  - api/ApplyVault.Api.Tests/InterviewPrepServiceTests.cs
+  - api/ApplyVault.Api.Tests/GoogleAiInterviewPrepClientTests.cs
+
+findings:
+  blockers: []
+
+  non_blocking:
+    - id: CR-IP-M1-01
+      severity: should-fix
+      confidence: medium
+      path: api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+      hunk: "response.EnsureSuccessStatusCode(); + JsonSerializer.Deserialize"
+      rationale: >
+        Gemini HTTP failure throws HttpRequestException; bad JSON throws
+        JsonException. Controller only maps KeyNotFound→404 and
+        InvalidOperation→400, so these can surface as 500. Frozen contracts
+        prefer Gemini/parse → 400. House-consistent with sibling GoogleAi*
+        clients (evaluation/export/etc.) — not M1-unique; fix only if Principal
+        wants a fleet-wide wrap pattern.
+    - id: CR-IP-M1-02
+      severity: nit
+      confidence: high
+      path: api/ApplyVault.Api.Tests/InterviewPrepServiceTests.cs
+      rationale: >
+        Service-layer coverage is strong for mode/languageMix/empty message/
+        missing CV/empty sections/foreign scrape/disabled AI/no-save. No
+        controller or WebApplicationFactory test asserts HTTP 401/404/400
+        status codes; thin controller mirrors CvDocuments AI endpoints so
+        gap is low risk.
+    - id: CR-IP-M1-03
+      severity: nit
+      confidence: high
+      path: api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+      hunk: ResolveLanguageMix
+      rationale: >
+        API service correctly rejects languageMix en+da (frozen). Client
+        soft-maps en+da→mixed and falls back unknown→default/en. Defense in
+        depth is fine; asymmetry is harmless as long as service stays the
+        public gate.
+    - id: CR-IP-M1-04
+      severity: nit
+      confidence: medium
+      path: api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+      hunk: NormalizePriorTurns
+      rationale: >
+        priorTurns.role/phase validation exists but lacks dedicated unit tests
+        (invalid role/phase → InvalidOperation). Non-critical coverage gap.
+    - id: CR-IP-M1-05
+      severity: nit
+      confidence: high
+      path: api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+      hunk: DefaultSystemPrompt (~line with "never default to software engineer")
+      rationale: >
+        Minor mid-sentence lowercase / grammar glitch in default system prompt;
+        does not weaken profession-agnostic rules. Comment-level polish only.
+
+praise:
+  - >
+    Tenancy call site correct: scrapeResultStore.GetByIdAsync(id, user.Id) with
+    KeyNotFound→NotFound(); store filters UserId (EfCoreScrapeResultStore).
+  - >
+    Explicit no-mutation evidence: CreateTurnAsync_PassesCappedInputsAndDoesNotSave
+    asserts SaveWasCalled false on structured + scrape stubs.
+  - >
+    Profession-agnostic system prompt + client test asserts
+    "Do NOT default to software engineering" / never default engineer role.
+  - >
+    Enum freeze: modes include full_loop; rejects technical; languageMix rejects en+da.
+  - >
+    Scorecard NormalizeScorecard drops unknown ids (e.g. relevance), keeps
+    clarity/evidence/structure/role_fit/language in stable order.
+  - >
+    ADR-0008: raw generateContent HttpClient, AddHttpClient registration,
+    InterviewPrepAi options beside sibling *AiOptions; GoogleAi gate shared.
+
+validation:
+  review_method: static diff/intent review against ADR-0012 + frozen contracts
+  tests_re_run: false
+  note: >
+    Did not re-run dotnet test. Backend/ai-llm handoffs claim InterviewPrep
+    filter Passed (15 / 7 respectively). QA owns runtime evidence.
+
+residual_risks:
+  - Live Gemini profession-agnostic quality unproven (M4 / product eval).
+  - Gemini HTTP/parse errors may 500 until wrapped (house-wide pattern).
+  - Config override of SystemPrompt could weaken profession-agnostic rules
+    (ops concern, not code defect).
+
+open_questions: []
+
+next_actions:
+  - Principal: accept READY; proceed M2 FE binding or optional QA smoke.
+  - Optional later: wrap EnsureSuccessStatusCode failures as InvalidOperation
+    fleet-wide if 400 mapping is desired for all GoogleAi clients.
+
+artifacts:
+  - agent-system/handoffs/active/interview-prep-m1-2026-08-02/handoff-code-review-interview-prep-m1.yaml
+
+definition_of_done:
+  - Structured findings with severities delivered
+  - Recommendation token set
+  - No GitHub publish attempted
+  - No fixes implemented (nits only; Principal owns)

@@ -1,0 +1,30 @@
+task_id: job-search-improvements-2026-08-01
+final_status: REQUEST COMPLETE
+closed_at: "2026-08-01T16:15:00Z"
+summary: >-
+  Investigated ApplyVault public job search (EURES/Jobnet); synthesized 14
+  improvement proposals; human approved ALL; filed GitHub issues #4–#17 with
+  labels enhancement + needs-triage.
+github_issues:
+  - { id: JS-01, number: 4,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/4" }
+  - { id: JS-02, number: 5,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/5" }
+  - { id: JS-03, number: 6,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/6" }
+  - { id: JS-04, number: 7,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/7" }
+  - { id: JS-05, number: 8,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/8" }
+  - { id: JS-06, number: 9,  url: "https://github.com/PrimusInterParess/ApplyVault/issues/9" }
+  - { id: JS-07, number: 10, url: "https://github.com/PrimusInterParess/ApplyVault/issues/10" }
+  - { id: JS-08, number: 11, url: "https://github.com/PrimusInterParess/ApplyVault/issues/11" }
+  - { id: JS-09, number: 12, url: "https://github.com/PrimusInterParess/ApplyVault/issues/12" }
+  - { id: JS-10, number: 13, url: "https://github.com/PrimusInterParess/ApplyVault/issues/13" }
+  - { id: JS-11, number: 14, url: "https://github.com/PrimusInterParess/ApplyVault/issues/14" }
+  - { id: JS-12, number: 15, url: "https://github.com/PrimusInterParess/ApplyVault/issues/15" }
+  - { id: JS-13, number: 16, url: "https://github.com/PrimusInterParess/ApplyVault/issues/16" }
+  - { id: JS-14, number: 17, url: "https://github.com/PrimusInterParess/ApplyVault/issues/17" }
+limitations:
+  - "Issues filed as needs-triage; not yet ready-for-agent (AC may need /to-spec deepening before AFK implement)."
+  - "Saved-job pipeline Phases 2–4 intentionally not filed."
+  - "JS-14 should wait on JS-01 (and ideally JS-04/JS-05)."
+agents:
+  - frontend-engineer
+  - backend-engineer
+  - product-manager

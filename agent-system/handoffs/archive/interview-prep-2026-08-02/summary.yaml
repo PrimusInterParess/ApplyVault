@@ -1,0 +1,36 @@
+task_id: interview-prep-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE
+summary: >-
+  Operate option A for profession-agnostic Interview Prep: product backlog
+  IP-01…IP-15, architecture design (ephemeral POST /api/interview-prep/turns,
+  /interview-prep FE, no sessions table MVP), implementation plan approved.
+  Human chose "all"; filed GitHub issues #67–#81. No application code in this run.
+approval:
+  human_choice: all
+  filed_set: IP-01 through IP-15
+plan: agent-system/implementation-plan-interview-prep.md
+github_issues:
+  - { id: IP-01, number: 67, url: "https://github.com/PrimusInterParess/ApplyVault/issues/67" }
+  - { id: IP-02, number: 68, url: "https://github.com/PrimusInterParess/ApplyVault/issues/68" }
+  - { id: IP-03, number: 69, url: "https://github.com/PrimusInterParess/ApplyVault/issues/69" }
+  - { id: IP-04, number: 70, url: "https://github.com/PrimusInterParess/ApplyVault/issues/70" }
+  - { id: IP-05, number: 71, url: "https://github.com/PrimusInterParess/ApplyVault/issues/71" }
+  - { id: IP-06, number: 72, url: "https://github.com/PrimusInterParess/ApplyVault/issues/72" }
+  - { id: IP-07, number: 73, url: "https://github.com/PrimusInterParess/ApplyVault/issues/73" }
+  - { id: IP-08, number: 74, url: "https://github.com/PrimusInterParess/ApplyVault/issues/74" }
+  - { id: IP-09, number: 75, url: "https://github.com/PrimusInterParess/ApplyVault/issues/75" }
+  - { id: IP-10, number: 76, url: "https://github.com/PrimusInterParess/ApplyVault/issues/76" }
+  - { id: IP-11, number: 77, url: "https://github.com/PrimusInterParess/ApplyVault/issues/77" }
+  - { id: IP-12, number: 78, url: "https://github.com/PrimusInterParess/ApplyVault/issues/78" }
+  - { id: IP-13, number: 79, url: "https://github.com/PrimusInterParess/ApplyVault/issues/79" }
+  - { id: IP-14, number: 80, url: "https://github.com/PrimusInterParess/ApplyVault/issues/80" }
+  - { id: IP-15, number: 81, url: "https://github.com/PrimusInterParess/ApplyVault/issues/81" }
+limitations:
+  - "Issues filed as needs-triage; deepen with /to-spec before ready-for-agent AFK implement if needed."
+  - "ADR for ephemeral profession-agnostic coach not yet written (M0 / IP-01)."
+  - "No application code; implementation via operate C starting IP-01."
+agents:
+  - product-manager
+  - architecture-engineer
+  - principal-software-architect

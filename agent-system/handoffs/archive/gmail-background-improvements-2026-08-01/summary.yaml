@@ -1,0 +1,78 @@
+task_id: gmail-background-improvements-2026-08-01
+closed_at: "2026-08-01"
+integration_status: REQUEST COMPLETE
+summary: >-
+  Investigated Gmail/background mail sync (backend + platform explores),
+  synthesized 19 prioritized improvements, human approved "all", filed
+  GitHub issues #48–#66. No application code changes in this operate run.
+approval:
+  human_choice: all
+  filed_set: GM-01 through GM-19
+github_issues:
+  - id: GM-01
+    number: 48
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/48
+  - id: GM-02
+    number: 49
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/49
+  - id: GM-03
+    number: 50
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/50
+  - id: GM-04
+    number: 51
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/51
+  - id: GM-05
+    number: 52
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/52
+  - id: GM-06
+    number: 53
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/53
+  - id: GM-07
+    number: 54
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/54
+  - id: GM-08
+    number: 55
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/55
+  - id: GM-09
+    number: 56
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/56
+  - id: GM-10
+    number: 57
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/57
+  - id: GM-11
+    number: 58
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/58
+  - id: GM-12
+    number: 59
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/59
+  - id: GM-13
+    number: 60
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/60
+  - id: GM-14
+    number: 61
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/61
+  - id: GM-15
+    number: 62
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/62
+  - id: GM-16
+    number: 63
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/63
+  - id: GM-17
+    number: 64
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/64
+  - id: GM-18
+    number: 65
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/65
+  - id: GM-19
+    number: 66
+    url: https://github.com/PrimusInterParess/ApplyVault/issues/66
+agents:
+  - backend-engineer
+  - platform-engineer
+  - product-manager
+limitations:
+  - Live host/replica count remains OPEN_QUESTION; Redis/multi-replica issues are conditional.
+  - Classification remains rules-based (not LLM); no LLM mail work filed.
+  - Application source not modified; issues are backlog only.
+residual_risks:
+  - Issues GM-03/05/13/14/15/18 labeled needs-triage pending product/architect decisions.

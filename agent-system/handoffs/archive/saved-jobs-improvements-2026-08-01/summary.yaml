@@ -1,0 +1,33 @@
+task_id: saved-jobs-improvements-2026-08-01
+final_status: REQUEST COMPLETE
+closed_at: "2026-08-01T16:30:00Z"
+summary: >-
+  Investigated ApplyVault Saved Jobs (job-results / scrape-results); synthesized
+  15 improvement proposals; human approved ALL; filed GitHub issues #33–#47
+  (non-contiguous: SJ-02=#33, SJ-05=#34, SJ-01=#35, SJ-03=#36, SJ-04=#37,
+  SJ-06…SJ-15=#38–#47) with labels enhancement + needs-triage.
+github_issues:
+  - { id: SJ-01, number: 35, url: "https://github.com/PrimusInterParess/ApplyVault/issues/35" }
+  - { id: SJ-02, number: 33, url: "https://github.com/PrimusInterParess/ApplyVault/issues/33" }
+  - { id: SJ-03, number: 36, url: "https://github.com/PrimusInterParess/ApplyVault/issues/36" }
+  - { id: SJ-04, number: 37, url: "https://github.com/PrimusInterParess/ApplyVault/issues/37" }
+  - { id: SJ-05, number: 34, url: "https://github.com/PrimusInterParess/ApplyVault/issues/34" }
+  - { id: SJ-06, number: 38, url: "https://github.com/PrimusInterParess/ApplyVault/issues/38" }
+  - { id: SJ-07, number: 39, url: "https://github.com/PrimusInterParess/ApplyVault/issues/39" }
+  - { id: SJ-08, number: 40, url: "https://github.com/PrimusInterParess/ApplyVault/issues/40" }
+  - { id: SJ-09, number: 41, url: "https://github.com/PrimusInterParess/ApplyVault/issues/41" }
+  - { id: SJ-10, number: 42, url: "https://github.com/PrimusInterParess/ApplyVault/issues/42" }
+  - { id: SJ-11, number: 43, url: "https://github.com/PrimusInterParess/ApplyVault/issues/43" }
+  - { id: SJ-12, number: 44, url: "https://github.com/PrimusInterParess/ApplyVault/issues/44" }
+  - { id: SJ-13, number: 45, url: "https://github.com/PrimusInterParess/ApplyVault/issues/45" }
+  - { id: SJ-14, number: 46, url: "https://github.com/PrimusInterParess/ApplyVault/issues/46" }
+  - { id: SJ-15, number: 47, url: "https://github.com/PrimusInterParess/ApplyVault/issues/47" }
+limitations:
+  - "Issues filed as needs-triage; not yet ready-for-agent (AC may need /to-spec deepening before AFK implement)."
+  - "Did not re-file search issues #4–#17; SJ-02/SJ-06 coordinate with #4."
+  - "Suggested sequence: SJ-01 → SJ-03 → SJ-02 → SJ-06 → SJ-09 → SJ-10 → SJ-07 → SJ-13 → SJ-04 → SJ-14 ongoing → SJ-15 → then SJ-08 / SJ-05 → SJ-11 → SJ-12."
+agents:
+  - frontend-engineer
+  - backend-engineer
+  - product-manager
+approval: "Human selected ALL (SJ-01…SJ-15) on 2026-08-01."

@@ -1,0 +1,30 @@
+task_id: settings-improvements-2026-08-01
+final_status: REQUEST COMPLETE
+closed_at: "2026-08-01T16:20:00Z"
+summary: >-
+  Investigated ApplyVault Settings (integrations hub); synthesized 15
+  improvement proposals; human approved ALL; filed GitHub issues #18–#32 with
+  labels enhancement + needs-triage.
+github_issues:
+  - { id: SI-01, number: 18, url: "https://github.com/PrimusInterParess/ApplyVault/issues/18" }
+  - { id: SI-02, number: 19, url: "https://github.com/PrimusInterParess/ApplyVault/issues/19" }
+  - { id: SI-03, number: 20, url: "https://github.com/PrimusInterParess/ApplyVault/issues/20" }
+  - { id: SI-04, number: 21, url: "https://github.com/PrimusInterParess/ApplyVault/issues/21" }
+  - { id: SI-05, number: 22, url: "https://github.com/PrimusInterParess/ApplyVault/issues/22" }
+  - { id: SI-06, number: 23, url: "https://github.com/PrimusInterParess/ApplyVault/issues/23" }
+  - { id: SI-07, number: 24, url: "https://github.com/PrimusInterParess/ApplyVault/issues/24" }
+  - { id: SI-08, number: 25, url: "https://github.com/PrimusInterParess/ApplyVault/issues/25" }
+  - { id: SI-09, number: 26, url: "https://github.com/PrimusInterParess/ApplyVault/issues/26" }
+  - { id: SI-10, number: 27, url: "https://github.com/PrimusInterParess/ApplyVault/issues/27" }
+  - { id: SI-11, number: 28, url: "https://github.com/PrimusInterParess/ApplyVault/issues/28" }
+  - { id: SI-12, number: 29, url: "https://github.com/PrimusInterParess/ApplyVault/issues/29" }
+  - { id: SI-13, number: 30, url: "https://github.com/PrimusInterParess/ApplyVault/issues/30" }
+  - { id: SI-14, number: 31, url: "https://github.com/PrimusInterParess/ApplyVault/issues/31" }
+  - { id: SI-15, number: 32, url: "https://github.com/PrimusInterParess/ApplyVault/issues/32" }
+limitations:
+  - "Issues filed as needs-triage; not yet ready-for-agent (AC may need /to-spec deepening before AFK implement)."
+  - "Task subagents unavailable (usage limit); probe ran as Principal single-chat fallback."
+  - "SI-05 partially depends on SI-06 for GitHub health rollup."
+  - "SI-14 requires an explicit product decision (parity vs Gmail-only copy) before implementation."
+agents:
+  - principal-software-architect

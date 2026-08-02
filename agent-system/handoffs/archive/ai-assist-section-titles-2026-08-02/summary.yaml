@@ -1,0 +1,26 @@
+schema_version: "1.0.0"
+task_id: ai-assist-section-titles-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+github_issues:
+  - "https://github.com/PrimusInterParess/ApplyVault/issues/82"
+  - "https://github.com/PrimusInterParess/ApplyVault/issues/83"
+agents:
+  - frontend-engineer
+  - ai-llm-engineer
+summary: >
+  Fixed CV Builder AI Assist showing raw section GUIDs instead of titles.
+  FE resolves sectionId → heading for compare/Suggestions/Evaluate; AI prompts
+  and StripIds normalize keep ids out of user-facing free-text.
+limitations:
+  - No builds/tests or live Gemini smoke in this operate run (user policy).
+  - Custom appsettings SystemPrompt overrides may still contain old "exact id" wording until refreshed.
+  - StripIds only removes GUID-shaped / labeled id patterns.
+residual_risks:
+  - Model may still invent non-GUID opaque tokens in free-text occasionally.
+files_changed_highlight:
+  - frontend/.../cv-builder-assist-panel/*
+  - api/.../Options/Cv{Suggestions,Evaluation,Update}AiOptions.cs
+  - api/.../CvAiUserFacingText.cs
+  - api/.../GoogleAiCvStructured{Suggestions,Evaluation,Update}Client.cs
+  - api/.../CvStructuredUpdateNormalizer.cs

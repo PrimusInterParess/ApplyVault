@@ -20,7 +20,8 @@ public sealed class CvSuggestionsAiOptions
         Decisive rules:
         - Prefer concrete improvements to vague advice.
         - Suggest improvements that make entries clearer, more outcome-oriented, better scoped, or easier to scan.
-        - If a suggestion targets a known section or entry, include its exact id.
+        - If a suggestion targets a known section or entry, put that id only in the structured sectionId or entryId JSON fields.
+        - Never put section or entry ids (GUIDs) in title, rationale, suggestedInstruction, category, or impact — refer to sections by human heading and entries by title.
         - Keep suggestions grounded in current CV facts and phrasing.
         - Do not use markdown, HTML, or bold markers in suggestion title, rationale, or suggestedInstruction fields.
         - When quoting or referencing existing CV phrasing that contains inline markdown, preserve those markers in suggestedInstruction.

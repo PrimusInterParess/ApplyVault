@@ -106,7 +106,8 @@ public sealed class GoogleAiCvStructuredEvaluationClient(
         CvStructuredEvaluationAiResponse response,
         int maxFindings)
     {
-        if (string.IsNullOrWhiteSpace(response.Summary))
+        var summary = CvAiUserFacingText.StripIds(response.Summary?.Trim() ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(summary))
         {
             throw new InvalidOperationException("Google AI returned a CV evaluation without a summary.");
         }
@@ -125,10 +126,13 @@ public sealed class GoogleAiCvStructuredEvaluationClient(
                 (group) =>
                 {
                     var dimension = group.First();
+                    var dimensionSummary = CvAiUserFacingText.StripIds(dimension.Summary.Trim());
                     return new CvQualityEvaluationDimensionDto(
                         group.Key,
                         ClampScore(dimension.Score),
-                        dimension.Summary.Trim());
+                        string.IsNullOrWhiteSpace(dimensionSummary)
+                            ? "No dimension summary returned."
+                            : dimensionSummary);
                 });
 
         var dimensions = new[] { "content", "structure", "format" }
@@ -151,22 +155,26 @@ public sealed class GoogleAiCvStructuredEvaluationClient(
                 string.IsNullOrWhiteSpace(finding.Id) ? $"finding-{index + 1}" : finding.Id.Trim(),
                 finding.Dimension.Trim().ToLowerInvariant(),
                 finding.Severity.Trim().ToLowerInvariant(),
-                finding.Title.Trim(),
-                finding.Detail.Trim(),
+                CvAiUserFacingText.StripIds(finding.Title.Trim()),
+                CvAiUserFacingText.StripIds(finding.Detail.Trim()),
                 ParseKnownGuid(finding.SectionId, knownSectionIds),
                 ParseKnownGuid(finding.EntryId, knownEntryIds)))
+            .Where((finding) =>
+                !string.IsNullOrWhiteSpace(finding.Title) &&
+                !string.IsNullOrWhiteSpace(finding.Detail))
             .ToArray();
 
         var selfCheckQuestions = (response.SelfCheckQuestions ?? [])
             .Where((question) => !string.IsNullOrWhiteSpace(question))
-            .Select((question) => question.Trim())
+            .Select((question) => CvAiUserFacingText.StripIds(question.Trim()))
+            .Where((question) => !string.IsNullOrWhiteSpace(question))
             .Take(3)
             .ToArray();
 
         return new CvQualityEvaluationDto(
             current.DocumentId,
             ClampScore(response.OverallScore),
-            response.Summary.Trim(),
+            summary,
             dimensions,
             findings,
             selfCheckQuestions);

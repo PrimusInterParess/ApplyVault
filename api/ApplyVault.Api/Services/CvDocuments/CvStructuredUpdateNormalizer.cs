@@ -14,12 +14,16 @@ internal static class CvStructuredUpdateNormalizer
             .OfType<Guid>()
             .ToHashSet();
 
+        var headingsById = current.Sections.ToDictionary(
+            (section) => section.Id,
+            (section) => section.Heading);
+
         var sections = response.Sections
             .Where((section) => !string.IsNullOrWhiteSpace(section.Heading))
             .OrderBy((section) => section.SortOrder)
             .Select((section, sectionIndex) => new CvStructuredSectionWriteDto(
                 ParseGuid(section.Id),
-                section.Heading.Trim(),
+                ResolveHeading(section, headingsById),
                 CvSectionTypes.Normalize(section.SectionType),
                 sectionIndex,
                 section.Entries
@@ -31,7 +35,7 @@ internal static class CvStructuredUpdateNormalizer
                         entryIndex,
                         knownSourceSummaryIds))
                     .ToArray()))
-            .Where((section) => section.Entries.Count > 0)
+            .Where((section) => section.Entries.Count > 0 && !string.IsNullOrWhiteSpace(section.Heading))
             .ToArray();
 
         return new SaveCvStructuredDocumentRequest(sections);
@@ -137,6 +141,26 @@ internal static class CvStructuredUpdateNormalizer
                     entryIndex))
                 .ToArray());
 
+    private static string ResolveHeading(
+        CvStructuredUpdateAiSection section,
+        IReadOnlyDictionary<Guid, string> headingsById)
+    {
+        var heading = CvAiUserFacingText.StripIds(section.Heading.Trim());
+        if (!string.IsNullOrWhiteSpace(heading))
+        {
+            return heading;
+        }
+
+        var sectionId = ParseGuid(section.Id);
+        if (sectionId is not null && headingsById.TryGetValue(sectionId.Value, out var currentHeading)
+            && !string.IsNullOrWhiteSpace(currentHeading))
+        {
+            return currentHeading;
+        }
+
+        return section.Heading.Trim();
+    }
+
     private static CvStructuredEntryWriteDto NormalizeEntry(
         string sectionType,
         CvStructuredUpdateAiEntry entry,
@@ -145,7 +169,7 @@ internal static class CvStructuredUpdateNormalizer
     {
         var bullets = entry.Bullets
             .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
-            .Select((bullet) => bullet.Trim().TrimStart('-', '*', '•').Trim())
+            .Select((bullet) => CvAiUserFacingText.StripIds(bullet.Trim().TrimStart('-', '*', '•').Trim()))
             .Where((bullet) => bullet.Length > 0)
             .ToArray();
         var techStack = entry.TechStack?.Trim() ?? string.Empty;
@@ -160,12 +184,18 @@ internal static class CvStructuredUpdateNormalizer
             bullets = [];
         }
 
+        var title = CvAiUserFacingText.StripIds(entry.Title.Trim());
+        var subtitle = string.IsNullOrWhiteSpace(entry.Subtitle)
+            ? null
+            : CvAiUserFacingText.StripIds(entry.Subtitle.Trim());
+        var summary = CvAiUserFacingText.StripIds(entry.Summary?.Trim() ?? string.Empty);
+
         return new CvStructuredEntryWriteDto(
             ParseGuid(entry.Id),
-            entry.Title.Trim(),
-            string.IsNullOrWhiteSpace(entry.Subtitle) ? null : entry.Subtitle.Trim(),
+            title,
+            string.IsNullOrWhiteSpace(subtitle) ? null : subtitle,
             string.IsNullOrWhiteSpace(entry.DateRange) ? null : entry.DateRange.Trim(),
-            entry.Summary?.Trim() ?? string.Empty,
+            summary,
             bullets,
             techStack,
             string.IsNullOrWhiteSpace(entry.Source) ? CvEntrySources.Manual : entry.Source.Trim(),

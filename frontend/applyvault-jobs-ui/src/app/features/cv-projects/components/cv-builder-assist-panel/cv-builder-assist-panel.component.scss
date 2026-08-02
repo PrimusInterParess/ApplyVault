@@ -286,9 +286,21 @@
   color: #1c2330;
 }
 
-.cv-builder-assist__suggestion span {
+.cv-builder-assist__suggestion-rationale {
   font-size: 0.82rem;
   color: #5b6575;
+}
+
+.cv-builder-assist__section-badge {
+  justify-self: start;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  background: #e8ebf0;
+  color: #5b6575;
+  line-height: 1.3;
 }
 
 .cv-builder-assist__suggestion--active {

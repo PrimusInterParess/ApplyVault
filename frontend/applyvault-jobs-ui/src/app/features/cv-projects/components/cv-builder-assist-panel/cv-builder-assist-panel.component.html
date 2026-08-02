@@ -242,8 +242,11 @@
                 [class.cv-builder-assist__suggestion--active]="isSuggestionSelected(suggestion.id)"
                 [disabled]="disabled()"
                 (click)="toggleSuggestion.emit(suggestion.id)">
+                @if (sectionTitleById(suggestion.sectionId); as sectionTitle) {
+                  <span class="cv-builder-assist__section-badge">{{ sectionTitle }}</span>
+                }
                 <strong>{{ suggestion.title }}</strong>
-                <span>{{ suggestion.rationale }}</span>
+                <span class="cv-builder-assist__suggestion-rationale">{{ suggestion.rationale }}</span>
               </button>
             </li>
           }
@@ -308,6 +311,9 @@
                     <span class="cv-builder-assist__finding-dim">{{
                       dimensionLabel(finding.dimension)
                     }}</span>
+                    @if (sectionTitleById(finding.sectionId); as sectionTitle) {
+                      <span class="cv-builder-assist__section-badge">{{ sectionTitle }}</span>
+                    }
                   </div>
                   <strong>{{ finding.title }}</strong>
                   <span>{{ finding.detail }}</span>

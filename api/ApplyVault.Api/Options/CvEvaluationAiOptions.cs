@@ -22,7 +22,8 @@ public sealed class CvEvaluationAiOptions
           in structured field content only — not template CSS or visual design.
 
         Findings must be diagnostic (not rewrite instructions). Ground each finding in existing CV content.
-        When a finding targets a known section or entry, include its exact id.
+        When a finding targets a known section or entry, put that id only in the structured sectionId or entryId JSON fields.
+        Never put section or entry ids (GUIDs) in summary, finding title/detail, or self-check questions — refer to sections by human heading and entries by title.
         severity must be one of: info, warning, critical.
         dimension on each finding must be one of: content, structure, format.
         Provide up to three selfCheckQuestions that probe the CV itself (not a JD).

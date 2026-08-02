@@ -66,7 +66,8 @@ public sealed class GoogleAiCvStructuredUpdateClient(
     internal static IReadOnlyList<string> NormalizeChangeBullets(IReadOnlyList<string>? changeBullets) =>
         (changeBullets ?? [])
             .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
-            .Select((bullet) => Truncate(bullet.Trim(), MaxBulletLength))
+            .Select((bullet) => Truncate(CvAiUserFacingText.StripIds(bullet.Trim()), MaxBulletLength))
+            .Where((bullet) => !string.IsNullOrWhiteSpace(bullet))
             .Take(MaxChangeBullets)
             .ToArray();
 
@@ -120,7 +121,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         var sectionsById = current.Sections.ToDictionary((section) => section.Id);
         var lines = new List<string>
         {
-            "Focus sections (apply instructions primarily to these; keep all other sections unchanged unless the instruction explicitly requires broader edits):"
+            "Focus sections (apply instructions primarily to these; keep all other sections unchanged unless the instruction explicitly requires broader edits). Lead with the human heading; sectionId is for targeting only — do not echo ids into headings, changeBullets, or other user-facing strings:"
         };
 
         foreach (var sectionId in focusSectionIds)
@@ -130,7 +131,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
                 continue;
             }
 
-            lines.Add($"- {section.Heading} (id: {section.Id})");
+            lines.Add($"- {section.Heading} — sectionId={section.Id}");
         }
 
         return string.Join(Environment.NewLine, lines);

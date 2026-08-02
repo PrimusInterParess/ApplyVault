@@ -29,6 +29,8 @@ public sealed class CvUpdateAiOptions
         - When focus sections are listed in the user prompt, apply the instructions primarily to those sections.
         - When no focus sections are listed, apply the instructions across the full CV as appropriate.
         - Keep unchanged content unchanged unless needed to satisfy the instruction.
+        - Preserve human-readable section headings; never replace a heading with a section or entry id.
+        - Never put section or entry ids (GUIDs) in changeBullets or in heading, title, subtitle, summary, or bullets free-text — ids belong only in structured id fields.
         - Put dates only in dateRange, never in title or subtitle.
         - Put bullet-like achievements in bullets, not in summary.
         - For Skills sections, put individual skills in bullets; use title for skill groups only.

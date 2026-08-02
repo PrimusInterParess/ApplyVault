@@ -201,6 +201,16 @@ export class CvBuilderAssistPanelComponent {
     return section.heading.trim() || section.sectionType;
   }
 
+  /** Resolve API sectionId to a display title from the current CV; never return the raw id. */
+  protected sectionTitleById(sectionId: string | null | undefined): string | null {
+    if (!sectionId) {
+      return null;
+    }
+
+    const section = this.sections().find((entry) => entry.id === sectionId);
+    return section ? this.aiSectionLabel(section) : null;
+  }
+
   protected compareSectionIds(proposal: CvUpdateProposal): string[] {
     return resolveUpdateProposalCompareSectionIds(
       proposal.focusSectionIds,
@@ -209,9 +219,9 @@ export class CvBuilderAssistPanelComponent {
   }
 
   protected sectionCompareHeading(sectionId: string, proposal: CvUpdateProposal): string {
-    const proposed = proposal.proposedSections.find((section) => section.id === sectionId);
     const current = this.sections().find((section) => section.id === sectionId);
-    const section = proposed ?? current;
+    const proposed = proposal.proposedSections.find((section) => section.id === sectionId);
+    const section = current ?? proposed;
     return section ? this.aiSectionLabel(section) : 'Section';
   }
 

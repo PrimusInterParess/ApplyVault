@@ -105,14 +105,14 @@ public sealed class GoogleAiCvStructuredSuggestionsClient(
         var sectionsById = current.Sections.ToDictionary((section) => section.Id);
         var lines = new List<string>
         {
-            "Focus sections (suggest improvements primarily for these sections):"
+            "Focus sections (suggest improvements primarily for these). Lead with the human heading; sectionId is for targeting only — do not echo ids into title, rationale, or suggestedInstruction:"
         };
 
         foreach (var sectionId in focusSectionIds)
         {
             if (sectionsById.TryGetValue(sectionId, out var section))
             {
-                lines.Add($"- {section.Heading} (id: {section.Id})");
+                lines.Add($"- {section.Heading} — sectionId={section.Id}");
             }
         }
 
@@ -139,14 +139,18 @@ public sealed class GoogleAiCvStructuredSuggestionsClient(
 
                 return new CvImprovementSuggestionDto(
                     string.IsNullOrWhiteSpace(suggestion.Id) ? $"suggestion-{index + 1}" : suggestion.Id.Trim(),
-                    suggestion.Title.Trim(),
-                    suggestion.Rationale.Trim(),
-                    suggestion.SuggestedInstruction.Trim(),
+                    CvAiUserFacingText.StripIds(suggestion.Title.Trim()),
+                    CvAiUserFacingText.StripIds(suggestion.Rationale.Trim()),
+                    CvAiUserFacingText.StripIds(suggestion.SuggestedInstruction.Trim()),
                     sectionId,
                     entryId,
                     string.IsNullOrWhiteSpace(suggestion.Category) ? "Content" : suggestion.Category.Trim(),
                     string.IsNullOrWhiteSpace(suggestion.Impact) ? "Medium" : suggestion.Impact.Trim());
             })
+            .Where((suggestion) =>
+                !string.IsNullOrWhiteSpace(suggestion.Title) &&
+                !string.IsNullOrWhiteSpace(suggestion.Rationale) &&
+                !string.IsNullOrWhiteSpace(suggestion.SuggestedInstruction))
             .ToArray();
 
         return new CvImprovementSuggestionsDto(current.DocumentId, current.StructuredImportedAt, suggestions);

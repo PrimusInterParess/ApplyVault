@@ -33,6 +33,12 @@ public sealed class GoogleAiInterviewPrepClient(
         "mixed"
     };
 
+    private static readonly HashSet<string> KnownHiringMarkets = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "general",
+        "dk"
+    };
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -98,6 +104,7 @@ public sealed class GoogleAiInterviewPrepClient(
         }
 
         var languageMix = ResolveLanguageMix(request.LanguageMix, prepOptions.DefaultLanguageMix);
+        var hiringMarket = ResolveHiringMarket(request.HiringMarket, prepOptions.DefaultHiringMarket);
         var userMessage = Truncate(
             (request.UserMessage ?? string.Empty).Trim(),
             prepOptions.MaxUserMessageChars);
@@ -131,6 +138,7 @@ public sealed class GoogleAiInterviewPrepClient(
                             text = prepOptions.UserPromptTemplate
                                 .Replace("{{mode}}", mode, StringComparison.Ordinal)
                                 .Replace("{{languageMix}}", languageMix, StringComparison.Ordinal)
+                                .Replace("{{hiringMarket}}", hiringMarket, StringComparison.Ordinal)
                                 .Replace("{{userMessage}}", userMessage, StringComparison.Ordinal)
                                 .Replace("{{priorTurnsJson}}", priorTurnsJson, StringComparison.Ordinal)
                                 .Replace("{{jobJson}}", jobJson, StringComparison.Ordinal)
@@ -251,6 +259,25 @@ public sealed class GoogleAiInterviewPrepClient(
         }
 
         return "en";
+    }
+
+    private static string ResolveHiringMarket(string? hiringMarket, string defaultHiringMarket)
+    {
+        var candidate = string.IsNullOrWhiteSpace(hiringMarket)
+            ? defaultHiringMarket
+            : hiringMarket.Trim();
+
+        if (KnownHiringMarkets.Contains(candidate))
+        {
+            return candidate.ToLowerInvariant();
+        }
+
+        if (KnownHiringMarkets.Contains(defaultHiringMarket))
+        {
+            return defaultHiringMarket.Trim().ToLowerInvariant();
+        }
+
+        return "general";
     }
 
     private static IReadOnlyList<object> NormalizePriorTurns(

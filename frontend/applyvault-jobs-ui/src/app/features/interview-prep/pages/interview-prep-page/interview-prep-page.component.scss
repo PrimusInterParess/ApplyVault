@@ -202,6 +202,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  /* Room so mode tips paint below the chip row without covering the next fieldset. */
+  margin-bottom: 0.25rem;
 }
 
 .interview-prep__chip-wrap {
@@ -211,7 +213,8 @@
 
 .interview-prep__chip-wrap:hover:not(.interview-prep__chip-wrap--suppressed),
 .interview-prep__chip-wrap:focus-within:not(.interview-prep__chip-wrap--suppressed) {
-  z-index: 2;
+  /* Stack tip above sibling chips visually; tip itself never captures clicks. */
+  z-index: 5;
 }
 
 .interview-prep__chip {
@@ -244,6 +247,7 @@
   text-align: left;
   opacity: 0;
   visibility: hidden;
+  /* Always none — interactive tips sit over neighboring chips and block mode selection. */
   pointer-events: none;
   transform: translateY(0.2rem);
   transition:
@@ -252,27 +256,16 @@
     visibility 0.14s ease;
 }
 
-.interview-prep__chip-popover::before {
-  content: '';
-  position: absolute;
-  top: -0.45rem;
-  left: 0;
-  width: 100%;
-  height: 0.45rem;
-}
-
 .interview-prep__chip-wrap:hover:not(.interview-prep__chip-wrap--suppressed) .interview-prep__chip-popover,
 .interview-prep__chip-wrap:focus-within:not(.interview-prep__chip-wrap--suppressed) .interview-prep__chip-popover {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
   transform: translateY(0);
 }
 
 .interview-prep__chip-wrap--suppressed .interview-prep__chip-popover {
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
 }
 
 .interview-prep__chip-popover p {

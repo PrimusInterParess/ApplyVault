@@ -22,7 +22,8 @@ public sealed record InterviewPrepAiTurnRequest(
     string Mode,
     string? LanguageMix,
     string UserMessage,
-    IReadOnlyList<InterviewPrepPriorTurn>? PriorTurns = null);
+    IReadOnlyList<InterviewPrepPriorTurn>? PriorTurns = null,
+    string? HiringMarket = null);
 
 /// <summary>
 /// Read-only job context derived from an owned scrape result (never trust client job text).

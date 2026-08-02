@@ -8,7 +8,8 @@ public sealed record InterviewPrepTurnRequest(
     string UserMessage,
     string? LanguageMix = null,
     Guid? ScrapeResultId = null,
-    IReadOnlyList<InterviewPrepPriorTurnDto>? PriorTurns = null);
+    IReadOnlyList<InterviewPrepPriorTurnDto>? PriorTurns = null,
+    string? HiringMarket = null);
 
 public sealed record InterviewPrepPriorTurnDto(
     string Role,
@@ -81,6 +82,21 @@ public static class InterviewPrepLanguageMixes
         En,
         Da,
         Mixed
+    };
+}
+
+/// <summary>
+/// Allowed hiringMarket values (ADR-0013). Orthogonal to languageMix.
+/// </summary>
+public static class InterviewPrepHiringMarkets
+{
+    public const string General = "general";
+    public const string Dk = "dk";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        General,
+        Dk
     };
 }
 

@@ -7,9 +7,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { InterviewPrepFacade } from '../../data-access/interview-prep.facade';
 import {
+  INTERVIEW_PREP_HIRING_MARKETS,
   INTERVIEW_PREP_LANGUAGE_MIXES,
   INTERVIEW_PREP_MODES,
   INTERVIEW_PREP_SCORECARD_DIMENSION_LABELS,
+  InterviewPrepHiringMarket,
+  InterviewPrepHiringMarketOption,
   InterviewPrepLanguageMix,
   InterviewPrepLanguageOption,
   InterviewPrepMode,
@@ -17,7 +20,10 @@ import {
   InterviewPrepScorecardDimensionId
 } from '../../models/interview-prep.model';
 
-type InterviewPrepHelpKey = `mode:${InterviewPrepMode}` | `language:${InterviewPrepLanguageMix}`;
+type InterviewPrepHelpKey =
+  | `mode:${InterviewPrepMode}`
+  | `language:${InterviewPrepLanguageMix}`
+  | `hiring:${InterviewPrepHiringMarket}`;
 
 @Component({
   selector: 'app-interview-prep-page',
@@ -30,6 +36,7 @@ export class InterviewPrepPageComponent implements OnInit {
   protected readonly facade = inject(InterviewPrepFacade);
   protected readonly modes = INTERVIEW_PREP_MODES;
   protected readonly languageMixes = INTERVIEW_PREP_LANGUAGE_MIXES;
+  protected readonly hiringMarkets = INTERVIEW_PREP_HIRING_MARKETS;
   protected readonly readInputValue = readInputValue;
 
   /** While set, hide that chip's hover/focus popover until the pointer leaves. */
@@ -43,6 +50,11 @@ export class InterviewPrepPageComponent implements OnInit {
   protected readonly selectedLanguageMix = computed(
     (): InterviewPrepLanguageOption | undefined =>
       this.languageMixes.find((option) => option.id === this.facade.languageMix())
+  );
+
+  protected readonly selectedHiringMarket = computed(
+    (): InterviewPrepHiringMarketOption | undefined =>
+      this.hiringMarkets.find((option) => option.id === this.facade.hiringMarket())
   );
 
   private readonly route = inject(ActivatedRoute);
@@ -69,12 +81,21 @@ export class InterviewPrepPageComponent implements OnInit {
     this.dismissChipHelp(this.languageHelpKey(languageMix), event);
   }
 
+  protected selectHiringMarket(hiringMarket: InterviewPrepHiringMarket, event: Event): void {
+    this.facade.setHiringMarket(hiringMarket);
+    this.dismissChipHelp(this.hiringHelpKey(hiringMarket), event);
+  }
+
   protected modeHelpKey(mode: InterviewPrepMode): InterviewPrepHelpKey {
     return `mode:${mode}`;
   }
 
   protected languageHelpKey(languageMix: InterviewPrepLanguageMix): InterviewPrepHelpKey {
     return `language:${languageMix}`;
+  }
+
+  protected hiringHelpKey(hiringMarket: InterviewPrepHiringMarket): InterviewPrepHelpKey {
+    return `hiring:${hiringMarket}`;
   }
 
   protected isHelpSuppressed(key: InterviewPrepHelpKey): boolean {

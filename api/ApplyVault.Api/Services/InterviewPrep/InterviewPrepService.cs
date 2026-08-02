@@ -28,6 +28,7 @@ public sealed class InterviewPrepService(
 
         var mode = ValidateMode(request.Mode);
         var languageMix = ResolveLanguageMix(request.LanguageMix, options.DefaultLanguageMix);
+        var hiringMarket = ResolveHiringMarket(request.HiringMarket, options.DefaultHiringMarket);
         var userMessage = CapUserMessage(request.UserMessage, options.MaxUserMessageChars);
         var priorTurns = NormalizePriorTurns(
             request.PriorTurns,
@@ -64,7 +65,8 @@ public sealed class InterviewPrepService(
             mode,
             languageMix,
             userMessage,
-            priorTurns);
+            priorTurns,
+            hiringMarket);
 
         var aiResult = await interviewPrepAiClient.GenerateTurnAsync(aiRequest, cancellationToken);
         return MapResponse(aiResult);
@@ -91,6 +93,21 @@ public sealed class InterviewPrepService(
         {
             throw new InvalidOperationException(
                 "languageMix must be one of: en, da, mixed.");
+        }
+
+        return resolved;
+    }
+
+    private static string ResolveHiringMarket(string? hiringMarket, string defaultHiringMarket)
+    {
+        var resolved = string.IsNullOrWhiteSpace(hiringMarket)
+            ? defaultHiringMarket
+            : hiringMarket;
+
+        if (!InterviewPrepHiringMarkets.All.Contains(resolved))
+        {
+            throw new InvalidOperationException(
+                "hiringMarket must be one of: general, dk.");
         }
 
         return resolved;

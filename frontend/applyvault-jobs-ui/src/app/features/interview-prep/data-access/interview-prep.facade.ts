@@ -9,10 +9,12 @@ import { JobResultsApiService } from '../../job-results/data-access/job-results-
 import { mapSavedJobResultToViewModel } from '../../job-results/utils/job-result.mapper';
 import { InterviewPrepApiService } from './interview-prep-api.service';
 import {
+  DEFAULT_INTERVIEW_PREP_HIRING_MARKET,
   DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX,
   DEFAULT_INTERVIEW_PREP_MODE,
   INTERVIEW_PREP_START_MESSAGE,
   InterviewPrepChatMessage,
+  InterviewPrepHiringMarket,
   InterviewPrepInference,
   InterviewPrepLanguageMix,
   InterviewPrepMode,
@@ -49,6 +51,7 @@ export class InterviewPrepFacade {
 
   readonly mode = signal<InterviewPrepMode>(DEFAULT_INTERVIEW_PREP_MODE);
   readonly languageMix = signal<InterviewPrepLanguageMix>(DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX);
+  readonly hiringMarket = signal<InterviewPrepHiringMarket>(DEFAULT_INTERVIEW_PREP_HIRING_MARKET);
   readonly scrapeResultId = signal<string | null>(null);
 
   readonly jobOptions = signal<readonly InterviewPrepJobOption[]>([]);
@@ -132,6 +135,14 @@ export class InterviewPrepFacade {
     }
 
     this.languageMix.set(languageMix);
+  }
+
+  setHiringMarket(hiringMarket: InterviewPrepHiringMarket): void {
+    if (this.sessionStarted() || this.sending()) {
+      return;
+    }
+
+    this.hiringMarket.set(hiringMarket);
   }
 
   /**
@@ -261,6 +272,7 @@ export class InterviewPrepFacade {
       .createTurn({
         mode: this.mode(),
         languageMix: this.languageMix(),
+        hiringMarket: this.hiringMarket(),
         userMessage,
         scrapeResultId: this.scrapeResultId(),
         priorTurns: priorSnapshot

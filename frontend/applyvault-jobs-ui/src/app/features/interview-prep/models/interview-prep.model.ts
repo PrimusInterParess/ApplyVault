@@ -11,6 +11,8 @@ export type InterviewPrepMode =
 
 export type InterviewPrepLanguageMix = 'en' | 'da' | 'mixed';
 
+export type InterviewPrepHiringMarket = 'general' | 'dk';
+
 export type InterviewPrepPhase = 'interview' | 'debrief';
 
 export type InterviewPrepTurnRole = 'user' | 'coach';
@@ -40,6 +42,13 @@ export interface InterviewPrepLanguageOption {
   readonly detail: string;
 }
 
+export interface InterviewPrepHiringMarketOption {
+  readonly id: InterviewPrepHiringMarket;
+  readonly label: string;
+  readonly description: string;
+  readonly detail: string;
+}
+
 export interface InterviewPrepPriorTurn {
   readonly role: InterviewPrepTurnRole;
   readonly text: string;
@@ -50,6 +59,7 @@ export interface InterviewPrepTurnRequest {
   readonly mode: InterviewPrepMode;
   readonly userMessage: string;
   readonly languageMix?: InterviewPrepLanguageMix;
+  readonly hiringMarket?: InterviewPrepHiringMarket;
   readonly scrapeResultId?: string | null;
   readonly priorTurns?: readonly InterviewPrepPriorTurn[];
 }
@@ -134,9 +144,9 @@ export const INTERVIEW_PREP_MODES: readonly InterviewPrepModeOption[] = [
   {
     id: 'language_practice',
     label: 'Language practice (EN / DA)',
-    description: 'Best when English or Danish is the hard part.',
+    description: 'Best when English, Danish, or switching between them is the hard part.',
     detail:
-      'Use this when you already know the job content, but want cleaner interview phrasing. The coach focuses on fluency, clarity, and natural answers in the language mix you pick below — with less pressure on deep domain expertise.',
+      'Use this when you already know the job content, but want cleaner interview phrasing — including bilingual EN↔DA practice common in Danish hiring. The coach focuses on fluency, clarity, and natural answers in the language mix you pick below — with less pressure on deep domain expertise.',
     example: 'Shorter interview answers in English, Danish, or mixed — with feedback on clarity and phrasing.'
   },
   {
@@ -154,7 +164,8 @@ export const INTERVIEW_PREP_LANGUAGE_MIXES: readonly InterviewPrepLanguageOption
     id: 'en',
     label: 'English',
     description: 'Questions and feedback stay in English.',
-    detail: 'Choose this for English-only interviews. Answer in English; the coach replies and scores language in English.'
+    detail:
+      'Choose this for English-only interviews. Answer in English; the coach replies and scores language in English. For English interviews in Denmark, keep English here and set Hiring market → Danish market.'
   },
   {
     id: 'da',
@@ -165,9 +176,26 @@ export const INTERVIEW_PREP_LANGUAGE_MIXES: readonly InterviewPrepLanguageOption
   {
     id: 'mixed',
     label: 'Mixed (EN + DA)',
-    description: 'The coach mixes English and Danish.',
+    description: 'The coach mixes English and Danish — common in Danish interviews.',
     detail:
-      'Useful for bilingual interviews in Denmark, where the conversation may switch languages. Practice answering comfortably in both.'
+      'Useful when Danish interviews switch between English and Danish. Practice answering comfortably in both.'
+  }
+] as const;
+
+export const INTERVIEW_PREP_HIRING_MARKETS: readonly InterviewPrepHiringMarketOption[] = [
+  {
+    id: 'general',
+    label: 'General',
+    description: 'Market-agnostic coaching.',
+    detail:
+      'No forced country hiring norms. Use when you want neutral practice, or when market cues should come only from a clearly Denmark-linked saved job.'
+  },
+  {
+    id: 'dk',
+    label: 'Danish market',
+    description: 'Coach for common Danish hiring norms.',
+    detail:
+      'Adds Danish-market coaching cues (motivation, culture, process). Spoken language stays whatever you pick under Language mix — English + Danish market is supported.'
   }
 ] as const;
 
@@ -183,4 +211,5 @@ export const INTERVIEW_PREP_SCORECARD_DIMENSION_LABELS: Readonly<
 
 export const DEFAULT_INTERVIEW_PREP_MODE: InterviewPrepMode = 'behavioral';
 export const DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX: InterviewPrepLanguageMix = 'en';
+export const DEFAULT_INTERVIEW_PREP_HIRING_MARKET: InterviewPrepHiringMarket = 'general';
 export const INTERVIEW_PREP_START_MESSAGE = "Let's start.";

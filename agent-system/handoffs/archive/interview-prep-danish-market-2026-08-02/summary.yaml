@@ -1,0 +1,39 @@
+schema_version: "1.0.0"
+task_id: "interview-prep-danish-market-2026-08-02"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+closed_at: "2026-08-02"
+parent_request: >
+  /operate A→C — Danish hiring-market bias for Interview Prep (conditional
+  system prompt + M1b Language practice / Mixed hint copy).
+plan: "agent-system/implementation-plan-interview-prep-danish-market.md"
+ship_cut: "M1 + M1b + M2"
+agents:
+  - ai-llm-engineer
+  - ui-ux-designer
+  - frontend-engineer
+  - qa-engineer
+decisions:
+  - id: IP-DK-PROMPT-01
+    summary: >
+      Conditional DK hiring-market cues in DefaultSystemPrompt when clear DK
+      job signals OR languageMix da|mixed; otherwise market-agnostic (ADR-0012).
+  - id: IP-DK-COPY-01
+    summary: >
+      M1b updates language_practice + mixed description/detail only; no new
+      mode, toggle, or API field.
+files_changed:
+  - "api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs"
+  - "frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts"
+limitations:
+  - "QA evidence was static only — live Gemini coach turns not executed"
+  - "Manual browser smoke of selection notes/popovers not run"
+  - "Operators with custom production SystemPrompt must merge the DK block"
+residual_risks:
+  - "Model may under/over-apply DK cues despite prompt text until live smoke"
+artifacts:
+  - "agent-system/handoffs/archive/interview-prep-danish-market-2026-08-02/qa-report.md"
+  - "agent-system/handoffs/archive/interview-prep-danish-market-2026-08-02/ux-danish-market-hints.md"
+  - "agent-system/implementation-plan-interview-prep-danish-market.md"
+next_recommended_action: >
+  Optional live smoke: DK job + da/mixed vs Remote/Nordics + en. Later:
+  auto languageMix=mixed or explicit market toggle (plan IP-DK-04/05).

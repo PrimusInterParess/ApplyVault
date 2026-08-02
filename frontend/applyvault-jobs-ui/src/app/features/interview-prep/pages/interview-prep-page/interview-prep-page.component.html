@@ -189,6 +189,47 @@
             }
           </fieldset>
 
+          <fieldset
+            class="interview-prep__fieldset"
+            [disabled]="facade.sessionStarted() || facade.sending()">
+            <legend class="interview-prep__legend">Hiring market</legend>
+            <p class="interview-prep__option-help">
+              Hiring norms for coaching cues — independent of Language mix. Hover for details; click to select (the tip closes).
+            </p>
+            <div class="interview-prep__chips interview-prep__chips--compact" role="list">
+              @for (option of hiringMarkets; track option.id) {
+                <div
+                  class="interview-prep__chip-wrap"
+                  [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(hiringHelpKey(option.id))"
+                  role="listitem"
+                  (mouseleave)="onChipHelpMouseLeave(hiringHelpKey(option.id))">
+                  <button
+                    type="button"
+                    class="interview-prep__chip"
+                    [class.interview-prep__chip--active]="facade.hiringMarket() === option.id"
+                    [attr.aria-pressed]="facade.hiringMarket() === option.id"
+                    [attr.aria-describedby]="'hiring-help-' + option.id"
+                    (click)="selectHiringMarket(option.id, $event)">
+                    {{ option.label }}
+                  </button>
+                  <div
+                    class="interview-prep__chip-popover"
+                    role="tooltip"
+                    [id]="'hiring-help-' + option.id">
+                    <p class="interview-prep__chip-popover-title">{{ option.label }}</p>
+                    <p class="interview-prep__chip-popover-lead">{{ option.description }}</p>
+                    <p>{{ option.detail }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+            @if (selectedHiringMarket(); as market) {
+              <p id="hiring-hint" class="interview-prep__option-hint" aria-live="polite">
+                <strong>{{ market.label }}.</strong> {{ market.description }}
+              </p>
+            }
+          </fieldset>
+
           @if (!facade.sessionStarted()) {
             <div class="interview-prep__start-row">
               <button
@@ -227,8 +268,8 @@
                 @if (inference.seniority) {
                   · {{ inference.seniority }}
                 }
-                @if (inference.interviewStyle) {
-                  · {{ inference.interviewStyle }}
+                @if (selectedMode(); as mode) {
+                  · {{ mode.label }}
                 }
               </p>
             }

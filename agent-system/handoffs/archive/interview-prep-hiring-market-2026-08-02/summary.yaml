@@ -1,0 +1,49 @@
+task_id: interview-prep-hiring-market-2026-08-02
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+completed_at: "2026-08-02"
+parent_request: "IP-DK-05 — English interview + Danish hiring market via hiringMarket"
+adr: docs/adr/0013-interview-prep-hiring-market.md
+plan: agent-system/implementation-plan-interview-prep-danish-market.md
+
+integration:
+  verdict: PASS
+  notes: >
+    Optional hiringMarket (general|dk) is orthogonal to languageMix. FE chips
+    send hiringMarket on each turn; API validates/defaults and prompt applies
+    DK bias when hiringMarket=dk (or prior DK job / da|mixed gates).
+
+specialists:
+  - agent: backend-engineer + ai-llm-engineer
+    handoff: handoff-backend-ai.yaml
+    status: READY
+  - agent: frontend-engineer
+    handoff: handoff-frontend-engineer.yaml
+    status: READY
+
+files_touched:
+  - docs/adr/0013-interview-prep-hiring-market.md
+  - agent-system/governance/contract-registry.yaml
+  - agent-system/handoffs/archive/interview-prep-ip-01-2026-08-02/frozen-contracts.md
+  - agent-system/implementation-plan-interview-prep-danish-market.md
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/interview-prep.facade.ts
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.ts
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.html
+
+limitations:
+  - Live Gemini smoke (en+dk vs en+general) not executed
+  - Specs/tests not updated (explicitly out of scope)
+  - Operators with custom SystemPrompt must merge ADR-0013 activation rules
+
+residual_risks:
+  - Model may under/over-apply DK cues despite prompt gate
+  - IP-DK-04 auto languageMix=mixed on DK job still backlog
+
+how_to_verify:
+  - /interview-prep → Language English + Hiring market Danish market → Start
+  - Turn body includes hiringMarket: "dk"; coach stays in English with DK cues

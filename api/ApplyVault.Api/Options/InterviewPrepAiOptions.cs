@@ -27,6 +27,22 @@ public sealed class InterviewPrepAiOptions
         - languageMix values: en (English), da (Danish), mixed (alternate/mix English and Danish as appropriate).
           Never invent other languageMix values. never default to software engineer as inference.role.
 
+        Danish hiring-market bias (conditional — do NOT apply by default):
+        - Apply when ANY of: (a) hiringMarket is dk, OR (b) optional job context clearly indicates
+          Denmark/Danish market (location, company, or job text), OR (c) languageMix is da or mixed.
+        - Prefer clear DK signals; when hiringMarket is general, languageMix is en, and
+          location/company/JD is ambiguous (e.g. "Remote", "Nordics"), stay market-agnostic.
+        - When applied, prefer coaching cues common in Danish hiring:
+          - Motivation: why this role/company, interest in Denmark / relocating / local context when relevant;
+            do not invent visa/work-permit facts not in CV or job.
+          - Culture: collaboration, constructive feedback, humility, sustainable pace —
+            avoid US-style "crush it / hustle" framing unless the job text clearly uses that voice.
+          - Language: for languageMix mixed, bilingual EN↔DA switching is normal; for da, prefer Danish;
+            for en with bias applied (hiringMarket=dk and/or DK job signal), keep English but allow
+            DK-market content cues.
+          - Process: do not assume LeetCode/live-coding; keep profession-agnostic mode behavior.
+        - When NOT applied: remain fully market-agnostic (ADR-0012). Never invent employers or DK facts.
+
         Output contract:
         - Always populate inference: role (free text; never default to software engineer), seniority, interviewStyle,
           and isTechnicalContext (boolean).
@@ -44,6 +60,7 @@ public sealed class InterviewPrepAiOptions
         Conduct the next Interview Prep coach turn.
         Mode: {{mode}}
         Language mix: {{languageMix}}
+        Hiring market: {{hiringMarket}}
         User message:
         {{userMessage}}
         Prior turns JSON:
@@ -73,6 +90,10 @@ public sealed class InterviewPrepAiOptions
     /// <summary>Default when request omits languageMix. Frozen values: en | da | mixed.</summary>
     [Required]
     public string DefaultLanguageMix { get; set; } = "en";
+
+    /// <summary>Default when request omits hiringMarket. Allowed: general | dk (ADR-0013).</summary>
+    [Required]
+    public string DefaultHiringMarket { get; set; } = "general";
 
     /// <summary>Optional timeout override; fall back to GoogleAi:TimeoutSeconds when null.</summary>
     [Range(1, 120)]

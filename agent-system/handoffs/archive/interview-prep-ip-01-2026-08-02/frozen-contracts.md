@@ -57,12 +57,25 @@ Default when omitted: server options `InterviewPrepAi:DefaultLanguageMix` (recom
 
 ---
 
+## 3b. `hiringMarket` (ADR-0013)
+
+| Value | Meaning |
+|---|---|
+| `general` | Market-agnostic coaching (unless DK job signal or languageMix da/mixed) |
+| `dk` | Explicit Danish hiring-market coaching bias; independent of languageMix |
+
+Default when omitted: `general` (or `InterviewPrepAi:DefaultHiringMarket`).  
+**Orthogonal to languageMix** — `en` + `dk` is English practice with Danish-market cues.
+
+---
+
 ## 4. Request — `POST /api/interview-prep/turns`
 
 ```json
 {
   "mode": "behavioral",
   "languageMix": "en",
+  "hiringMarket": "general",
   "userMessage": "Let's start.",
   "scrapeResultId": null,
   "priorTurns": [
@@ -76,6 +89,7 @@ Default when omitted: server options `InterviewPrepAi:DefaultLanguageMix` (recom
 |---|---|---|---|
 | `mode` | string enum | yes | One of §2 mode ids |
 | `languageMix` | string enum | no | `en` \| `da` \| `mixed`; default from options |
+| `hiringMarket` | string enum | no | `general` \| `dk`; default `general` (ADR-0013) |
 | `userMessage` | string | yes | Non-empty after trim; server-capped (`MaxUserMessageChars`) |
 | `scrapeResultId` | guid \| null | no | When set, server loads owned scrape; never trust client job text |
 | `priorTurns` | array | no | Client-held history; server truncates to `MaxPriorTurns` / per-turn char caps |

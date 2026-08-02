@@ -1,0 +1,47 @@
+schema_version: "1.0.0"
+task_id: interview-prep-hiring-market-2026-08-02
+from_agent: backend-engineer + ai-llm-engineer
+to_agent: principal-software-architect
+status: READY
+completed_at: "2026-08-02"
+parent_request: "IP-DK-05 — English interview + Danish hiring market via hiringMarket"
+summary: >
+  Added optional hiringMarket (general|dk) on Interview Prep turns per ADR-0013.
+  Service validates/defaults to general; AI turn request and user prompt carry
+  the resolved value; system prompt DK bias gates on hiringMarket=dk OR clear
+  DK job OR languageMix da|mixed.
+
+files_touched:
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+
+contract_delta:
+  request_field: hiringMarket
+  json_name: hiringMarket
+  allowed: [general, dk]
+  omit_or_null: defaults to general (InterviewPrepAi:DefaultHiringMarket)
+  invalid: InvalidOperationException → 400 (same style as languageMix)
+  orthogonal_to: languageMix
+  ai_turn_request: InterviewPrepAiTurnRequest.HiringMarket (optional trailing param)
+  user_prompt_placeholder: "{{hiringMarket}}"
+  system_prompt: DK bias activation includes hiringMarket=dk (ADR-0013)
+
+definition_of_done:
+  - InterviewPrepTurnRequest accepts optional HiringMarket
+  - InterviewPrepHiringMarkets.General|Dk + All set
+  - Service ResolveHiringMarket validate/default
+  - AI request + user prompt include hiringMarket
+  - System prompt DK bias gated per ADR-0013
+  - Thin READY handoff written
+
+residual_risks:
+  - Operators with custom InterviewPrepAi:SystemPrompt must merge updated DK activation rules
+  - Live Gemini smoke (en + hiringMarket=dk vs general) not run
+  - Tests not updated/run per task constraints
+
+next_recommended_action: >
+  Frontend: bind hiringMarket chips (general|dk) on turn request; then QA
+  static/contract smoke. Optional live Gemini en+dk vs en+general.

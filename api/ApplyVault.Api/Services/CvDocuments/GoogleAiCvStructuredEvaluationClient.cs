@@ -74,7 +74,9 @@ public sealed class GoogleAiCvStructuredEvaluationClient(
     private object BuildRequest(CvStructuredDocumentDto current, int maxFindings)
     {
         var prompts = evaluationAiOptions.Value;
-        var payloadJson = JsonSerializer.Serialize(current, SerializerOptions);
+        // Flat projection only — omit entry.fields (catalog storage keys like Summary.body).
+        // Those leak internal schema and cause bogus "ATS" findings about JSON shape.
+        var payloadJson = JsonSerializer.Serialize(ToEvaluationPayload(current), SerializerOptions);
 
         return new
         {
@@ -100,6 +102,33 @@ public sealed class GoogleAiCvStructuredEvaluationClient(
             generationConfig = GoogleAiCvStructuredEvaluationResponseSchema.Create()
         };
     }
+
+    /// <summary>
+    /// User-facing content for evaluation. Excludes catalog <c>fields</c> bags and import metadata.
+    /// </summary>
+    internal static object ToEvaluationPayload(CvStructuredDocumentDto current) =>
+        new
+        {
+            documentId = current.DocumentId,
+            sections = current.Sections.Select((section) => new
+            {
+                id = section.Id,
+                heading = section.Heading,
+                sectionType = section.SectionType,
+                sortOrder = section.SortOrder,
+                entries = section.Entries.Select((entry) => new
+                {
+                    id = entry.Id,
+                    title = entry.Title,
+                    subtitle = entry.Subtitle,
+                    dateRange = entry.DateRange,
+                    summary = entry.Summary,
+                    bullets = entry.Bullets,
+                    techStack = entry.TechStack,
+                    sortOrder = entry.SortOrder
+                }).ToArray()
+            }).ToArray()
+        };
 
     private static CvQualityEvaluationDto Normalize(
         CvStructuredDocumentDto current,

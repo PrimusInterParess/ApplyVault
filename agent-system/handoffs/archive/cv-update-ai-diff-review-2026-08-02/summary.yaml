@@ -1,0 +1,26 @@
+schema_version: "1.0.0"
+task_id: cv-update-ai-diff-review-2026-08-02
+closed_at: "2026-08-02"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+agents:
+  - explore (diagnosis)
+  - frontend-engineer
+summary: >
+  Assist Update CV with AI review was showing Current|Proposed for every
+  proposed section when focus chips were empty, because the AI returns a full
+  CV and the compare helper fell back to all proposedSections ids. FE now
+  filters empty-focus compare to content-changed sections only (ADR-0011 D3).
+limitations:
+  - No builds/tests or live Gemini smoke in this operate run (user policy).
+  - cv-update-proposal-compare.util.spec.ts still asserts the old all-sections
+    fallback and was not updated (no-*.spec.ts policy); refresh in a follow-up.
+  - With non-empty focus chips, unchanged focused sections still appear in panes.
+residual_risks:
+  - Stale util.spec will fail until QA updates expectations for content-diff ids.
+  - AI id remints still show as changed (Current "Section not present.") — acceptable.
+files_changed_highlight:
+  - frontend/.../cv-update-proposal-compare.util.ts
+  - frontend/.../cv-builder-assist-panel.component.ts
+next_eligible_action: >
+  Optional: refresh util.spec.ts, or code-review the FE diff. Smoke Update with
+  empty focus chips and confirm only changed sections appear in Current|Proposed.

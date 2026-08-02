@@ -18,10 +18,13 @@ public sealed class CvEvaluationAiOptions
         - content: clarity, outcomes, specificity, buzzword/empty phrasing, contact completeness.
         - structure: section order/coverage, missing expected sections for a general professional CV,
           entry density, chronology/gaps as visible in the CV.
-        - format: scanability of entry fields, length, consistency of dates/titles, ATS-hostile patterns
-          in structured field content only — not template CSS or visual design.
+        - format: scanability of human-readable entry content (titles, dates, bullets, prose length),
+          consistency of dates/titles, and ATS-hostile wording in that content only —
+          not template CSS, visual design, or JSON/property names.
 
         Findings must be diagnostic (not rewrite instructions). Ground each finding in existing CV content.
+        Never comment on JSON keys, property names, fields dictionaries, storage schema, or how content
+        is serialized (e.g. summary vs body). Those are application internals, not CV quality.
         When a finding targets a known section or entry, put that id only in the structured sectionId or entryId JSON fields.
         Never put section or entry ids (GUIDs) in summary, finding title/detail, or self-check questions — refer to sections by human heading and entries by title.
         severity must be one of: info, warning, critical.

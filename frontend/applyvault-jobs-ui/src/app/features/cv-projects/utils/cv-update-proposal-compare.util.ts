@@ -64,15 +64,25 @@ function formatEntryLines(entry: CvStructuredEntry): string[] {
 
 /**
  * Section ids to show in the Update proposal review:
- * focus ids when present, otherwise proposed section ids.
+ * focus ids when present; otherwise only sections whose Current compare text
+ * differs from Proposed (ADR-0011 / D3 — affected sections only).
  */
 export function resolveUpdateProposalCompareSectionIds(
   focusSectionIds: readonly string[],
-  proposedSections: readonly CvStructuredSection[]
+  proposedSections: readonly CvStructuredSection[],
+  currentSections: readonly CvStructuredSection[] = []
 ): string[] {
   if (focusSectionIds.length > 0) {
     return [...focusSectionIds];
   }
 
-  return proposedSections.map((section) => section.id);
+  const currentById = new Map(currentSections.map((section) => [section.id, section]));
+  return proposedSections
+    .filter((proposed) => {
+      const current = currentById.get(proposed.id);
+      return (
+        formatSectionForAssistCompare(current) !== formatSectionForAssistCompare(proposed)
+      );
+    })
+    .map((section) => section.id);
 }

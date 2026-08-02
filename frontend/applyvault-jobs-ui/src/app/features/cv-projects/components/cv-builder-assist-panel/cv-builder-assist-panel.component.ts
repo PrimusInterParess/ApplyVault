@@ -214,7 +214,8 @@ export class CvBuilderAssistPanelComponent {
   protected compareSectionIds(proposal: CvUpdateProposal): string[] {
     return resolveUpdateProposalCompareSectionIds(
       proposal.focusSectionIds,
-      proposal.proposedSections
+      proposal.proposedSections,
+      this.sections()
     );
   }
 

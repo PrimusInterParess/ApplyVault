@@ -34,6 +34,7 @@ import {
 import { ExternalJobCardComponent } from '../../presentation/external-job-card/external-job-card.component';
 import { ExternalJobDetailComponent } from '../../presentation/external-job-detail/external-job-detail.component';
 import { JobSearchSourceToggleComponent } from '../../presentation/job-search-source-toggle/job-search-source-toggle.component';
+import { JOB_SEARCH_PAGE_SIZE_OPTIONS } from '../../utils/job-search-filter.utils';
 import {
   buildJobSearchQueryKeyFromParams,
   jobSearchQueryParamsEqual
@@ -59,6 +60,7 @@ export class JobSearchPageComponent implements OnInit {
   private readonly jobResultsFacade = inject(JobResultsFacade);
   readonly keywordSuggestionGroups = EURES_KEYWORD_SUGGESTION_GROUPS;
   readonly locationOptions = EURES_LOCATION_OPTIONS;
+  readonly pageSizeOptions = JOB_SEARCH_PAGE_SIZE_OPTIONS;
   readonly loadMoreSkeletonIndexes = [0, 1];
   readonly readInputValue = readInputValue;
   readonly showSourceToggle = hasMultipleJobSearchProviders();
@@ -85,7 +87,7 @@ export class JobSearchPageComponent implements OnInit {
   private lastSelectedJobIdForFocus: string | null = null;
 
   protected readonly skeletonListIndexes = computed(() =>
-    Array.from({ length: 5 }, (_, index) => index)
+    Array.from({ length: this.facade.resultsPerPage() }, (_, index) => index)
   );
 
   protected readonly searchDisabledHint = computed(() => {
@@ -252,6 +254,26 @@ export class JobSearchPageComponent implements OnInit {
 
   protected updateLocationCode(event: Event): void {
     this.facade.updateLocationCode(readInputValue(event));
+    this.syncUrlIfNeeded();
+  }
+
+  protected updatePublicationPeriod(event: Event): void {
+    this.facade.updatePublicationPeriod(readInputValue(event));
+    this.syncUrlIfNeeded();
+  }
+
+  protected updateScheduleCode(event: Event): void {
+    this.facade.updateScheduleCode(readInputValue(event));
+    this.syncUrlIfNeeded();
+  }
+
+  protected updateSortSearch(event: Event): void {
+    this.facade.updateSortSearch(readInputValue(event));
+    this.syncUrlIfNeeded();
+  }
+
+  protected updateResultsPerPage(event: Event): void {
+    this.facade.updateResultsPerPage(readInputValue(event));
     this.syncUrlIfNeeded();
   }
 

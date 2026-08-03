@@ -26,6 +26,7 @@ export interface JobSearchProviderFacade {
   readonly resultsSummary: Signal<string>;
   readonly hasMoreResults: Signal<boolean>;
   readonly hasValidLocation: Signal<boolean>;
+  readonly resultsPerPage: Signal<number>;
 
   initFromQueryParams(params: ParamMap): void;
   loadInitialSearch(selectJobId?: string | null): void;
@@ -43,6 +44,7 @@ export interface JobSearchProviderFacade {
   select(id: string): void;
   clearSelection(): void;
   saveSelectedJob(): void;
+  updateResultsPerPage(value: number | string): void;
 }
 
 export type JobSearchProviderRegistry = Readonly<Record<JobSearchSource, JobSearchProviderFacade>>;

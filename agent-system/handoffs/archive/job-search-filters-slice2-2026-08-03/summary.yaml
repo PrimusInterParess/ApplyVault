@@ -1,0 +1,42 @@
+task_id: job-search-filters-slice2-2026-08-03
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-03T17:01:00+03:00"
+summary: >
+  Implemented #6 discovery-power slice: EURES sort allowlist, page size (default 10),
+  publicationPeriod (LAST_WEEK|LAST_MONTH), positionScheduleCodes (fulltime|parttime)
+  through API + UI + URL. Jobnet page size only. Human accepted defaults; dropped
+  Last 3 months (unsupported upstream). ADR-0014 written. Static QA PASS with limitations.
+github_issues:
+  - { number: 6, role: primary, labels: [enhancement, ready-for-agent], url: "https://github.com/PrimusInterParess/ApplyVault/issues/6" }
+  - { number: 15, role: slice-1-prerequisite, note: IA/honesty operate closed earlier }
+adr:
+  - docs/adr/0014-eures-public-search-filters.md
+artifacts_retained:
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/backend-filters-implement.md
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/frontend-filters-implement.md
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/ux-filters-placement.md
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/qa-report.md
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/product-filters-brief.md
+  - agent-system/handoffs/archive/job-search-filters-slice2-2026-08-03/architecture-filters-design.md
+  - api/ApplyVault.Api/Services/Eures/
+  - api/ApplyVault.Api/Models/EuresContracts.cs
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/
+agents:
+  - product-manager
+  - architecture-engineer
+  - ui-ux-designer
+  - backend-engineer
+  - frontend-engineer
+  - qa-engineer
+limitations:
+  - "Dirty compose: Sort/Per page immediate re-search can apply Published/Schedule edits before Search."
+  - "No Last 3 months (upstream unsupported) — product accepted buckets adjusted."
+  - "No ng/dotnet build or automated test execution this operate."
+  - "Existing FE *.spec.ts may still assert pre-slice URL shapes (not updated)."
+residual_risks:
+  - "Live browser QA not run — recommend manual smoke on EURES + Jobnet."
+  - "If relevance was the real 'listings off' pain (#7), filters alone may not satisfy."
+next_recommended_actions:
+  - "Manual smoke: EURES filters/sort/URL; Jobnet page size; multi-kw Best match."
+  - "Optional polish: do not apply dirty Published/Schedule on Sort/Per page until Search."
+  - "Commit BE+FE+ADR when satisfied; close #6 after smoke."

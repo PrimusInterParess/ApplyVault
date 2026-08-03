@@ -23,11 +23,31 @@ public sealed class EuresJobsController(
     {
         if (!requestNormalizer.TryNormalizeSearchRequest(request, out var normalizedRequest, out var validationMessage))
         {
-            ModelState.AddModelError(nameof(request.Keywords), validationMessage);
+            ModelState.AddModelError(ResolveValidationKey(validationMessage), validationMessage);
             return ValidationProblem(ModelState);
         }
 
         return Ok(await euresJobClient.SearchJobsAsync(normalizedRequest));
+    }
+
+    private static string ResolveValidationKey(string validationMessage)
+    {
+        if (validationMessage.StartsWith("sortSearch", StringComparison.OrdinalIgnoreCase))
+        {
+            return nameof(EuresJobSearchRequest.SortSearch);
+        }
+
+        if (validationMessage.StartsWith("publicationPeriod", StringComparison.OrdinalIgnoreCase))
+        {
+            return nameof(EuresJobSearchRequest.PublicationPeriod);
+        }
+
+        if (validationMessage.StartsWith("positionScheduleCodes", StringComparison.OrdinalIgnoreCase))
+        {
+            return nameof(EuresJobSearchRequest.PositionScheduleCodes);
+        }
+
+        return nameof(EuresJobSearchRequest.Keywords);
     }
 
     [HttpGet("{id}")]

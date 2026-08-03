@@ -10,7 +10,7 @@ internal sealed class EuresSearchPayload
 
     public IReadOnlyList<EuresKeywordPayload> Keywords { get; set; } = [];
 
-    public object? PublicationPeriod { get; set; }
+    public string? PublicationPeriod { get; set; }
 
     public IReadOnlyList<string> OccupationUris { get; set; } = [];
 

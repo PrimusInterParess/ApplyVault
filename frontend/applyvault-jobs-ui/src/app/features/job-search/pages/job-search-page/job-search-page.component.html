@@ -71,6 +71,30 @@
             </select>
           </div>
         </label>
+
+        <label class="eures-page__filter">
+          <span class="eures-page__filter-label">Published</span>
+          <div class="eures-page__filter-control">
+            <select
+              [value]="facade.publishedSelectValue()"
+              (change)="updatePublicationPeriod($event)">
+              <option value="">Any</option>
+              <option value="week">Last week</option>
+              <option value="month">Last month</option>
+            </select>
+          </div>
+        </label>
+
+        <label class="eures-page__filter">
+          <span class="eures-page__filter-label">Schedule</span>
+          <div class="eures-page__filter-control">
+            <select [value]="facade.scheduleSelectValue()" (change)="updateScheduleCode($event)">
+              <option value="">Any</option>
+              <option value="fulltime">Full-time</option>
+              <option value="parttime">Part-time</option>
+            </select>
+          </div>
+        </label>
       } @else {
         <p class="eures-page__board-context" role="status">
           <span class="eures-page__filter-label">Board</span>
@@ -96,6 +120,10 @@
 
     @if (facade.locationInitWarning(); as locationWarning) {
       <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
+    }
+
+    @if (facade.filterInitWarning(); as filterWarning) {
+      <p class="eures-page__inline-error" role="status" aria-live="polite">{{ filterWarning }}</p>
     }
   </section>
 
@@ -213,30 +241,6 @@
         <button type="button" class="jobs-page__primary-action" (click)="retrySearch()">Try again</button>
       }
     </section>
-  } @else if (facade.hasSearched() && facade.totalResults() === 0) {
-    <section class="jobs-page__state">
-      <h2 tabindex="-1">No matching listings</h2>
-      @if (facade.source() === 'jobnet') {
-        <p>
-          Nothing matched
-          @if (facade.keywordsLabel()) {
-            <strong>{{ facade.keywordsLabel() }}</strong>
-          }
-          in Work in Denmark.
-        </p>
-        <p>Try fewer keywords or pick broader suggestion chips.</p>
-      } @else {
-        <p>
-          Nothing matched
-          @if (facade.keywordsLabel()) {
-            <strong>{{ facade.keywordsLabel() }}</strong>
-          }
-          in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
-        </p>
-        <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
-      }
-      <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
-    </section>
   } @else if (facade.hasSearched()) {
     <section class="eures-page__results-header">
       <h2>{{ facade.providerLabel() }} results</h2>
@@ -253,103 +257,161 @@
             Refresh results
           </button>
         </div>
+
+        <div class="jobs-page__controls-meta">
+          @if (facade.source() === 'eures') {
+            <label class="jobs-page__control-field">
+              <span class="jobs-page__control-label">Sort</span>
+              <select
+                [value]="facade.sortSearch()"
+                [attr.aria-describedby]="facade.isMultiKeywordSortForced() ? 'job-search-sort-help' : null"
+                (change)="updateSortSearch($event)">
+                <option value="MOST_RECENT" [disabled]="facade.isMultiKeywordSortForced()">
+                  Most recent
+                </option>
+                <option value="BEST_MATCH">Best match</option>
+              </select>
+            </label>
+          }
+
+          <label class="jobs-page__control-field">
+            <span class="jobs-page__control-label">Per page</span>
+            <select [value]="facade.resultsPerPage()" (change)="updateResultsPerPage($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+        </div>
       </div>
+
+      @if (facade.source() === 'eures' && facade.isMultiKeywordSortForced()) {
+        <p id="job-search-sort-help" class="jobs-page__control-help">
+          Multiple keywords use best match.
+        </p>
+      }
     </section>
 
-    <section
-      class="jobs-page__content"
-      [class.jobs-page__content--mobile-detail]="showMobileDetail()">
-      <aside
-        #listRegion
-        class="jobs-page__list"
-        tabindex="0"
-        [attr.aria-label]="facade.providerLabel() + ' search results'"
-        (scroll)="onListScroll()"
-        (keydown)="handleListKeydown($event)">
-        @if (facade.initialLoading()) {
-          @for (index of skeletonListIndexes(); track index) {
-            <div class="jobs-page__skeleton-card">
-              <app-skeleton-block width="78%" height="1.1rem" />
-              <app-skeleton-block width="62%" height="0.95rem" />
-              <app-skeleton-block width="54%" height="0.9rem" />
-              <app-skeleton-block width="38%" height="0.8rem" />
-            </div>
-          }
+    @if (facade.totalResults() === 0) {
+      <section class="jobs-page__state">
+        <h2 tabindex="-1">No matching listings</h2>
+        @if (facade.source() === 'jobnet') {
+          <p>
+            Nothing matched
+            @if (facade.keywordsLabel()) {
+              <strong>{{ facade.keywordsLabel() }}</strong>
+            }
+            in Work in Denmark.
+          </p>
+          <p>Try fewer keywords or pick broader suggestion chips.</p>
         } @else {
-          @for (job of facade.results(); track job.id) {
-            <app-external-job-card
-              [job]="job"
-              [source]="facade.source()"
-              [selected]="facade.selectedJobId() === job.id"
-              [saved]="facade.isListingSaved(job.id)"
-              (choose)="selectJob($event)" />
-          }
-
-          @if (facade.loadingMore()) {
-            @for (index of loadMoreSkeletonIndexes; track index) {
+          <p>
+            Nothing matched
+            @if (facade.keywordsLabel()) {
+              <strong>{{ facade.keywordsLabel() }}</strong>
+            }
+            in EURES for <strong>{{ locationLabel(facade.locationCode()) }}</strong>.
+          </p>
+          <p>Try fewer keywords, pick broader suggestion chips, or change the country.</p>
+        }
+        <a routerLink="/jobs" class="jobs-page__primary-action">View saved jobs</a>
+      </section>
+    } @else {
+      <section
+        class="jobs-page__content"
+        [class.jobs-page__content--mobile-detail]="showMobileDetail()">
+        <aside
+          #listRegion
+          class="jobs-page__list"
+          tabindex="0"
+          [attr.aria-label]="facade.providerLabel() + ' search results'"
+          (scroll)="onListScroll()"
+          (keydown)="handleListKeydown($event)">
+          @if (facade.initialLoading()) {
+            @for (index of skeletonListIndexes(); track index) {
               <div class="jobs-page__skeleton-card">
                 <app-skeleton-block width="78%" height="1.1rem" />
                 <app-skeleton-block width="62%" height="0.95rem" />
                 <app-skeleton-block width="54%" height="0.9rem" />
+                <app-skeleton-block width="38%" height="0.8rem" />
+              </div>
+            }
+          } @else {
+            @for (job of facade.results(); track job.id) {
+              <app-external-job-card
+                [job]="job"
+                [source]="facade.source()"
+                [selected]="facade.selectedJobId() === job.id"
+                [saved]="facade.isListingSaved(job.id)"
+                (choose)="selectJob($event)" />
+            }
+
+            @if (facade.loadingMore()) {
+              @for (index of loadMoreSkeletonIndexes; track index) {
+                <div class="jobs-page__skeleton-card">
+                  <app-skeleton-block width="78%" height="1.1rem" />
+                  <app-skeleton-block width="62%" height="0.95rem" />
+                  <app-skeleton-block width="54%" height="0.9rem" />
+                </div>
+              }
+            }
+
+            @if (facade.loadMoreError(); as loadMoreErrorMessage) {
+              <div class="eures-page__load-more-error" role="alert">
+                <p>{{ loadMoreErrorMessage }}</p>
+                <button type="button" class="jobs-page__secondary-action" (click)="retryLoadMore()">
+                  Try again
+                </button>
               </div>
             }
           }
 
-          @if (facade.loadMoreError(); as loadMoreErrorMessage) {
-            <div class="eures-page__load-more-error" role="alert">
-              <p>{{ loadMoreErrorMessage }}</p>
-              <button type="button" class="jobs-page__secondary-action" (click)="retryLoadMore()">
-                Try again
+          <footer class="eures-page__list-footer">
+            @if (facade.hasMoreResults()) {
+              <button
+                type="button"
+                class="jobs-page__secondary-action"
+                [disabled]="facade.loadingMore()"
+                (click)="loadMore()">
+                {{ facade.loadingMore() ? 'Loading more...' : 'Load more' }}
               </button>
+            } @else if (facade.results().length > 0) {
+              <span class="eures-page__end-of-results">All results loaded</span>
+            }
+          </footer>
+        </aside>
+
+        <section class="jobs-page__detail">
+          @if (showMobileDetail()) {
+            <div class="jobs-page__mobile-back">
+              <button
+                #mobileBackButton
+                type="button"
+                class="jobs-page__back-button"
+                (click)="backToList()">
+                ← Back to list
+              </button>
+              @if (facade.selectedJob(); as selected) {
+                <p class="jobs-page__mobile-title">{{ selected.title || 'Untitled listing' }}</p>
+              }
             </div>
           }
-        }
 
-        <footer class="eures-page__list-footer">
-          @if (facade.hasMoreResults()) {
-            <button
-              type="button"
-              class="jobs-page__secondary-action"
-              [disabled]="facade.loadingMore()"
-              (click)="loadMore()">
-              {{ facade.loadingMore() ? 'Loading more...' : 'Load more' }}
-            </button>
-          } @else if (facade.results().length > 0) {
-            <span class="eures-page__end-of-results">All results loaded</span>
-          }
-        </footer>
-      </aside>
-
-      <section class="jobs-page__detail">
-        @if (showMobileDetail()) {
-          <div class="jobs-page__mobile-back">
-            <button
-              #mobileBackButton
-              type="button"
-              class="jobs-page__back-button"
-              (click)="backToList()">
-              ← Back to list
-            </button>
-            @if (facade.selectedJob(); as selected) {
-              <p class="jobs-page__mobile-title">{{ selected.title || 'Untitled listing' }}</p>
-            }
-          </div>
-        }
-
-        <app-external-job-detail
-          [job]="facade.selectedJob()"
-          [source]="facade.source()"
-          [detailLoading]="facade.detailLoading()"
-          [detailError]="facade.detailError()"
-          [saving]="facade.saving()"
-          [saveError]="null"
-          [savedJobId]="facade.savedJobId()"
-          [saveAlreadyExists]="facade.saveAlreadyExists()"
-          [detailUrl]="detailUrl()"
-          (save)="saveSelectedJob()"
-          (retryDetail)="retryDetail()" />
+          <app-external-job-detail
+            [job]="facade.selectedJob()"
+            [source]="facade.source()"
+            [detailLoading]="facade.detailLoading()"
+            [detailError]="facade.detailError()"
+            [saving]="facade.saving()"
+            [saveError]="null"
+            [savedJobId]="facade.savedJobId()"
+            [saveAlreadyExists]="facade.saveAlreadyExists()"
+            [detailUrl]="detailUrl()"
+            (save)="saveSelectedJob()"
+            (retryDetail)="retryDetail()" />
+        </section>
       </section>
-    </section>
+    }
   } @else {
     <section class="jobs-page__state">
       <h2>No results yet</h2>

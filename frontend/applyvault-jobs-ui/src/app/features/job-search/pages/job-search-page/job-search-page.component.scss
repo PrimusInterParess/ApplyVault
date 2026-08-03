@@ -56,7 +56,7 @@ h1 {
 }
 
 .eures-page__filter-row--eures {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .eures-page__filter-row--jobnet {
@@ -574,8 +574,8 @@ h1 {
 .jobs-page__controls-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 0.65rem 0.75rem;
 }
 
@@ -583,9 +583,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 0.75rem;
-  margin-left: auto;
 }
 
 .jobs-page__last-updated {
@@ -597,8 +595,47 @@ h1 {
 .jobs-page__controls-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.75rem;
+  margin-left: auto;
+}
+
+.jobs-page__control-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 7.5rem;
+}
+
+.jobs-page__control-label {
+  color: var(--app-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jobs-page__control-field select {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.86rem;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.jobs-page__control-field select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 18%, transparent);
+}
+
+.jobs-page__control-help {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
 }
 
 .jobs-page__filter-summary {
@@ -716,6 +753,12 @@ h1 {
   cursor: not-allowed;
 }
 
+@media (max-width: 1280px) and (min-width: 1081px) {
+  .eures-page__filter-row--eures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1080px) {
   .eures-page {
     padding: 1.25rem 1rem 2rem;
@@ -725,6 +768,25 @@ h1 {
   .eures-page__filter-row--eures,
   .eures-page__filter-row--jobnet {
     grid-template-columns: 1fr;
+  }
+
+  .jobs-page__controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jobs-page__controls-meta {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .jobs-page__control-field {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .jobs-page__control-field select {
+    width: 100%;
   }
 
   .eures-page__suggestions {

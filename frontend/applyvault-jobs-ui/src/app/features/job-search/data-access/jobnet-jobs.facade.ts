@@ -19,9 +19,15 @@ import {
   matchesEuresKeyword,
   normalizeEuresKeywords
 } from '../utils/eures-keyword.utils';
+import {
+  JOB_SEARCH_DEFAULT_PAGE_SIZE,
+  JobSearchPageSize,
+  parseJobSearchPageSize
+} from '../utils/job-search-filter.utils';
+import { readJobSearchPageSizeFromQueryParams } from '../utils/job-search-url-state.utils';
 import { JobnetJobsApiService } from './jobnet-jobs-api.service';
 
-export const JOBNET_RESULTS_PER_PAGE = 5;
+export const JOBNET_RESULTS_PER_PAGE = JOB_SEARCH_DEFAULT_PAGE_SIZE;
 
 type FetchPageOptions = {
   resetSelection: boolean;
@@ -47,7 +53,8 @@ export class JobnetJobsFacade {
   private readonly saveCancel$ = new Subject<void>();
   private searchEpoch = 0;
 
-  readonly resultsPerPage = signal(JOBNET_RESULTS_PER_PAGE);
+  readonly resultsPerPage = signal<JobSearchPageSize>(JOBNET_RESULTS_PER_PAGE);
+  readonly filterInitWarning = signal<string | null>(null);
 
   readonly keywords = signal<string[]>(['software']);
   readonly requestLanguage = signal('en');
@@ -286,6 +293,39 @@ export class JobnetJobsFacade {
       if (parsedKeywords.length > 0) {
         this.keywords.set(parsedKeywords);
       }
+    }
+
+    this.resultsPerPage.set(readJobSearchPageSizeFromQueryParams(params));
+
+    const pageSizeRaw = params.get('pageSize');
+
+    if (pageSizeRaw?.trim() && parseJobSearchPageSize(pageSizeRaw) === null) {
+      this.filterInitWarning.set('Invalid page size in the URL. Using 10 per page.');
+    } else {
+      this.filterInitWarning.set(null);
+    }
+  }
+
+  setResultsPerPage(value: JobSearchPageSize): void {
+    this.resultsPerPage.set(value);
+    this.filterInitWarning.set(null);
+  }
+
+  updateResultsPerPage(value: number | string): void {
+    const parsed =
+      typeof value === 'number'
+        ? parseJobSearchPageSize(String(value))
+        : parseJobSearchPageSize(value);
+
+    if (!parsed || this.resultsPerPage() === parsed) {
+      return;
+    }
+
+    this.setResultsPerPage(parsed);
+
+    if (this.hasSearched()) {
+      this.page.set(1);
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
     }
   }
 
@@ -678,6 +718,7 @@ export class JobnetJobsFacade {
     this.resetSaveState();
     this.keywords.set(['software']);
     this.resultsPerPage.set(JOBNET_RESULTS_PER_PAGE);
+    this.filterInitWarning.set(null);
     this.requestLanguage.set('en');
     this.loading.set(false);
     this.loadingMore.set(false);

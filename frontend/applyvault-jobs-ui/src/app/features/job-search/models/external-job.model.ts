@@ -29,4 +29,8 @@ export interface JobSearchUrlQueryParams {
   country: string | null;
   location: string | null;
   selected: string | null;
+  sort: string | null;
+  pageSize: string | null;
+  published: string | null;
+  schedule: string | null;
 }

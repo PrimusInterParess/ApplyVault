@@ -84,7 +84,9 @@ internal sealed class EuresApiClient(
         string sortSearch,
         string locationCode,
         string requestLanguage,
-        string? sessionId = null)
+        string? sessionId = null,
+        string? publicationPeriod = null,
+        IReadOnlyList<string>? positionScheduleCodes = null)
     {
         return new EuresSearchPayload
         {
@@ -100,7 +102,12 @@ internal sealed class EuresApiClient(
                 }
             ],
             LocationCodes = [NormalizeLocationCode(locationCode)],
-            PublicationPeriod = null,
+            PublicationPeriod = string.IsNullOrWhiteSpace(publicationPeriod)
+                ? null
+                : publicationPeriod.Trim(),
+            PositionScheduleCodes = positionScheduleCodes is { Count: > 0 }
+                ? positionScheduleCodes.ToArray()
+                : [],
             MinNumberPost = null,
             SessionId = string.IsNullOrWhiteSpace(sessionId)
                 ? $"applyvault-{Guid.NewGuid():N}"

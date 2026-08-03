@@ -36,9 +36,11 @@ contracts:
 
   - id: eures-jobnet-search
     status: APPROVED_EXISTING
-    description: Public job search APIs and ranked caches
+    description: >
+      Public job search APIs and ranked caches. EURES additive filters
+      (sort allowlist, publicationPeriod, positionScheduleCodes) per ADR-0014 / #6.
     owner: backend-engineer
-    evidence: Services/Eures; Services/Jobnet
+    evidence: Services/Eures; Services/Jobnet; docs/adr/0014-eures-public-search-filters.md
 
   - id: google-ai-gemini-http
     status: APPROVED_EXISTING

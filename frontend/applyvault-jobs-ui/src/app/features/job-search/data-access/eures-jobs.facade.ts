@@ -25,15 +25,26 @@ import {
   normalizeEuresKeywords
 } from '../utils/eures-keyword.utils';
 import {
-  buildEuresUrlQueryParams,
-  EuresUrlQueryParams
-} from '../utils/eures-url-state.utils';
+  EURES_DEFAULT_SORT_SEARCH,
+  EuresPublicationPeriod,
+  EuresScheduleCode,
+  EuresSortSearch,
+  JOB_SEARCH_DEFAULT_PAGE_SIZE,
+  JobSearchPageSize,
+  parseEuresPublicationPeriod,
+  parseEuresScheduleCode,
+  parseEuresSortSearch,
+  parseJobSearchPageSize,
+  resolveEuresSortSearch
+} from '../utils/job-search-filter.utils';
 import {
-  readEuresCountryFromQueryParams
+  readEuresCountryFromQueryParams,
+  readJobSearchKeywordsFromQueryParams,
+  readJobSearchPageSizeFromQueryParams
 } from '../utils/job-search-url-state.utils';
 import { EuresJobsApiService } from './eures-jobs-api.service';
 
-export const EURES_RESULTS_PER_PAGE = 5;
+export const EURES_RESULTS_PER_PAGE = JOB_SEARCH_DEFAULT_PAGE_SIZE;
 
 type FetchPageOptions = {
   resetSelection: boolean;
@@ -58,12 +69,17 @@ export class EuresJobsFacade {
   private readonly saveIntent$ = new Subject<SaveIntent>();
   private readonly saveCancel$ = new Subject<void>();
   private searchEpoch = 0;
+  private sortForcedByMultiKeyword = false;
 
-  readonly resultsPerPage = signal(EURES_RESULTS_PER_PAGE);
+  readonly resultsPerPage = signal<JobSearchPageSize>(EURES_RESULTS_PER_PAGE);
+  readonly sortSearch = signal<EuresSortSearch>(EURES_DEFAULT_SORT_SEARCH);
+  readonly publicationPeriod = signal<EuresPublicationPeriod | null>(null);
+  readonly scheduleCode = signal<EuresScheduleCode | null>(null);
 
   readonly keywords = signal<string[]>(['software']);
   readonly locationCode = signal(EURES_DEFAULT_LOCATION_CODE);
   readonly locationInitWarning = signal<string | null>(null);
+  readonly filterInitWarning = signal<string | null>(null);
   readonly requestLanguage = signal('en');
   readonly page = signal(1);
   readonly loading = signal(false);
@@ -154,6 +170,12 @@ export class EuresJobsFacade {
   });
 
   readonly hasValidLocation = computed(() => isKnownEuresLocationCode(this.locationCode()));
+
+  readonly isMultiKeywordSortForced = computed(() => this.keywords().length >= 2);
+
+  readonly effectiveSortSearch = computed(() =>
+    resolveEuresSortSearch(this.sortSearch(), this.keywords().length)
+  );
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -293,19 +315,72 @@ export class EuresJobsFacade {
   }
 
   initFromQueryParams(params: ParamMap): void {
-    const keywordsParam = params.get('keywords');
+    const keywords = readJobSearchKeywordsFromQueryParams(params);
 
-    if (keywordsParam?.trim()) {
-      const parsedKeywords = normalizeEuresKeywords(keywordsParam.split(/[,;]+/));
+    if (keywords.length > 0) {
+      this.keywords.set([...keywords]);
+    }
 
-      if (parsedKeywords.length > 0) {
-        this.keywords.set(parsedKeywords);
-      }
+    this.resultsPerPage.set(readJobSearchPageSizeFromQueryParams(params));
+
+    const pageSizeRaw = params.get('pageSize');
+    const warnings: string[] = [];
+
+    if (pageSizeRaw?.trim() && parseJobSearchPageSize(pageSizeRaw) === null) {
+      warnings.push('Invalid page size in the URL. Using 10 per page.');
     }
 
     if (params.get('source')?.trim().toLowerCase() !== 'eures' && params.get('source')?.trim()) {
+      this.filterInitWarning.set(warnings.length > 0 ? warnings.join(' ') : null);
       return;
     }
+
+    const sortRaw = params.get('sort');
+    const parsedSort = parseEuresSortSearch(sortRaw);
+
+    if (sortRaw?.trim() && parsedSort === null) {
+      warnings.push('Invalid sort in the URL. Using Most recent.');
+    }
+
+    if (this.keywords().length >= 2) {
+      this.sortForcedByMultiKeyword = !parsedSort || parsedSort === 'MOST_RECENT';
+      this.sortSearch.set('BEST_MATCH');
+    } else {
+      this.sortForcedByMultiKeyword = false;
+      this.sortSearch.set(parsedSort ?? EURES_DEFAULT_SORT_SEARCH);
+    }
+
+    const publishedRaw = params.get('published');
+
+    if (!publishedRaw?.trim()) {
+      this.publicationPeriod.set(null);
+    } else {
+      const parsedPublished = parseEuresPublicationPeriod(publishedRaw);
+
+      if (parsedPublished) {
+        this.publicationPeriod.set(parsedPublished);
+      } else {
+        this.publicationPeriod.set(null);
+        warnings.push('Invalid published filter in the URL. Cleared to Any.');
+      }
+    }
+
+    const scheduleRaw = params.get('schedule');
+
+    if (!scheduleRaw?.trim()) {
+      this.scheduleCode.set(null);
+    } else {
+      const parsedSchedule = parseEuresScheduleCode(scheduleRaw);
+
+      if (parsedSchedule) {
+        this.scheduleCode.set(parsedSchedule);
+      } else {
+        this.scheduleCode.set(null);
+        warnings.push('Invalid schedule filter in the URL. Cleared to Any.');
+      }
+    }
+
+    this.filterInitWarning.set(warnings.length > 0 ? warnings.join(' ') : null);
 
     const country = readEuresCountryFromQueryParams(params);
 
@@ -353,19 +428,12 @@ export class EuresJobsFacade {
     });
   }
 
-  buildQueryParamState(): EuresUrlQueryParams {
-    return buildEuresUrlQueryParams({
-      keywords: this.keywords(),
-      locationCode: this.locationCode(),
-      selectedJobId: this.selectedJobId()
-    });
-  }
-
   search(draftKeywords?: string): void {
     if (draftKeywords?.trim()) {
       this.addKeywords(draftKeywords.split(/[,;]+/));
     }
 
+    this.syncSortForKeywordCount();
     this.page.set(1);
     this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
   }
@@ -435,6 +503,7 @@ export class EuresJobsFacade {
       ...currentKeywords,
       canonicalizeEuresKeyword(normalizedKeyword)
     ]);
+    this.syncSortForKeywordCount();
 
     if (this.hasSearched()) {
       this.page.set(1);
@@ -459,12 +528,14 @@ export class EuresJobsFacade {
     }
 
     this.keywords.set(nextKeywords);
+    this.syncSortForKeywordCount();
   }
 
   removeKeyword(keyword: string): void {
     this.keywords.update((currentKeywords) =>
       currentKeywords.filter((currentKeyword) => !matchesEuresKeyword(currentKeyword, keyword))
     );
+    this.syncSortForKeywordCount();
 
     if (this.hasSearched() && this.keywords().length > 0) {
       this.page.set(1);
@@ -481,6 +552,7 @@ export class EuresJobsFacade {
 
   clearKeywords(): void {
     this.keywords.set([]);
+    this.syncSortForKeywordCount();
 
     if (this.hasSearched()) {
       this.cancelPendingRequests();
@@ -540,6 +612,93 @@ export class EuresJobsFacade {
       this.page.set(1);
       this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
     }
+  }
+
+  updateSortSearch(value: string): void {
+    if (this.isMultiKeywordSortForced()) {
+      this.sortSearch.set('BEST_MATCH');
+      return;
+    }
+
+    const parsed = parseEuresSortSearch(value);
+
+    if (!parsed || this.sortSearch() === parsed) {
+      return;
+    }
+
+    this.sortSearch.set(parsed);
+    this.sortForcedByMultiKeyword = false;
+    this.filterInitWarning.set(null);
+
+    if (this.hasSearched()) {
+      this.page.set(1);
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
+    }
+  }
+
+  setResultsPerPage(value: JobSearchPageSize): void {
+    this.resultsPerPage.set(value);
+    this.filterInitWarning.set(null);
+  }
+
+  updateResultsPerPage(value: number | string): void {
+    const parsed =
+      typeof value === 'number'
+        ? parseJobSearchPageSize(String(value))
+        : parseJobSearchPageSize(value);
+
+    if (!parsed || this.resultsPerPage() === parsed) {
+      return;
+    }
+
+    this.setResultsPerPage(parsed);
+
+    if (this.hasSearched()) {
+      this.page.set(1);
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
+    }
+  }
+
+  updatePublicationPeriod(value: string): void {
+    if (!value.trim()) {
+      this.publicationPeriod.set(null);
+      this.filterInitWarning.set(null);
+      return;
+    }
+
+    const parsed = parseEuresPublicationPeriod(value);
+
+    if (!parsed) {
+      return;
+    }
+
+    if (this.publicationPeriod() === parsed) {
+      return;
+    }
+
+    this.publicationPeriod.set(parsed);
+    this.filterInitWarning.set(null);
+  }
+
+  updateScheduleCode(value: string): void {
+    if (!value.trim()) {
+      this.scheduleCode.set(null);
+      this.filterInitWarning.set(null);
+      return;
+    }
+
+    const parsed = parseEuresScheduleCode(value);
+
+    if (!parsed) {
+      return;
+    }
+
+    if (this.scheduleCode() === parsed) {
+      return;
+    }
+
+    this.scheduleCode.set(parsed);
+    this.filterInitWarning.set(null);
   }
 
   saveSelectedJob(): void {
@@ -671,13 +830,35 @@ export class EuresJobsFacade {
     keywords: readonly string[],
     page: number
   ): EuresJobSearchRequest {
+    const schedule = this.scheduleCode();
+    const publicationPeriod = this.publicationPeriod();
+
     return {
       keywords,
       locationCode: this.locationCode().trim() || EURES_DEFAULT_LOCATION_CODE,
       page,
       resultsPerPage: this.resultsPerPage(),
-      requestLanguage: this.requestLanguage().trim() || 'en'
+      requestLanguage: this.requestLanguage().trim() || 'en',
+      sortSearch: resolveEuresSortSearch(this.sortSearch(), keywords.length),
+      publicationPeriod: publicationPeriod ?? null,
+      positionScheduleCodes: schedule ? [schedule] : null
     };
+  }
+
+  private syncSortForKeywordCount(): void {
+    if (this.keywords().length >= 2) {
+      if (this.sortSearch() !== 'BEST_MATCH') {
+        this.sortForcedByMultiKeyword = true;
+        this.sortSearch.set('BEST_MATCH');
+      }
+
+      return;
+    }
+
+    if (this.sortForcedByMultiKeyword) {
+      this.sortSearch.set(EURES_DEFAULT_SORT_SEARCH);
+      this.sortForcedByMultiKeyword = false;
+    }
   }
 
   private syncSelectionAfterSearch(
@@ -755,7 +936,12 @@ export class EuresJobsFacade {
     this.keywords.set(['software']);
     this.locationCode.set(EURES_DEFAULT_LOCATION_CODE);
     this.locationInitWarning.set(null);
+    this.filterInitWarning.set(null);
     this.resultsPerPage.set(EURES_RESULTS_PER_PAGE);
+    this.sortSearch.set(EURES_DEFAULT_SORT_SEARCH);
+    this.sortForcedByMultiKeyword = false;
+    this.publicationPeriod.set(null);
+    this.scheduleCode.set(null);
     this.requestLanguage.set('en');
     this.loading.set(false);
     this.loadingMore.set(false);

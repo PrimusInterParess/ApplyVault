@@ -23,6 +23,18 @@ public sealed class EuresJobSearchRequest
 
     public string SortSearch { get; set; } = "MOST_RECENT";
 
+    /// <summary>
+    /// Upstream publication window preset. Null/omit = no filter.
+    /// Allowlisted: LAST_WEEK, LAST_MONTH.
+    /// </summary>
+    public string? PublicationPeriod { get; set; }
+
+    /// <summary>
+    /// Upstream work-schedule codes. Null/empty = no filter.
+    /// Allowlisted: fulltime, parttime (case-insensitive).
+    /// </summary>
+    public List<string>? PositionScheduleCodes { get; set; }
+
     public IReadOnlyList<string> ResolveKeywords()
     {
         var resolvedKeywords = Keywords?

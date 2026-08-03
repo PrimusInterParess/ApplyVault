@@ -1,0 +1,38 @@
+task_id: job-search-ux-redesign-2026-08-03
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-03T16:28:00Z"
+summary: >-
+  Discussed public job-search UX under Bridge; PM + UX briefs aligned; human
+  accepted defaults; /to-spec on #15/#12/#6; frontend-engineer implemented #15
+  UI-only IA and honest chrome. Closed without qa-engineer run or automated
+  build/test evidence.
+github_issues:
+  - { number: 15, role: slice-1-primary, labels: [enhancement, ready-for-agent], url: "https://github.com/PrimusInterParess/ApplyVault/issues/15" }
+  - { number: 12, role: remainder-jobnet-suggestion-lists, labels: [enhancement, needs-triage], url: "https://github.com/PrimusInterParess/ApplyVault/issues/12" }
+  - { number: 6, role: slice-2-api-filters, labels: [enhancement, needs-triage], url: "https://github.com/PrimusInterParess/ApplyVault/issues/6" }
+artifacts_retained:
+  - agent-system/handoffs/archive/job-search-ux-redesign-2026-08-03/ux-job-search-redesign.md
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/pages/job-search-page/job-search-page.component.html
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/pages/job-search-page/job-search-page.component.ts
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/pages/job-search-page/job-search-page.component.scss
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/presentation/external-job-detail/external-job-detail.component.html
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/presentation/external-job-detail/external-job-detail.component.ts
+  - frontend/applyvault-jobs-ui/src/app/features/job-search/presentation/external-job-detail/external-job-detail.component.scss
+agents:
+  - product-manager
+  - ui-ux-designer
+  - frontend-engineer
+limitations:
+  - "No qa-engineer acceptance pass before Close."
+  - "ng build / ng test not run (workspace constraints during FE Task)."
+  - "Legacy unrouted eures-jobs-page copies under job-search not updated."
+  - "Same suggestion chip lists across sources remain (#12)."
+  - "#6 API sort/filters still needs-triage (slice 2)."
+  - "Working-tree FE changes may be uncommitted at Close time."
+residual_risks:
+  - "If 'listings are off' meant relevance (#7), slice 1 will not fully address that."
+  - "Mobile list focus restore falls back if selected card left the DOM."
+next_recommended_actions:
+  - "Manual QA of job-search page (EURES + Jobnet), then commit FE changes if satisfied."
+  - "Optional /operate D: qa-engineer against #15, or /to-spec then implement #6."
+  - "Defer #12 until Jobnet-specific suggestion list content exists."

@@ -25,7 +25,9 @@ internal sealed class EuresJobSearchService(
             euresSearchTerms,
             locationCode,
             sortSearch,
-            request.RequestLanguage);
+            request.RequestLanguage,
+            request.PublicationPeriod,
+            request.PositionScheduleCodes);
         var sessionId = BuildSessionId(cacheKey);
 
         var rankedSnapshot = await rankedResultsCache.GetOrCreateAsync(
@@ -90,7 +92,9 @@ internal sealed class EuresJobSearchService(
                     sortSearch,
                     locationCode,
                     request.RequestLanguage,
-                    sessionId),
+                    sessionId,
+                    request.PublicationPeriod,
+                    request.PositionScheduleCodes),
                 cancellationToken);
 
             upstreamTotalRecords ??= searchResponse?.NumberRecords;
@@ -142,7 +146,9 @@ internal sealed class EuresJobSearchService(
                     sortSearch,
                     locationCode,
                     request.RequestLanguage,
-                    sessionId),
+                    sessionId,
+                    request.PublicationPeriod,
+                    request.PositionScheduleCodes),
                 cancellationToken))
             .ToArray();
 
@@ -232,10 +238,24 @@ internal sealed class EuresJobSearchService(
         IReadOnlyList<string> euresSearchTerms,
         string locationCode,
         string sortSearch,
-        string requestLanguage)
+        string requestLanguage,
+        string? publicationPeriod,
+        IReadOnlyList<string>? positionScheduleCodes)
     {
         var keywordFingerprint = string.Join('\u001f', keywords.OrderBy((keyword) => keyword, StringComparer.OrdinalIgnoreCase));
         var termFingerprint = string.Join('\u001f', euresSearchTerms.OrderBy((term) => term, StringComparer.OrdinalIgnoreCase));
+        var publicationFingerprint = string.IsNullOrWhiteSpace(publicationPeriod)
+            ? string.Empty
+            : publicationPeriod.Trim().ToUpperInvariant();
+        var scheduleFingerprint = positionScheduleCodes is null || positionScheduleCodes.Count == 0
+            ? string.Empty
+            : string.Join(
+                '\u001f',
+                positionScheduleCodes
+                    .Where((code) => !string.IsNullOrWhiteSpace(code))
+                    .Select((code) => code.Trim().ToLowerInvariant())
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy((code) => code, StringComparer.Ordinal));
 
         return string.Join(
             '\u001e',
@@ -243,7 +263,9 @@ internal sealed class EuresJobSearchService(
             termFingerprint,
             locationCode.Trim().ToLowerInvariant(),
             sortSearch.Trim().ToUpperInvariant(),
-            requestLanguage.Trim().ToLowerInvariant());
+            requestLanguage.Trim().ToLowerInvariant(),
+            publicationFingerprint,
+            scheduleFingerprint);
     }
 
     private static string BuildSessionId(string cacheKey)
@@ -343,7 +365,15 @@ internal sealed class EuresJobSearchService(
             return "BEST_MATCH";
         }
 
-        return string.IsNullOrWhiteSpace(sortSearch) ? "MOST_RECENT" : sortSearch.Trim();
+        if (string.IsNullOrWhiteSpace(sortSearch))
+        {
+            return "MOST_RECENT";
+        }
+
+        var trimmed = sortSearch.Trim();
+        return EuresSearchFilterCodes.SortSearch.Contains(trimmed)
+            ? EuresSearchFilterCodes.CanonicalSortSearch(trimmed)
+            : "MOST_RECENT";
     }
 
     private sealed record RankedJobListing(

@@ -9,6 +9,13 @@ import {
   normalizeJobSearchSource
 } from '../models/job-source.model';
 import { EURES_LOCATION_OPTIONS } from '../models/eures-location-options';
+import {
+  JOB_SEARCH_DEFAULT_PAGE_SIZE,
+  JobSearchPageSize,
+  parseJobSearchPageSize,
+  publicationPeriodToUrl,
+  scheduleCodeToUrl
+} from '../utils/job-search-filter.utils';
 import { buildJobSearchUrlQueryParams, normalizeJobSearchSourceFromParams } from '../utils/job-search-url-state.utils';
 import { EuresJobsFacade } from './eures-jobs.facade';
 import { JobnetJobsFacade } from './jobnet-jobs.facade';
@@ -60,6 +67,24 @@ export class JobSearchFacade {
   readonly locationCode = computed(() =>
     this.source() === 'eures' ? this.euresFacade.locationCode() : null
   );
+  readonly resultsPerPage = computed(() => this.activeFacade().resultsPerPage());
+  readonly sortSearch = computed(() => this.euresFacade.effectiveSortSearch());
+  readonly isMultiKeywordSortForced = computed(
+    () => this.source() === 'eures' && this.euresFacade.isMultiKeywordSortForced()
+  );
+  readonly publishedSelectValue = computed(
+    () => publicationPeriodToUrl(this.euresFacade.publicationPeriod()) ?? ''
+  );
+  readonly scheduleSelectValue = computed(
+    () => scheduleCodeToUrl(this.euresFacade.scheduleCode()) ?? ''
+  );
+  readonly filterInitWarning = computed(() => {
+    if (this.source() === 'eures') {
+      return this.euresFacade.filterInitWarning();
+    }
+
+    return this.jobnetFacade.filterInitWarning();
+  });
 
   readonly results = computed((): readonly ExternalJobListing[] => {
     if (this.source() === 'eures') {
@@ -162,12 +187,17 @@ export class JobSearchFacade {
 
   buildQueryParamState() {
     const source = this.source();
+    const pageSize = this.activeFacade().resultsPerPage() as JobSearchPageSize;
 
     return buildJobSearchUrlQueryParams({
       source,
       keywords: this.activeFacade().keywords(),
       country: source === 'eures' ? this.euresFacade.locationCode() : null,
-      selectedJobId: this.activeFacade().selectedJobId()
+      selectedJobId: this.activeFacade().selectedJobId(),
+      sortSearch: source === 'eures' ? this.euresFacade.effectiveSortSearch() : undefined,
+      pageSize: pageSize || JOB_SEARCH_DEFAULT_PAGE_SIZE,
+      publicationPeriod: source === 'eures' ? this.euresFacade.publicationPeriod() : null,
+      scheduleCode: source === 'eures' ? this.euresFacade.scheduleCode() : null
     });
   }
 
@@ -226,6 +256,34 @@ export class JobSearchFacade {
 
   updateLocationCode(value: string): void {
     this.euresFacade.updateLocationCode(value);
+  }
+
+  updateSortSearch(value: string): void {
+    this.euresFacade.updateSortSearch(value);
+  }
+
+  updateResultsPerPage(value: string): void {
+    const parsed = parseJobSearchPageSize(value);
+
+    if (!parsed || this.activeFacade().resultsPerPage() === parsed) {
+      return;
+    }
+
+    this.activeFacade().updateResultsPerPage(parsed);
+
+    if (this.source() === 'eures') {
+      this.jobnetFacade.setResultsPerPage(parsed);
+    } else {
+      this.euresFacade.setResultsPerPage(parsed);
+    }
+  }
+
+  updatePublicationPeriod(value: string): void {
+    this.euresFacade.updatePublicationPeriod(value);
+  }
+
+  updateScheduleCode(value: string): void {
+    this.euresFacade.updateScheduleCode(value);
   }
 
   saveSelectedJob(): void {

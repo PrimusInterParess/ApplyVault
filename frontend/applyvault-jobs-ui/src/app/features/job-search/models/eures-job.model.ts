@@ -5,6 +5,8 @@ export interface EuresJobSearchRequest {
   resultsPerPage?: number;
   requestLanguage?: string;
   sortSearch?: string;
+  publicationPeriod?: string | null;
+  positionScheduleCodes?: readonly string[] | null;
 }
 
 export interface EuresJobListing {

@@ -89,12 +89,8 @@ export function normalizeTurnResponse(
             : []
         }
       : null,
-    followUps: Array.isArray(response.followUps)
-      ? response.followUps.map((item) => item?.trim() ?? '').filter((item) => item.length > 0)
-      : [],
-    debriefBullets: Array.isArray(response.debriefBullets)
-      ? response.debriefBullets.map((item) => item?.trim() ?? '').filter((item) => item.length > 0)
-      : [],
+    followUps: normalizeStringList(response.followUps),
+    debriefBullets: normalizeStringList(response.debriefBullets),
     modelAnswer: normalizeOptionalText(response.modelAnswer),
     sessionId: normalizeOptionalId(response.sessionId)
   };
@@ -149,12 +145,8 @@ function normalizeSessionMessage(message: InterviewPrepSessionMessage): Intervie
             : []
         }
       : null,
-    followUps: Array.isArray(message.followUps)
-      ? message.followUps.map((item) => item?.trim() ?? '').filter((item) => item.length > 0)
-      : [],
-    debriefBullets: Array.isArray(message.debriefBullets)
-      ? message.debriefBullets.map((item) => item?.trim() ?? '').filter((item) => item.length > 0)
-      : [],
+    followUps: normalizeStringList(message.followUps),
+    debriefBullets: normalizeStringList(message.debriefBullets),
     modelAnswer: normalizeOptionalText(message.modelAnswer),
     inference: message.inference
       ? {
@@ -166,6 +158,25 @@ function normalizeSessionMessage(message: InterviewPrepSessionMessage): Intervie
       : null,
     createdAt: message.createdAt || ''
   };
+}
+
+/** Trim, drop empties, dedupe exact strings (first wins; defense in depth for tip lists). */
+function normalizeStringList(values: readonly (string | null | undefined)[] | null | undefined): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of values) {
+    const item = raw?.trim() ?? '';
+    if (item.length === 0 || seen.has(item)) {
+      continue;
+    }
+    seen.add(item);
+    result.push(item);
+  }
+  return result;
 }
 
 function normalizeOptionalText(value: string | null | undefined): string | null {

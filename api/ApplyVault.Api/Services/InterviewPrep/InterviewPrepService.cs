@@ -1,8 +1,10 @@
+using System.Text;
 using System.Text.Json;
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services;
@@ -47,8 +49,12 @@ public sealed class InterviewPrepService(
     ICvStructuredDocumentService structuredDocumentService,
     IScrapeResultStore scrapeResultStore,
     IInterviewPrepAiClient interviewPrepAiClient,
-    IOptions<InterviewPrepAiOptions> interviewPrepAiOptions) : IInterviewPrepService
+    IOptions<InterviewPrepAiOptions> interviewPrepAiOptions,
+    ILogger<InterviewPrepService> logger) : IInterviewPrepService
 {
+    private const string CoachDuplicateRetryNudge =
+        "Corrective instruction (server retry): Your previous coachMessage duplicated an earlier coach question. Ask a NEW competency/topic for this mode. Do not paraphrase the same theme or story.";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -188,7 +194,7 @@ public sealed class InterviewPrepService(
         var languageMix = ResolveLanguageMix(request.LanguageMix, options.DefaultLanguageMix);
         var hiringMarket = ResolveHiringMarket(request.HiringMarket, options.DefaultHiringMarket);
         var userMessage = CapUserMessage(request.UserMessage, options.MaxUserMessageChars);
-        // Digest from full client priorTurns before MaxPriorTurns truncate (ADR-0017).
+        // Digest = coach questions outside MaxPriorTurns window (ADR-0017); recent stay in priorTurns.
         var alreadyAsked = InterviewPrepAlreadyAskedDigest.Build(
             request.PriorTurns,
             options.MaxPriorTurns,
@@ -207,7 +213,7 @@ public sealed class InterviewPrepService(
             requireOwnedScrape: true,
             cancellationToken);
 
-        var aiResult = await interviewPrepAiClient.GenerateTurnAsync(
+        var aiResult = await GenerateTurnWithDuplicateGateAsync(
             new InterviewPrepAiTurnRequest(
                 structured,
                 jobContext,
@@ -217,6 +223,7 @@ public sealed class InterviewPrepService(
                 priorTurns,
                 hiringMarket,
                 alreadyAsked),
+            request.PriorTurns,
             cancellationToken);
 
         return MapResponse(aiResult, sessionId: null);
@@ -256,7 +263,7 @@ public sealed class InterviewPrepService(
             .OrderBy((message) => message.Sequence)
             .Select((message) => new InterviewPrepPriorTurnDto(message.Role, message.Text, message.Phase))
             .ToArray();
-        // Digest from full session transcript before MaxPriorTurns truncate (ADR-0017).
+        // Digest = coach questions outside MaxPriorTurns window (ADR-0017); recent stay in priorTurns.
         // modelAnswer is never mapped into priorTurnDtos (ADR-0015).
         var alreadyAsked = InterviewPrepAlreadyAskedDigest.Build(
             priorTurnDtos,
@@ -276,7 +283,7 @@ public sealed class InterviewPrepService(
             requireOwnedScrape: false,
             cancellationToken);
 
-        var aiResult = await interviewPrepAiClient.GenerateTurnAsync(
+        var aiResult = await GenerateTurnWithDuplicateGateAsync(
             new InterviewPrepAiTurnRequest(
                 structured,
                 jobContext,
@@ -286,6 +293,7 @@ public sealed class InterviewPrepService(
                 priorTurns,
                 session.HiringMarket,
                 alreadyAsked),
+            priorTurnDtos,
             cancellationToken);
 
         var response = MapResponse(aiResult, session.Id);
@@ -431,6 +439,143 @@ public sealed class InterviewPrepService(
         }
 
         return resolved;
+    }
+
+    private async Task<InterviewPrepAiTurnResult> GenerateTurnWithDuplicateGateAsync(
+        InterviewPrepAiTurnRequest aiRequest,
+        IReadOnlyList<InterviewPrepPriorTurnDto>? fullPriorTurns,
+        CancellationToken cancellationToken)
+    {
+        var maxRetries = Math.Clamp(interviewPrepAiOptions.Value.MaxCoachDuplicateRetries, 0, 2);
+        var priorCoachTexts = CollectCoachInterviewTexts(fullPriorTurns);
+
+        var result = await interviewPrepAiClient.GenerateTurnAsync(aiRequest, cancellationToken);
+
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            if (!IsExactDuplicateCoachInterviewMessage(result, priorCoachTexts))
+            {
+                return result;
+            }
+
+            logger.LogInformation(
+                "Interview Prep coachMessage exact duplicate detected; silent regenerate {Attempt}/{MaxRetries}.",
+                attempt + 1,
+                maxRetries);
+
+            result = await interviewPrepAiClient.GenerateTurnAsync(
+                aiRequest with { CorrectiveNudge = CoachDuplicateRetryNudge },
+                cancellationToken);
+        }
+
+        if (IsExactDuplicateCoachInterviewMessage(result, priorCoachTexts))
+        {
+            logger.LogWarning(
+                "Interview Prep coachMessage still an exact duplicate after {MaxRetries} regenerat(e/es); accepting last result.",
+                maxRetries);
+        }
+
+        return result;
+    }
+
+    private static List<string> CollectCoachInterviewTexts(
+        IReadOnlyList<InterviewPrepPriorTurnDto>? priorTurns)
+    {
+        var texts = new List<string>();
+        if (priorTurns is null || priorTurns.Count == 0)
+        {
+            return texts;
+        }
+
+        foreach (var turn in priorTurns)
+        {
+            if (!string.Equals(turn.Role, InterviewPrepTurnRoles.Coach, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var phase = string.IsNullOrWhiteSpace(turn.Phase)
+                ? InterviewPrepPhases.Interview
+                : turn.Phase;
+
+            if (!string.Equals(phase, InterviewPrepPhases.Interview, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(turn.Text))
+            {
+                continue;
+            }
+
+            texts.Add(turn.Text);
+        }
+
+        return texts;
+    }
+
+    private static bool IsExactDuplicateCoachInterviewMessage(
+        InterviewPrepAiTurnResult result,
+        IReadOnlyList<string> priorCoachTexts)
+    {
+        if (priorCoachTexts.Count == 0)
+        {
+            return false;
+        }
+
+        if (!string.Equals(result.Phase, InterviewPrepPhases.Interview, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var normalized = NormalizeForDuplicateCompare(result.CoachMessage);
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var prior in priorCoachTexts)
+        {
+            if (string.Equals(
+                    normalized,
+                    NormalizeForDuplicateCompare(prior),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string NormalizeForDuplicateCompare(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(trimmed.Length);
+        var previousWasWhitespace = false;
+        foreach (var ch in trimmed)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                if (!previousWasWhitespace)
+                {
+                    builder.Append(' ');
+                    previousWasWhitespace = true;
+                }
+            }
+            else
+            {
+                builder.Append(ch);
+                previousWasWhitespace = false;
+            }
+        }
+
+        return builder.ToString();
     }
 
     private static string CapUserMessage(string? userMessage, int maxChars)

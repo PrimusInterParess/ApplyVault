@@ -444,7 +444,7 @@
             <section class="interview-prep__side-block" aria-labelledby="follow-ups-heading">
               <h2 id="follow-ups-heading" class="interview-prep__side-title">Try next</h2>
               <ul class="interview-prep__follow-ups">
-                @for (item of facade.followUps(); track item) {
+                @for (item of facade.followUps(); track $index) {
                   <li>
                     <button
                       type="button"
@@ -484,7 +484,7 @@
             <section class="interview-prep__side-block" aria-labelledby="debrief-heading">
               <h2 id="debrief-heading" class="interview-prep__side-title">Debrief</h2>
               <ul class="interview-prep__side-list">
-                @for (item of facade.debriefBullets(); track item) {
+                @for (item of facade.debriefBullets(); track $index) {
                   <li>{{ item }}</li>
                 }
               </ul>

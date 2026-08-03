@@ -52,33 +52,49 @@ public sealed class InterviewPrepAiOptions
           (e.g. structure cues, what to emphasize, a clarifying angle). 2–4 items when phase is interview
           and coachMessage asks or continues a question. Do not wait for the candidate to answer first.
           Use [] only in debrief, or when no useful tip applies.
-        - modelAnswer: one concise sample spoken answer for the CURRENT coach question (coaching aid only).
-          Distinct from followUps — tips are brief structure/angle cues; modelAnswer is a short spoken sample
-          (one short paragraph / STAR-like when behavioral), not an essay and not a second chat message.
-          Prefer a non-null modelAnswer when phase is interview and coachMessage poses or continues an
-          answerable question. Must be null when phase is debrief. May be null on setup / acknowledgment /
-          score-only turns with no answerable question, or when no useful sample exists.
-          Keep the sample profession-agnostic and grounded in Structured CV ± optional job + inference;
-          honor languageMix and hiring-market bias rules above. Never invent employers, credentials, visa,
-          or work-permit facts. Never put the full sample into coachMessage or followUps — keep the question
-          in coachMessage and tips in followUps only.
+        - modelAnswer: REQUIRED sample spoken answer for the CURRENT coach question whenever phase is
+          interview and coachMessage asks or continues an answerable question. Always populate it in that
+          case — do not omit it to save tokens or because of anti-repeat rules. Distinct from followUps:
+          tips are brief structure/angle cues; modelAnswer is a short spoken sample (one short paragraph /
+          STAR-like when behavioral), not an essay and not a second chat message. Must be null when phase
+          is debrief. May be null only on setup / acknowledgment / score-only turns with no answerable
+          question. Ground in Structured CV ± optional job + inference; honor languageMix and hiring-market
+          bias. Never invent employers, credentials, visa, or work-permit facts. Never put the full sample
+          into coachMessage or followUps.
         - debriefBullets is a string array (use [] when none / not in debrief).
         - scorecard may be null on setup / pure interview turns. When scoring an answer or ending a round, return
           scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:
           clarity, evidence, structure, role_fit, language. Each dimension needs score (0–100) and note.
         - Never return a mutated CV or claim durable session storage. This turn is ephemeral.
 
-        Anti-repeat (mandatory):
-        - Do NOT re-ask a question that is substantially the same as any item in the already-asked
-          list or recent priorTurns.
-        - Instead deepen the current thread, reframe from a new angle, advance to a new topic within
-          the current mode, or move toward debrief when appropriate.
-        - Stay profession-agnostic; never use hardcoded question banks.
+        Session pacing (mandatory — anti-repeat):
+        - One new interview question per coach turn, on ONE competency/theme.
+        - At most ONE short deepen/reframe on the same theme after the candidate answers.
+          On the next coach turn after that deepen, you MUST switch to a clearly different
+          competency, scenario, or skill for this mode (or move to debrief). Never ask for
+          "another example" of the same story, stakeholder conflict, prioritization, or
+          strategic-buy-in theme back-to-back.
+        - BLOCKLIST: never re-ask (exact or paraphrase) any coach question in priorTurns or
+          in the already-asked list. Treat both as forbidden topics, not inspiration.
+        - If priorTurns already covered a theme, pick a fresh angle from the CV/job that has
+          not been used yet. Variety over depth-loops.
+        - followUps: 2–4 distinct tips for THIS question only; do not recycle prior tip wording.
+        - Stay profession-agnostic; never use hardcoded question banks (ADR-0012).
         """;
 
     public const string DefaultUserPromptTemplate =
         """
         Conduct the next Interview Prep coach turn.
+
+        THIS TURN (read first):
+        - If coachMessage asks or continues a question (phase=interview): you MUST return non-empty
+          followUps (2–4 tips) AND a non-null modelAnswer (sample spoken answer for that question).
+          Anti-repeat rules never justify omitting modelAnswer or followUps.
+        - alreadyAskedJson is a BLOCKLIST of older coach questions — do not ask them again (exact or paraphrase).
+        - priorTurnsJson shows recent chat — do not re-ask those coach questions either.
+        - If the last coach turn already deepened or reframed the same theme/story, your coachMessage
+          MUST introduce a NEW competency/topic for this mode (or start debrief). Do not continue the loop.
+
         Mode: {{mode}}
         Language mix: {{languageMix}}
         Hiring market: {{hiringMarket}}
@@ -86,7 +102,7 @@ public sealed class InterviewPrepAiOptions
         {{userMessage}}
         Prior turns JSON:
         {{priorTurnsJson}}
-        Already-asked questions JSON (earlier coach interview questions outside the prior-turns window; [] when none):
+        Already-asked BLOCKLIST JSON (older coach questions outside the recent window; [] when none):
         {{alreadyAskedJson}}
         Optional job context JSON (null when absent):
         {{jobJson}}
@@ -118,7 +134,7 @@ public sealed class InterviewPrepAiOptions
 
     /// <summary>
     /// Max coach-interview texts in the already-asked digest (ADR-0017).
-    /// Digest prefers turns outside the retained MaxPriorTurns window.
+    /// Digest is outside-MaxPriorTurns only (recent questions live in priorTurnsJson).
     /// </summary>
     [Range(0, 200)]
     public int MaxAlreadyAskedItems { get; set; } = 40;
@@ -132,6 +148,13 @@ public sealed class InterviewPrepAiOptions
     /// </summary>
     [Range(0, 32_000)]
     public int MaxAlreadyAskedTotalChars { get; set; } = 4_000;
+
+    /// <summary>
+    /// Silent regenerates when coachMessage exactly duplicates a prior coach+interview
+    /// text (normalize: trim, collapse whitespace, ordinal ignore case). 0 disables.
+    /// </summary>
+    [Range(0, 2)]
+    public int MaxCoachDuplicateRetries { get; set; } = 1;
 
     /// <summary>Default when request omits languageMix. Frozen values: en | da | mixed.</summary>
     [Required]

@@ -124,6 +124,21 @@ public sealed class GoogleAiInterviewPrepClient(
             request.AlreadyAsked ?? Array.Empty<string>(),
             SerializerOptions);
 
+        var userPrompt = prepOptions.UserPromptTemplate
+            .Replace("{{mode}}", mode, StringComparison.Ordinal)
+            .Replace("{{languageMix}}", languageMix, StringComparison.Ordinal)
+            .Replace("{{hiringMarket}}", hiringMarket, StringComparison.Ordinal)
+            .Replace("{{userMessage}}", userMessage, StringComparison.Ordinal)
+            .Replace("{{priorTurnsJson}}", priorTurnsJson, StringComparison.Ordinal)
+            .Replace("{{alreadyAskedJson}}", alreadyAskedJson, StringComparison.Ordinal)
+            .Replace("{{jobJson}}", jobJson, StringComparison.Ordinal)
+            .Replace("{{cvJson}}", cvJson, StringComparison.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(request.CorrectiveNudge))
+        {
+            userPrompt = userPrompt + "\n\n" + request.CorrectiveNudge.Trim();
+        }
+
         return new
         {
             systemInstruction = new
@@ -138,15 +153,7 @@ public sealed class GoogleAiInterviewPrepClient(
                     {
                         new
                         {
-                            text = prepOptions.UserPromptTemplate
-                                .Replace("{{mode}}", mode, StringComparison.Ordinal)
-                                .Replace("{{languageMix}}", languageMix, StringComparison.Ordinal)
-                                .Replace("{{hiringMarket}}", hiringMarket, StringComparison.Ordinal)
-                                .Replace("{{userMessage}}", userMessage, StringComparison.Ordinal)
-                                .Replace("{{priorTurnsJson}}", priorTurnsJson, StringComparison.Ordinal)
-                                .Replace("{{alreadyAskedJson}}", alreadyAskedJson, StringComparison.Ordinal)
-                                .Replace("{{jobJson}}", jobJson, StringComparison.Ordinal)
-                                .Replace("{{cvJson}}", cvJson, StringComparison.Ordinal)
+                            text = userPrompt
                         }
                     }
                 }

@@ -15,7 +15,8 @@ public interface IInterviewPrepAiClient
 
 /// <summary>
 /// Inputs for a single Interview Prep AI turn (CV ± optional job + chat context).
-/// <see cref="AlreadyAsked"/> is the server-built digest outside MaxPriorTurns (ADR-0017); internal only.
+/// <see cref="AlreadyAsked"/> is the server-built full-transcript digest (ADR-0017 amended); internal only.
+/// <see cref="CorrectiveNudge"/> is an optional server retry instruction appended to the user prompt.
 /// </summary>
 public sealed record InterviewPrepAiTurnRequest(
     CvStructuredDocumentDto StructuredCv,
@@ -25,7 +26,8 @@ public sealed record InterviewPrepAiTurnRequest(
     string UserMessage,
     IReadOnlyList<InterviewPrepPriorTurn>? PriorTurns = null,
     string? HiringMarket = null,
-    IReadOnlyList<string>? AlreadyAsked = null);
+    IReadOnlyList<string>? AlreadyAsked = null,
+    string? CorrectiveNudge = null);
 
 /// <summary>
 /// Read-only job context derived from an owned scrape result (never trust client job text).

@@ -5,8 +5,9 @@ namespace ApplyVault.Api.Services;
 
 /// <summary>
 /// Builds the compact already-asked digest for Interview Prep AI turns (ADR-0017).
-/// Source is the full prior transcript before MaxPriorTurns truncation; members are
-/// coach + interview texts outside the retained priorTurns tail.
+/// Coach + interview texts from the full prior transcript that fall outside the
+/// retained MaxPriorTurns tail (newest-first under item + total-char budgets).
+/// Recent questions stay in priorTurnsJson only — avoid duplicating them here.
 /// </summary>
 internal static class InterviewPrepAlreadyAskedDigest
 {

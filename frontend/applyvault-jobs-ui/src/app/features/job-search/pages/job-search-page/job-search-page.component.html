@@ -35,7 +35,10 @@
       </div>
     }
 
-    <div class="eures-page__filter-row">
+    <div
+      class="eures-page__filter-row"
+      [class.eures-page__filter-row--eures]="facade.source() === 'eures'"
+      [class.eures-page__filter-row--jobnet]="facade.source() === 'jobnet'">
       <label class="eures-page__filter">
         <span class="eures-page__filter-label">Keywords</span>
         <div class="eures-page__filter-control">
@@ -57,34 +60,23 @@
         </div>
       </label>
 
-      <label class="eures-page__filter">
-        <span class="eures-page__filter-label">Country</span>
-        <div class="eures-page__filter-control">
-          @if (facade.source() === 'eures') {
+      @if (facade.source() === 'eures') {
+        <label class="eures-page__filter">
+          <span class="eures-page__filter-label">Country</span>
+          <div class="eures-page__filter-control">
             <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
               @for (option of locationOptions; track option.code) {
                 <option [value]="option.code">{{ option.label }}</option>
               }
             </select>
-          } @else {
-            <select disabled aria-label="Country filter not used for Work in Denmark">
-              <option>Denmark (Work in Denmark)</option>
-            </select>
-          }
-        </div>
-      </label>
-
-      <label class="eures-page__filter">
-        <span class="eures-page__filter-label">Department</span>
-        <div class="eures-page__filter-control">
-          <select [value]="activeSuggestionGroup()" (change)="updateSuggestionGroup($event)">
-            <option value="">All areas</option>
-            @for (group of keywordSuggestionGroups; track group.label) {
-              <option [value]="group.label">{{ group.label }}</option>
-            }
-          </select>
-        </div>
-      </label>
+          </div>
+        </label>
+      } @else {
+        <p class="eures-page__board-context" role="status">
+          <span class="eures-page__filter-label">Board</span>
+          <span class="eures-page__board-context-value">Work in Denmark · Denmark</span>
+        </p>
+      }
     </div>
 
     <div class="eures-page__filter-actions">
@@ -105,34 +97,63 @@
     @if (facade.locationInitWarning(); as locationWarning) {
       <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
     }
+  </section>
 
-    <div class="eures-page__suggestions" aria-label="Popular IT search terms">
-      <div class="eures-page__suggestions-header">
-        <p class="eures-page__suggestions-title">Popular IT searches</p>
-        <p class="eures-page__suggestions-hint">
-          Select multiple terms. Results must match at least one term in the listing.
-        </p>
-      </div>
-
-      @for (group of visibleSuggestionGroups(); track group.label) {
-        <div class="eures-page__suggestion-group">
-          <span class="eures-page__suggestion-label">{{ group.label }}</span>
-          <div class="eures-page__suggestion-chips">
-            @for (keyword of group.keywords; track keyword) {
-              <button
-                type="button"
-                class="eures-page__workflow-chip"
-                [class.eures-page__workflow-chip--active]="isActiveSuggestion(keyword)"
-                [attr.aria-pressed]="isActiveSuggestion(keyword)"
-                [disabled]="facade.loading()"
-                (click)="toggleSuggestion(keyword)">
-                {{ keyword }}
-              </button>
-            }
-          </div>
-        </div>
-      }
+  <section class="eures-page__suggestions" aria-label="Popular searches">
+    <div class="eures-page__suggestions-header">
+      <button
+        type="button"
+        class="eures-page__suggestions-toggle"
+        [attr.aria-expanded]="suggestionsOpen()"
+        aria-controls="job-search-suggestions-panel"
+        (click)="toggleSuggestions()">
+        <span class="eures-page__suggestions-title">Popular searches</span>
+        <span class="eures-page__suggestions-toggle-state" aria-hidden="true">
+          {{ suggestionsOpen() ? 'Hide' : 'Show' }}
+        </span>
+      </button>
+      <p class="eures-page__suggestions-hint">
+        Client-side helpers — chips add keywords only; they are not board filters.
+      </p>
     </div>
+
+    @if (suggestionsOpen()) {
+      <div id="job-search-suggestions-panel" class="eures-page__suggestions-panel">
+        <label class="eures-page__filter eures-page__suggestion-area">
+          <span class="eures-page__filter-label">Suggestion area</span>
+          <div class="eures-page__filter-control">
+            <select [value]="activeSuggestionGroup()" (change)="updateSuggestionGroup($event)">
+              <option value="">All areas</option>
+              @for (group of keywordSuggestionGroups; track group.label) {
+                <option [value]="group.label">{{ group.label }}</option>
+              }
+            </select>
+          </div>
+          <span class="eures-page__suggestion-area-hint">
+            Filters the chip list only — does not change the search query.
+          </span>
+        </label>
+
+        @for (group of visibleSuggestionGroups(); track group.label) {
+          <div class="eures-page__suggestion-group">
+            <span class="eures-page__suggestion-label">{{ group.label }}</span>
+            <div class="eures-page__suggestion-chips">
+              @for (keyword of group.keywords; track keyword) {
+                <button
+                  type="button"
+                  class="eures-page__workflow-chip"
+                  [class.eures-page__workflow-chip--active]="isActiveSuggestion(keyword)"
+                  [attr.aria-pressed]="isActiveSuggestion(keyword)"
+                  [disabled]="facade.loading()"
+                  (click)="toggleSuggestion(keyword)">
+                  {{ keyword }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
   </section>
 
   @if (loadBannerMessage(); as bannerMessage) {
@@ -142,7 +163,7 @@
     </div>
   }
 
-  <p class="jobs-page__live-region" aria-live="polite">{{ facade.resultsSummary() }}</p>
+  <p class="jobs-page__live-region visually-hidden" aria-live="polite">{{ facade.resultsSummary() }}</p>
 
   @if (facade.saveError(); as saveErrorMessage) {
     <div class="jobs-page__error-bar" role="alert">
@@ -218,18 +239,19 @@
     </section>
   } @else if (facade.hasSearched()) {
     <section class="eures-page__results-header">
-      <h2>Latest jobs</h2>
+      <h2>{{ facade.providerLabel() }} results</h2>
       <p class="eures-page__results-summary">{{ facade.resultsSummary() }}</p>
     </section>
 
-    <section class="jobs-page__controls">
+    <section class="jobs-page__controls" aria-label="Results controls">
       <div class="jobs-page__controls-row">
-        <p class="jobs-page__filter-summary">{{ facade.resultsSummary() }}</p>
         <div class="jobs-page__controls-actions">
           @if (lastSearchedLabel(); as searchedLabel) {
             <p class="jobs-page__last-updated">{{ searchedLabel }}</p>
           }
-          <button type="button" class="jobs-page__refresh" (click)="retrySearch()">Refresh results</button>
+          <button type="button" class="jobs-page__secondary-action" (click)="retrySearch()">
+            Refresh results
+          </button>
         </div>
       </div>
     </section>
@@ -301,7 +323,13 @@
       <section class="jobs-page__detail">
         @if (showMobileDetail()) {
           <div class="jobs-page__mobile-back">
-            <button type="button" class="jobs-page__back-button" (click)="backToList()">← Back to list</button>
+            <button
+              #mobileBackButton
+              type="button"
+              class="jobs-page__back-button"
+              (click)="backToList()">
+              ← Back to list
+            </button>
             @if (facade.selectedJob(); as selected) {
               <p class="jobs-page__mobile-title">{{ selected.title || 'Untitled listing' }}</p>
             }

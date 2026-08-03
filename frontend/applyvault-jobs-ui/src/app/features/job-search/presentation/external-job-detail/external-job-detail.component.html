@@ -11,10 +11,39 @@
       </div>
 
       <div class="job-detail__actions job-detail__actions--primary">
-        @if (detailUrl(); as openUrl) {
-          <a [href]="openUrl" target="_blank" rel="noreferrer" class="job-detail__primary-link">
-            Open listing
+        @if (savedJobId(); as savedId) {
+          <a
+            [routerLink]="['/jobs']"
+            [queryParams]="{ selected: savedId }"
+            class="job-detail__primary-link">
+            View saved job
           </a>
+          @if (detailUrl(); as openUrl) {
+            <a
+              [href]="openUrl"
+              target="_blank"
+              rel="noreferrer"
+              class="job-detail__secondary-link">
+              Open listing
+            </a>
+          }
+        } @else {
+          <button
+            type="button"
+            class="job-detail__primary-action"
+            [disabled]="saving() || !canSave()"
+            (click)="save.emit()">
+            {{ saving() ? 'Saving…' : 'Save to ApplyVault' }}
+          </button>
+          @if (detailUrl(); as openUrl) {
+            <a
+              [href]="openUrl"
+              target="_blank"
+              rel="noreferrer"
+              class="job-detail__secondary-link">
+              Open listing
+            </a>
+          }
         }
       </div>
     </div>
@@ -32,22 +61,14 @@
       @if (selectedJob.workHours) {
         <span>{{ selectedJob.workHours }}</span>
       }
-      @for (tag of selectedJob.tags ?? []; track tag) {
-        <span>{{ tag }}</span>
+      @if (selectedJob.tags?.length) {
+        @for (tag of selectedJob.tags; track tag) {
+          <span>{{ tag }}</span>
+        }
       }
       @if (savedJobId()) {
         <span class="job-detail__chip job-detail__chip--reviewed">In ApplyVault</span>
       }
-    </div>
-
-    <div class="job-detail__actions">
-      <button
-        type="button"
-        class="job-detail__secondary-action"
-        [disabled]="!canSave()"
-        (click)="save.emit()">
-        {{ saving() ? 'Saving...' : 'Save to ApplyVault' }}
-      </button>
     </div>
 
     @if (saveError(); as saveErrorMessage) {
@@ -59,7 +80,7 @@
       </article>
     }
 
-    @if (savedJobId(); as savedId) {
+    @if (savedJobId()) {
       <article class="job-detail__panel">
         <p>
           {{
@@ -68,9 +89,6 @@
               : 'Saved to ApplyVault.'
           }}
         </p>
-        <a [routerLink]="['/jobs']" [queryParams]="{ selected: savedId }" class="job-detail__primary-link">
-          View saved job
-        </a>
       </article>
     }
 

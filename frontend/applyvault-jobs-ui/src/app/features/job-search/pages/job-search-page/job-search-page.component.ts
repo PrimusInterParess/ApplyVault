@@ -65,9 +65,11 @@ export class JobSearchPageComponent implements OnInit {
 
   protected readonly draftKeyword = signal('');
   protected readonly activeSuggestionGroup = signal('');
+  protected readonly suggestionsOpen = signal(true);
   protected readonly mobileDetailEngaged = signal(false);
   protected readonly loadBannerMessage = signal('');
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
+  protected readonly mobileBackButton = viewChild<ElementRef<HTMLButtonElement>>('mobileBackButton');
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -80,6 +82,7 @@ export class JobSearchPageComponent implements OnInit {
   private shouldFocusAfterSearch = false;
   private bannerDismissHandle: ReturnType<typeof setTimeout> | null = null;
   private wasLoading = false;
+  private lastSelectedJobIdForFocus: string | null = null;
 
   protected readonly skeletonListIndexes = computed(() =>
     Array.from({ length: 5 }, (_, index) => index)
@@ -118,6 +121,7 @@ export class JobSearchPageComponent implements OnInit {
       const generation = this.facade.searchGeneration();
 
       if (this.wasLoading && !loading && !error && generation > 0) {
+        this.suggestionsOpen.set(false);
         const total = this.facade.totalResults();
         this.showLoadBanner(
           total === 0
@@ -173,6 +177,10 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.isMobileViewport()) {
+      this.suggestionsOpen.set(false);
+    }
+
     this.jobResultsFacade.load();
     this.applyRouteParams(this.route.snapshot.queryParamMap, { triggerSearch: true });
 
@@ -251,6 +259,10 @@ export class JobSearchPageComponent implements OnInit {
     this.activeSuggestionGroup.set(readInputValue(event));
   }
 
+  protected toggleSuggestions(): void {
+    this.suggestionsOpen.update((open) => !open);
+  }
+
   protected toggleSuggestion(keyword: string): void {
     this.facade.toggleKeyword(keyword);
     this.syncUrlIfNeeded();
@@ -315,9 +327,11 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   protected selectJob(id: string): void {
+    this.lastSelectedJobIdForFocus = id;
     this.mobileDetailEngaged.set(true);
     this.facade.select(id);
     this.syncUrlIfNeeded();
+    this.focusMobileDetailIfNeeded();
   }
 
   protected showMobileDetail(): boolean {
@@ -325,9 +339,11 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   protected backToList(): void {
+    const previousId = this.facade.selectedJobId() ?? this.lastSelectedJobIdForFocus;
     this.mobileDetailEngaged.set(false);
     this.facade.clearSelection();
     this.syncUrlIfNeeded();
+    this.restoreListFocus(previousId);
   }
 
   protected locationLabel(code: string | null): string {
@@ -463,12 +479,63 @@ export class JobSearchPageComponent implements OnInit {
     const jobId = card.dataset['jobId'];
 
     if (jobId) {
+      this.lastSelectedJobIdForFocus = jobId;
       this.mobileDetailEngaged.set(true);
       this.facade.select(jobId);
       this.syncUrlIfNeeded();
     }
 
+    if (this.isMobileViewport()) {
+      this.focusMobileDetailIfNeeded();
+      return;
+    }
+
     card.focus();
+  }
+
+  private focusMobileDetailIfNeeded(): void {
+    if (!this.isMobileViewport()) {
+      return;
+    }
+
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => {
+        const backButton = this.mobileBackButton()?.nativeElement;
+
+        if (backButton) {
+          backButton.focus();
+        }
+      });
+    });
+  }
+
+  private restoreListFocus(previousJobId: string | null): void {
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => {
+        const listElement = this.listRegion()?.nativeElement;
+
+        if (!listElement) {
+          return;
+        }
+
+        if (previousJobId) {
+          const card = listElement.querySelector<HTMLButtonElement>(
+            `.job-card[data-job-id="${CSS.escape(previousJobId)}"]`
+          );
+
+          if (card) {
+            card.focus();
+            return;
+          }
+        }
+
+        listElement.focus();
+      });
+    });
+  }
+
+  private isMobileViewport(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(max-width: 1080px)').matches;
   }
 
   private showLoadBanner(message: string): void {

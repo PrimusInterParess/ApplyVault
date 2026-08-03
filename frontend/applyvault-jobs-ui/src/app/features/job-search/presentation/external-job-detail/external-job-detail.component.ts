@@ -34,7 +34,7 @@ export class ExternalJobDetailComponent {
   });
 
   protected readonly canSave = computed(() => {
-    return Boolean(this.job()) && !this.saving() && !this.savedJobId();
+    return Boolean(this.job()) && !this.savedJobId();
   });
 
   protected readonly sourceLabel = computed(() =>

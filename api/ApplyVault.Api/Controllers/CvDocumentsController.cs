@@ -52,7 +52,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -131,7 +131,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -311,7 +311,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -332,7 +332,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -353,7 +353,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -374,7 +374,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -395,7 +395,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -416,7 +416,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -440,7 +440,7 @@ public sealed class CvDocumentsController(
         }
         catch (InvalidOperationException exception)
         {
-            return BadRequest(exception.Message);
+            return BadRequest(new { message = exception.Message });
         }
     }
 }

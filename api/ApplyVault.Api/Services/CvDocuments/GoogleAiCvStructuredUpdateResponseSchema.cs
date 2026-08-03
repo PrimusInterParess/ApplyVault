@@ -5,6 +5,7 @@ internal static class GoogleAiCvStructuredUpdateResponseSchema
     public static object Create() =>
         new
         {
+            temperature = 0.6,
             responseMimeType = "application/json",
             responseSchema = new
             {

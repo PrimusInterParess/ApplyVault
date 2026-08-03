@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 
+import { resolveHttpErrorMessage } from '../../../core/http/api-error-message';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import {
   CvImprovementSuggestion,
@@ -20,6 +21,7 @@ import {
 } from '../utils/cv-structured-draft.util';
 import { normalizeSectionsForEditing } from '../utils/cv-structured-edit-normalizer.util';
 import { createSectionOfType } from '../utils/cv-starter-entry.util';
+import { resolveUpdateProposalCompareSectionIds } from '../utils/cv-update-proposal-compare.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
 type PendingStructuredSave = {
@@ -140,11 +142,32 @@ export class CvStructuredFacade {
       .subscribe({
         next: (proposal) => {
           this.proposingUpdate.set(false);
+
+          const focusSectionIds = proposal.focusSectionIds ?? [];
+          const proposedSections = this.hydrateProposedSections(
+            proposal.proposedSections ?? []
+          );
+          const currentSections = this.structured()?.sections ?? [];
+          const changedIds = resolveUpdateProposalCompareSectionIds(
+            focusSectionIds,
+            proposedSections,
+            currentSections
+          );
+
+          // Never show "What changed" / Approve when Current and Proposed text match.
+          if (changedIds.length === 0) {
+            this.updateProposal.set(null);
+            this.aiUpdateError.set(
+              'AI returned no visible changes to the selected section. Try clearer instructions or try again.'
+            );
+            return;
+          }
+
           this.updateProposal.set({
             ...proposal,
-            focusSectionIds: proposal.focusSectionIds ?? [],
+            focusSectionIds,
             changeBullets: proposal.changeBullets ?? [],
-            proposedSections: this.hydrateProposedSections(proposal.proposedSections ?? [])
+            proposedSections
           });
           this.discardSummaryProposal();
         },
@@ -527,14 +550,6 @@ export class CvStructuredFacade {
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {
-    if (typeof error === 'object' && error !== null && 'error' in error) {
-      const payload = (error as { error: unknown }).error;
-
-      if (typeof payload === 'string' && payload.trim()) {
-        return payload;
-      }
-    }
-
-    return fallback;
+    return resolveHttpErrorMessage(error, { fallback });
   }
 }

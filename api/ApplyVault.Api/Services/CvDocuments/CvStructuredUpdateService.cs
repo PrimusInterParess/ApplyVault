@@ -35,8 +35,11 @@ public sealed class CvStructuredUpdateService(
 
         var focusSectionIds = ResolveFocusSectionIds(current, request.SectionIds);
 
+        // Keep full `current` for merge; only the scoped slice is sent to the model.
+        var modelInput = GoogleAiCvStructuredUpdateClient.BuildPayloadForModel(current, focusSectionIds);
+
         var aiResult = await updateAiClient.UpdateAsync(
-            current,
+            modelInput,
             request.Instructions.Trim(),
             focusSectionIds,
             cancellationToken);

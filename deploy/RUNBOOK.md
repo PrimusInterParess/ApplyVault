@@ -16,7 +16,7 @@ Implements [prod-07-deployment-and-hosting.md](../plans/production-readiness/pro
 
 **Single replica:** Omit `ConnectionStrings__Redis`; the API uses in-process distributed cache and locks (one replica only).
 
-**Multiple replicas:** Set `ConnectionStrings__Redis` to a shared Redis instance so EURES ranked-result paging and Gmail sync stay consistent across API pods (steps 16–17).
+**Multiple replicas:** Set `ConnectionStrings__Redis` to a shared Redis instance so EURES/Jobnet ranked-result paging and Gmail sync stay consistent across API pods (steps 16–17).
 
 ## Prerequisites
 
@@ -348,7 +348,7 @@ Expect `429` responses with `Retry-After` once the per-user scrape limit is exce
 
 When running **more than one** API replica, set `ConnectionStrings__Redis` in `deploy/.env` so all instances share:
 
-- **EURES ranked-result cache** (5-minute TTL) — consistent pagination / load-more across replicas
+- **EURES / Jobnet ranked-result caches** (5-minute TTL) — consistent pagination / load-more across replicas
 - **Gmail sync lock** — only one instance polls per interval when `MailIntegration__Enabled=true`
 
 Single replica: omit Redis; the API uses in-process cache and locks automatically.
@@ -363,7 +363,7 @@ docker compose --profile multi-instance up -d
 
 ## Related steps
 
-- **Step 8:** Frontend environment builds — set `apiUrl` to `https://${API_DOMAIN}`.
+- **Step 8:** Frontend environment builds — set `apiBaseUrl` to `https://${API_DOMAIN}/api`.
 - **Step 10:** OAuth redirect URIs and secrets — [OAUTH.md](../plans/production-readiness/OAUTH.md).
 - **Step 11:** CORS hardening for production domains — done; see [HTTPS and transport security](#https-and-transport-security).
 - **Step 12:** Health/readiness probes — see [Health and readiness probes](#health-and-readiness-probes).

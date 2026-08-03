@@ -168,7 +168,7 @@
         </button>
         @if (updateProposal(); as proposal) {
           <div class="cv-builder-assist__proposal">
-            @if (proposal.changeBullets.length > 0) {
+            @if (compareSectionIds(proposal).length > 0 && proposal.changeBullets.length > 0) {
               <h4 class="cv-builder-assist__subheading">What changed</h4>
               <ul class="cv-builder-assist__change-bullets">
                 @for (bullet of proposal.changeBullets; track bullet) {

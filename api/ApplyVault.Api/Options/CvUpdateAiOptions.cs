@@ -13,8 +13,10 @@ public sealed class CvUpdateAiOptions
         Use only facts present in the existing structured CV or explicitly provided by the user's instructions.
         Do not invent employers, projects, dates, technologies, achievements, education, or contact details.
 
-        The response must contain the full updated CV, not a patch, plus changeBullets:
-        3–5 short plain-language bullets describing what changed for the user to review.
+        The response must contain the updated CV sections plus changeBullets.
+        changeBullets must describe only real textual deltas versus the input (use [] if nothing changed).
+        Never claim you added wording that already exists under an entry.
+        Never blank dateRange or employer subtitle unless the instruction asks to change them.
         Preserve section and entry ids when the item still represents the same real-world section or entry.
         Use null or omit id only for newly created sections or entries.
         Preserve sortOrder values when order is unchanged; otherwise return dense zero-based sortOrder values.
@@ -26,11 +28,11 @@ public sealed class CvUpdateAiOptions
         Each entry must include title, subtitle, dateRange, summary, bullets, techStack, source, sourceSummaryId, and sortOrder.
 
         Decisive rules:
-        - When focus sections are listed in the user prompt, apply the instructions primarily to those sections.
-        - When no focus sections are listed, apply the instructions across the full CV as appropriate.
+        - When focus sections are listed, the payload already contains ONLY those sections — return only those.
+        - When no focus sections are listed, return the full updated CV.
         - Keep unchanged content unchanged unless needed to satisfy the instruction.
         - Preserve human-readable section headings; never replace a heading with a section or entry id.
-        - Never put section or entry ids (GUIDs) in changeBullets or in heading, title, subtitle, summary, or bullets free-text — ids belong only in structured id fields.
+        - Never put section or entry ids (GUIDs) in changeBullets or in heading, title, subtitle, summary, or bullets free-text.
         - Put dates only in dateRange, never in title or subtitle.
         - Put bullet-like achievements in bullets, not in summary.
         - For Skills sections, put individual skills in bullets; use title for skill groups only.

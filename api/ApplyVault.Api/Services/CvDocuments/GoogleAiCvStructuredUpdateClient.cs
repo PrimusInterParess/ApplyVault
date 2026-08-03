@@ -22,7 +22,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
     public const int MaxBulletLength = 200;
 
     public async Task<CvStructuredUpdateAiResult> UpdateAsync(
-        CvStructuredDocumentDto current,
+        CvStructuredDocumentDto modelInput,
         string instructions,
         IReadOnlyList<Guid>? focusSectionIds = null,
         CancellationToken cancellationToken = default)
@@ -47,7 +47,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(current, instructions, focusSectionIds),
+            BuildRequest(modelInput, instructions, focusSectionIds),
             SerializerOptions,
             timeoutCts.Token);
 
@@ -59,7 +59,7 @@ public sealed class GoogleAiCvStructuredUpdateClient(
             ?? throw new InvalidOperationException("Google AI returned an empty CV update payload.");
 
         return new CvStructuredUpdateAiResult(
-            CvStructuredUpdateNormalizer.Normalize(current, result),
+            CvStructuredUpdateNormalizer.Normalize(modelInput, result),
             NormalizeChangeBullets(result.ChangeBullets));
     }
 
@@ -75,13 +75,15 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         value.Length <= maxLength ? value : value[..maxLength];
 
     private object BuildRequest(
-        CvStructuredDocumentDto current,
+        CvStructuredDocumentDto modelInput,
         string instructions,
         IReadOnlyList<Guid>? focusSectionIds)
     {
         var prompts = updateAiOptions.Value;
-        var payloadJson = JsonSerializer.Serialize(current, SerializerOptions);
-        var focusSections = BuildFocusSectionsText(current, focusSectionIds);
+        // Callers pass an already-scoped document when chips are selected.
+        var payloadForModel = BuildPayloadForModel(modelInput, focusSectionIds);
+        var payloadJson = JsonSerializer.Serialize(payloadForModel, SerializerOptions);
+        var focusSections = BuildFocusSectionsText(modelInput, focusSectionIds);
 
         return new
         {
@@ -109,6 +111,29 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         };
     }
 
+    internal static CvStructuredDocumentDto BuildPayloadForModel(
+        CvStructuredDocumentDto current,
+        IReadOnlyList<Guid>? focusSectionIds)
+    {
+        if (focusSectionIds is null || focusSectionIds.Count == 0)
+        {
+            return current;
+        }
+
+        var byId = current.Sections.ToDictionary((section) => section.Id);
+        var focused = focusSectionIds
+            .Where(byId.ContainsKey)
+            .Select((id) => byId[id])
+            .ToArray();
+
+        if (focused.Length == 0)
+        {
+            throw new InvalidOperationException("One or more selected CV sections were not found.");
+        }
+
+        return current with { Sections = focused };
+    }
+
     private static string BuildFocusSectionsText(
         CvStructuredDocumentDto current,
         IReadOnlyList<Guid>? focusSectionIds)
@@ -121,7 +146,10 @@ public sealed class GoogleAiCvStructuredUpdateClient(
         var sectionsById = current.Sections.ToDictionary((section) => section.Id);
         var lines = new List<string>
         {
-            "Focus sections (apply instructions primarily to these; keep all other sections unchanged unless the instruction explicitly requires broader edits). Lead with the human heading; sectionId is for targeting only — do not echo ids into headings, changeBullets, or other user-facing strings:"
+            "Scope: focus sections only. The payload contains ONLY these sections.",
+            "Return ONLY these sections. Preserve sectionId/entry ids.",
+            "Do not blank dateRange or employer subtitle.",
+            "changeBullets must describe only real text edits you made (or [] if unchanged)."
         };
 
         foreach (var sectionId in focusSectionIds)

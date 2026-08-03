@@ -1,0 +1,26 @@
+task_id: settings-oauth-explain-ux-2026-08-03
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-03T13:00:00Z"
+summary: >-
+  Settings Integrations explain UX: Interview Prep-style hover/focus popovers
+  on Connect / Refresh / Disconnect; copy matrix for Calendar, GitHub, and
+  Gmail (Gmail-only mailbox); empty/partial connect UIs unified on
+  provider-action cards. No API changes.
+agents:
+  - principal-software-architect
+  - ui-ux-designer
+  - frontend-engineer
+artifacts:
+  - frontend/applyvault-jobs-ui/src/app/features/settings/pages/user-settings-page/user-settings-page.component.ts
+  - frontend/applyvault-jobs-ui/src/app/features/settings/pages/user-settings-page/user-settings-page.component.html
+  - frontend/applyvault-jobs-ui/src/app/features/settings/pages/user-settings-page/user-settings-page.component.scss
+  - agent-system/handoffs/archive/settings-oauth-explain-ux-2026-08-03/ux-settings-oauth-explain.md
+limitations:
+  - Visual browser smoke not run in this operate pass; confirm hover/focus/suppress on /settings.
+  - Builds and Angular specs not run (no-automatic-builds / no-automatic-tests).
+  - Existing settings page specs may need help-wrap / click-signature updates if CI covers them.
+  - AskQuestion tool unavailable; entry used option D from concrete user request.
+residual_risks:
+  - Dense mobile: popovers may cover nearby CTAs (width capped).
+  - Connection-list overflow set visible for disconnect tooltips.
+github_issues: []

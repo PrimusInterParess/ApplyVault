@@ -3,7 +3,8 @@
     <p class="settings-page__eyebrow">User settings</p>
     <h1>Integrations</h1>
     <p class="settings-page__subtitle">
-      Connect calendar, GitHub, and Gmail for interview scheduling, portfolio sync, and status updates.
+      Connect calendar, GitHub, and Gmail so ApplyVault can schedule interviews, pull portfolio
+      projects, and notice status emails for your saved jobs.
     </p>
   </section>
 
@@ -12,7 +13,7 @@
       <div class="settings-page__section-intro">
         <div class="settings-page__section-title-row">
           <div>
-            <p class="settings-page__label">Calendar providers</p>
+            <p class="settings-page__label">Calendar</p>
             <h2 id="calendar-settings-heading">Connections</h2>
           </div>
           <span
@@ -24,18 +25,33 @@
           </span>
         </div>
         <p class="settings-page__muted">
-          Add or remove the accounts that appear when you create interview events from saved jobs.
+          Connect Google Calendar and/or Microsoft Outlook calendar. ApplyVault uses these accounts
+          when you create interview events from saved jobs.
         </p>
       </div>
 
-      <button
-        type="button"
-        class="settings-page__secondary-action"
-        [disabled]="calendarConnections.loading()"
-        [attr.aria-busy]="calendarConnections.loading()"
-        (click)="calendarConnections.load()">
-        {{ calendarConnections.loading() ? 'Refreshing...' : 'Refresh' }}
-      </button>
+      <div
+        class="settings-page__help-wrap"
+        [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('calendar:refresh')"
+        (mouseleave)="onHelpMouseLeave('calendar:refresh')">
+        <button
+          type="button"
+          class="settings-page__secondary-action"
+          [disabled]="calendarConnections.loading()"
+          [attr.aria-busy]="calendarConnections.loading()"
+          [attr.aria-describedby]="helpId('calendar:refresh')"
+          (click)="onCalendarRefresh($event)">
+          {{ calendarConnections.loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+        <div
+          class="settings-page__help-popover settings-page__help-popover--end"
+          role="tooltip"
+          [id]="helpId('calendar:refresh')">
+          <p class="settings-page__help-popover-title">{{ helpCopyFor('calendar:refresh').title }}</p>
+          <p class="settings-page__help-popover-lead">{{ helpCopyFor('calendar:refresh').lead }}</p>
+          <p>{{ helpCopyFor('calendar:refresh').detail }}</p>
+        </div>
+      </div>
     </div>
 
     @if (calendarConnections.error(); as errorMessage) {
@@ -57,140 +73,253 @@
           </div>
         }
       </div>
-    } @else if (calendarConnections.connections().length === 0) {
-      <div class="settings-page__empty">
-        <h3>No providers connected</h3>
-        <p class="settings-page__muted">
-          Connect Google or Microsoft to make interview event sync available in the jobs workspace.
-        </p>
-        <div class="settings-page__provider-actions">
-          <button
-            type="button"
-            class="settings-page__provider-action"
-            [disabled]="calendarConnections.connectingProvider() === 'google'"
-            (click)="calendarConnections.connect('google')">
-            <span class="settings-page__provider-badge settings-page__provider-badge--google" aria-hidden="true">
-              {{ providerInitial('google') }}
-            </span>
-            <span class="settings-page__provider-action-copy">
-              <strong>{{ providerLabel('google') }}</strong>
-              <span class="settings-page__muted">Calendar for interview events</span>
-            </span>
-            <span class="settings-page__provider-action-label">
-              {{
-                calendarConnections.connectingProvider() === 'google'
-                  ? 'Connecting...'
-                  : 'Connect'
-              }}
-            </span>
-          </button>
-          <button
-            type="button"
-            class="settings-page__provider-action"
-            [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
-            (click)="calendarConnections.connect('microsoft')">
-            <span class="settings-page__provider-badge settings-page__provider-badge--microsoft" aria-hidden="true">
-              {{ providerInitial('microsoft') }}
-            </span>
-            <span class="settings-page__provider-action-copy">
-              <strong>{{ providerLabel('microsoft') }}</strong>
-              <span class="settings-page__muted">Calendar for interview events</span>
-            </span>
-            <span class="settings-page__provider-action-label">
-              {{
-                calendarConnections.connectingProvider() === 'microsoft'
-                  ? 'Connecting...'
-                  : 'Connect'
-              }}
-            </span>
-          </button>
-        </div>
-      </div>
     } @else {
-      <div class="settings-page__connect-actions">
-        <button
-          type="button"
-          class="settings-page__primary-action"
-          [class.settings-page__secondary-action]="isCalendarProviderConnected('google')"
-          [disabled]="
-            isCalendarProviderConnected('google') ||
-            calendarConnections.connectingProvider() === 'google'
-          "
-          (click)="calendarConnections.connect('google')">
-          {{
-            isCalendarProviderConnected('google')
-              ? 'Google connected'
-              : calendarConnections.connectingProvider() === 'google'
-                ? 'Connecting Google...'
-                : 'Connect Google'
-          }}
-        </button>
-        <button
-          type="button"
-          class="settings-page__primary-action"
-          [class.settings-page__secondary-action]="isCalendarProviderConnected('microsoft')"
-          [disabled]="
-            isCalendarProviderConnected('microsoft') ||
-            calendarConnections.connectingProvider() === 'microsoft'
-          "
-          (click)="calendarConnections.connect('microsoft')">
-          {{
-            isCalendarProviderConnected('microsoft')
-              ? 'Microsoft connected'
-              : calendarConnections.connectingProvider() === 'microsoft'
-                ? 'Connecting Microsoft...'
-                : 'Connect Microsoft'
-          }}
-        </button>
-      </div>
-
-      <ul class="settings-page__connection-list">
-        @for (connection of calendarConnections.connections(); track connection.id) {
-          <li class="settings-page__connection-row">
-            <div class="settings-page__connection-main">
-              <span [class]="providerBadgeClass(connection.provider)" aria-hidden="true">
-                {{ providerInitial(connection.provider) }}
-              </span>
-              <div class="settings-page__connection-copy">
-                <div class="settings-page__connection-title-row">
-                  <strong>{{ providerLabel(connection.provider) }}</strong>
-                  @if (expiryPresentation(connection.expiresAt); as expiryStatus) {
-                    <span
-                      class="settings-page__status-chip settings-page__status-chip--compact"
-                      [class.settings-page__status-chip--warning]="expiryStatus.variant === 'warning'"
-                      [class.settings-page__status-chip--danger]="expiryStatus.variant === 'danger'">
-                      {{ expiryStatus.label }}
-                    </span>
-                  } @else {
-                    <span class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
-                      Connected
-                    </span>
-                  }
-                </div>
-                <p>{{ connectionDisplayName(connection) }}</p>
-                <p class="settings-page__meta">
-                  Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
-                  @if (connection.expiresAt) {
-                    · Expires {{ connection.expiresAt | date: 'MMM d, y, h:mm a' }}
-                  }
+      @if (calendarConnections.connections().length === 0) {
+        <div class="settings-page__empty">
+          <h3>No calendar connected</h3>
+          <p class="settings-page__muted">
+            Connect at least one calendar to schedule interview events from the jobs workspace.
+          </p>
+          <div class="settings-page__provider-actions">
+            <div
+              class="settings-page__help-wrap settings-page__help-wrap--block"
+              [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('calendar:connect:google')"
+              (mouseleave)="onHelpMouseLeave('calendar:connect:google')">
+              <button
+                type="button"
+                class="settings-page__provider-action"
+                [disabled]="calendarConnections.connectingProvider() === 'google'"
+                [attr.aria-describedby]="helpId('calendar:connect:google')"
+                (click)="onCalendarConnect('google', $event)">
+                <span class="settings-page__provider-badge settings-page__provider-badge--google" aria-hidden="true">
+                  {{ providerInitial('google') }}
+                </span>
+                <span class="settings-page__provider-action-copy">
+                  <strong>{{ providerLabel('google') }}</strong>
+                  <span class="settings-page__muted">Interview events on Google Calendar</span>
+                </span>
+                <span class="settings-page__provider-action-label">
+                  {{
+                    calendarConnections.connectingProvider() === 'google'
+                      ? 'Connecting...'
+                      : 'Connect'
+                  }}
+                </span>
+              </button>
+              <div
+                class="settings-page__help-popover"
+                role="tooltip"
+                [id]="helpId('calendar:connect:google')">
+                <p class="settings-page__help-popover-title">
+                  {{ helpCopyFor('calendar:connect:google').title }}
                 </p>
+                <p class="settings-page__help-popover-lead">
+                  {{ helpCopyFor('calendar:connect:google').lead }}
+                </p>
+                <p>{{ helpCopyFor('calendar:connect:google').detail }}</p>
               </div>
             </div>
-
-            <button
-              type="button"
-              class="settings-page__secondary-action settings-page__connection-action"
-              [disabled]="calendarConnections.disconnectingConnectionId() === connection.id"
-              (click)="beginDisconnectCalendar(connection.id, connection.provider)">
-              {{
-                calendarConnections.disconnectingConnectionId() === connection.id
-                  ? 'Disconnecting...'
-                  : 'Disconnect'
-              }}
-            </button>
-          </li>
+            <div
+              class="settings-page__help-wrap settings-page__help-wrap--block"
+              [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('calendar:connect:microsoft')"
+              (mouseleave)="onHelpMouseLeave('calendar:connect:microsoft')">
+              <button
+                type="button"
+                class="settings-page__provider-action"
+                [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
+                [attr.aria-describedby]="helpId('calendar:connect:microsoft')"
+                (click)="onCalendarConnect('microsoft', $event)">
+                <span
+                  class="settings-page__provider-badge settings-page__provider-badge--microsoft"
+                  aria-hidden="true">
+                  {{ providerInitial('microsoft') }}
+                </span>
+                <span class="settings-page__provider-action-copy">
+                  <strong>{{ providerLabel('microsoft') }}</strong>
+                  <span class="settings-page__muted">Interview events on Outlook calendar</span>
+                </span>
+                <span class="settings-page__provider-action-label">
+                  {{
+                    calendarConnections.connectingProvider() === 'microsoft'
+                      ? 'Connecting...'
+                      : 'Connect'
+                  }}
+                </span>
+              </button>
+              <div
+                class="settings-page__help-popover"
+                role="tooltip"
+                [id]="helpId('calendar:connect:microsoft')">
+                <p class="settings-page__help-popover-title">
+                  {{ helpCopyFor('calendar:connect:microsoft').title }}
+                </p>
+                <p class="settings-page__help-popover-lead">
+                  {{ helpCopyFor('calendar:connect:microsoft').lead }}
+                </p>
+                <p>{{ helpCopyFor('calendar:connect:microsoft').detail }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        @if (!isCalendarProviderConnected('google') || !isCalendarProviderConnected('microsoft')) {
+          <div class="settings-page__provider-actions settings-page__provider-actions--above-list">
+            @if (!isCalendarProviderConnected('google')) {
+              <div
+                class="settings-page__help-wrap settings-page__help-wrap--block"
+                [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('calendar:connect:google')"
+                (mouseleave)="onHelpMouseLeave('calendar:connect:google')">
+                <button
+                  type="button"
+                  class="settings-page__provider-action"
+                  [disabled]="calendarConnections.connectingProvider() === 'google'"
+                  [attr.aria-describedby]="helpId('calendar:connect:google')"
+                  (click)="onCalendarConnect('google', $event)">
+                  <span
+                    class="settings-page__provider-badge settings-page__provider-badge--google"
+                    aria-hidden="true">
+                    {{ providerInitial('google') }}
+                  </span>
+                  <span class="settings-page__provider-action-copy">
+                    <strong>{{ providerLabel('google') }}</strong>
+                    <span class="settings-page__muted">Interview events on Google Calendar</span>
+                  </span>
+                  <span class="settings-page__provider-action-label">
+                    {{
+                      calendarConnections.connectingProvider() === 'google'
+                        ? 'Connecting...'
+                        : 'Connect'
+                    }}
+                  </span>
+                </button>
+                <div
+                  class="settings-page__help-popover"
+                  role="tooltip"
+                  [id]="helpId('calendar:connect:google')">
+                  <p class="settings-page__help-popover-title">
+                    {{ helpCopyFor('calendar:connect:google').title }}
+                  </p>
+                  <p class="settings-page__help-popover-lead">
+                    {{ helpCopyFor('calendar:connect:google').lead }}
+                  </p>
+                  <p>{{ helpCopyFor('calendar:connect:google').detail }}</p>
+                </div>
+              </div>
+            }
+            @if (!isCalendarProviderConnected('microsoft')) {
+              <div
+                class="settings-page__help-wrap settings-page__help-wrap--block"
+                [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('calendar:connect:microsoft')"
+                (mouseleave)="onHelpMouseLeave('calendar:connect:microsoft')">
+                <button
+                  type="button"
+                  class="settings-page__provider-action"
+                  [disabled]="calendarConnections.connectingProvider() === 'microsoft'"
+                  [attr.aria-describedby]="helpId('calendar:connect:microsoft')"
+                  (click)="onCalendarConnect('microsoft', $event)">
+                  <span
+                    class="settings-page__provider-badge settings-page__provider-badge--microsoft"
+                    aria-hidden="true">
+                    {{ providerInitial('microsoft') }}
+                  </span>
+                  <span class="settings-page__provider-action-copy">
+                    <strong>{{ providerLabel('microsoft') }}</strong>
+                    <span class="settings-page__muted">Interview events on Outlook calendar</span>
+                  </span>
+                  <span class="settings-page__provider-action-label">
+                    {{
+                      calendarConnections.connectingProvider() === 'microsoft'
+                        ? 'Connecting...'
+                        : 'Connect'
+                    }}
+                  </span>
+                </button>
+                <div
+                  class="settings-page__help-popover"
+                  role="tooltip"
+                  [id]="helpId('calendar:connect:microsoft')">
+                  <p class="settings-page__help-popover-title">
+                    {{ helpCopyFor('calendar:connect:microsoft').title }}
+                  </p>
+                  <p class="settings-page__help-popover-lead">
+                    {{ helpCopyFor('calendar:connect:microsoft').lead }}
+                  </p>
+                  <p>{{ helpCopyFor('calendar:connect:microsoft').detail }}</p>
+                </div>
+              </div>
+            }
+          </div>
         }
-      </ul>
+
+        <ul class="settings-page__connection-list">
+          @for (connection of calendarConnections.connections(); track connection.id) {
+            <li class="settings-page__connection-row">
+              <div class="settings-page__connection-main">
+                <span [class]="providerBadgeClass(connection.provider)" aria-hidden="true">
+                  {{ providerInitial(connection.provider) }}
+                </span>
+                <div class="settings-page__connection-copy">
+                  <div class="settings-page__connection-title-row">
+                    <strong>{{ providerLabel(connection.provider) }}</strong>
+                    @if (expiryPresentation(connection.expiresAt); as expiryStatus) {
+                      <span
+                        class="settings-page__status-chip settings-page__status-chip--compact"
+                        [class.settings-page__status-chip--warning]="expiryStatus.variant === 'warning'"
+                        [class.settings-page__status-chip--danger]="expiryStatus.variant === 'danger'">
+                        {{ expiryStatus.label }}
+                      </span>
+                    } @else {
+                      <span
+                        class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
+                        Connected
+                      </span>
+                    }
+                  </div>
+                  <p>{{ connectionDisplayName(connection) }}</p>
+                  <p class="settings-page__meta">
+                    Connected {{ connection.createdAt | date: 'MMM d, y, h:mm a' }}
+                    @if (connection.expiresAt) {
+                      · Expires {{ connection.expiresAt | date: 'MMM d, y, h:mm a' }}
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="settings-page__help-wrap settings-page__help-wrap--action"
+                [class.settings-page__help-wrap--suppressed]="
+                  isHelpSuppressed('calendar:disconnect:' + connection.id)
+                "
+                (mouseleave)="onHelpMouseLeave('calendar:disconnect:' + connection.id)">
+                <button
+                  type="button"
+                  class="settings-page__secondary-action settings-page__connection-action"
+                  [disabled]="calendarConnections.disconnectingConnectionId() === connection.id"
+                  [attr.aria-describedby]="helpId('calendar:disconnect:' + connection.id)"
+                  (click)="beginDisconnectCalendar(connection.id, connection.provider, $event)">
+                  {{
+                    calendarConnections.disconnectingConnectionId() === connection.id
+                      ? 'Disconnecting...'
+                      : 'Disconnect'
+                  }}
+                </button>
+                <div
+                  class="settings-page__help-popover settings-page__help-popover--end"
+                  role="tooltip"
+                  [id]="helpId('calendar:disconnect:' + connection.id)">
+                  <p class="settings-page__help-popover-title">
+                    {{ helpCopyFor('calendar:disconnect:' + connection.id).title }}
+                  </p>
+                  <p class="settings-page__help-popover-lead">
+                    {{ helpCopyFor('calendar:disconnect:' + connection.id).lead }}
+                  </p>
+                  <p>{{ helpCopyFor('calendar:disconnect:' + connection.id).detail }}</p>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
     }
   </section>
 
@@ -199,7 +328,7 @@
       <div class="settings-page__section-intro">
         <div class="settings-page__section-title-row">
           <div>
-            <p class="settings-page__label">Portfolio sync</p>
+            <p class="settings-page__label">Portfolio</p>
             <h2 id="github-settings-heading">GitHub</h2>
           </div>
           <span
@@ -211,18 +340,33 @@
           </span>
         </div>
         <p class="settings-page__muted">
-          Connect GitHub to import repositories for your portfolio and future CV sections.
+          Connect GitHub so ApplyVault can read your profile and repositories for portfolio and CV
+          project sections.
         </p>
       </div>
 
-      <button
-        type="button"
-        class="settings-page__secondary-action"
-        [disabled]="gitHubConnections.loading()"
-        [attr.aria-busy]="gitHubConnections.loading()"
-        (click)="gitHubConnections.load()">
-        {{ gitHubConnections.loading() ? 'Refreshing...' : 'Refresh' }}
-      </button>
+      <div
+        class="settings-page__help-wrap"
+        [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('github:refresh')"
+        (mouseleave)="onHelpMouseLeave('github:refresh')">
+        <button
+          type="button"
+          class="settings-page__secondary-action"
+          [disabled]="gitHubConnections.loading()"
+          [attr.aria-busy]="gitHubConnections.loading()"
+          [attr.aria-describedby]="helpId('github:refresh')"
+          (click)="onGitHubRefresh($event)">
+          {{ gitHubConnections.loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+        <div
+          class="settings-page__help-popover settings-page__help-popover--end"
+          role="tooltip"
+          [id]="helpId('github:refresh')">
+          <p class="settings-page__help-popover-title">{{ helpCopyFor('github:refresh').title }}</p>
+          <p class="settings-page__help-popover-lead">{{ helpCopyFor('github:refresh').lead }}</p>
+          <p>{{ helpCopyFor('github:refresh').detail }}</p>
+        </div>
+      </div>
     </div>
 
     @if (gitHubConnections.error(); as errorMessage) {
@@ -248,25 +392,36 @@
       <div class="settings-page__empty">
         <h3>No GitHub account connected</h3>
         <p class="settings-page__muted">
-          Link GitHub so ApplyVault can read your repositories and help build your project portfolio.
+          Link GitHub to import repositories into your portfolio and future CV project sections.
         </p>
         <div class="settings-page__provider-actions">
-          <button
-            type="button"
-            class="settings-page__provider-action"
-            [disabled]="gitHubConnections.connecting()"
-            (click)="gitHubConnections.connect()">
-            <span class="settings-page__provider-badge settings-page__provider-badge--github" aria-hidden="true">
-              {{ providerInitial('github') }}
-            </span>
-            <span class="settings-page__provider-action-copy">
-              <strong>{{ providerLabel('github') }}</strong>
-              <span class="settings-page__muted">Repository and profile access</span>
-            </span>
-            <span class="settings-page__provider-action-label">
-              {{ gitHubConnections.connecting() ? 'Connecting...' : 'Connect' }}
-            </span>
-          </button>
+          <div
+            class="settings-page__help-wrap settings-page__help-wrap--block"
+            [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('github:connect')"
+            (mouseleave)="onHelpMouseLeave('github:connect')">
+            <button
+              type="button"
+              class="settings-page__provider-action"
+              [disabled]="gitHubConnections.connecting()"
+              [attr.aria-describedby]="helpId('github:connect')"
+              (click)="onGitHubConnect($event)">
+              <span class="settings-page__provider-badge settings-page__provider-badge--github" aria-hidden="true">
+                {{ providerInitial('github') }}
+              </span>
+              <span class="settings-page__provider-action-copy">
+                <strong>{{ providerLabel('github') }}</strong>
+                <span class="settings-page__muted">Repository and profile access</span>
+              </span>
+              <span class="settings-page__provider-action-label">
+                {{ gitHubConnections.connecting() ? 'Connecting...' : 'Connect' }}
+              </span>
+            </button>
+            <div class="settings-page__help-popover" role="tooltip" [id]="helpId('github:connect')">
+              <p class="settings-page__help-popover-title">{{ helpCopyFor('github:connect').title }}</p>
+              <p class="settings-page__help-popover-lead">{{ helpCopyFor('github:connect').lead }}</p>
+              <p>{{ helpCopyFor('github:connect').detail }}</p>
+            </div>
+          </div>
         </div>
       </div>
     } @else {
@@ -280,7 +435,8 @@
               <div class="settings-page__connection-copy">
                 <div class="settings-page__connection-title-row">
                   <strong>{{ connectionDisplayName(connection) }}</strong>
-                  <span class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
+                  <span
+                    class="settings-page__status-chip settings-page__status-chip--compact settings-page__status-chip--success">
                     Connected
                   </span>
                 </div>
@@ -291,17 +447,37 @@
               </div>
             </div>
 
-            <button
-              type="button"
-              class="settings-page__secondary-action settings-page__connection-action"
-              [disabled]="gitHubConnections.disconnectingConnectionId() === connection.id"
-              (click)="beginDisconnectGitHub(connection.id)">
-              {{
-                gitHubConnections.disconnectingConnectionId() === connection.id
-                  ? 'Disconnecting...'
-                  : 'Disconnect'
-              }}
-            </button>
+            <div
+              class="settings-page__help-wrap settings-page__help-wrap--action"
+              [class.settings-page__help-wrap--suppressed]="
+                isHelpSuppressed('github:disconnect:' + connection.id)
+              "
+              (mouseleave)="onHelpMouseLeave('github:disconnect:' + connection.id)">
+              <button
+                type="button"
+                class="settings-page__secondary-action settings-page__connection-action"
+                [disabled]="gitHubConnections.disconnectingConnectionId() === connection.id"
+                [attr.aria-describedby]="helpId('github:disconnect:' + connection.id)"
+                (click)="beginDisconnectGitHub(connection.id, $event)">
+                {{
+                  gitHubConnections.disconnectingConnectionId() === connection.id
+                    ? 'Disconnecting...'
+                    : 'Disconnect'
+                }}
+              </button>
+              <div
+                class="settings-page__help-popover settings-page__help-popover--end"
+                role="tooltip"
+                [id]="helpId('github:disconnect:' + connection.id)">
+                <p class="settings-page__help-popover-title">
+                  {{ helpCopyFor('github:disconnect:' + connection.id).title }}
+                </p>
+                <p class="settings-page__help-popover-lead">
+                  {{ helpCopyFor('github:disconnect:' + connection.id).lead }}
+                </p>
+                <p>{{ helpCopyFor('github:disconnect:' + connection.id).detail }}</p>
+              </div>
+            </div>
           </li>
         }
       </ul>
@@ -313,7 +489,7 @@
       <div class="settings-page__section-intro">
         <div class="settings-page__section-title-row">
           <div>
-            <p class="settings-page__label">Mailbox sync</p>
+            <p class="settings-page__label">Mailbox</p>
             <h2 id="mail-settings-heading">Gmail</h2>
           </div>
           <span
@@ -325,18 +501,34 @@
           </span>
         </div>
         <p class="settings-page__muted">
-          Connect Gmail to let the dashboard detect interview and rejection emails for saved jobs.
+          Connect Gmail for background email sync. ApplyVault looks for rejection and interview
+          messages related to your saved jobs. Gmail only — Outlook mailbox sync is not available
+          yet.
         </p>
       </div>
 
-      <button
-        type="button"
-        class="settings-page__secondary-action"
-        [disabled]="mailConnections.loading()"
-        [attr.aria-busy]="mailConnections.loading()"
-        (click)="mailConnections.load()">
-        {{ mailConnections.loading() ? 'Refreshing...' : 'Refresh' }}
-      </button>
+      <div
+        class="settings-page__help-wrap"
+        [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('mail:refresh')"
+        (mouseleave)="onHelpMouseLeave('mail:refresh')">
+        <button
+          type="button"
+          class="settings-page__secondary-action"
+          [disabled]="mailConnections.loading()"
+          [attr.aria-busy]="mailConnections.loading()"
+          [attr.aria-describedby]="helpId('mail:refresh')"
+          (click)="onMailRefresh($event)">
+          {{ mailConnections.loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+        <div
+          class="settings-page__help-popover settings-page__help-popover--end"
+          role="tooltip"
+          [id]="helpId('mail:refresh')">
+          <p class="settings-page__help-popover-title">{{ helpCopyFor('mail:refresh').title }}</p>
+          <p class="settings-page__help-popover-lead">{{ helpCopyFor('mail:refresh').lead }}</p>
+          <p>{{ helpCopyFor('mail:refresh').detail }}</p>
+        </div>
+      </div>
     </div>
 
     @if (mailConnections.error(); as errorMessage) {
@@ -362,45 +554,90 @@
       <div class="settings-page__empty">
         <h3>No Gmail mailbox connected</h3>
         <p class="settings-page__muted">
-          Connect Gmail to keep rejection and interview status changes in sync with your dashboard.
+          Connect Gmail to detect rejection and interview emails for saved jobs in the background.
         </p>
         <div class="settings-page__provider-actions">
-          <button
-            type="button"
-            class="settings-page__provider-action"
-            [disabled]="mailConnections.connectingProvider() === 'gmail'"
-            (click)="mailConnections.connect('gmail')">
-            <span class="settings-page__provider-badge settings-page__provider-badge--gmail" aria-hidden="true">
-              {{ providerInitial('gmail') }}
-            </span>
-            <span class="settings-page__provider-action-copy">
-              <strong>{{ providerLabel('gmail') }}</strong>
-              <span class="settings-page__muted">Interview and rejection email sync</span>
-            </span>
-            <span class="settings-page__provider-action-label">
-              {{
-                mailConnections.connectingProvider() === 'gmail'
-                  ? 'Connecting...'
-                  : 'Connect'
-              }}
-            </span>
-          </button>
+          <div
+            class="settings-page__help-wrap settings-page__help-wrap--block"
+            [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('mail:connect:gmail')"
+            (mouseleave)="onHelpMouseLeave('mail:connect:gmail')">
+            <button
+              type="button"
+              class="settings-page__provider-action"
+              [disabled]="mailConnections.connectingProvider() === 'gmail'"
+              [attr.aria-describedby]="helpId('mail:connect:gmail')"
+              (click)="onMailConnect($event)">
+              <span class="settings-page__provider-badge settings-page__provider-badge--gmail" aria-hidden="true">
+                {{ providerInitial('gmail') }}
+              </span>
+              <span class="settings-page__provider-action-copy">
+                <strong>{{ providerLabel('gmail') }}</strong>
+                <span class="settings-page__muted">Rejection and interview email sync</span>
+              </span>
+              <span class="settings-page__provider-action-label">
+                {{
+                  mailConnections.connectingProvider() === 'gmail'
+                    ? 'Connecting...'
+                    : 'Connect'
+                }}
+              </span>
+            </button>
+            <div
+              class="settings-page__help-popover"
+              role="tooltip"
+              [id]="helpId('mail:connect:gmail')">
+              <p class="settings-page__help-popover-title">
+                {{ helpCopyFor('mail:connect:gmail').title }}
+              </p>
+              <p class="settings-page__help-popover-lead">
+                {{ helpCopyFor('mail:connect:gmail').lead }}
+              </p>
+              <p>{{ helpCopyFor('mail:connect:gmail').detail }}</p>
+            </div>
+          </div>
         </div>
       </div>
     } @else {
       @if (!isMailProviderConnected('gmail')) {
-        <div class="settings-page__connect-actions">
-          <button
-            type="button"
-            class="settings-page__primary-action"
-            [disabled]="mailConnections.connectingProvider() === 'gmail'"
-            (click)="mailConnections.connect('gmail')">
-            {{
-              mailConnections.connectingProvider() === 'gmail'
-                ? 'Connecting Gmail...'
-                : 'Connect Gmail'
-            }}
-          </button>
+        <div class="settings-page__provider-actions settings-page__provider-actions--above-list">
+          <div
+            class="settings-page__help-wrap settings-page__help-wrap--block"
+            [class.settings-page__help-wrap--suppressed]="isHelpSuppressed('mail:connect:gmail')"
+            (mouseleave)="onHelpMouseLeave('mail:connect:gmail')">
+            <button
+              type="button"
+              class="settings-page__provider-action"
+              [disabled]="mailConnections.connectingProvider() === 'gmail'"
+              [attr.aria-describedby]="helpId('mail:connect:gmail')"
+              (click)="onMailConnect($event)">
+              <span class="settings-page__provider-badge settings-page__provider-badge--gmail" aria-hidden="true">
+                {{ providerInitial('gmail') }}
+              </span>
+              <span class="settings-page__provider-action-copy">
+                <strong>{{ providerLabel('gmail') }}</strong>
+                <span class="settings-page__muted">Rejection and interview email sync</span>
+              </span>
+              <span class="settings-page__provider-action-label">
+                {{
+                  mailConnections.connectingProvider() === 'gmail'
+                    ? 'Connecting...'
+                    : 'Connect'
+                }}
+              </span>
+            </button>
+            <div
+              class="settings-page__help-popover"
+              role="tooltip"
+              [id]="helpId('mail:connect:gmail')">
+              <p class="settings-page__help-popover-title">
+                {{ helpCopyFor('mail:connect:gmail').title }}
+              </p>
+              <p class="settings-page__help-popover-lead">
+                {{ helpCopyFor('mail:connect:gmail').lead }}
+              </p>
+              <p>{{ helpCopyFor('mail:connect:gmail').detail }}</p>
+            </div>
+          </div>
         </div>
       }
 
@@ -439,17 +676,37 @@
               </div>
             </div>
 
-            <button
-              type="button"
-              class="settings-page__secondary-action settings-page__connection-action"
-              [disabled]="mailConnections.disconnectingConnectionId() === connection.id"
-              (click)="beginDisconnectMail(connection.id)">
-              {{
-                mailConnections.disconnectingConnectionId() === connection.id
-                  ? 'Disconnecting...'
-                  : 'Disconnect'
-              }}
-            </button>
+            <div
+              class="settings-page__help-wrap settings-page__help-wrap--action"
+              [class.settings-page__help-wrap--suppressed]="
+                isHelpSuppressed('mail:disconnect:' + connection.id)
+              "
+              (mouseleave)="onHelpMouseLeave('mail:disconnect:' + connection.id)">
+              <button
+                type="button"
+                class="settings-page__secondary-action settings-page__connection-action"
+                [disabled]="mailConnections.disconnectingConnectionId() === connection.id"
+                [attr.aria-describedby]="helpId('mail:disconnect:' + connection.id)"
+                (click)="beginDisconnectMail(connection.id, $event)">
+                {{
+                  mailConnections.disconnectingConnectionId() === connection.id
+                    ? 'Disconnecting...'
+                    : 'Disconnect'
+                }}
+              </button>
+              <div
+                class="settings-page__help-popover settings-page__help-popover--end"
+                role="tooltip"
+                [id]="helpId('mail:disconnect:' + connection.id)">
+                <p class="settings-page__help-popover-title">
+                  {{ helpCopyFor('mail:disconnect:' + connection.id).title }}
+                </p>
+                <p class="settings-page__help-popover-lead">
+                  {{ helpCopyFor('mail:disconnect:' + connection.id).lead }}
+                </p>
+                <p>{{ helpCopyFor('mail:disconnect:' + connection.id).detail }}</p>
+              </div>
+            </div>
           </li>
         }
       </ul>

@@ -27,6 +27,81 @@ interface DisconnectConfirmTarget {
   readonly provider?: string;
 }
 
+interface SettingsHelpCopy {
+  readonly title: string;
+  readonly lead: string;
+  readonly detail: string;
+}
+
+type SettingsHelpKey = string;
+
+const SETTINGS_HELP_COPY: Readonly<Record<string, SettingsHelpCopy>> = {
+  'calendar:connect:google': {
+    title: 'Google Calendar',
+    lead: 'Create interview events on Google Calendar',
+    detail:
+      'Opens Google sign-in so ApplyVault can add interview events from your saved jobs to this calendar account.'
+  },
+  'calendar:connect:microsoft': {
+    title: 'Microsoft Calendar',
+    lead: 'Create interview events on Outlook calendar',
+    detail:
+      'Opens Microsoft sign-in so ApplyVault can add interview events from your saved jobs to this Outlook calendar account.'
+  },
+  'calendar:refresh': {
+    title: 'Refresh calendars',
+    lead: 'Reload connected calendar accounts',
+    detail:
+      'Fetches the latest connection status and expiry for Google and Microsoft calendars. Does not create events.'
+  },
+  'calendar:disconnect': {
+    title: 'Disconnect calendar',
+    lead: 'Stop using this calendar for interview events',
+    detail: 'Removes this account from ApplyVault. You can reconnect later. Confirm in the next step.'
+  },
+  'github:connect': {
+    title: 'GitHub',
+    lead: 'Repository and profile access',
+    detail:
+      'Opens GitHub sign-in so ApplyVault can read your public profile and repos for portfolio / CV projects.'
+  },
+  'github:refresh': {
+    title: 'Refresh GitHub',
+    lead: 'Reload GitHub connection',
+    detail:
+      'Fetches the latest GitHub connection status. Does not change which repos are imported.'
+  },
+  'github:disconnect': {
+    title: 'Disconnect GitHub',
+    lead: 'Remove GitHub from ApplyVault',
+    detail:
+      'Stops repo/profile access. Synced projects will be removed from ApplyVault. Confirm in the next step.'
+  },
+  'mail:connect:gmail': {
+    title: 'Gmail',
+    lead: 'Background sync for job status emails',
+    detail:
+      'Opens Google sign-in for Gmail so ApplyVault can detect rejection and interview emails about your saved jobs. Does not send mail. Outlook mailbox is not supported.'
+  },
+  'mail:refresh': {
+    title: 'Refresh Gmail',
+    lead: 'Reload mailbox connection',
+    detail: 'Fetches the latest Gmail connection and sync status. Does not send email.'
+  },
+  'mail:disconnect': {
+    title: 'Disconnect Gmail',
+    lead: 'Stop mailbox sync',
+    detail:
+      'Stops interview/rejection email detection for saved jobs. Confirm in the next step.'
+  }
+};
+
+const EMPTY_HELP_COPY: SettingsHelpCopy = {
+  title: '',
+  lead: '',
+  detail: ''
+};
+
 @Component({
   selector: 'app-user-settings-page',
   standalone: true,
@@ -40,6 +115,9 @@ export class UserSettingsPageComponent {
   protected readonly mailConnections = inject(MailConnectionsFacade);
   protected readonly skeletonRowIndexes = [0, 1, 2] as const;
   protected readonly disconnectConfirm = signal<DisconnectConfirmTarget | null>(null);
+
+  /** While set, hide that control's hover/focus popover until the pointer leaves. */
+  protected readonly suppressedHelpKey = signal<SettingsHelpKey | null>(null);
 
   protected isCalendarProviderConnected(provider: string): boolean {
     const normalizedProvider = provider.trim().toLowerCase();
@@ -219,7 +297,60 @@ export class UserSettingsPageComponent {
       .replace(/\b\w/g, (character) => character.toUpperCase());
   }
 
-  protected beginDisconnectCalendar(connectionId: string, provider: string): void {
+  protected helpId(key: SettingsHelpKey): string {
+    return `settings-help-${key.replace(/:/g, '-')}`;
+  }
+
+  protected helpCopyFor(key: SettingsHelpKey): SettingsHelpCopy {
+    const normalizedKey = key.replace(/:disconnect:[^:]+$/, ':disconnect');
+    return SETTINGS_HELP_COPY[normalizedKey] ?? SETTINGS_HELP_COPY[key] ?? EMPTY_HELP_COPY;
+  }
+
+  protected isHelpSuppressed(key: SettingsHelpKey): boolean {
+    return this.suppressedHelpKey() === key;
+  }
+
+  protected onHelpMouseLeave(key: SettingsHelpKey): void {
+    if (this.suppressedHelpKey() === key) {
+      this.suppressedHelpKey.set(null);
+    }
+  }
+
+  protected onCalendarConnect(provider: 'google' | 'microsoft', event: Event): void {
+    this.dismissHelp(`calendar:connect:${provider}`, event);
+    this.calendarConnections.connect(provider);
+  }
+
+  protected onCalendarRefresh(event: Event): void {
+    this.dismissHelp('calendar:refresh', event);
+    this.calendarConnections.load();
+  }
+
+  protected onGitHubConnect(event: Event): void {
+    this.dismissHelp('github:connect', event);
+    this.gitHubConnections.connect();
+  }
+
+  protected onGitHubRefresh(event: Event): void {
+    this.dismissHelp('github:refresh', event);
+    this.gitHubConnections.load();
+  }
+
+  protected onMailConnect(event: Event): void {
+    this.dismissHelp('mail:connect:gmail', event);
+    this.mailConnections.connect('gmail');
+  }
+
+  protected onMailRefresh(event: Event): void {
+    this.dismissHelp('mail:refresh', event);
+    this.mailConnections.load();
+  }
+
+  protected beginDisconnectCalendar(connectionId: string, provider: string, event?: Event): void {
+    if (event) {
+      this.dismissHelp(`calendar:disconnect:${connectionId}`, event);
+    }
+
     this.disconnectConfirm.set({
       kind: 'calendar',
       connectionId,
@@ -227,14 +358,22 @@ export class UserSettingsPageComponent {
     });
   }
 
-  protected beginDisconnectMail(connectionId: string): void {
+  protected beginDisconnectMail(connectionId: string, event?: Event): void {
+    if (event) {
+      this.dismissHelp(`mail:disconnect:${connectionId}`, event);
+    }
+
     this.disconnectConfirm.set({
       kind: 'mail',
       connectionId
     });
   }
 
-  protected beginDisconnectGitHub(connectionId: string): void {
+  protected beginDisconnectGitHub(connectionId: string, event?: Event): void {
+    if (event) {
+      this.dismissHelp(`github:disconnect:${connectionId}`, event);
+    }
+
     this.disconnectConfirm.set({
       kind: 'github',
       connectionId
@@ -279,6 +418,15 @@ export class UserSettingsPageComponent {
 
   protected cancelDisconnectConfirm(): void {
     this.disconnectConfirm.set(null);
+  }
+
+  private dismissHelp(key: SettingsHelpKey, event: Event): void {
+    this.suppressedHelpKey.set(key);
+
+    const target = event.currentTarget;
+    if (target instanceof HTMLElement) {
+      target.blur();
+    }
   }
 
   private isMailSyncIssue(syncStatus: string | null | undefined): boolean {

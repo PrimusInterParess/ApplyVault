@@ -2,6 +2,7 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests;
@@ -174,10 +175,20 @@ public sealed class InterviewPrepServiceTests
         IInterviewPrepAiClient aiClient,
         InterviewPrepAiOptions? options = null) =>
         new(
+            CreateDbContext(),
             structuredDocumentService,
             scrapeResultStore,
             aiClient,
             Microsoft.Extensions.Options.Options.Create(options ?? new InterviewPrepAiOptions()));
+
+    private static ApplyVaultDbContext CreateDbContext()
+    {
+        var dbOptions = new DbContextOptionsBuilder<ApplyVaultDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+
+        return new ApplyVaultDbContext(dbOptions);
+    }
 
     private static AppUserEntity CreateUser() =>
         new()

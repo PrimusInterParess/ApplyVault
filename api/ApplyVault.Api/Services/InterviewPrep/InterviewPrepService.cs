@@ -188,6 +188,13 @@ public sealed class InterviewPrepService(
         var languageMix = ResolveLanguageMix(request.LanguageMix, options.DefaultLanguageMix);
         var hiringMarket = ResolveHiringMarket(request.HiringMarket, options.DefaultHiringMarket);
         var userMessage = CapUserMessage(request.UserMessage, options.MaxUserMessageChars);
+        // Digest from full client priorTurns before MaxPriorTurns truncate (ADR-0017).
+        var alreadyAsked = InterviewPrepAlreadyAskedDigest.Build(
+            request.PriorTurns,
+            options.MaxPriorTurns,
+            options.MaxAlreadyAskedItems,
+            options.MaxAlreadyAskedItemChars,
+            options.MaxAlreadyAskedTotalChars);
         var priorTurns = NormalizePriorTurns(
             request.PriorTurns,
             options.MaxPriorTurns,
@@ -208,7 +215,8 @@ public sealed class InterviewPrepService(
                 languageMix,
                 userMessage,
                 priorTurns,
-                hiringMarket),
+                hiringMarket,
+                alreadyAsked),
             cancellationToken);
 
         return MapResponse(aiResult, sessionId: null);
@@ -248,6 +256,14 @@ public sealed class InterviewPrepService(
             .OrderBy((message) => message.Sequence)
             .Select((message) => new InterviewPrepPriorTurnDto(message.Role, message.Text, message.Phase))
             .ToArray();
+        // Digest from full session transcript before MaxPriorTurns truncate (ADR-0017).
+        // modelAnswer is never mapped into priorTurnDtos (ADR-0015).
+        var alreadyAsked = InterviewPrepAlreadyAskedDigest.Build(
+            priorTurnDtos,
+            options.MaxPriorTurns,
+            options.MaxAlreadyAskedItems,
+            options.MaxAlreadyAskedItemChars,
+            options.MaxAlreadyAskedTotalChars);
         var priorTurns = NormalizePriorTurns(
             priorTurnDtos,
             options.MaxPriorTurns,
@@ -268,7 +284,8 @@ public sealed class InterviewPrepService(
                 session.LanguageMix,
                 userMessage,
                 priorTurns,
-                session.HiringMarket),
+                session.HiringMarket,
+                alreadyAsked),
             cancellationToken);
 
         var response = MapResponse(aiResult, session.Id);

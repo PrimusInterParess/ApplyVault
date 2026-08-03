@@ -67,6 +67,13 @@ public sealed class InterviewPrepAiOptions
           scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:
           clarity, evidence, structure, role_fit, language. Each dimension needs score (0–100) and note.
         - Never return a mutated CV or claim durable session storage. This turn is ephemeral.
+
+        Anti-repeat (mandatory):
+        - Do NOT re-ask a question that is substantially the same as any item in the already-asked
+          list or recent priorTurns.
+        - Instead deepen the current thread, reframe from a new angle, advance to a new topic within
+          the current mode, or move toward debrief when appropriate.
+        - Stay profession-agnostic; never use hardcoded question banks.
         """;
 
     public const string DefaultUserPromptTemplate =
@@ -79,6 +86,8 @@ public sealed class InterviewPrepAiOptions
         {{userMessage}}
         Prior turns JSON:
         {{priorTurnsJson}}
+        Already-asked questions JSON (earlier coach interview questions outside the prior-turns window; [] when none):
+        {{alreadyAskedJson}}
         Optional job context JSON (null when absent):
         {{jobJson}}
         Structured CV JSON:
@@ -106,6 +115,23 @@ public sealed class InterviewPrepAiOptions
     /// </summary>
     [Range(2, 2_000)]
     public int MaxMessagesPerSession { get; set; } = 200;
+
+    /// <summary>
+    /// Max coach-interview texts in the already-asked digest (ADR-0017).
+    /// Digest prefers turns outside the retained MaxPriorTurns window.
+    /// </summary>
+    [Range(0, 200)]
+    public int MaxAlreadyAskedItems { get; set; } = 40;
+
+    /// <summary>Max characters per already-asked digest item (ADR-0017).</summary>
+    [Range(1, 2_000)]
+    public int MaxAlreadyAskedItemChars { get; set; } = 240;
+
+    /// <summary>
+    /// Hard stop on serialized already-asked JSON array length (ADR-0017).
+    /// </summary>
+    [Range(0, 32_000)]
+    public int MaxAlreadyAskedTotalChars { get; set; } = 4_000;
 
     /// <summary>Default when request omits languageMix. Frozen values: en | da | mixed.</summary>
     [Required]

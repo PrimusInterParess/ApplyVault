@@ -1,0 +1,34 @@
+schema_version: "1.0.0"
+task_id: interview-prep-anti-repeat-2026-08-03
+closed_at: "2026-08-03"
+integration_status: REQUEST_COMPLETE_WITH_DOCUMENTED_LIMITATIONS
+parent_request: >
+  Long Interview Prep sessions (~MaxMessagesPerSession=200) re-asked the same
+  coach questions after MaxPriorTurns=12 dropped them from Gemini context.
+final_status_notes: >
+  ADR-0017 Accepted. Server-built already-asked digest (outside MaxPriorTurns
+  window) injected via {{alreadyAskedJson}}; system prompt anti-repeat rule;
+  options MaxAlreadyAskedItems/ItemChars/TotalChars (40/240/4000). CR-AR-01
+  fixed (newest-first total-char fill). No public API/FE change. Code-review
+  APPROVE WITH NOTES (nits CR-AR-02/03 deferred).
+durable_artifacts:
+  - docs/adr/0017-interview-prep-already-asked-digest.md
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAlreadyAskedDigest.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepAiContracts.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/GoogleAiInterviewPrepClient.cs
+  - api/ApplyVault.Api/appsettings.example.json
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - ai-llm-engineer
+  - code-review-engineer
+limitations:
+  - No new unit tests for digest/prompt wiring (operator no-automatic-tests policy)
+  - "Substantially the same" question match is model-judged
+  - Custom InterviewPrepAi SystemPrompt/UserPromptTemplate overrides must merge anti-repeat rule and {{alreadyAskedJson}}
+  - Ephemeral clients that truncate priorTurns before send cannot recover dropped questions (accepted ADR-0017)
+  - CR-AR-02 stale "ephemeral" system-prompt line deferred; CR-AR-03 O(n²) serialize nit deferred
+pr_links: []
+issue_links: []

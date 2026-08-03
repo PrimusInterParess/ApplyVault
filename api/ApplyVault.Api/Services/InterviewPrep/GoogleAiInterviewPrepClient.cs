@@ -120,6 +120,9 @@ public sealed class GoogleAiInterviewPrepClient(
             ? "null"
             : JsonSerializer.Serialize(request.Job, SerializerOptions);
         var priorTurnsJson = JsonSerializer.Serialize(priorTurns, SerializerOptions);
+        var alreadyAskedJson = JsonSerializer.Serialize(
+            request.AlreadyAsked ?? Array.Empty<string>(),
+            SerializerOptions);
 
         return new
         {
@@ -141,6 +144,7 @@ public sealed class GoogleAiInterviewPrepClient(
                                 .Replace("{{hiringMarket}}", hiringMarket, StringComparison.Ordinal)
                                 .Replace("{{userMessage}}", userMessage, StringComparison.Ordinal)
                                 .Replace("{{priorTurnsJson}}", priorTurnsJson, StringComparison.Ordinal)
+                                .Replace("{{alreadyAskedJson}}", alreadyAskedJson, StringComparison.Ordinal)
                                 .Replace("{{jobJson}}", jobJson, StringComparison.Ordinal)
                                 .Replace("{{cvJson}}", cvJson, StringComparison.Ordinal)
                         }

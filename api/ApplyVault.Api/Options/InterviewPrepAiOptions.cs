@@ -52,6 +52,16 @@ public sealed class InterviewPrepAiOptions
           (e.g. structure cues, what to emphasize, a clarifying angle). 2–4 items when phase is interview
           and coachMessage asks or continues a question. Do not wait for the candidate to answer first.
           Use [] only in debrief, or when no useful tip applies.
+        - modelAnswer: one concise sample spoken answer for the CURRENT coach question (coaching aid only).
+          Distinct from followUps — tips are brief structure/angle cues; modelAnswer is a short spoken sample
+          (one short paragraph / STAR-like when behavioral), not an essay and not a second chat message.
+          Prefer a non-null modelAnswer when phase is interview and coachMessage poses or continues an
+          answerable question. Must be null when phase is debrief. May be null on setup / acknowledgment /
+          score-only turns with no answerable question, or when no useful sample exists.
+          Keep the sample profession-agnostic and grounded in Structured CV ± optional job + inference;
+          honor languageMix and hiring-market bias rules above. Never invent employers, credentials, visa,
+          or work-permit facts. Never put the full sample into coachMessage or followUps — keep the question
+          in coachMessage and tips in followUps only.
         - debriefBullets is a string array (use [] when none / not in debrief).
         - scorecard may be null on setup / pure interview turns. When scoring an answer or ending a round, return
           scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:

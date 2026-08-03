@@ -46,6 +46,12 @@ export function normalizeTurnResponse(
       : [],
     debriefBullets: Array.isArray(response.debriefBullets)
       ? response.debriefBullets.map((item) => item?.trim() ?? '').filter((item) => item.length > 0)
-      : []
+      : [],
+    modelAnswer: normalizeOptionalText(response.modelAnswer)
   };
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed.length > 0 ? trimmed : null;
 }

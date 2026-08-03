@@ -90,6 +90,8 @@ export interface InterviewPrepTurnResponse {
   readonly scorecard: InterviewPrepScorecard | null;
   readonly followUps: readonly string[];
   readonly debriefBullets: readonly string[];
+  /** Sample spoken answer for the current coach question; null when unused / debrief. */
+  readonly modelAnswer: string | null;
 }
 
 /** Display transcript row (client-held; not persisted). */

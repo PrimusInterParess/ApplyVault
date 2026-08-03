@@ -170,6 +170,7 @@ public sealed class GoogleAiInterviewPrepClient(
         var scorecard = response.Scorecard is null
             ? null
             : NormalizeScorecard(response.Scorecard);
+        var modelAnswer = NormalizeModelAnswer(response.ModelAnswer, phase);
 
         return new InterviewPrepAiTurnResult(
             phase,
@@ -177,7 +178,23 @@ public sealed class GoogleAiInterviewPrepClient(
             response.CoachMessage.Trim(),
             scorecard,
             followUps,
-            debriefBullets);
+            debriefBullets,
+            modelAnswer);
+    }
+
+    private static string? NormalizeModelAnswer(string? modelAnswer, string phase)
+    {
+        if (string.Equals(phase, "debrief", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(modelAnswer))
+        {
+            return null;
+        }
+
+        return Truncate(modelAnswer.Trim(), 4_000);
     }
 
     internal static InterviewPrepAiScorecard NormalizeScorecard(InterviewPrepAiRawScorecard scorecard)

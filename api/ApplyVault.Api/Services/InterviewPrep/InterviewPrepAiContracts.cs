@@ -46,7 +46,8 @@ public sealed record InterviewPrepAiTurnResult(
     string CoachMessage,
     InterviewPrepAiScorecard? Scorecard,
     IReadOnlyList<string> FollowUps,
-    IReadOnlyList<string> DebriefBullets);
+    IReadOnlyList<string> DebriefBullets,
+    string? ModelAnswer = null);
 
 public sealed record InterviewPrepAiInference(
     string Role,
@@ -70,7 +71,8 @@ public sealed record InterviewPrepAiRawResponse(
     string? CoachMessage,
     InterviewPrepAiRawScorecard? Scorecard,
     IReadOnlyList<string>? FollowUps,
-    IReadOnlyList<string>? DebriefBullets);
+    IReadOnlyList<string>? DebriefBullets,
+    string? ModelAnswer = null);
 
 public sealed record InterviewPrepAiRawInference(
     string? Role,

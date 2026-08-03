@@ -66,12 +66,14 @@ contracts:
     description: >
       Ephemeral profession-agnostic Interview Prep coach turns
       (POST /api/interview-prep/turns). Design locked ADR-0012; optional
-      hiringMarket general|dk per ADR-0013 (IP-DK-05).
+      hiringMarket general|dk per ADR-0013 (IP-DK-05); additive nullable
+      modelAnswer on turn response per ADR-0015.
     owner: backend-engineer
     secondary: ai-llm-engineer
     evidence: >
       docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md;
       docs/adr/0013-interview-prep-hiring-market.md;
+      docs/adr/0015-interview-prep-model-answer-reveal.md;
       agent-system/handoffs/archive/interview-prep-ip-01-2026-08-02/frozen-contracts.md;
       api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
       api/ApplyVault.Api/Services/InterviewPrep/

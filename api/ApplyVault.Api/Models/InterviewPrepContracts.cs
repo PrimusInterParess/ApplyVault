@@ -25,7 +25,8 @@ public sealed record InterviewPrepTurnResponseDto(
     string CoachMessage,
     InterviewPrepScorecardDto? Scorecard,
     IReadOnlyList<string> FollowUps,
-    IReadOnlyList<string> DebriefBullets);
+    IReadOnlyList<string> DebriefBullets,
+    string? ModelAnswer = null);
 
 public sealed record InterviewPrepInferenceDto(
     string Role,

@@ -69,6 +69,8 @@ export class InterviewPrepFacade {
   readonly scorecard = signal<InterviewPrepScorecard | null>(null);
   readonly followUps = signal<readonly string[]>([]);
   readonly debriefBullets = signal<readonly string[]>([]);
+  readonly modelAnswer = signal<string | null>(null);
+  readonly modelAnswerRevealed = signal(false);
 
   readonly sessionStarted = computed(() => this.messages().length > 0);
   readonly linkedJob = computed(() => {
@@ -264,6 +266,15 @@ export class InterviewPrepFacade {
     this.draftMessage.set(trimmed);
   }
 
+  /** Toggle visibility of the latest-turn sample answer (client-only; not chat/composer). */
+  revealModelAnswer(): void {
+    if (!this.modelAnswer() || this.isDebrief()) {
+      return;
+    }
+
+    this.modelAnswerRevealed.update((current) => !current);
+  }
+
   resetSession(): void {
     this.cancelTurn();
     this.sending.set(false);
@@ -276,6 +287,8 @@ export class InterviewPrepFacade {
     this.scorecard.set(null);
     this.followUps.set([]);
     this.debriefBullets.set([]);
+    this.modelAnswer.set(null);
+    this.modelAnswerRevealed.set(false);
   }
 
   clearTurnError(): void {
@@ -352,6 +365,8 @@ export class InterviewPrepFacade {
     }
     this.followUps.set(response.followUps);
     this.debriefBullets.set(response.debriefBullets);
+    this.modelAnswer.set(response.modelAnswer);
+    this.modelAnswerRevealed.set(false);
   }
 
   private mapTurnError(error: unknown): string {

@@ -362,6 +362,27 @@
             </section>
           }
 
+          @if (facade.modelAnswer(); as modelAnswer) {
+            @if (!facade.isDebrief()) {
+              <section class="interview-prep__side-block" aria-labelledby="model-answer-heading">
+                <h2 id="model-answer-heading" class="interview-prep__side-title">Sample answer</h2>
+                <button
+                  type="button"
+                  class="interview-prep__secondary interview-prep__reveal-btn"
+                  [attr.aria-expanded]="facade.modelAnswerRevealed()"
+                  [attr.aria-controls]="'model-answer-body'"
+                  (click)="facade.revealModelAnswer()">
+                  {{ facade.modelAnswerRevealed() ? 'Hide sample answer' : 'Reveal sample answer' }}
+                </button>
+                @if (facade.modelAnswerRevealed()) {
+                  <p id="model-answer-body" class="interview-prep__model-answer" aria-live="polite">
+                    {{ modelAnswer }}
+                  </p>
+                }
+              </section>
+            }
+          }
+
           @if (facade.debriefBullets().length > 0) {
             <section class="interview-prep__side-block" aria-labelledby="debrief-heading">
               <h2 id="debrief-heading" class="interview-prep__side-title">Debrief</h2>
@@ -376,6 +397,7 @@
           @if (
             !facade.scorecard() &&
             facade.followUps().length === 0 &&
+            !facade.modelAnswer() &&
             facade.debriefBullets().length === 0
           ) {
             <section class="interview-prep__scorecard interview-prep__scorecard--empty">

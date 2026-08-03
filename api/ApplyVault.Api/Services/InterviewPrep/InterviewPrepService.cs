@@ -207,6 +207,7 @@ public sealed class InterviewPrepService(
             result.CoachMessage,
             scorecard,
             result.FollowUps ?? [],
-            result.DebriefBullets ?? []);
+            result.DebriefBullets ?? [],
+            result.ModelAnswer);
     }
 }

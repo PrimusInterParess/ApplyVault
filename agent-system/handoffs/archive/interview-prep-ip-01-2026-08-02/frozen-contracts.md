@@ -124,7 +124,8 @@ Default when omitted: `general` (or `InterviewPrepAi:DefaultHiringMarket`).
   "coachMessage": "…",
   "scorecard": null,
   "followUps": [],
-  "debriefBullets": []
+  "debriefBullets": [],
+  "modelAnswer": "In my last role I…"
 }
 ```
 
@@ -140,6 +141,7 @@ Default when omitted: `general` (or `InterviewPrepAi:DefaultHiringMarket`).
 | `scorecard` | object \| null | no | Present when scoring an answer / ending a round; null on setup |
 | `followUps` | string[] | yes | Normalize missing → `[]` |
 | `debriefBullets` | string[] | yes | Normalize missing → `[]` |
+| `modelAnswer` | string \| null | no | Additive (ADR-0015). Sample spoken answer for the current coach question; distinct from tip-style `followUps`. Prefer non-null in `interview` when a question is posed; **must be `null` in `debrief`**; may be `null` on setup / unused. Normalize missing / whitespace-only → `null`. Not included in `priorTurns`. |
 
 ### Scorecard object
 

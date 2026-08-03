@@ -74,6 +74,11 @@ internal static class GoogleAiInterviewPrepResponseSchema
                     {
                         type = "ARRAY",
                         items = new { type = "STRING" }
+                    },
+                    modelAnswer = new
+                    {
+                        type = "STRING",
+                        nullable = true
                     }
                 }
             }

@@ -99,12 +99,10 @@ public sealed class CvPdfFullTextExtractor(
             charCount,
             orderedLines.Count);
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        // Information so Development console shows reading order without raising Default to Debug.
+        foreach (var line in orderedLines)
         {
-            foreach (var line in orderedLines)
-            {
-                _logger.LogDebug("{Tag} P{Page} | {Text}", LogTag, line.PageIndex + 1, line.Text);
-            }
+            _logger.LogInformation("{Tag} P{Page} | {Text}", LogTag, line.PageIndex + 1, line.Text);
         }
 
         return new CvPdfExtractionResult(orderedLines, [], pageCount, charCount, wordCount, quality);

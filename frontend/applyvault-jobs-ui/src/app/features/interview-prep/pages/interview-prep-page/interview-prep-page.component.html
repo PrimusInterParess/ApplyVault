@@ -1,7 +1,7 @@
 <main class="interview-prep">
   <header class="interview-prep__hero">
     <h1>Interview Prep</h1>
-    <p class="interview-prep__subtitle">Practice from your Structured CV · session clears on refresh</p>
+    <p class="interview-prep__subtitle">Practice from your Structured CV · sessions save to your history</p>
   </header>
 
   @if (facade.cvGateStatus() === 'loading' || facade.cvGateStatus() === 'unknown') {
@@ -25,7 +25,11 @@
   } @else {
     <section class="interview-prep__layout">
       <div class="interview-prep__main">
-        @if (!facade.sessionStarted() && !facade.isDebrief()) {
+        @if (facade.sessionLoadStatus() === 'loading') {
+          <section class="interview-prep__panel interview-prep__panel--quiet" aria-busy="true">
+            <p class="interview-prep__muted">Opening session…</p>
+          </section>
+        } @else if (!facade.sessionStarted() && !facade.isDebrief()) {
           <section class="interview-prep__setup" aria-labelledby="setup-heading">
             <div class="interview-prep__setup-top">
               <h2 id="setup-heading" class="interview-prep__setup-title">Setup</h2>
@@ -197,6 +201,73 @@
               </button>
             </div>
           </section>
+
+          <section class="interview-prep__history" aria-labelledby="history-heading">
+            <div class="interview-prep__history-head">
+              <h2 id="history-heading" class="interview-prep__history-title">History</h2>
+              <button
+                type="button"
+                class="interview-prep__text-btn"
+                [disabled]="facade.historyStatus() === 'loading'"
+                (click)="facade.loadHistory()">
+                Refresh
+              </button>
+            </div>
+
+            @if (facade.historyStatus() === 'loading' || facade.historyStatus() === 'idle') {
+              <p class="interview-prep__muted" aria-busy="true">Loading history…</p>
+            } @else if (facade.historyStatus() === 'error' && facade.historyItems().length === 0) {
+              <div class="interview-prep__job-alert" role="alert">
+                <p>{{ facade.historyError() }}</p>
+                <button type="button" class="interview-prep__text-btn" (click)="facade.loadHistory()">
+                  Try again
+                </button>
+              </div>
+            } @else if (facade.historyItems().length === 0) {
+              <p class="interview-prep__muted">No saved practice sessions yet. Start one above.</p>
+            } @else {
+              @if (facade.historyError(); as historyError) {
+                <div class="interview-prep__job-alert" role="alert">
+                  <p>{{ historyError }}</p>
+                  <button type="button" class="interview-prep__text-btn" (click)="facade.loadHistory()">
+                    Refresh
+                  </button>
+                </div>
+              }
+              <ul class="interview-prep__history-list">
+                @for (item of facade.historyItems(); track item.id) {
+                  <li class="interview-prep__history-item">
+                    <button
+                      type="button"
+                      class="interview-prep__history-open"
+                      [disabled]="facade.deletingSessionId() === item.id || facade.sending()"
+                      (click)="openHistorySession(item.id)">
+                      <span class="interview-prep__history-date">
+                        {{ item.updatedAt || item.createdAt | date: 'mediumDate' }}
+                      </span>
+                      <span class="interview-prep__history-mode">{{ modeLabel(item.mode) }}</span>
+                      @if (historyJobLabel(item); as jobLabel) {
+                        <span class="interview-prep__history-job">{{ jobLabel }}</span>
+                      }
+                      <span
+                        class="interview-prep__history-status"
+                        [class.interview-prep__history-status--done]="item.status === 'completed'">
+                        {{ statusLabel(item.status) }}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="interview-prep__history-delete"
+                      [disabled]="facade.deletingSessionId() === item.id"
+                      [attr.aria-label]="'Delete session ' + modeLabel(item.mode)"
+                      (click)="confirmDeleteSession(item, $event)">
+                      {{ facade.deletingSessionId() === item.id ? '…' : 'Delete' }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
         } @else {
           <div class="interview-prep__session-bar">
             <div class="interview-prep__session-meta">
@@ -222,9 +293,21 @@
                   }
                 </span>
               }
+              @if (facade.isReadOnly()) {
+                <span class="interview-prep__pill interview-prep__pill--soft">Read-only</span>
+              }
             </div>
             <button type="button" class="interview-prep__secondary" (click)="confirmNewRound()">
-              New round
+              {{ facade.isReadOnly() ? 'Back to setup' : 'New round' }}
+            </button>
+          </div>
+        }
+
+        @if (facade.sessionLoadError(); as sessionLoadError) {
+          <div class="interview-prep__alert" role="alert">
+            <p>{{ sessionLoadError }}</p>
+            <button type="button" class="interview-prep__text-btn" (click)="facade.clearSessionLoadError()">
+              Dismiss
             </button>
           </div>
         }
@@ -238,23 +321,34 @@
           </div>
         }
 
-        @if (facade.sending() || facade.sessionStarted() || facade.isDebrief()) {
+        @if (
+          facade.sessionLoadStatus() !== 'loading' &&
+          (facade.sending() || facade.sessionStarted() || facade.isDebrief())
+        ) {
           <section
             class="interview-prep__chat"
             aria-labelledby="chat-heading"
             [attr.aria-busy]="facade.sending() ? true : null">
             <div class="interview-prep__chat-head">
               <h2 id="chat-heading">Mock interview</h2>
-              @if (facade.isDebrief()) {
-                <span class="interview-prep__status-chip">Round ended</span>
+              @if (facade.isReadOnly()) {
+                <span class="interview-prep__status-chip">
+                  {{ facade.isDebrief() || facade.sessionStatus() === 'completed' ? 'Round ended' : 'Read-only' }}
+                </span>
               }
             </div>
 
-            @if (facade.isDebrief()) {
+            @if (facade.isReadOnly()) {
               <div class="interview-prep__debrief-banner" role="status">
-                <p>Review the scorecard, then start a new round when ready.</p>
+                <p>
+                  @if (facade.sessionStatus() === 'completed' || facade.isDebrief()) {
+                    This session is complete. Review the transcript and scorecard, or start a new round.
+                  } @else {
+                    This session is read-only.
+                  }
+                </p>
                 <button type="button" class="interview-prep__secondary" (click)="confirmNewRound()">
-                  New round
+                  Back to setup
                 </button>
               </div>
             }
@@ -284,7 +378,7 @@
               }
             </ul>
 
-            @if (!facade.isDebrief()) {
+            @if (!facade.isReadOnly()) {
               <div class="interview-prep__composer">
                 <label class="interview-prep__sr-only" for="interview-prep-composer">Your answer</label>
                 <textarea
@@ -310,7 +404,10 @@
         }
       </div>
 
-      @if (facade.sending() || facade.sessionStarted() || facade.isDebrief()) {
+      @if (
+        facade.sessionLoadStatus() !== 'loading' &&
+        (facade.sending() || facade.sessionStarted() || facade.isDebrief())
+      ) {
         <aside class="interview-prep__side" aria-label="Feedback">
           @if (facade.scorecard(); as scorecard) {
             <section class="interview-prep__scorecard" aria-labelledby="scorecard-heading">
@@ -343,7 +440,7 @@
             </section>
           }
 
-          @if (facade.followUps().length > 0 && !facade.isDebrief()) {
+          @if (facade.followUps().length > 0 && !facade.isReadOnly()) {
             <section class="interview-prep__side-block" aria-labelledby="follow-ups-heading">
               <h2 id="follow-ups-heading" class="interview-prep__side-title">Try next</h2>
               <ul class="interview-prep__follow-ups">

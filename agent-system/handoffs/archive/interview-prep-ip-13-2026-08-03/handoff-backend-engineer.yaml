@@ -1,0 +1,86 @@
+schema_version: "1.0.0"
+task_id: interview-prep-ip-13-2026-08-03
+from_agent: backend-engineer
+to_agent: principal-software-architect
+status: READY
+completed_at: "2026-08-03"
+parent_request: >
+  IP-13 / GitHub #79 — durable Interview Prep session history
+  (EF sessions + messages, CRUD, durable POST /turns).
+objective: implement
+summary: >
+  Implemented InterviewPrepSession + InterviewPrepSessionMessage persistence,
+  session CRUD under /api/interview-prep/sessions, and durable POST /turns with
+  optional sessionId (session-wins; priorTurns from DB; complete on debrief → 409;
+  MaxMessagesPerSession=200). Ephemeral turns without sessionId unchanged.
+  Migration AddInterviewPrepSessions added. No tests run (user policy).
+  CR-IP-13-01 fixed: durable turns update LatestScorecardJson/LatestOverallScore
+  only when response.Scorecard is non-null (do not clear prior denorm on null).
+
+## Verified facts
+- Existing sole endpoint was POST /api/interview-prep/turns (ephemeral).
+- ADR-0016 Accepted with OQ defaults (session-wins, max 200, keep ephemeral).
+- Tenancy via GetRequiredUserAsync + UserId filters; scrape FK ON DELETE SET NULL.
+
+## Decisions applied
+- session-wins: ignore client mode/languageMix/hiringMarket/scrapeResultId/priorTurns when sessionId set
+- Complete when durable response phase=debrief; further turns → 409 Conflict
+- Hard delete session (+ cascade messages)
+- Message cap: reject when messageCount + 2 > MaxMessagesPerSession (default 200)
+- Response echoes sessionId on durable turns; null/omit on ephemeral
+
+## Artifacts / files changed
+  - api/ApplyVault.Api/Data/InterviewPrepSessionEntity.cs
+  - api/ApplyVault.Api/Data/ApplyVaultDbContext.cs
+  - api/ApplyVault.Api/Data/ScrapeResultEntity.cs
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Migrations/20260803183000_AddInterviewPrepSessions.cs
+  - api/ApplyVault.Api/Migrations/20260803183000_AddInterviewPrepSessions.Designer.cs
+  - api/ApplyVault.Api/Migrations/ApplyVaultDbContextModelSnapshot.cs
+  - api/ApplyVault.Api/appsettings.example.json
+
+## FE contract summary
+endpoints:
+  - POST /api/interview-prep/sessions → 201 InterviewPrepSessionSummaryDto
+  - GET /api/interview-prep/sessions?take&skip → 200 { items, totalCount }
+  - GET /api/interview-prep/sessions/{id} → 200 detail + ordered messages
+  - DELETE /api/interview-prep/sessions/{id} → 204 hard delete
+  - POST /api/interview-prep/turns + sessionId → durable append; echo sessionId
+  - POST /api/interview-prep/turns without sessionId → ephemeral (unchanged)
+errors:
+  - 404 missing/foreign session or scrape (create) / missing CV
+  - 409 turn on completed session
+  - 400 invalid enums, empty userMessage, message cap
+options:
+  - InterviewPrepAi:MaxMessagesPerSession default 200
+
+## Validation
+  - Code + migration only; no dotnet build/restore/test (user policy)
+  - Principal / QA to validate later
+
+## Security
+  - [Authorize] + GetRequiredUserAsync
+  - All session queries filter UserId == user.Id
+  - No CV / scrape mutation from prep path
+
+## Residual risks
+  - Hand-written EF Designer/snapshot not verified via `dotnet ef` / build
+  - Abandoned in_progress sessions remain until user deletes
+  - Soft-deleted scrape on durable turn → job context omitted (snapshots remain on session)
+
+## Next actions
+  - agent: frontend-engineer
+    action: Bind history list / create / resume / read-only completed / delete + durable turns
+  - agent: principal-software-architect
+    action: Integrate handoff; optionally mark registry interview-prep-sessions APPROVED after FE
+
+definition_of_done_met:
+  - entities_dbcontext_migration: true
+  - session_crud_endpoints: true
+  - durable_turns_sessionId: true
+  - ephemeral_path_kept: true
+  - max_messages_options: true
+  - thin_handoff: true

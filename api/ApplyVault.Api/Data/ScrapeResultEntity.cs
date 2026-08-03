@@ -122,6 +122,8 @@ public sealed class AppUserEntity
 
     public List<UserCvProjectSummaryEntity> CvProjectSummaries { get; set; } = [];
 
+    public List<InterviewPrepSessionEntity> InterviewPrepSessions { get; set; } = [];
+
     public UserCvDocumentEntity? CvDocument { get; set; }
 }
 

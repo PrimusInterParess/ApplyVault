@@ -1,0 +1,110 @@
+schema_version: "1.0.0"
+task_id: interview-prep-ip-13-2026-08-03
+from_agent: code-review-engineer
+to_agent: principal-software-architect
+status: READY
+completed_at: "2026-08-03"
+
+recommendation: APPROVE WITH NITS
+
+review_summary: >
+  IP-13 BE+FE durable session history matches ADR-0016 and frozen contracts
+  on focus axes (tenancy, session-wins, completed→409, hard delete, FE
+  always-durable). No blockers. Two should-fix items (list score denorm
+  wipe; concurrent sequence race). Missing tests = documented limitation
+  per operate policy, not a Close blocker.
+
+range: uncommitted IP-13 BE+FE scope (handoff file lists; not base...HEAD)
+ticket: "#79 / interview-prep-ip-13-2026-08-03"
+contracts_checked:
+  - docs/adr/0016-interview-prep-durable-session-history.md
+  - agent-system/handoffs/active/interview-prep-ip-13-2026-08-03/frozen-contracts-session-history.md
+  - docs/adr/0010-strict-per-user-tenancy.md
+
+scope_reviewed:
+  - api/ApplyVault.Api/Data/InterviewPrepSessionEntity.cs
+  - api/ApplyVault.Api/Data/ApplyVaultDbContext.cs
+  - api/ApplyVault.Api/Data/ScrapeResultEntity.cs (AppUserEntity.InterviewPrepSessions)
+  - api/ApplyVault.Api/Models/InterviewPrepContracts.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Migrations/20260803183000_AddInterviewPrepSessions.cs
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+  - docs/adr/0016-interview-prep-durable-session-history.md
+  - agent-system/handoffs/active/interview-prep-ip-13-2026-08-03/
+
+findings:
+  blockers: []
+
+  non_blocking:
+    - id: CR-IP-13-01
+      severity: should-fix
+      confidence: high
+      path: api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+      hunk: "session.LatestOverallScore = response.Scorecard?.Overall"
+      rationale: >
+        Null scorecard on a later durable turn clears LatestOverallScore /
+        LatestScorecardJson denorms used by GET /sessions list.
+    - id: CR-IP-13-02
+      severity: should-fix
+      confidence: medium
+      path: api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+      hunk: CreateDurableTurnAsync sequence assignment
+      rationale: >
+        Concurrent durable turns can collide on unique (SessionId, Sequence)
+        and surface as unmapped 500.
+    - id: CR-IP-13-03
+      severity: nit
+      confidence: high
+      path: api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+      rationale: DefaultSystemPrompt still claims turn is ephemeral.
+    - id: CR-IP-13-04
+      severity: nit
+      confidence: high
+      path: frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/interview-prep.facade.ts
+      rationale: Durable sendTurn still posts client mode/priorTurns (ignored by BE).
+    - id: CR-IP-13-05
+      severity: nit
+      confidence: high
+      path: agent-system/handoffs/active/interview-prep-ip-13-2026-08-03/frozen-contracts-session-history.md
+      rationale: Header still PROPOSED while ADR-0016 is Accepted.
+
+praise:
+  - Tenancy filters + 404 for foreign sessions; scrape ownership on create.
+  - Session-wins; priorTurns from DB without modelAnswer; debrief→completed→409.
+  - Hard delete with message cascade; FE confirm + DELETE.
+  - FE always-durable create→sessionId turns; history resume/read-only/delete.
+
+validation:
+  review_method: static diff/intent review against ADR-0016 + frozen contracts
+  tests_re_run: false
+  note: >
+    No builds/tests. Missing BE/FE tests = documented limitation (user policy),
+    not a merge blocker for this operate pass. QA owns evidence.
+
+residual_risks:
+  - Hand-written EF Designer/snapshot not migrate-smoke verified.
+  - Empty in_progress sessions if bootstrap turn fails after create.
+  - Existing FE specs may fail until QA updates for sessionId/history.
+
+open_questions: []
+
+next_actions:
+  - agent: principal-software-architect
+    action: >
+      Accept READY review; optionally queue CR-IP-13-01 before Close or track
+      as follow-up; promote registry interview-prep-sessions when ready.
+  - agent: qa-engineer
+    action: Smoke create/resume/completed-409/delete + update specs.
+
+artifacts:
+  - agent-system/handoffs/active/interview-prep-ip-13-2026-08-03/code-review-findings.md
+  - agent-system/handoffs/active/interview-prep-ip-13-2026-08-03/handoff-code-review-engineer.yaml
+
+definition_of_done_met:
+  - findings_md_with_severity: true
+  - thin_handoff_ready: true
+  - recommendation_token: true
+  - no_code_changes: true
+  - no_github_publish: true

@@ -101,6 +101,12 @@ public sealed class InterviewPrepAiOptions
     [Range(1, 8_000)]
     public int MaxPriorTurnChars { get; set; } = 2_000;
 
+    /// <summary>
+    /// Max persisted messages per durable session (ADR-0016). Further durable turns return 400.
+    /// </summary>
+    [Range(2, 2_000)]
+    public int MaxMessagesPerSession { get; set; } = 200;
+
     /// <summary>Default when request omits languageMix. Frozen values: en | da | mixed.</summary>
     [Required]
     public string DefaultLanguageMix { get; set; } = "en";

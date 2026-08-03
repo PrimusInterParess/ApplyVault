@@ -15,6 +15,8 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<UserCvDocumentEntity> UserCvDocuments => Set<UserCvDocumentEntity>();
     public DbSet<UserCvSectionEntity> UserCvSections => Set<UserCvSectionEntity>();
     public DbSet<UserCvEntryEntity> UserCvEntries => Set<UserCvEntryEntity>();
+    public DbSet<InterviewPrepSessionEntity> InterviewPrepSessions => Set<InterviewPrepSessionEntity>();
+    public DbSet<InterviewPrepSessionMessageEntity> InterviewPrepSessionMessages => Set<InterviewPrepSessionMessageEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -182,6 +184,48 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
                 .WithMany()
                 .HasForeignKey((entry) => entry.SourceSummaryId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<InterviewPrepSessionEntity>((entity) =>
+        {
+            entity.HasKey((session) => session.Id);
+            entity.Property((session) => session.Mode).IsRequired().HasMaxLength(64);
+            entity.Property((session) => session.LanguageMix).IsRequired().HasMaxLength(16);
+            entity.Property((session) => session.HiringMarket).IsRequired().HasMaxLength(16);
+            entity.Property((session) => session.JobTitle).HasMaxLength(512);
+            entity.Property((session) => session.CompanyName).HasMaxLength(512);
+            entity.Property((session) => session.Status).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.Phase).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.InferenceJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.LatestScorecardJson).HasColumnType("nvarchar(max)");
+            entity.HasIndex((session) => new { session.UserId, session.UpdatedAt })
+                .IsDescending(false, true);
+            entity.HasOne((session) => session.User)
+                .WithMany((user) => user.InterviewPrepSessions)
+                .HasForeignKey((session) => session.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne((session) => session.ScrapeResult)
+                .WithMany()
+                .HasForeignKey((session) => session.ScrapeResultId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany((session) => session.Messages)
+                .WithOne((message) => message.Session)
+                .HasForeignKey((message) => message.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InterviewPrepSessionMessageEntity>((entity) =>
+        {
+            entity.HasKey((message) => message.Id);
+            entity.Property((message) => message.Role).IsRequired().HasMaxLength(16);
+            entity.Property((message) => message.Text).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.Phase).IsRequired().HasMaxLength(32);
+            entity.Property((message) => message.ScorecardJson).HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.FollowUpsJson).HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.DebriefBulletsJson).HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.ModelAnswer).HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.InferenceJson).HasColumnType("nvarchar(max)");
+            entity.HasIndex((message) => new { message.SessionId, message.Sequence }).IsUnique();
         });
     }
 }

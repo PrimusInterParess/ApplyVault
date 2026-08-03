@@ -4,6 +4,8 @@
 
 Accepted (2026-08-02 — operate `interview-prep-ip-01-2026-08-02` / GitHub [#67](https://github.com/PrimusInterParess/ApplyVault/issues/67) IP-01)
 
+**Supersession:** Decision point **1** (ephemeral turns only) is superseded by [ADR-0016](0016-interview-prep-durable-session-history.md) for IP-13 durable session history (Accepted 2026-08-03). Decision points **2–8** remain in force. Ephemeral `POST /turns` without `sessionId` remains for API compatibility.
+
 ## Context
 
 ApplyVault will ship an **Interview Prep** coach so authenticated seekers can practice interviews grounded in their **Structured CV**, with an optional owned scrape (saved job) for targeting.

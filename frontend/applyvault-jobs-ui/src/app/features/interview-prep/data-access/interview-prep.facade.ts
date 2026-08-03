@@ -20,12 +20,19 @@ import {
   InterviewPrepMode,
   InterviewPrepPriorTurn,
   InterviewPrepScorecard,
+  InterviewPrepSessionDetail,
+  InterviewPrepSessionStatus,
+  InterviewPrepSessionSummary,
   InterviewPrepTurnResponse
 } from '../models/interview-prep.model';
 
 export type InterviewPrepCvGateStatus = 'unknown' | 'loading' | 'ready' | 'missing' | 'error';
 
 export type InterviewPrepJobLinkStatus = 'idle' | 'loading' | 'ready' | 'invalid' | 'error';
+
+export type InterviewPrepHistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export type InterviewPrepSessionLoadStatus = 'idle' | 'loading' | 'error';
 
 export interface InterviewPrepJobOption {
   readonly id: string;
@@ -42,6 +49,10 @@ export class InterviewPrepFacade {
 
   private cvGateSubscription: Subscription | null = null;
   private jobsSubscription: Subscription | null = null;
+  private historySubscription: Subscription | null = null;
+  private sessionLoadSubscription: Subscription | null = null;
+  private createSessionSubscription: Subscription | null = null;
+  private deleteSubscription: Subscription | null = null;
   private turnSubscription: Subscription | null = null;
   private messageSequence = 0;
   private pendingJobId: string | null = null;
@@ -58,6 +69,17 @@ export class InterviewPrepFacade {
   readonly jobLinkStatus = signal<InterviewPrepJobLinkStatus>('idle');
   readonly jobLinkError = signal<string | null>(null);
 
+  readonly historyStatus = signal<InterviewPrepHistoryStatus>('idle');
+  readonly historyError = signal<string | null>(null);
+  readonly historyItems = signal<readonly InterviewPrepSessionSummary[]>([]);
+  readonly historyTotalCount = signal(0);
+
+  readonly sessionId = signal<string | null>(null);
+  readonly sessionStatus = signal<InterviewPrepSessionStatus | string | null>(null);
+  readonly sessionLoadStatus = signal<InterviewPrepSessionLoadStatus>('idle');
+  readonly sessionLoadError = signal<string | null>(null);
+  readonly deletingSessionId = signal<string | null>(null);
+
   readonly draftMessage = signal('');
   readonly sending = signal(false);
   readonly turnError = signal<string | null>(null);
@@ -72,7 +94,12 @@ export class InterviewPrepFacade {
   readonly modelAnswer = signal<string | null>(null);
   readonly modelAnswerRevealed = signal(false);
 
-  readonly sessionStarted = computed(() => this.messages().length > 0);
+  readonly sessionStarted = computed(
+    () => this.sessionId() != null || this.messages().length > 0
+  );
+  readonly isReadOnly = computed(
+    () => this.sessionStatus() === 'completed' || this.phase() === 'debrief'
+  );
   readonly linkedJob = computed(() => {
     const id = this.scrapeResultId();
     if (!id) {
@@ -82,13 +109,17 @@ export class InterviewPrepFacade {
     return this.jobOptions().find((job) => job.id === id) ?? null;
   });
   readonly isDebrief = computed(() => this.phase() === 'debrief');
+  readonly setupLocked = computed(
+    () => this.sessionStarted() || this.sending() || this.sessionLoadStatus() === 'loading'
+  );
 
   readonly canSend = computed(() => {
     const draft = this.draftMessage().trim();
     return (
       this.cvGateStatus() === 'ready' &&
       !this.sending() &&
-      !this.isDebrief() &&
+      !this.isReadOnly() &&
+      this.sessionLoadStatus() !== 'loading' &&
       (this.sessionStarted() ? draft.length > 0 : true)
     );
   });
@@ -126,8 +157,37 @@ export class InterviewPrepFacade {
     });
   }
 
+  loadHistory(): void {
+    this.cancelHistory();
+    this.historyStatus.set('loading');
+    this.historyError.set(null);
+
+    this.historySubscription = this.apiService.listSessions({ take: 50, skip: 0 }).subscribe({
+      next: (response) => {
+        this.historyItems.set(response.items);
+        this.historyTotalCount.set(response.totalCount);
+        this.historyStatus.set('ready');
+        this.historySubscription = null;
+      },
+      error: (error: unknown) => {
+        this.historySubscription = null;
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.historyStatus.set('error');
+        this.historyError.set(
+          resolveHttpErrorMessage(error, {
+            fallback: 'Could not load practice history. Try again in a moment.'
+          })
+        );
+      }
+    });
+  }
+
   setMode(mode: InterviewPrepMode): void {
-    if (this.sessionStarted() || this.sending()) {
+    if (this.setupLocked()) {
       return;
     }
 
@@ -135,7 +195,7 @@ export class InterviewPrepFacade {
   }
 
   setLanguageMix(languageMix: InterviewPrepLanguageMix): void {
-    if (this.sessionStarted() || this.sending()) {
+    if (this.setupLocked()) {
       return;
     }
 
@@ -143,7 +203,7 @@ export class InterviewPrepFacade {
   }
 
   setHiringMarket(hiringMarket: InterviewPrepHiringMarket): void {
-    if (this.sessionStarted() || this.sending()) {
+    if (this.setupLocked()) {
       return;
     }
 
@@ -162,7 +222,7 @@ export class InterviewPrepFacade {
   }
 
   selectOwnedJob(jobId: string | null | undefined): void {
-    if (this.sessionStarted() || this.sending()) {
+    if (this.setupLocked()) {
       return;
     }
 
@@ -170,7 +230,7 @@ export class InterviewPrepFacade {
   }
 
   clearJobLink(): void {
-    if (this.sessionStarted() || this.sending()) {
+    if (this.setupLocked()) {
       return;
     }
 
@@ -218,7 +278,7 @@ export class InterviewPrepFacade {
             fallback: 'Could not load your saved jobs. You can still practice without a job link.'
           })
         );
-        // Keep pending scrapeResultId when list fails — server still validates on turn.
+        // Keep pending scrapeResultId when list fails — server still validates on create/turn.
       }
     });
   }
@@ -227,13 +287,120 @@ export class InterviewPrepFacade {
     this.draftMessage.set(value);
   }
 
+  /** Create a durable session, then bootstrap the first coach turn with sessionId. */
   startSession(): void {
     if (this.sessionStarted() || this.sending() || this.cvGateStatus() !== 'ready') {
       return;
     }
 
-    // Bootstrap phrase is API-only — do not render as a "You" chat bubble.
-    this.sendTurn(INTERVIEW_PREP_START_MESSAGE, { showUserMessage: false });
+    this.cancelCreateSession();
+    this.cancelTurn();
+    this.sending.set(true);
+    this.turnError.set(null);
+    this.sessionLoadError.set(null);
+
+    this.createSessionSubscription = this.apiService
+      .createSession({
+        mode: this.mode(),
+        languageMix: this.languageMix(),
+        hiringMarket: this.hiringMarket(),
+        scrapeResultId: this.scrapeResultId()
+      })
+      .subscribe({
+        next: (session) => {
+          this.createSessionSubscription = null;
+          this.sessionId.set(session.id);
+          this.sessionStatus.set(session.status || 'in_progress');
+          this.phase.set(session.phase || 'interview');
+          // Bootstrap phrase is API-only — do not render as a "You" chat bubble.
+          this.sendTurn(INTERVIEW_PREP_START_MESSAGE, {
+            showUserMessage: false,
+            alreadySending: true
+          });
+          this.loadHistory();
+        },
+        error: (error: unknown) => {
+          this.createSessionSubscription = null;
+          this.sending.set(false);
+
+          if (isRequestAborted(error)) {
+            return;
+          }
+
+          this.turnError.set(this.mapSessionError(error, 'create'));
+        }
+      });
+  }
+
+  openSession(sessionId: string): void {
+    const trimmed = sessionId?.trim();
+    if (!trimmed || this.sending() || this.sessionLoadStatus() === 'loading') {
+      return;
+    }
+
+    this.cancelSessionLoad();
+    this.cancelCreateSession();
+    this.cancelTurn();
+    this.clearActivePracticeState({ keepSetup: false });
+    this.sessionLoadStatus.set('loading');
+    this.sessionLoadError.set(null);
+    this.turnError.set(null);
+
+    this.sessionLoadSubscription = this.apiService.getSession(trimmed).subscribe({
+      next: (detail) => {
+        this.hydrateFromDetail(detail);
+        this.sessionLoadStatus.set('idle');
+        this.sessionLoadSubscription = null;
+      },
+      error: (error: unknown) => {
+        this.sessionLoadSubscription = null;
+        this.sessionLoadStatus.set('error');
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.sessionLoadError.set(this.mapSessionError(error, 'load'));
+      }
+    });
+  }
+
+  deleteSession(sessionId: string): void {
+    const trimmed = sessionId?.trim();
+    if (!trimmed || this.deletingSessionId()) {
+      return;
+    }
+
+    this.cancelDelete();
+    this.deletingSessionId.set(trimmed);
+
+    this.deleteSubscription = this.apiService.deleteSession(trimmed).subscribe({
+      next: () => {
+        this.deleteSubscription = null;
+        this.deletingSessionId.set(null);
+        this.historyError.set(null);
+        this.historyItems.update((items) => items.filter((item) => item.id !== trimmed));
+        this.historyTotalCount.update((count) => Math.max(0, count - 1));
+
+        if (this.sessionId() === trimmed) {
+          this.resetSession();
+        }
+      },
+      error: (error: unknown) => {
+        this.deleteSubscription = null;
+        this.deletingSessionId.set(null);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        // Keep existing list visible; surface delete failure on the history panel.
+        this.historyError.set(this.mapSessionError(error, 'delete'));
+        if (this.historyStatus() !== 'ready') {
+          this.historyStatus.set('error');
+        }
+      }
+    });
   }
 
   sendDraft(): void {
@@ -243,7 +410,8 @@ export class InterviewPrepFacade {
       !text ||
       this.sending() ||
       this.cvGateStatus() !== 'ready' ||
-      this.phase() === 'debrief'
+      this.isReadOnly() ||
+      !this.sessionId()
     ) {
       return;
     }
@@ -254,7 +422,7 @@ export class InterviewPrepFacade {
 
   /** Insert a suggested follow-up into the composer (does not send). */
   insertFollowUp(text: string): void {
-    if (this.sending() || this.phase() === 'debrief') {
+    if (this.sending() || this.isReadOnly()) {
       return;
     }
 
@@ -277,32 +445,38 @@ export class InterviewPrepFacade {
 
   resetSession(): void {
     this.cancelTurn();
-    this.sending.set(false);
-    this.turnError.set(null);
-    this.draftMessage.set('');
-    this.messages.set([]);
-    this.priorTurns.set([]);
-    this.phase.set('interview');
-    this.inference.set(null);
-    this.scorecard.set(null);
-    this.followUps.set([]);
-    this.debriefBullets.set([]);
-    this.modelAnswer.set(null);
-    this.modelAnswerRevealed.set(false);
+    this.cancelCreateSession();
+    this.cancelSessionLoad();
+    this.clearActivePracticeState({ keepSetup: true });
   }
 
   clearTurnError(): void {
     this.turnError.set(null);
   }
 
+  clearSessionLoadError(): void {
+    this.sessionLoadError.set(null);
+    this.sessionLoadStatus.set('idle');
+  }
+
   private sendTurn(
     userMessage: string,
-    options: { readonly showUserMessage?: boolean } = {}
+    options: { readonly showUserMessage?: boolean; readonly alreadySending?: boolean } = {}
   ): void {
+    const sessionId = this.sessionId();
+    if (!sessionId) {
+      this.sending.set(false);
+      this.turnError.set('Practice session is missing. Start a new round.');
+      return;
+    }
+
     const showUserMessage = options.showUserMessage !== false;
 
-    this.cancelTurn();
-    this.sending.set(true);
+    if (!options.alreadySending) {
+      this.cancelTurn();
+      this.sending.set(true);
+    }
+
     this.turnError.set(null);
 
     const priorSnapshot = this.priorTurns();
@@ -321,13 +495,15 @@ export class InterviewPrepFacade {
         hiringMarket: this.hiringMarket(),
         userMessage,
         scrapeResultId: this.scrapeResultId(),
-        priorTurns: priorSnapshot
+        priorTurns: priorSnapshot,
+        sessionId
       })
       .subscribe({
         next: (response) => {
           this.applySuccessfulTurn(userMessage, response);
           this.sending.set(false);
           this.turnSubscription = null;
+          this.loadHistory();
         },
         error: (error: unknown) => {
           if (userChat) {
@@ -355,7 +531,11 @@ export class InterviewPrepFacade {
     this.priorTurns.update((current) => [
       ...current,
       { role: 'user', text: userMessage, phase: 'interview' },
-      { role: 'coach', text: response.coachMessage, phase: coachPhase === 'debrief' ? 'debrief' : 'interview' }
+      {
+        role: 'coach',
+        text: response.coachMessage,
+        phase: coachPhase === 'debrief' ? 'debrief' : 'interview'
+      }
     ]);
     this.phase.set(coachPhase);
     this.inference.set(response.inference);
@@ -367,15 +547,119 @@ export class InterviewPrepFacade {
     this.debriefBullets.set(response.debriefBullets);
     this.modelAnswer.set(response.modelAnswer);
     this.modelAnswerRevealed.set(false);
+
+    if (response.sessionId) {
+      this.sessionId.set(response.sessionId);
+    }
+
+    if (coachPhase === 'debrief') {
+      this.sessionStatus.set('completed');
+    }
+  }
+
+  private hydrateFromDetail(detail: InterviewPrepSessionDetail): void {
+    this.sessionId.set(detail.id);
+    this.sessionStatus.set(detail.status || 'in_progress');
+    this.mode.set(this.asMode(detail.mode));
+    this.languageMix.set(this.asLanguageMix(detail.languageMix));
+    this.hiringMarket.set(this.asHiringMarket(detail.hiringMarket));
+    this.scrapeResultId.set(detail.scrapeResultId);
+    this.pendingJobId = detail.scrapeResultId;
+    this.resolvePendingJobLink();
+
+    const chatMessages: InterviewPrepChatMessage[] = [];
+    const prior: InterviewPrepPriorTurn[] = [];
+    let latestScorecard: InterviewPrepScorecard | null = null;
+    let latestFollowUps: readonly string[] = [];
+    let latestDebrief: readonly string[] = [];
+    let latestModelAnswer: string | null = null;
+    let latestInference: InterviewPrepInference | null = null;
+    let latestPhase = detail.phase || 'interview';
+
+    for (const message of detail.messages) {
+      const role = message.role === 'user' ? 'user' : 'coach';
+      const phase = message.phase || 'interview';
+      prior.push({ role, text: message.text, phase: phase === 'debrief' ? 'debrief' : 'interview' });
+
+      const hideBootstrap =
+        role === 'user' && message.text.trim() === INTERVIEW_PREP_START_MESSAGE;
+
+      if (!hideBootstrap && message.text.trim().length > 0) {
+        chatMessages.push({
+          id: message.id || this.nextMessageId(),
+          role,
+          text: message.text,
+          phase
+        });
+      }
+
+      if (role === 'coach') {
+        latestPhase = phase;
+        if (message.scorecard) {
+          latestScorecard = message.scorecard;
+        }
+        latestFollowUps = message.followUps;
+        latestDebrief = message.debriefBullets;
+        latestModelAnswer = message.modelAnswer;
+        if (message.inference) {
+          latestInference = message.inference;
+        }
+      }
+    }
+
+    this.messages.set(chatMessages);
+    this.priorTurns.set(prior);
+    this.phase.set(latestPhase);
+    this.inference.set(latestInference);
+    this.scorecard.set(latestScorecard);
+    this.followUps.set(detail.status === 'completed' ? [] : latestFollowUps);
+    this.debriefBullets.set(latestDebrief);
+    this.modelAnswer.set(detail.status === 'completed' ? null : latestModelAnswer);
+    this.modelAnswerRevealed.set(false);
+    this.draftMessage.set('');
+    this.sending.set(false);
+  }
+
+  private clearActivePracticeState(options: { readonly keepSetup: boolean }): void {
+    this.sending.set(false);
+    this.turnError.set(null);
+    this.sessionLoadError.set(null);
+    this.sessionLoadStatus.set('idle');
+    this.draftMessage.set('');
+    this.messages.set([]);
+    this.priorTurns.set([]);
+    this.phase.set('interview');
+    this.inference.set(null);
+    this.scorecard.set(null);
+    this.followUps.set([]);
+    this.debriefBullets.set([]);
+    this.modelAnswer.set(null);
+    this.modelAnswerRevealed.set(false);
+    this.sessionId.set(null);
+    this.sessionStatus.set(null);
+
+    if (!options.keepSetup) {
+      // Mode / language / job are overwritten by fetch hydration.
+      return;
+    }
   }
 
   private mapTurnError(error: unknown): string {
+    if (error instanceof HttpErrorResponse && error.status === 409) {
+      return resolveHttpErrorMessage(error, {
+        fallback: 'This practice session is complete and read-only. Start a new round to continue.',
+        statusMessages: {
+          409: 'This practice session is complete and read-only. Start a new round to continue.'
+        }
+      });
+    }
+
     if (error instanceof HttpErrorResponse && error.status === 404) {
       return resolveHttpErrorMessage(error, {
         fallback:
-          'Structured CV or linked job was not found. Open CV Builder to create your CV, or clear the job link.',
+          'Structured CV, session, or linked job was not found. Open CV Builder, refresh history, or clear the job link.',
         statusMessages: {
-          404: 'Structured CV or linked job was not found. Open CV Builder to create your CV, or clear the job link.'
+          404: 'Structured CV, session, or linked job was not found. Open CV Builder, refresh history, or clear the job link.'
         }
       });
     }
@@ -385,7 +669,7 @@ export class InterviewPrepFacade {
         fallback:
           'Interview Prep could not continue. Check that AI is enabled and your Structured CV has usable content.',
         statusMessages: {
-          400: 'Interview Prep is unavailable right now (validation or AI off). Confirm AI is enabled and your CV has content.'
+          400: 'Interview Prep is unavailable right now (validation, message cap, or AI off). Confirm AI is enabled and your CV has content.'
         }
       });
     }
@@ -395,19 +679,81 @@ export class InterviewPrepFacade {
     });
   }
 
+  private mapSessionError(
+    error: unknown,
+    action: 'create' | 'load' | 'delete'
+  ): string {
+    const fallbacks: Record<typeof action, string> = {
+      create: 'Could not create a practice session. Please try again.',
+      load: 'Could not open that practice session. It may have been deleted.',
+      delete: 'Could not delete that practice session. Please try again.'
+    };
+
+    if (error instanceof HttpErrorResponse && error.status === 404) {
+      return resolveHttpErrorMessage(error, {
+        fallback:
+          action === 'create'
+            ? 'Linked job was not found. Continue as general prep or pick another job.'
+            : fallbacks[action],
+        statusMessages: {
+          404:
+            action === 'create'
+              ? 'Linked job was not found. Continue as general prep or pick another job.'
+              : fallbacks[action]
+        }
+      });
+    }
+
+    return resolveHttpErrorMessage(error, {
+      fallback: fallbacks[action]
+    });
+  }
+
   private createChatMessage(
     role: InterviewPrepChatMessage['role'],
     text: string,
     phase: string
   ): InterviewPrepChatMessage {
-    this.messageSequence += 1;
-
     return {
-      id: `msg-${this.messageSequence}`,
+      id: this.nextMessageId(),
       role,
       text,
       phase
     };
+  }
+
+  private nextMessageId(): string {
+    this.messageSequence += 1;
+    return `msg-${this.messageSequence}`;
+  }
+
+  private asMode(value: string): InterviewPrepMode {
+    const allowed: readonly InterviewPrepMode[] = [
+      'screening',
+      'behavioral',
+      'role_domain',
+      'problem_solving',
+      'process_systems',
+      'language_practice',
+      'full_loop'
+    ];
+    return (allowed.includes(value as InterviewPrepMode)
+      ? value
+      : DEFAULT_INTERVIEW_PREP_MODE) as InterviewPrepMode;
+  }
+
+  private asLanguageMix(value: string): InterviewPrepLanguageMix {
+    const allowed: readonly InterviewPrepLanguageMix[] = ['en', 'da', 'mixed'];
+    return (allowed.includes(value as InterviewPrepLanguageMix)
+      ? value
+      : DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX) as InterviewPrepLanguageMix;
+  }
+
+  private asHiringMarket(value: string): InterviewPrepHiringMarket {
+    const allowed: readonly InterviewPrepHiringMarket[] = ['general', 'dk'];
+    return (allowed.includes(value as InterviewPrepHiringMarket)
+      ? value
+      : DEFAULT_INTERVIEW_PREP_HIRING_MARKET) as InterviewPrepHiringMarket;
   }
 
   private resolvePendingJobLink(): void {
@@ -427,7 +773,7 @@ export class InterviewPrepFacade {
       return;
     }
 
-    // List failed: keep deep-link id for the turn request; server re-validates tenancy.
+    // List failed: keep deep-link id for create/turn; server re-validates tenancy.
     if (status === 'error' || status === 'idle') {
       this.scrapeResultId.set(pending);
       return;
@@ -442,7 +788,15 @@ export class InterviewPrepFacade {
       return;
     }
 
-    // Not in owned list — do not send unknown id on turns.
+    // Not in owned list — do not send unknown id on create/turns when list is ready.
+    // Resumed sessions may still hold a scrapeResultId snapshot even if the job list misses it.
+    if (this.sessionId()) {
+      this.scrapeResultId.set(pending);
+      this.jobLinkStatus.set('ready');
+      this.jobLinkError.set(null);
+      return;
+    }
+
     this.scrapeResultId.set(null);
     this.jobLinkStatus.set('invalid');
     this.jobLinkError.set(
@@ -458,6 +812,26 @@ export class InterviewPrepFacade {
   private cancelJobs(): void {
     this.jobsSubscription?.unsubscribe();
     this.jobsSubscription = null;
+  }
+
+  private cancelHistory(): void {
+    this.historySubscription?.unsubscribe();
+    this.historySubscription = null;
+  }
+
+  private cancelSessionLoad(): void {
+    this.sessionLoadSubscription?.unsubscribe();
+    this.sessionLoadSubscription = null;
+  }
+
+  private cancelCreateSession(): void {
+    this.createSessionSubscription?.unsubscribe();
+    this.createSessionSubscription = null;
+  }
+
+  private cancelDelete(): void {
+    this.deleteSubscription?.unsubscribe();
+    this.deleteSubscription = null;
   }
 
   private cancelTurn(): void {

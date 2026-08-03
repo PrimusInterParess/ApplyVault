@@ -1,6 +1,6 @@
 # Implementation plan — Interview Prep (profession-agnostic coach)
 
-**Status:** `MVP COMPLETE WITH DOCUMENTED LIMITATIONS` (M0–M4 done; Later issues remain open)  
+**Status:** `MVP COMPLETE WITH DOCUMENTED LIMITATIONS` (M0–M4 done; IP-13 history landed 2026-08-03; IP-12/14/15 remain)  
 **Task id:** `interview-prep-2026-08-02`  
 **Author:** principal-software-architect (operate option **A**)  
 **Date:** 2026-08-02  
@@ -195,8 +195,8 @@ Also: `agent-system/handoffs/archive/interview-prep-2026-08-02/created-issues.js
 | M2 | **DONE** — `/interview-prep` UI; [#68](https://github.com/PrimusInterParess/ApplyVault/issues/68) [#71](https://github.com/PrimusInterParess/ApplyVault/issues/71) [#73](https://github.com/PrimusInterParess/ApplyVault/issues/73) [#74](https://github.com/PrimusInterParess/ApplyVault/issues/74) [#76](https://github.com/PrimusInterParess/ApplyVault/issues/76) [#77](https://github.com/PrimusInterParess/ApplyVault/issues/77) |
 | M3 | **DONE** — job picker + CTA; [#75](https://github.com/PrimusInterParess/ApplyVault/issues/75) |
 | M4 | **DONE** — QA report; API 15/15 + FE 11/11; live Gemini SKIP (env) |
-| Later | IP-12 [#78](https://github.com/PrimusInterParess/ApplyVault/issues/78); IP-13…15 [#79](https://github.com/PrimusInterParess/ApplyVault/issues/79)–[#81](https://github.com/PrimusInterParess/ApplyVault/issues/81) |
+| Later | IP-13 [#79](https://github.com/PrimusInterParess/ApplyVault/issues/79) **DONE** (ADR-0016; operate `interview-prep-ip-13-2026-08-03`); IP-12 [#78](https://github.com/PrimusInterParess/ApplyVault/issues/78); IP-14 [#80](https://github.com/PrimusInterParess/ApplyVault/issues/80); IP-15 [#81](https://github.com/PrimusInterParess/ApplyVault/issues/81) |
 
 ## Next operate step
 
-**MVP ship gate met.** Optional next: **C**/**D** for IP-12 full-loop (#78), or Later history/nudge/notes (#79–#81). Or stop and use `/interview-prep` in the app.
+**IP-13 landed** (durable sessions). Optional next: human smoke migrate+`/interview-prep` history, then **C**/**D** for IP-12 (#78), IP-14 (#80), or IP-15 (#81).

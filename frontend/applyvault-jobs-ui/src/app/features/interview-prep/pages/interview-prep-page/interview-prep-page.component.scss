@@ -367,6 +367,146 @@
   margin-top: 1rem;
 }
 
+/* —— History —— */
+.interview-prep__history {
+  padding: 1.05rem 1.15rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  display: grid;
+  gap: 0.75rem;
+  animation: interview-prep-in 0.28s ease;
+}
+
+.interview-prep__history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.interview-prep__history-title {
+  font-size: 0.95rem;
+}
+
+.interview-prep__history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.interview-prep__history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: stretch;
+}
+
+.interview-prep__history-open {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'date mode status'
+    'job job job';
+  gap: 0.2rem 0.65rem;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-soft);
+  color: var(--app-text);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+
+.interview-prep__history-open:hover:not(:disabled) {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+}
+
+.interview-prep__history-open:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.interview-prep__history-date {
+  grid-area: date;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.interview-prep__history-mode {
+  grid-area: mode;
+  font-size: 0.88rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interview-prep__history-job {
+  grid-area: job;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interview-prep__history-status {
+  grid-area: status;
+  justify-self: end;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  color: var(--app-accent-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.interview-prep__history-status--done {
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+}
+
+.interview-prep__history-delete {
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  padding: 0 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.interview-prep__history-delete:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--app-danger) 45%, var(--app-border));
+  color: var(--app-danger);
+}
+
+.interview-prep__history-delete:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* —— Active session bar —— */
 .interview-prep__session-bar {
   display: flex;
@@ -785,7 +925,9 @@
 .interview-prep__text-btn:focus-visible,
 .interview-prep__follow-up-btn:focus-visible,
 .interview-prep__reveal-btn:focus-visible,
-.interview-prep__inline-link:focus-visible {
+.interview-prep__inline-link:focus-visible,
+.interview-prep__history-open:focus-visible,
+.interview-prep__history-delete:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--app-accent) 35%, transparent);
   outline-offset: 2px;
 }
@@ -848,5 +990,21 @@
 
   .interview-prep__message {
     max-width: 100%;
+  }
+
+  .interview-prep__history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .interview-prep__history-delete {
+    min-height: 2.2rem;
+  }
+
+  .interview-prep__history-open {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'date status'
+      'mode mode'
+      'job job';
   }
 }

@@ -17,6 +17,8 @@ export type InterviewPrepPhase = 'interview' | 'debrief';
 
 export type InterviewPrepTurnRole = 'user' | 'coach';
 
+export type InterviewPrepSessionStatus = 'in_progress' | 'completed';
+
 export type InterviewPrepScorecardDimensionId =
   | 'clarity'
   | 'evidence'
@@ -62,6 +64,54 @@ export interface InterviewPrepTurnRequest {
   readonly hiringMarket?: InterviewPrepHiringMarket;
   readonly scrapeResultId?: string | null;
   readonly priorTurns?: readonly InterviewPrepPriorTurn[];
+  /** When set, durable turn path (ADR-0016). */
+  readonly sessionId?: string | null;
+}
+
+export interface InterviewPrepCreateSessionRequest {
+  readonly mode: InterviewPrepMode;
+  readonly languageMix?: InterviewPrepLanguageMix;
+  readonly hiringMarket?: InterviewPrepHiringMarket;
+  readonly scrapeResultId?: string | null;
+}
+
+export interface InterviewPrepSessionSummary {
+  readonly id: string;
+  readonly mode: InterviewPrepMode | string;
+  readonly languageMix: InterviewPrepLanguageMix | string;
+  readonly hiringMarket: InterviewPrepHiringMarket | string;
+  readonly scrapeResultId: string | null;
+  readonly jobTitle: string | null;
+  readonly companyName: string | null;
+  readonly status: InterviewPrepSessionStatus | string;
+  readonly phase: InterviewPrepPhase | string;
+  readonly latestOverallScore: number | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly completedAt: string | null;
+}
+
+export interface InterviewPrepSessionListResponse {
+  readonly items: readonly InterviewPrepSessionSummary[];
+  readonly totalCount: number;
+}
+
+export interface InterviewPrepSessionMessage {
+  readonly id: string;
+  readonly sequence: number;
+  readonly role: InterviewPrepTurnRole | string;
+  readonly text: string;
+  readonly phase: InterviewPrepPhase | string;
+  readonly scorecard: InterviewPrepScorecard | null;
+  readonly followUps: readonly string[];
+  readonly debriefBullets: readonly string[];
+  readonly modelAnswer: string | null;
+  readonly inference: InterviewPrepInference | null;
+  readonly createdAt: string;
+}
+
+export interface InterviewPrepSessionDetail extends InterviewPrepSessionSummary {
+  readonly messages: readonly InterviewPrepSessionMessage[];
 }
 
 export interface InterviewPrepInference {
@@ -92,9 +142,11 @@ export interface InterviewPrepTurnResponse {
   readonly debriefBullets: readonly string[];
   /** Sample spoken answer for the current coach question; null when unused / debrief. */
   readonly modelAnswer: string | null;
+  /** Echoed when the turn was durable (ADR-0016). */
+  readonly sessionId?: string | null;
 }
 
-/** Display transcript row (client-held; not persisted). */
+/** Display transcript row (hydrated from durable session or live turns). */
 export interface InterviewPrepChatMessage {
   readonly id: string;
   readonly role: InterviewPrepTurnRole;

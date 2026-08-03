@@ -27,7 +27,8 @@ import {
   InterviewPrepLanguageOption,
   InterviewPrepMode,
   InterviewPrepModeOption,
-  InterviewPrepScorecardDimensionId
+  InterviewPrepScorecardDimensionId,
+  InterviewPrepSessionSummary
 } from '../../models/interview-prep.model';
 
 type InterviewPrepHelpKey =
@@ -90,6 +91,7 @@ export class InterviewPrepPageComponent implements OnInit {
   ngOnInit(): void {
     this.facade.loadCvGate();
     this.facade.loadOwnedJobs();
+    this.facade.loadHistory();
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const jobId = params.get('jobId');
@@ -152,6 +154,29 @@ export class InterviewPrepPageComponent implements OnInit {
     );
   }
 
+  protected modeLabel(modeId: string): string {
+    return this.modes.find((mode) => mode.id === modeId)?.label ?? modeId.replace(/_/g, ' ');
+  }
+
+  protected statusLabel(status: string): string {
+    if (status === 'completed') {
+      return 'Completed';
+    }
+    if (status === 'in_progress') {
+      return 'In progress';
+    }
+    return status.replace(/_/g, ' ');
+  }
+
+  protected historyJobLabel(item: InterviewPrepSessionSummary): string | null {
+    const title = item.jobTitle?.trim();
+    if (!title) {
+      return null;
+    }
+    const company = item.companyName?.trim();
+    return company ? `${company} · ${title}` : title;
+  }
+
   protected onComposerKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -159,10 +184,39 @@ export class InterviewPrepPageComponent implements OnInit {
     }
   }
 
+  protected openHistorySession(sessionId: string): void {
+    if (this.facade.sending() || this.facade.deletingSessionId()) {
+      return;
+    }
+
+    this.facade.openSession(sessionId);
+  }
+
+  protected confirmDeleteSession(item: InterviewPrepSessionSummary, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (this.facade.deletingSessionId()) {
+      return;
+    }
+
+    const label = this.historyJobLabel(item) ?? this.modeLabel(item.mode);
+    const confirmed = window.confirm(
+      `Delete this practice session (${label})? This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.facade.deleteSession(item.id);
+  }
+
   protected confirmNewRound(): void {
-    if (this.facade.messages().length > 0) {
+    if (this.facade.sessionStarted() || this.facade.messages().length > 0) {
       const confirmed = window.confirm(
-        'Start a new round? This clears the current conversation in this tab.'
+        this.facade.isReadOnly()
+          ? 'Return to setup? You can reopen this session from history.'
+          : 'Start a new round? Your current session stays in history; this view returns to setup.'
       );
       if (!confirmed) {
         return;

@@ -1,7 +1,8 @@
 namespace ApplyVault.Api.Models;
 
 /// <summary>
-/// Request for an ephemeral Interview Prep coach turn (ADR-0012). Not persisted.
+/// Request for an Interview Prep coach turn (ADR-0012 / ADR-0016).
+/// Without <see cref="SessionId"/> the turn is ephemeral; with it, durable.
 /// </summary>
 public sealed record InterviewPrepTurnRequest(
     string Mode,
@@ -9,7 +10,8 @@ public sealed record InterviewPrepTurnRequest(
     string? LanguageMix = null,
     Guid? ScrapeResultId = null,
     IReadOnlyList<InterviewPrepPriorTurnDto>? PriorTurns = null,
-    string? HiringMarket = null);
+    string? HiringMarket = null,
+    Guid? SessionId = null);
 
 public sealed record InterviewPrepPriorTurnDto(
     string Role,
@@ -17,7 +19,7 @@ public sealed record InterviewPrepPriorTurnDto(
     string? Phase = null);
 
 /// <summary>
-/// Ephemeral Interview Prep coach turn response. Not persisted.
+/// Interview Prep coach turn response. Durably persisted when request includes sessionId.
 /// </summary>
 public sealed record InterviewPrepTurnResponseDto(
     string Phase,
@@ -26,7 +28,62 @@ public sealed record InterviewPrepTurnResponseDto(
     InterviewPrepScorecardDto? Scorecard,
     IReadOnlyList<string> FollowUps,
     IReadOnlyList<string> DebriefBullets,
-    string? ModelAnswer = null);
+    string? ModelAnswer = null,
+    Guid? SessionId = null);
+
+public sealed record InterviewPrepCreateSessionRequest(
+    string Mode,
+    string? LanguageMix = null,
+    string? HiringMarket = null,
+    Guid? ScrapeResultId = null);
+
+public sealed record InterviewPrepSessionSummaryDto(
+    Guid Id,
+    string Mode,
+    string LanguageMix,
+    string HiringMarket,
+    Guid? ScrapeResultId,
+    string? JobTitle,
+    string? CompanyName,
+    string Status,
+    string Phase,
+    int? LatestOverallScore,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? CompletedAt);
+
+public sealed record InterviewPrepSessionListResponseDto(
+    IReadOnlyList<InterviewPrepSessionSummaryDto> Items,
+    int TotalCount);
+
+public sealed record InterviewPrepSessionDetailDto(
+    Guid Id,
+    string Mode,
+    string LanguageMix,
+    string HiringMarket,
+    Guid? ScrapeResultId,
+    string? JobTitle,
+    string? CompanyName,
+    string Status,
+    string Phase,
+    int? LatestOverallScore,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? CompletedAt,
+    IReadOnlyList<InterviewPrepSessionMessageDto> Messages);
+
+public sealed record InterviewPrepSessionMessageDto(
+    Guid Id,
+    int Sequence,
+    string Role,
+    string Text,
+    string Phase,
+    InterviewPrepScorecardDto? Scorecard,
+    IReadOnlyList<string> FollowUps,
+    IReadOnlyList<string> DebriefBullets,
+    string? ModelAnswer,
+    InterviewPrepInferenceDto? Inference,
+    DateTimeOffset CreatedAt);
 
 public sealed record InterviewPrepInferenceDto(
     string Role,
@@ -111,4 +168,10 @@ public static class InterviewPrepTurnRoles
 {
     public const string User = "user";
     public const string Coach = "coach";
+}
+
+public static class InterviewPrepSessionStatuses
+{
+    public const string InProgress = "in_progress";
+    public const string Completed = "completed";
 }

@@ -1,0 +1,45 @@
+schema_version: "1.0.0"
+task_id: interview-prep-ip-13-2026-08-03
+closed_at: "2026-08-03"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+issue:
+  number: 79
+  url: "https://github.com/PrimusInterParess/ApplyVault/issues/79"
+  title: "[IP-13] Session history (list / resume past prep)"
+adr:
+  - docs/adr/0016-interview-prep-durable-session-history.md
+  - docs/adr/0012-interview-prep-ephemeral-profession-agnostic.md # §1 superseded
+summary: >
+  Durable Interview Prep session history shipped: EF sessions + messages,
+  session CRUD, optional sessionId on turns (session-wins; complete on debrief),
+  FE always-durable history/resume/read-only/delete. ADR-0016 Accepted.
+  Code review APPROVE WITH NITS; CR-IP-13-01 score denorm wipe fixed.
+
+agents:
+  - architecture-engineer
+  - backend-engineer
+  - frontend-engineer
+  - code-review-engineer
+
+artifacts:
+  - docs/adr/0016-interview-prep-durable-session-history.md
+  - agent-system/handoffs/archive/interview-prep-ip-13-2026-08-03/frozen-contracts-session-history.md
+  - agent-system/handoffs/archive/interview-prep-ip-13-2026-08-03/code-review-findings.md
+  - api/ApplyVault.Api/Migrations/20260803183000_AddInterviewPrepSessions.cs
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+
+limitations:
+  - No unit/Karma tests added or run (user policy this pass); existing FE specs may need update
+  - Hand-written EF migration/Designer/snapshot not verified via dotnet ef / build
+  - Concurrent durable turns on same session may race on message Sequence (CR-IP-13-02) — low likelihood single-tab
+  - Empty in_progress session remains if create succeeds but bootstrap turn fails (resumable)
+  - Prompt DefaultSystemPrompt still mentions ephemeral turn wording (nit CR-IP-13-03)
+
+residual_risks:
+  - Human should migrate DB and smoke create / resume / completed read-only / delete on /interview-prep
+  - IP-15 prep notes (#81) still Later / separate
+
+next:
+  - Human smoke + optionally close #79
+  - Optional: fix concurrency (CR-IP-13-02), refresh FE specs, prompt nit
+  - Remaining Later: IP-12 #78, IP-14 #80, IP-15 #81

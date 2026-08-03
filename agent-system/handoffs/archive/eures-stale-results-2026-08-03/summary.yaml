@@ -1,0 +1,26 @@
+task_id: "eures-stale-results-2026-08-03"
+closed_at: "2026-08-03"
+integration_status: "REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS"
+option: D
+summary: >
+  EURES looked older than Jobnet because local BuildSnapshot always re-ranked by
+  relevance, ignoring MOST_RECENT. Fixed in EuresJobSearchService; unit tests
+  updated and re-run (7/7 pass).
+agents:
+  - backend-engineer
+  - qa-engineer
+artifacts_retained_in_repo:
+  - api/ApplyVault.Api/Services/Eures/EuresJobSearchService.cs
+  - api/ApplyVault.Api.Tests/EuresJobSearchServiceTests.cs
+  - docs/adr/0014-eures-public-search-filters.md
+limitations:
+  - "Default Published=Any still admits old jobs into the set (product/FE default optional)."
+  - "Multi-keyword still forces BEST_MATCH (ADR-0014); older strong matches expected."
+  - "QA did not execute live EURES Published-window or Jobnet contrast smoke."
+residual_risks:
+  - "MOST_RECENT can surface newer low-relevance upstream hits above older strong matches."
+  - "Restart ApplyVault.Api if it was running during the fix so the process loads the new DLL."
+next_actions_optional:
+  - "Manual smoke: EURES Sort=Most recent + Published Last week/month."
+  - "Product decision: default Published to LAST_MONTH or LAST_WEEK."
+pr_or_issue: null

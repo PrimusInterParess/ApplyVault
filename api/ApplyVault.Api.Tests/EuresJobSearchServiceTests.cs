@@ -12,7 +12,7 @@ namespace ApplyVault.Api.Tests;
 public sealed class EuresJobSearchServiceTests
 {
     [Fact]
-    public async Task SearchAsync_SingleKeyword_OrdersByRelevanceThenNewestDate()
+    public async Task SearchAsync_SingleKeyword_MostRecent_OrdersByNewestDateThenRelevance()
     {
         var responsePayload = new EuresSearchResponsePayload
         {
@@ -42,6 +42,50 @@ public sealed class EuresJobSearchServiceTests
         var result = await service.SearchAsync(new EuresJobSearchRequest
         {
             Keyword = "developer",
+            SortSearch = "MOST_RECENT",
+            Page = 1,
+            ResultsPerPage = 2,
+            LocationCode = "dk",
+            RequestLanguage = "en"
+        });
+
+        Assert.Equal(2, result.TotalResults);
+        Assert.Equal("job-newer-irrelevant", result.Jobs[0].Id);
+        Assert.Equal("job-older-relevant", result.Jobs[1].Id);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SingleKeyword_BestMatch_OrdersByRelevanceThenNewestDate()
+    {
+        var responsePayload = new EuresSearchResponsePayload
+        {
+            NumberRecords = 2,
+            Jvs =
+            [
+                EuresTestData.CreateSearchJob(
+                    "job-newer-irrelevant",
+                    "Marketing Specialist",
+                    "Contoso",
+                    "General marketing",
+                    creationDate: EuresTestData.SampleCreationDate + 1_000),
+                EuresTestData.CreateSearchJob(
+                    "job-older-relevant",
+                    "Backend Developer",
+                    "Fabrikam",
+                    "API development",
+                    creationDate: EuresTestData.SampleCreationDate)
+            ]
+        };
+
+        var service = CreateService(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(EuresTestData.SerializeSearchResponse(responsePayload), Encoding.UTF8, "application/json")
+        });
+
+        var result = await service.SearchAsync(new EuresJobSearchRequest
+        {
+            Keyword = "developer",
+            SortSearch = "BEST_MATCH",
             Page = 1,
             ResultsPerPage = 2,
             LocationCode = "dk",
@@ -54,7 +98,7 @@ public sealed class EuresJobSearchServiceTests
     }
 
     [Fact]
-    public async Task SearchAsync_SingleKeyword_UsesNewestDateAsTieBreaker()
+    public async Task SearchAsync_SingleKeyword_MostRecent_UsesRelevanceAsTieBreaker()
     {
         var responsePayload = new EuresSearchResponsePayload
         {
@@ -62,17 +106,17 @@ public sealed class EuresJobSearchServiceTests
             Jvs =
             [
                 EuresTestData.CreateSearchJob(
-                    "job-older-match",
-                    "Backend Developer",
+                    "job-same-date-weaker",
+                    "Marketing Specialist",
                     "Contoso",
-                    "API development",
+                    "General marketing",
                     creationDate: EuresTestData.SampleCreationDate),
                 EuresTestData.CreateSearchJob(
-                    "job-newer-match",
-                    "Platform Developer",
+                    "job-same-date-stronger",
+                    "Backend Developer",
                     "Fabrikam",
-                    "Platform development",
-                    creationDate: EuresTestData.SampleCreationDate + 1_000)
+                    "API development",
+                    creationDate: EuresTestData.SampleCreationDate)
             ]
         };
 
@@ -84,14 +128,15 @@ public sealed class EuresJobSearchServiceTests
         var result = await service.SearchAsync(new EuresJobSearchRequest
         {
             Keyword = "developer",
+            SortSearch = "MOST_RECENT",
             Page = 1,
             ResultsPerPage = 2,
             LocationCode = "dk",
             RequestLanguage = "en"
         });
 
-        Assert.Equal("job-newer-match", result.Jobs[0].Id);
-        Assert.Equal("job-older-match", result.Jobs[1].Id);
+        Assert.Equal("job-same-date-stronger", result.Jobs[0].Id);
+        Assert.Equal("job-same-date-weaker", result.Jobs[1].Id);
     }
 
     [Fact]

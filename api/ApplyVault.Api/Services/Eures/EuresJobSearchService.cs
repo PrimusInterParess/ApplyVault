@@ -122,7 +122,7 @@ internal sealed class EuresJobSearchService(
             }
         }
 
-        return BuildSnapshot(mergedJobs, upstreamTotalRecords, hitSafetyCap);
+        return BuildSnapshot(mergedJobs, sortSearch, upstreamTotalRecords, hitSafetyCap);
     }
 
     private async Task<EuresRankedSearchSnapshot> FetchKeywordUnionRankedJobsAsync(
@@ -166,17 +166,29 @@ internal sealed class EuresJobSearchService(
                 maxCachedResults);
         }
 
-        return BuildSnapshot(mergedJobs, upstreamTotalRecords: null, resultsTruncated: false);
+        return BuildSnapshot(mergedJobs, sortSearch, upstreamTotalRecords: null, resultsTruncated: false);
     }
 
     private static EuresRankedSearchSnapshot BuildSnapshot(
         Dictionary<string, RankedJobListing> mergedJobs,
+        string sortSearch,
         int? upstreamTotalRecords,
         bool resultsTruncated)
     {
-        var rankedJobs = mergedJobs.Values
-            .OrderByDescending((entry) => entry.RelevanceScore)
-            .ThenByDescending((entry) => entry.CreationDate)
+        // Local re-rank must honor the resolved sort. MOST_RECENT was previously always
+        // overridden by relevance, which floated older high-match jobs above fresher ones.
+        IEnumerable<RankedJobListing> ordered = string.Equals(
+            sortSearch,
+            "MOST_RECENT",
+            StringComparison.OrdinalIgnoreCase)
+            ? mergedJobs.Values
+                .OrderByDescending((entry) => entry.CreationDate)
+                .ThenByDescending((entry) => entry.RelevanceScore)
+            : mergedJobs.Values
+                .OrderByDescending((entry) => entry.RelevanceScore)
+                .ThenByDescending((entry) => entry.CreationDate);
+
+        var rankedJobs = ordered
             .Select((entry) => entry.Listing)
             .ToArray();
 

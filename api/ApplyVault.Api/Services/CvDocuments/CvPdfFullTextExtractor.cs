@@ -26,6 +26,12 @@ public sealed class CvPdfFullTextExtractor(
 
     internal const double YTolerancePoints = 2.0;
     internal const double ColumnGapMinWidthPoints = 24.0;
+    /// <summary>Page-global column mid window (fraction of page width).</summary>
+    internal const double DefaultColumnMidToleranceRatio = 0.25;
+    /// <summary>Wider mid window for body-only split after header/span strip.</summary>
+    internal const double BodyColumnMidToleranceRatio = 0.40;
+    /// <summary>Token/line width ≥ this fraction of page width counts as spanning.</summary>
+    internal const double HeaderSpanWidthRatio = 0.60;
     internal const int DefaultSparseCharsPerPageThreshold = 120;
     internal const int SparseWordsPerPageThreshold = 20;
     internal const double MinLetterCoverageRatio = 0.90;
@@ -359,13 +365,35 @@ public sealed class CvPdfFullTextExtractor(
             yield break;
         }
 
-        var splitX = TryDetectColumnSplit(tokens, pageWidth);
+        // Option 1: emit top full-width/span header as single-column, then split body only.
+        var headerTokens = TakeTopHeaderSpanTokens(tokens, pageWidth);
+        if (headerTokens.Count > 0)
+        {
+            foreach (var line in ClusterLinesByY(headerTokens))
+            {
+                yield return line;
+            }
+        }
+
+        var bodyTokens = headerTokens.Count == 0
+            ? tokens
+            : tokens.Where((token) => !headerTokens.Contains(token)).ToArray();
+
+        if (bodyTokens.Count == 0)
+        {
+            yield break;
+        }
+
+        var midTolerance = headerTokens.Count > 0
+            ? BodyColumnMidToleranceRatio
+            : DefaultColumnMidToleranceRatio;
+        var splitX = TryDetectColumnSplit(bodyTokens, pageWidth, midTolerance);
         var bands = splitX is null
-            ? new[] { tokens }
+            ? new[] { bodyTokens }
             : new[]
             {
-                tokens.Where((token) => token.CenterX < splitX.Value).ToArray(),
-                tokens.Where((token) => token.CenterX >= splitX.Value).ToArray()
+                bodyTokens.Where((token) => token.CenterX < splitX.Value).ToArray(),
+                bodyTokens.Where((token) => token.CenterX >= splitX.Value).ToArray()
             };
 
         foreach (var band in bands)
@@ -382,7 +410,92 @@ public sealed class CvPdfFullTextExtractor(
         }
     }
 
-    private static double? TryDetectColumnSplit(IReadOnlyList<TextToken> tokens, double pageWidth)
+    /// <summary>
+    /// Contiguous top Y-lines that span the page (wide token / continuous mid coverage).
+    /// Stops at the first non-span line so two-column body rows are not absorbed.
+    /// </summary>
+    private static IReadOnlyList<TextToken> TakeTopHeaderSpanTokens(
+        IReadOnlyList<TextToken> tokens,
+        double pageWidth)
+    {
+        if (pageWidth <= 0)
+        {
+            return [];
+        }
+
+        var pageMid = pageWidth / 2.0;
+        var header = new List<TextToken>();
+
+        foreach (var line in GroupTokensIntoYLines(tokens))
+        {
+            if (!IsSpanningHeaderLine(line, pageWidth, pageMid))
+            {
+                break;
+            }
+
+            header.AddRange(line);
+        }
+
+        return header;
+    }
+
+    private static bool IsSpanningHeaderLine(
+        IReadOnlyList<TextToken> line,
+        double pageWidth,
+        double pageMid)
+    {
+        if (line.Count == 0)
+        {
+            return false;
+        }
+
+        var ordered = line.OrderBy(static (token) => token.Left).ToArray();
+
+        // Reject two-column rows first: large gap near page mid is left|right, not a header span.
+        for (var index = 1; index < ordered.Length; index++)
+        {
+            var gap = ordered[index].Left - ordered[index - 1].Right;
+            if (gap < ColumnGapMinWidthPoints)
+            {
+                continue;
+            }
+
+            var gapMid = (ordered[index].Left + ordered[index - 1].Right) / 2.0;
+            if (Math.Abs(gapMid - pageMid) <= pageWidth * DefaultColumnMidToleranceRatio)
+            {
+                return false;
+            }
+        }
+
+        // Single wide token (name/title bar) or token that straddles the page mid.
+        foreach (var token in ordered)
+        {
+            if (token.Width >= pageWidth * HeaderSpanWidthRatio)
+            {
+                return true;
+            }
+
+            if (token.Left < pageMid && token.Right > pageMid
+                && token.Width >= pageWidth * 0.20)
+            {
+                return true;
+            }
+        }
+
+        var minLeft = ordered[0].Left;
+        var maxRight = ordered[^1].Right;
+        if (maxRight - minLeft < pageWidth * HeaderSpanWidthRatio)
+        {
+            return false;
+        }
+
+        return minLeft < pageMid && maxRight > pageMid;
+    }
+
+    private static double? TryDetectColumnSplit(
+        IReadOnlyList<TextToken> tokens,
+        double pageWidth,
+        double midToleranceRatio = DefaultColumnMidToleranceRatio)
     {
         if (tokens.Count < 8 || pageWidth <= 0)
         {
@@ -409,7 +522,7 @@ public sealed class CvPdfFullTextExtractor(
             }
 
             // Prefer a gap near the horizontal middle (simple 2-column layouts).
-            if (Math.Abs(mid - pageMid) > pageWidth * 0.25)
+            if (Math.Abs(mid - pageMid) > pageWidth * midToleranceRatio)
             {
                 continue;
             }
@@ -433,6 +546,24 @@ public sealed class CvPdfFullTextExtractor(
     }
 
     private static IEnumerable<(string Text, double YPoints)> ClusterLinesByY(IReadOnlyList<TextToken> tokens)
+    {
+        foreach (var cluster in GroupTokensIntoYLines(tokens))
+        {
+            var y = cluster.Average(static (token) => token.Bottom);
+            var orderedTexts = cluster
+                .OrderBy(static (token) => token.Left)
+                .Select(static (token) => token.Text)
+                .ToArray();
+            var text = CvImportLinkIntegrity.JoinAdjacentTokens(orderedTexts);
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                yield return (text, y);
+            }
+        }
+    }
+
+    private static List<List<TextToken>> GroupTokensIntoYLines(IReadOnlyList<TextToken> tokens)
     {
         var ordered = tokens
             .OrderByDescending(static (token) => token.Bottom)
@@ -469,24 +600,13 @@ public sealed class CvPdfFullTextExtractor(
             clusters.Add(current);
         }
 
-        foreach (var cluster in clusters)
-        {
-            var y = cluster.Average(static (token) => token.Bottom);
-            var orderedTexts = cluster
-                .OrderBy(static (token) => token.Left)
-                .Select(static (token) => token.Text)
-                .ToArray();
-            var text = CvImportLinkIntegrity.JoinAdjacentTokens(orderedTexts);
-
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                yield return (text, y);
-            }
-        }
+        return clusters;
     }
 
     private sealed record TextToken(string Text, double Left, double Right, double Bottom, double Top)
     {
         public double CenterX => (Left + Right) / 2.0;
+
+        public double Width => Right - Left;
     }
 }

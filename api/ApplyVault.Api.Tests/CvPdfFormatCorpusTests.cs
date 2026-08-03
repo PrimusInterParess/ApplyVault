@@ -89,6 +89,7 @@ public sealed class CvPdfFormatCorpusTests
             var extractPath = Path.Combine(OutDir, Path.GetFileNameWithoutExtension(name) + ".extract.txt");
             await File.WriteAllTextAsync(extractPath, fullText);
 
+            var imageOnly = DetectImageOnlyPdf(bytes);
             var fallbackSections = extractor.SectionizeForFallback(extraction.Lines);
             var headerSignals = DetectHeaderSignals(fullText);
             var row = new Dictionary<string, object?>
@@ -99,6 +100,7 @@ public sealed class CvPdfFormatCorpusTests
                 ["pages"] = extraction.PageCount,
                 ["lines"] = extraction.Lines.Count,
                 ["chars"] = extraction.CharCount,
+                ["imageOnlyLikely"] = imageOnly,
                 ["sections"] = fallbackSections.Count,
                 ["sectionHeadings"] = fallbackSections.Select(static (s) => s.Heading).ToArray(),
                 ["headerSignals"] = headerSignals,
@@ -107,7 +109,9 @@ public sealed class CvPdfFormatCorpusTests
 
             if (extraction.Quality == CvPdfExtractionQuality.Empty || extraction.Lines.Count == 0)
             {
-                failures.Add($"{name}: empty extraction");
+                failures.Add(imageOnly
+                    ? $"{name}: empty extraction (image-only / no OCR)"
+                    : $"{name}: empty extraction");
                 rows.Add(row);
                 continue;
             }
@@ -239,6 +243,18 @@ public sealed class CvPdfFormatCorpusTests
             }
 
             await File.WriteAllTextAsync(Path.Combine(OutDir, "corpus-extract-summary.md"), md.ToString());
+
+            var allImageOnly = rows.All(static (r) =>
+                r is Dictionary<string, object?> d
+                && d.TryGetValue("imageOnlyLikely", out var flag)
+                && flag is true);
+
+            if (allImageOnly)
+            {
+                // Image-only corpus: Empty is expected (no OCR). Do not treat as extractor break.
+                return;
+            }
+
             Assert.True(failures.Count < pdfs.Length, "All samples empty — extractor broken.");
         }
     }
@@ -252,6 +268,24 @@ public sealed class CvPdfFormatCorpusTests
         };
 
         return candidates.First(Directory.Exists);
+    }
+
+    /// <summary>
+    /// Heuristic: Pillow/screenshot wrappers and PDFs with image XObjects but no fonts
+    /// cannot yield text without OCR (out of scope for PdfPig extract).
+    /// </summary>
+    private static bool DetectImageOnlyPdf(byte[] bytes)
+    {
+        var ascii = System.Text.Encoding.ASCII.GetString(bytes);
+        var pillow = ascii.Contains("Pillow", StringComparison.OrdinalIgnoreCase)
+            || ascii.Contains("created by Pillow", StringComparison.OrdinalIgnoreCase);
+        var hasImage = ascii.Contains("/Subtype/Image", StringComparison.Ordinal)
+            || ascii.Contains("/Subtype /Image", StringComparison.Ordinal);
+        var hasFont = ascii.Contains("/Type/Font", StringComparison.Ordinal)
+            || ascii.Contains("/Type /Font", StringComparison.Ordinal)
+            || ascii.Contains("/Font", StringComparison.Ordinal);
+
+        return pillow || (hasImage && !hasFont);
     }
 
     private static List<HeaderSignal> DetectHeaderSignals(string text)

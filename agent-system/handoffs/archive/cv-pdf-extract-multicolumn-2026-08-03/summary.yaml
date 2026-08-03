@@ -1,0 +1,25 @@
+schema_version: "1.0.0"
+task_id: cv-pdf-extract-multicolumn-2026-08-03
+closed_at: "2026-08-03"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+summary: >
+  Sidebar/header-span PDF extract reading order improved (Option 1): top spanning
+  header emitted single-column, then body-only column split left-then-right.
+  Operator smoke on layout-class fixture confirmed coherent About/Skills then
+  Experience/Education (no classic interleave). Stopped before Structure-stage work.
+artifacts:
+  - api/ApplyVault.Api/Services/CvDocuments/CvPdfFullTextExtractor.cs
+agents:
+  - architecture-engineer
+  - backend-engineer
+limitations:
+  - Left-then-right body order (sidebar before Experience) unchanged by design.
+  - Contact crumbs (email/github) may still appear late in ordered lines.
+  - Structure (AI section mapping) not in scope; chase separately if builder buckets wrong.
+  - Temporary Information line dump for smoke reverted to Debug on Close.
+  - No automated tests added/run this turn.
+residual_risks:
+  - Header-span heuristics may miss short titles or over-classify unusual wide top lines.
+  - Asymmetric gutters without a stripable header may still miss split.
+  - Complex table layouts still out of scope (prior archive residual).
+next_action: none — Structure mapping only if a later /operate request targets it

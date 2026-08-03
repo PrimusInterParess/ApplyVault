@@ -1,0 +1,26 @@
+task_id: cv-projects-page-ux-2026-08-03
+final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-08-03T16:15:00Z"
+summary: >-
+  CV Projects /cv-projects presentation cleanup: left-aligned Projects header,
+  one toolbar band for browse/saved + controls with inline counts (dual stats
+  cards and centered hero removed), Jobs-like list-card anatomy, quiet selected
+  state without ✓ ornament, Saved badge tokens fixed to --app-positive /
+  --app-success-soft. Facade bindings, routes, keyboard nav, and a11y preserved.
+  No API changes.
+agents:
+  - principal-software-architect
+  - ui-ux-designer
+  - frontend-engineer
+artifacts:
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-projects-page/cv-projects-page.component.html
+  - frontend/applyvault-jobs-ui/src/app/features/cv-projects/pages/cv-projects-page/cv-projects-page.component.scss
+  - agent-system/handoffs/archive/cv-projects-page-ux-2026-08-03/ux-cv-projects-page.md
+limitations:
+  - Live localhost visual QA not completed in this operate pass (browser session blank); confirm hierarchy on /cv-projects.
+  - Builds and Angular specs not run (no-automatic-builds / no-automatic-tests).
+  - AskQuestion tool unavailable; entry used option D from concrete user request.
+residual_risks:
+  - Folded metric cards into muted counts may feel like less overview for some users.
+  - Auto-select first list item behavior unchanged.
+github_issues: []

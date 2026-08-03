@@ -1,11 +1,10 @@
 <main class="cv-projects-page">
-  <section class="cv-projects-page__hero">
-    <p class="cv-projects-page__eyebrow">Portfolio builder</p>
+  <header class="cv-projects-page__header">
     <h1>Projects</h1>
     <p class="cv-projects-page__intro">
       Turn GitHub repositories into concise personal-project copy for your CV.
     </p>
-  </section>
+  </header>
 
   @if (!gitHubConnections.loading() && !facade.isGitHubConnected()) {
     <section class="cv-projects-page__banner" role="status">
@@ -18,20 +17,7 @@
       <a routerLink="/settings" class="cv-projects-page__primary-action">Open settings</a>
     </section>
   } @else {
-    @if (facade.isGitHubConnected()) {
-      <section class="cv-projects-page__stats" aria-label="Projects overview">
-        <article>
-          <span>Repositories shown</span>
-          <strong>{{ filteredRepos().length }}</strong>
-        </article>
-        <article>
-          <span>Saved summaries</span>
-          <strong>{{ facade.savedSummaries().length }}</strong>
-        </article>
-      </section>
-    }
-
-    <section class="cv-projects-page__controls">
+    <section class="cv-projects-page__toolbar" aria-label="Projects workspace">
       <div
         class="cv-projects-page__workspace-toggle"
         role="group"
@@ -93,6 +79,10 @@
           </button>
         </div>
       }
+
+      <p class="cv-projects-page__toolbar-counts" aria-live="polite">
+        {{ filteredRepos().length }} repos · {{ facade.savedSummaries().length }} saved
+      </p>
     </section>
 
     @if (facade.generateError(); as generateError) {
@@ -134,11 +124,22 @@
         [attr.aria-label]="workspaceMode() === 'browse' ? 'GitHub repositories' : 'Saved CV summaries'"
         (keydown)="handleListKeydown($event)">
         @if (workspaceMode() === 'browse') {
+          @if (!facade.loadingRepos() && filteredRepos().length > 0) {
+            <p class="cv-projects-page__list-heading">
+              Showing {{ filteredRepos().length }} repositories
+            </p>
+          }
+
           @if (facade.loadingRepos()) {
             @for (index of skeletonRowIndexes; track index) {
-              <div class="cv-projects-page__skeleton-card">
-                <app-skeleton-block width="72%" height="1rem" />
-                <app-skeleton-block width="54%" height="0.85rem" />
+              <div class="cv-projects-page__skeleton-card" aria-hidden="true">
+                <div class="cv-projects-page__skeleton-header">
+                  <app-skeleton-block width="2.5rem" height="2.5rem" />
+                  <div class="cv-projects-page__skeleton-heading">
+                    <app-skeleton-block width="72%" height="1rem" />
+                    <app-skeleton-block width="48%" height="0.85rem" />
+                  </div>
+                </div>
                 <app-skeleton-block width="88%" height="0.85rem" />
               </div>
             }
@@ -158,15 +159,18 @@
                 [attr.data-repo-id]="repo.externalRepoId"
                 [attr.aria-current]="isRepoSelected(repo.externalRepoId) ? 'true' : null"
                 (click)="selectRepo(repo.externalRepoId)">
-                <div class="cv-projects-page__list-card-top">
+                <div class="cv-projects-page__list-card-header">
                   <span class="cv-projects-page__list-card-monogram" aria-hidden="true">
                     {{ repo.name.slice(0, 1).toUpperCase() }}
                   </span>
-                  <div class="cv-projects-page__list-card-eyebrow">
-                    <span>{{ repo.fullName.split('/')[0] }}</span>
-                    @if (repo.pushedAt) {
-                      <span>{{ repo.pushedAt | date: 'MMM d, y' }}</span>
-                    }
+                  <div class="cv-projects-page__list-card-heading">
+                    <h3>{{ repo.name }}</h3>
+                    <p class="cv-projects-page__list-card-subtitle">
+                      {{ repo.fullName.split('/')[0] }}
+                      @if (repo.pushedAt) {
+                        <span>· {{ repo.pushedAt | date: 'MMM d, y' }}</span>
+                      }
+                    </p>
                   </div>
                   @if (savedSummaryFor(repo)) {
                     <span class="cv-projects-page__list-card-badge cv-projects-page__list-card-badge--saved">
@@ -174,8 +178,6 @@
                     </span>
                   }
                 </div>
-
-                <h3>{{ repo.name }}</h3>
 
                 <div class="cv-projects-page__list-card-meta">
                   @if (repo.primaryLanguage) {
@@ -197,19 +199,35 @@
 
             @if (facade.loadingMoreRepos()) {
               @for (index of loadMoreSkeletonIndexes; track index) {
-                <div class="cv-projects-page__skeleton-card">
-                  <app-skeleton-block width="72%" height="1rem" />
-                  <app-skeleton-block width="54%" height="0.85rem" />
+                <div class="cv-projects-page__skeleton-card" aria-hidden="true">
+                  <div class="cv-projects-page__skeleton-header">
+                    <app-skeleton-block width="2.5rem" height="2.5rem" />
+                    <div class="cv-projects-page__skeleton-heading">
+                      <app-skeleton-block width="72%" height="1rem" />
+                      <app-skeleton-block width="48%" height="0.85rem" />
+                    </div>
+                  </div>
                 </div>
               }
             }
           }
         } @else {
+          @if (!facade.loadingSummaries() && facade.savedSummaries().length > 0) {
+            <p class="cv-projects-page__list-heading">
+              Showing {{ facade.savedSummaries().length }} saved summaries
+            </p>
+          }
+
           @if (facade.loadingSummaries()) {
             @for (index of skeletonRowIndexes; track index) {
-              <div class="cv-projects-page__skeleton-card">
-                <app-skeleton-block width="68%" height="1rem" />
-                <app-skeleton-block width="48%" height="0.85rem" />
+              <div class="cv-projects-page__skeleton-card" aria-hidden="true">
+                <div class="cv-projects-page__skeleton-header">
+                  <app-skeleton-block width="2.5rem" height="2.5rem" />
+                  <div class="cv-projects-page__skeleton-heading">
+                    <app-skeleton-block width="68%" height="1rem" />
+                    <app-skeleton-block width="48%" height="0.85rem" />
+                  </div>
+                </div>
                 <app-skeleton-block width="82%" height="0.85rem" />
               </div>
             }
@@ -229,18 +247,18 @@
                 [attr.data-summary-id]="summary.id"
                 [attr.aria-current]="isSummarySelected(summary.id) ? 'true' : null"
                 (click)="selectSummary(summary.id)">
-                <div class="cv-projects-page__list-card-top">
+                <div class="cv-projects-page__list-card-header">
                   <span class="cv-projects-page__list-card-monogram" aria-hidden="true">
                     {{ summary.cvTitle.slice(0, 1).toUpperCase() }}
                   </span>
-                  <div class="cv-projects-page__list-card-eyebrow">
-                    <span>{{ summary.fullName.split('/')[0] }}</span>
-                    <span>{{ summary.updatedAt | date: 'MMM d, y' }}</span>
+                  <div class="cv-projects-page__list-card-heading">
+                    <h3>{{ summary.cvTitle }}</h3>
+                    <p class="cv-projects-page__list-card-subtitle">
+                      {{ summary.fullName }}
+                      <span>· {{ summary.updatedAt | date: 'MMM d, y' }}</span>
+                    </p>
                   </div>
                 </div>
-
-                <h3>{{ summary.cvTitle }}</h3>
-                <p class="cv-projects-page__list-card-subtitle">{{ summary.fullName }}</p>
 
                 <div class="cv-projects-page__list-card-meta">
                   @if (summary.primaryLanguage) {
@@ -255,9 +273,14 @@
 
             @if (facade.loadingMoreSummaries()) {
               @for (index of loadMoreSkeletonIndexes; track index) {
-                <div class="cv-projects-page__skeleton-card">
-                  <app-skeleton-block width="68%" height="1rem" />
-                  <app-skeleton-block width="48%" height="0.85rem" />
+                <div class="cv-projects-page__skeleton-card" aria-hidden="true">
+                  <div class="cv-projects-page__skeleton-header">
+                    <app-skeleton-block width="2.5rem" height="2.5rem" />
+                    <div class="cv-projects-page__skeleton-heading">
+                      <app-skeleton-block width="68%" height="1rem" />
+                      <app-skeleton-block width="48%" height="0.85rem" />
+                    </div>
+                  </div>
                 </div>
               }
             }

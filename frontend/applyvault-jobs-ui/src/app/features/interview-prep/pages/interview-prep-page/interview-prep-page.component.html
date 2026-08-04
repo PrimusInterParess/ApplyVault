@@ -189,6 +189,37 @@
                   }
                 </div>
               </fieldset>
+
+              <fieldset class="interview-prep__row" [disabled]="facade.sending()">
+                <legend class="interview-prep__legend">Interviewer</legend>
+                <div class="interview-prep__chips interview-prep__chips--compact" role="list">
+                  @for (profile of interviewerProfiles; track profile.id) {
+                    <div
+                      class="interview-prep__chip-wrap"
+                      [class.interview-prep__chip-wrap--suppressed]="isHelpSuppressed(profileHelpKey(profile.id))"
+                      role="listitem"
+                      (mouseleave)="onChipHelpMouseLeave(profileHelpKey(profile.id))">
+                      <button
+                        type="button"
+                        class="interview-prep__chip"
+                        [class.interview-prep__chip--active]="facade.interviewerProfile() === profile.id"
+                        [attr.aria-pressed]="facade.interviewerProfile() === profile.id"
+                        [attr.aria-describedby]="'profile-help-' + profile.id"
+                        (click)="selectInterviewerProfile(profile.id, $event)">
+                        {{ profile.label }}
+                      </button>
+                      <div
+                        class="interview-prep__chip-popover"
+                        role="tooltip"
+                        [id]="'profile-help-' + profile.id">
+                        <p class="interview-prep__chip-popover-title">{{ profile.label }}</p>
+                        <p class="interview-prep__chip-popover-lead">{{ profile.description }}</p>
+                        <p>{{ profile.detail }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </fieldset>
             </div>
 
             <div class="interview-prep__start-row">
@@ -280,6 +311,9 @@
               @if (selectedHiringMarket(); as market) {
                 <span class="interview-prep__pill">{{ market.label }}</span>
               }
+              @if (selectedInterviewerProfile(); as profile) {
+                <span class="interview-prep__pill">{{ profile.label }}</span>
+              }
               @if (facade.linkedJob(); as linked) {
                 <span class="interview-prep__pill interview-prep__pill--soft">
                   {{ linked.company }}
@@ -301,6 +335,36 @@
               {{ facade.isReadOnly() ? 'Back to setup' : 'New round' }}
             </button>
           </div>
+        }
+
+        @if (facade.sessionStarted() || facade.isDebrief()) {
+          <section class="interview-prep__stage-card" aria-labelledby="interview-stage-heading">
+            <div class="interview-prep__stage-card-main">
+              <p class="interview-prep__stage-eyebrow">
+                @if (selectedInterviewerProfile(); as profile) {
+                  {{ profile.label }} interview
+                } @else {
+                  Live interview
+                }
+              </p>
+              <h2 id="interview-stage-heading">{{ currentStageLabel() }}</h2>
+              <p class="interview-prep__stage-copy">{{ interviewMoveTone() }}</p>
+            </div>
+            <div class="interview-prep__stage-progress" aria-label="Interview progress">
+              <span class="interview-prep__stage-count">{{ stageProgressLabel() }}</span>
+              <ol class="interview-prep__stage-rail">
+                @for (stage of agendaStageItems(); track stage.id; let index = $index) {
+                  <li
+                    class="interview-prep__stage-rail-item"
+                    [class.interview-prep__stage-rail-item--complete]="stageItemState(index) === 'complete'"
+                    [class.interview-prep__stage-rail-item--current]="stageItemState(index) === 'current'">
+                    <span class="interview-prep__stage-dot" aria-hidden="true"></span>
+                    <span>{{ stage.label }}</span>
+                  </li>
+                }
+              </ol>
+            </div>
+          </section>
         }
 
         @if (facade.sessionLoadError(); as sessionLoadError) {
@@ -330,7 +394,7 @@
             aria-labelledby="chat-heading"
             [attr.aria-busy]="facade.sending() ? true : null">
             <div class="interview-prep__chat-head">
-              <h2 id="chat-heading">Mock interview</h2>
+              <h2 id="chat-heading">Live interview</h2>
               @if (facade.isReadOnly()) {
                 <span class="interview-prep__status-chip">
                   {{ facade.isDebrief() || facade.sessionStatus() === 'completed' ? 'Round ended' : 'Read-only' }}
@@ -409,6 +473,30 @@
         (facade.sending() || facade.sessionStarted() || facade.isDebrief())
       ) {
         <aside class="interview-prep__side" aria-label="Feedback">
+          @if (!facade.isReadOnly()) {
+            <section class="interview-prep__side-block" aria-labelledby="coach-mode-heading">
+              <h2 id="coach-mode-heading" class="interview-prep__side-title">Interview status</h2>
+              <p class="interview-prep__muted">
+                You are in {{ currentStageLabel() }}. {{ interviewMoveTone() }}
+              </p>
+              <p class="interview-prep__muted">
+                Coaching aids are hidden during the live interview unless you turn them on.
+              </p>
+              @if (interviewMoveLabel(facade.latestInterviewMove()); as moveLabel) {
+                <p class="interview-prep__muted">
+                  Current behavior: {{ moveLabel }}
+                </p>
+              }
+              <button
+                type="button"
+                class="interview-prep__secondary interview-prep__reveal-btn"
+                [attr.aria-pressed]="facade.coachMode()"
+                (click)="facade.toggleCoachMode()">
+                {{ facade.coachMode() ? 'Hide coaching aids' : 'Show coaching aids' }}
+              </button>
+            </section>
+          }
+
           @if (facade.scorecard(); as scorecard) {
             <section class="interview-prep__scorecard" aria-labelledby="scorecard-heading">
               <div class="interview-prep__scorecard-head">
@@ -440,7 +528,7 @@
             </section>
           }
 
-          @if (facade.followUps().length > 0 && !facade.isReadOnly()) {
+          @if (facade.followUps().length > 0 && !facade.isReadOnly() && facade.coachMode()) {
             <section class="interview-prep__side-block" aria-labelledby="follow-ups-heading">
               <h2 id="follow-ups-heading" class="interview-prep__side-title">Try next</h2>
               <ul class="interview-prep__follow-ups">
@@ -461,7 +549,10 @@
 
           @if (facade.modelAnswer(); as modelAnswer) {
             @if (!facade.isDebrief()) {
-              <section class="interview-prep__side-block" aria-labelledby="model-answer-heading">
+              <section
+                class="interview-prep__side-block"
+                aria-labelledby="model-answer-heading"
+                [hidden]="!facade.coachMode()">
                 <h2 id="model-answer-heading" class="interview-prep__side-title">Answer guide</h2>
                 <button
                   type="button"
@@ -478,6 +569,20 @@
                 }
               </section>
             }
+          }
+
+          @if (facade.coachMode() && facade.listeningNotes().length > 0) {
+            <section class="interview-prep__side-block" aria-labelledby="listening-notes-heading">
+              <h2 id="listening-notes-heading" class="interview-prep__side-title">Interviewer notes</h2>
+              @if (facade.interviewerIntent(); as intent) {
+                <p class="interview-prep__muted">{{ intent }}</p>
+              }
+              <ul class="interview-prep__side-list">
+                @for (item of facade.listeningNotes(); track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </section>
           }
 
           @if (facade.debriefBullets().length > 0) {
@@ -503,7 +608,7 @@
                 @if (facade.sending()) {
                   Scoring your answer…
                 } @else {
-                  Tips for the current question and scores after you answer show up here.
+                  Turn on coaching aids for tips and answer guides, or keep them hidden for a more realistic interview.
                 }
               </p>
             </section>

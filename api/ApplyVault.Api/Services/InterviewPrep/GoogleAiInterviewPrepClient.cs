@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using Microsoft.Extensions.Options;
 
@@ -123,11 +124,23 @@ public sealed class GoogleAiInterviewPrepClient(
         var alreadyAskedJson = JsonSerializer.Serialize(
             request.AlreadyAsked ?? Array.Empty<string>(),
             SerializerOptions);
+        var sessionState = request.SessionState ?? new InterviewPrepAiSessionState(
+            InterviewPrepInterviewerProfiles.HiringManager,
+            "[]",
+            "opening",
+            null);
+        var memoryJson = string.IsNullOrWhiteSpace(sessionState.MemoryJson)
+            ? "null"
+            : sessionState.MemoryJson;
 
         var userPrompt = prepOptions.UserPromptTemplate
             .Replace("{{mode}}", mode, StringComparison.Ordinal)
             .Replace("{{languageMix}}", languageMix, StringComparison.Ordinal)
             .Replace("{{hiringMarket}}", hiringMarket, StringComparison.Ordinal)
+            .Replace("{{interviewerProfile}}", sessionState.InterviewerProfile, StringComparison.Ordinal)
+            .Replace("{{agendaJson}}", sessionState.AgendaJson, StringComparison.Ordinal)
+            .Replace("{{currentAgendaStep}}", sessionState.CurrentAgendaStep, StringComparison.Ordinal)
+            .Replace("{{memoryJson}}", memoryJson, StringComparison.Ordinal)
             .Replace("{{userMessage}}", userMessage, StringComparison.Ordinal)
             .Replace("{{priorTurnsJson}}", priorTurnsJson, StringComparison.Ordinal)
             .Replace("{{alreadyAskedJson}}", alreadyAskedJson, StringComparison.Ordinal)
@@ -182,6 +195,7 @@ public sealed class GoogleAiInterviewPrepClient(
             ? null
             : NormalizeScorecard(response.Scorecard);
         var modelAnswer = NormalizeModelAnswer(response.ModelAnswer, phase);
+        var turnState = NormalizeTurnState(response.TurnState, phase);
 
         return new InterviewPrepAiTurnResult(
             phase,
@@ -190,7 +204,79 @@ public sealed class GoogleAiInterviewPrepClient(
             scorecard,
             followUps,
             debriefBullets,
-            modelAnswer);
+            modelAnswer,
+            turnState);
+    }
+
+    private static InterviewPrepAiTurnState NormalizeTurnState(
+        InterviewPrepAiRawTurnState? turnState,
+        string phase)
+    {
+        if (turnState is null)
+        {
+            return new InterviewPrepAiTurnState(
+                string.Equals(phase, InterviewPrepPhases.Debrief, StringComparison.OrdinalIgnoreCase)
+                    ? InterviewPrepInterviewMoves.CloseRound
+                    : InterviewPrepInterviewMoves.AskNewQuestion,
+                InterviewPrepQuestionTypes.RoleDepth,
+                InterviewPrepPressureLevels.Medium,
+                "Continue the interview based on the candidate's latest answer.",
+                string.Equals(phase, InterviewPrepPhases.Debrief, StringComparison.OrdinalIgnoreCase)
+                    ? InterviewPrepPhases.Debrief
+                    : "opening",
+                null,
+                null,
+                []);
+        }
+
+        var interviewMove = NormalizeKnown(
+            turnState.InterviewMove,
+            InterviewPrepInterviewMoves.All,
+            InterviewPrepInterviewMoves.AskNewQuestion);
+        var questionType = NormalizeKnown(
+            turnState.QuestionType,
+            InterviewPrepQuestionTypes.All,
+            InterviewPrepQuestionTypes.RoleDepth);
+        var pressureLevel = NormalizeKnown(
+            turnState.PressureLevel,
+            InterviewPrepPressureLevels.All,
+            InterviewPrepPressureLevels.Medium);
+        var agendaStep = string.IsNullOrWhiteSpace(turnState.AgendaStep)
+            ? "opening"
+            : turnState.AgendaStep.Trim();
+
+        return new InterviewPrepAiTurnState(
+            interviewMove,
+            questionType,
+            pressureLevel,
+            string.IsNullOrWhiteSpace(turnState.InterviewerIntent)
+                ? "Continue the interview based on the candidate's latest answer."
+                : Truncate(turnState.InterviewerIntent.Trim(), 500),
+            Truncate(agendaStep, 64),
+            string.IsNullOrWhiteSpace(turnState.NextAgendaStep)
+                ? null
+                : Truncate(turnState.NextAgendaStep.Trim(), 64),
+            string.IsNullOrWhiteSpace(turnState.MemorySummary)
+                ? null
+                : Truncate(turnState.MemorySummary.Trim(), 4_000),
+            NormalizeStringList(turnState.ListeningNotes)
+                .Select((note) => Truncate(note, 500))
+                .Take(6)
+                .ToArray());
+    }
+
+    private static string NormalizeKnown(
+        string? value,
+        IReadOnlySet<string> allowed,
+        string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+        return allowed.Contains(normalized) ? normalized : fallback;
     }
 
     private static string? NormalizeModelAnswer(string? modelAnswer, string phase)

@@ -15,7 +15,8 @@ internal static class GoogleAiInterviewPrepResponseSchema
                     "inference",
                     "coachMessage",
                     "followUps",
-                    "debriefBullets"
+                    "debriefBullets",
+                    "turnState"
                 },
                 properties = new
                 {
@@ -79,6 +80,42 @@ internal static class GoogleAiInterviewPrepResponseSchema
                     {
                         type = "STRING",
                         nullable = true
+                    },
+                    turnState = new
+                    {
+                        type = "OBJECT",
+                        required = new[]
+                        {
+                            "interviewMove",
+                            "questionType",
+                            "pressureLevel",
+                            "interviewerIntent",
+                            "agendaStep",
+                            "listeningNotes"
+                        },
+                        properties = new
+                        {
+                            interviewMove = new { type = "STRING" },
+                            questionType = new { type = "STRING" },
+                            pressureLevel = new { type = "STRING" },
+                            interviewerIntent = new { type = "STRING" },
+                            agendaStep = new { type = "STRING" },
+                            nextAgendaStep = new
+                            {
+                                type = "STRING",
+                                nullable = true
+                            },
+                            memorySummary = new
+                            {
+                                type = "STRING",
+                                nullable = true
+                            },
+                            listeningNotes = new
+                            {
+                                type = "ARRAY",
+                                items = new { type = "STRING" }
+                            }
+                        }
                     }
                 }
             }

@@ -27,7 +27,14 @@ public sealed record InterviewPrepAiTurnRequest(
     IReadOnlyList<InterviewPrepPriorTurn>? PriorTurns = null,
     string? HiringMarket = null,
     IReadOnlyList<string>? AlreadyAsked = null,
+    InterviewPrepAiSessionState? SessionState = null,
     string? CorrectiveNudge = null);
+
+public sealed record InterviewPrepAiSessionState(
+    string InterviewerProfile,
+    string AgendaJson,
+    string CurrentAgendaStep,
+    string? MemoryJson);
 
 /// <summary>
 /// Read-only job context derived from an owned scrape result (never trust client job text).
@@ -51,7 +58,18 @@ public sealed record InterviewPrepAiTurnResult(
     InterviewPrepAiScorecard? Scorecard,
     IReadOnlyList<string> FollowUps,
     IReadOnlyList<string> DebriefBullets,
-    string? ModelAnswer = null);
+    string? ModelAnswer = null,
+    InterviewPrepAiTurnState? TurnState = null);
+
+public sealed record InterviewPrepAiTurnState(
+    string InterviewMove,
+    string QuestionType,
+    string PressureLevel,
+    string InterviewerIntent,
+    string AgendaStep,
+    string? NextAgendaStep,
+    string? MemorySummary,
+    IReadOnlyList<string> ListeningNotes);
 
 public sealed record InterviewPrepAiInference(
     string Role,
@@ -76,7 +94,18 @@ public sealed record InterviewPrepAiRawResponse(
     InterviewPrepAiRawScorecard? Scorecard,
     IReadOnlyList<string>? FollowUps,
     IReadOnlyList<string>? DebriefBullets,
-    string? ModelAnswer = null);
+    string? ModelAnswer = null,
+    InterviewPrepAiRawTurnState? TurnState = null);
+
+public sealed record InterviewPrepAiRawTurnState(
+    string? InterviewMove,
+    string? QuestionType,
+    string? PressureLevel,
+    string? InterviewerIntent,
+    string? AgendaStep,
+    string? NextAgendaStep,
+    string? MemorySummary,
+    IReadOnlyList<string>? ListeningNotes);
 
 public sealed record InterviewPrepAiRawInference(
     string? Role,

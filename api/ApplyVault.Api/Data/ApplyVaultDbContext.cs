@@ -192,6 +192,11 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((session) => session.Mode).IsRequired().HasMaxLength(64);
             entity.Property((session) => session.LanguageMix).IsRequired().HasMaxLength(16);
             entity.Property((session) => session.HiringMarket).IsRequired().HasMaxLength(16);
+            entity.Property((session) => session.InterviewerProfile).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.AgendaJson).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.CurrentAgendaStep).IsRequired().HasMaxLength(64);
+            entity.Property((session) => session.InterviewerMemoryJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.LatestInterviewMove).HasMaxLength(64);
             entity.Property((session) => session.JobTitle).HasMaxLength(512);
             entity.Property((session) => session.CompanyName).HasMaxLength(512);
             entity.Property((session) => session.Status).IsRequired().HasMaxLength(32);
@@ -225,6 +230,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((message) => message.DebriefBulletsJson).HasColumnType("nvarchar(max)");
             entity.Property((message) => message.ModelAnswer).HasColumnType("nvarchar(max)");
             entity.Property((message) => message.InferenceJson).HasColumnType("nvarchar(max)");
+            entity.Property((message) => message.TurnStateJson).HasColumnType("nvarchar(max)");
             entity.HasIndex((message) => new { message.SessionId, message.Sequence }).IsUnique();
         });
     }

@@ -29,19 +29,24 @@ public sealed record InterviewPrepTurnResponseDto(
     IReadOnlyList<string> FollowUps,
     IReadOnlyList<string> DebriefBullets,
     string? ModelAnswer = null,
-    Guid? SessionId = null);
+    Guid? SessionId = null,
+    InterviewPrepTurnStateDto? TurnState = null);
 
 public sealed record InterviewPrepCreateSessionRequest(
     string Mode,
     string? LanguageMix = null,
     string? HiringMarket = null,
-    Guid? ScrapeResultId = null);
+    Guid? ScrapeResultId = null,
+    string? InterviewerProfile = null);
 
 public sealed record InterviewPrepSessionSummaryDto(
     Guid Id,
     string Mode,
     string LanguageMix,
     string HiringMarket,
+    string InterviewerProfile,
+    string CurrentAgendaStep,
+    string? LatestInterviewMove,
     Guid? ScrapeResultId,
     string? JobTitle,
     string? CompanyName,
@@ -61,6 +66,9 @@ public sealed record InterviewPrepSessionDetailDto(
     string Mode,
     string LanguageMix,
     string HiringMarket,
+    string InterviewerProfile,
+    string CurrentAgendaStep,
+    string? LatestInterviewMove,
     Guid? ScrapeResultId,
     string? JobTitle,
     string? CompanyName,
@@ -83,6 +91,7 @@ public sealed record InterviewPrepSessionMessageDto(
     IReadOnlyList<string> DebriefBullets,
     string? ModelAnswer,
     InterviewPrepInferenceDto? Inference,
+    InterviewPrepTurnStateDto? TurnState,
     DateTimeOffset CreatedAt);
 
 public sealed record InterviewPrepInferenceDto(
@@ -100,6 +109,16 @@ public sealed record InterviewPrepScorecardDimensionDto(
     string Id,
     int Score,
     string Note);
+
+public sealed record InterviewPrepTurnStateDto(
+    string InterviewMove,
+    string QuestionType,
+    string PressureLevel,
+    string InterviewerIntent,
+    string AgendaStep,
+    string? NextAgendaStep,
+    string? MemorySummary,
+    IReadOnlyList<string> ListeningNotes);
 
 /// <summary>
 /// Allowed Interview Prep mode ids (case-sensitive snake_case).
@@ -174,4 +193,78 @@ public static class InterviewPrepSessionStatuses
 {
     public const string InProgress = "in_progress";
     public const string Completed = "completed";
+}
+
+public static class InterviewPrepInterviewerProfiles
+{
+    public const string Recruiter = "recruiter";
+    public const string HiringManager = "hiring_manager";
+    public const string SeniorPeer = "senior_peer";
+    public const string BarRaiser = "bar_raiser";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Recruiter,
+        HiringManager,
+        SeniorPeer,
+        BarRaiser
+    };
+}
+
+public static class InterviewPrepInterviewMoves
+{
+    public const string AskNewQuestion = "ask_new_question";
+    public const string ProbeEvidence = "probe_evidence";
+    public const string ClarifyAmbiguity = "clarify_ambiguity";
+    public const string ChallengeClaim = "challenge_claim";
+    public const string TransitionTopic = "transition_topic";
+    public const string CloseRound = "close_round";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        AskNewQuestion,
+        ProbeEvidence,
+        ClarifyAmbiguity,
+        ChallengeClaim,
+        TransitionTopic,
+        CloseRound
+    };
+}
+
+public static class InterviewPrepQuestionTypes
+{
+    public const string Warmup = "warmup";
+    public const string Motivation = "motivation";
+    public const string Behavioral = "behavioral";
+    public const string RoleDepth = "role_depth";
+    public const string Case = "case";
+    public const string Clarification = "clarification";
+    public const string Challenge = "challenge";
+    public const string Close = "close";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Warmup,
+        Motivation,
+        Behavioral,
+        RoleDepth,
+        Case,
+        Clarification,
+        Challenge,
+        Close
+    };
+}
+
+public static class InterviewPrepPressureLevels
+{
+    public const string Low = "low";
+    public const string Medium = "medium";
+    public const string High = "high";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Low,
+        Medium,
+        High
+    };
 }

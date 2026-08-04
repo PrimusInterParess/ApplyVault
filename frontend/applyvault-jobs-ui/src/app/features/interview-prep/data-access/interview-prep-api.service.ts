@@ -9,6 +9,7 @@ import {
   InterviewPrepSessionListResponse,
   InterviewPrepSessionMessage,
   InterviewPrepSessionSummary,
+  InterviewPrepTurnState,
   InterviewPrepTurnRequest,
   InterviewPrepTurnResponse
 } from '../models/interview-prep.model';
@@ -92,7 +93,8 @@ export function normalizeTurnResponse(
     followUps: normalizeStringList(response.followUps),
     debriefBullets: normalizeStringList(response.debriefBullets),
     modelAnswer: normalizeOptionalText(response.modelAnswer),
-    sessionId: normalizeOptionalId(response.sessionId)
+    sessionId: normalizeOptionalId(response.sessionId),
+    turnState: normalizeTurnState(response.turnState)
   };
 }
 
@@ -102,6 +104,9 @@ function normalizeSessionSummary(response: InterviewPrepSessionSummary): Intervi
     mode: response.mode || 'behavioral',
     languageMix: response.languageMix || 'en',
     hiringMarket: response.hiringMarket || 'general',
+    interviewerProfile: response.interviewerProfile || 'hiring_manager',
+    currentAgendaStep: response.currentAgendaStep || 'opening',
+    latestInterviewMove: normalizeOptionalText(response.latestInterviewMove),
     scrapeResultId: normalizeOptionalId(response.scrapeResultId),
     jobTitle: normalizeOptionalText(response.jobTitle),
     companyName: normalizeOptionalText(response.companyName),
@@ -156,7 +161,27 @@ function normalizeSessionMessage(message: InterviewPrepSessionMessage): Intervie
           isTechnicalContext: Boolean(message.inference.isTechnicalContext)
         }
       : null,
+    turnState: normalizeTurnState(message.turnState),
     createdAt: message.createdAt || ''
+  };
+}
+
+function normalizeTurnState(
+  value: InterviewPrepTurnResponse['turnState']
+): InterviewPrepTurnState | null {
+  if (!value) {
+    return null;
+  }
+
+  return {
+    interviewMove: value.interviewMove || 'ask_new_question',
+    questionType: value.questionType || 'role_depth',
+    pressureLevel: value.pressureLevel || 'medium',
+    interviewerIntent: value.interviewerIntent?.trim() || '',
+    agendaStep: value.agendaStep || 'opening',
+    nextAgendaStep: normalizeOptionalText(value.nextAgendaStep),
+    memorySummary: normalizeOptionalText(value.memorySummary),
+    listeningNotes: normalizeStringList(value.listeningNotes)
   };
 }
 

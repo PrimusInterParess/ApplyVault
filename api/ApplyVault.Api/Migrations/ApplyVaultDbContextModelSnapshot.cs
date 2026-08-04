@@ -198,6 +198,15 @@ namespace ApplyVault.Api.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("AgendaJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CurrentAgendaStep")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("HiringMarket")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -205,6 +214,14 @@ namespace ApplyVault.Api.Migrations
 
                     b.Property<string>("InferenceJson")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InterviewerMemoryJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InterviewerProfile")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<string>("JobTitle")
                         .HasMaxLength(512)
@@ -220,6 +237,10 @@ namespace ApplyVault.Api.Migrations
 
                     b.Property<string>("LatestScorecardJson")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LatestInterviewMove")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Mode")
                         .IsRequired()
@@ -297,6 +318,9 @@ namespace ApplyVault.Api.Migrations
 
                     b.Property<string>("Text")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TurnStateJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");

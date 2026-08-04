@@ -1,0 +1,53 @@
+schema_version: "1.0.0"
+task_id: interview-prep-answered-question-progress-2026-08-04
+closed_at: "2026-08-04"
+integration_status: REQUEST_COMPLETE_WITH_DOCUMENTED_LIMITATIONS
+parent_request: >
+  User reported that Interview Prep stayed in a same-question loop after a
+  candidate gave partial but relevant answers about a LifeBonder RxJS-to-Signals
+  technical disagreement. Desired behavior: verify/evaluate whether the answer is
+  okay, record weak spots, and move to a new topic instead of repeating the same
+  timing/considerations probe.
+final_status_notes: >
+  AI/LLM prompt rules now distinguish non-answers from answered-but-incomplete
+  responses. Relevant examples, reasons, trade-offs, actions, constraints, or
+  results count as answers even when weak. After one focused probe on the same
+  answer/theme, the model must evaluate, update scorecard/listeningNotes/memory,
+  and transition or debrief. Backend also added a narrow immediate answered-prompt
+  repeat detector inside the existing silent regenerate path, preserving the
+  existing MaxCoachDuplicateRetries budget and corrective nudge.
+durable_artifacts:
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepService.cs
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+agents:
+  - ai-llm-engineer
+  - backend-engineer
+validation:
+  - "Cursor ReadLints reported no diagnostics for touched source files."
+  - "No dotnet build, dotnet test, restore, install, or production build was run per user rules."
+context_window_notes:
+  - >
+    The provided transcript is short enough to remain inside MaxPriorTurns, so
+    the observed loop was not caused by older context being dropped.
+  - >
+    Model calls receive role/text/phase for recent prior turns only, bounded by
+    MaxPriorTurns and MaxPriorTurnChars. Durable modelAnswer content is persisted
+    but intentionally not sent back as prior-turn chat context.
+  - >
+    Older coach questions outside the recent window are represented only by the
+    alreadyAsked digest, bounded by MaxAlreadyAskedItems, MaxAlreadyAskedItemChars,
+    and MaxAlreadyAskedTotalChars; it blocks repeated topics but does not preserve
+    full old user answers.
+limitations:
+  - >
+    Model compliance is still probabilistic; the deterministic retry catches exact,
+    high-overlap, and immediate repeated prompts but not every semantic paraphrase.
+  - >
+    If InterviewPrepAi:MaxCoachDuplicateRetries is configured to 0, the existing
+    duplicate/stall regeneration path remains disabled.
+  - >
+    Custom InterviewPrepAi prompt overrides must merge the new answer-classification
+    and after-one-probe progress rules.
+pr_links: []
+issue_links: []

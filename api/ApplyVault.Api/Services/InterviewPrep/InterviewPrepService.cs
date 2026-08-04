@@ -56,19 +56,31 @@ public sealed class InterviewPrepService(
         "Corrective instruction (server retry): Your previous coachMessage duplicated an earlier coach question. Ask a NEW competency/topic for this mode. Do not paraphrase the same theme or story.";
 
     private const string AnsweredQuestionStallRetryNudge =
-        "Corrective instruction (server retry): The previous user message counts as an answer to the immediately preceding coach question. Do not ask for the same elaboration, stakeholder/support details, technical-choice explanation, or same theme again. Move to a clearly new competency/topic for this mode, or debrief.";
+        "Corrective instruction (server retry): Your previous coachMessage re-asked a question the candidate already answered. Treat the latest user message as an answer even if it is partial. Do not ask for the same elaboration, specifics, outcome, timing, considerations, stakeholder/support details, communication steps, architectural decision, or technical-choice explanation again. Briefly evaluate what is still missing, lower scorecard/listeningNotes/memorySummary as needed, then move to a clearly new competency/topic for this mode, or debrief.";
+
+    private const string UserEchoedCoachQuestionNudge =
+        "Corrective instruction: The latest user message appears to repeat the previous coach question instead of answering it. Treat this as a non-answer. Stay on the same agenda step, use interviewMove=challenge_claim or clarify_ambiguity, and respond like a critical but professional interviewer: point out that they have not answered, ask for one concrete example with their action and result, and do not paraphrase the same question neutrally.";
 
     private const int MaxRecentAnsweredCoachPrompts = 3;
     private const int MinSignificantTokenLength = 6;
     private const int MinTokensForStallCompare = 4;
+    private const int MinTokensForImmediatePromptRepeatCompare = 2;
     private const int MinSharedTokensForStall = 3;
+    private const int MinSharedTokensForImmediatePromptRepeat = 2;
     private const double AnsweredPromptJaccardThreshold = 0.45;
     private const double AnsweredPromptContainmentThreshold = 0.72;
+    private const double ImmediatePromptRepeatJaccardThreshold = 0.25;
+    private const double ImmediatePromptRepeatContainmentThreshold = 0.50;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    private sealed record InterviewPrepAgendaStep(
+        string Id,
+        string Label,
+        string Goal);
 
     public async Task<InterviewPrepTurnResponseDto> CreateTurnAsync(
         AppUserEntity user,
@@ -92,6 +104,7 @@ public sealed class InterviewPrepService(
         var mode = ValidateMode(request.Mode);
         var languageMix = ResolveLanguageMix(request.LanguageMix, options.DefaultLanguageMix);
         var hiringMarket = ResolveHiringMarket(request.HiringMarket, options.DefaultHiringMarket);
+        var interviewerProfile = ResolveInterviewerProfile(request.InterviewerProfile, mode);
 
         string? jobTitle = null;
         string? companyName = null;
@@ -116,6 +129,9 @@ public sealed class InterviewPrepService(
             Mode = mode,
             LanguageMix = languageMix,
             HiringMarket = hiringMarket,
+            InterviewerProfile = interviewerProfile,
+            AgendaJson = JsonSerializer.Serialize(BuildAgenda(mode, interviewerProfile), JsonOptions),
+            CurrentAgendaStep = "opening",
             ScrapeResultId = scrapeResultId,
             JobTitle = jobTitle,
             CompanyName = companyName,
@@ -232,7 +248,8 @@ public sealed class InterviewPrepService(
                 userMessage,
                 priorTurns,
                 hiringMarket,
-                alreadyAsked),
+                alreadyAsked,
+                BuildEphemeralSessionState(mode)),
             request.PriorTurns,
             cancellationToken);
 
@@ -302,7 +319,8 @@ public sealed class InterviewPrepService(
                 userMessage,
                 priorTurns,
                 session.HiringMarket,
-                alreadyAsked),
+                alreadyAsked,
+                BuildSessionState(session)),
             priorTurnDtos,
             cancellationToken);
 
@@ -336,6 +354,7 @@ public sealed class InterviewPrepService(
             DebriefBulletsJson = JsonSerializer.Serialize(response.DebriefBullets, JsonOptions),
             ModelAnswer = response.ModelAnswer,
             InferenceJson = JsonSerializer.Serialize(response.Inference, JsonOptions),
+            TurnStateJson = SerializeOptional(response.TurnState),
             CreatedAt = now
         };
 
@@ -344,6 +363,19 @@ public sealed class InterviewPrepService(
 
         session.Phase = response.Phase;
         session.InferenceJson = coachEntity.InferenceJson;
+        session.LatestInterviewMove = response.TurnState?.InterviewMove;
+        session.CurrentAgendaStep = ResolveNextAgendaStep(
+            session.AgendaJson,
+            session.CurrentAgendaStep,
+            response.TurnState,
+            response.Phase);
+        if (!string.IsNullOrWhiteSpace(response.TurnState?.MemorySummary))
+        {
+            session.InterviewerMemoryJson = JsonSerializer.Serialize(
+                new { summary = response.TurnState.MemorySummary },
+                JsonOptions);
+        }
+
         if (response.Scorecard is { } scorecard)
         {
             session.LatestScorecardJson = coachEntity.ScorecardJson;
@@ -451,6 +483,165 @@ public sealed class InterviewPrepService(
         return resolved;
     }
 
+    private static string ResolveInterviewerProfile(string? interviewerProfile, string mode)
+    {
+        if (!string.IsNullOrWhiteSpace(interviewerProfile))
+        {
+            var resolved = interviewerProfile.Trim();
+            if (!InterviewPrepInterviewerProfiles.All.Contains(resolved))
+            {
+                throw new InvalidOperationException(
+                    "interviewerProfile must be one of: recruiter, hiring_manager, senior_peer, bar_raiser.");
+            }
+
+            return resolved;
+        }
+
+        return mode switch
+        {
+            InterviewPrepModes.Screening or InterviewPrepModes.LanguagePractice =>
+                InterviewPrepInterviewerProfiles.Recruiter,
+            InterviewPrepModes.ProblemSolving or InterviewPrepModes.ProcessSystems =>
+                InterviewPrepInterviewerProfiles.SeniorPeer,
+            InterviewPrepModes.FullLoop => InterviewPrepInterviewerProfiles.HiringManager,
+            _ => InterviewPrepInterviewerProfiles.HiringManager
+        };
+    }
+
+    private static InterviewPrepAiSessionState BuildEphemeralSessionState(string mode) =>
+        new(
+            ResolveInterviewerProfile(null, mode),
+            JsonSerializer.Serialize(BuildAgenda(mode, ResolveInterviewerProfile(null, mode)), JsonOptions),
+            "opening",
+            null);
+
+    private static InterviewPrepAiSessionState BuildSessionState(InterviewPrepSessionEntity session) =>
+        new(
+            session.InterviewerProfile,
+            string.IsNullOrWhiteSpace(session.AgendaJson) ? "[]" : session.AgendaJson,
+            string.IsNullOrWhiteSpace(session.CurrentAgendaStep) ? "opening" : session.CurrentAgendaStep,
+            session.InterviewerMemoryJson);
+
+    private static IReadOnlyList<InterviewPrepAgendaStep> BuildAgenda(
+        string mode,
+        string interviewerProfile)
+    {
+        var opening = new InterviewPrepAgendaStep(
+            "opening",
+            "Opening",
+            "Set context, establish interview tone, and ask the first natural question.");
+        var close = new InterviewPrepAgendaStep(
+            "candidate_questions",
+            "Candidate questions",
+            "Invite concise candidate questions or close the simulated round naturally.");
+        var debrief = new InterviewPrepAgendaStep(
+            "debrief",
+            "Debrief",
+            "Summarize performance across the whole agenda with concrete next-practice advice.");
+
+        IReadOnlyList<InterviewPrepAgendaStep> steps = mode switch
+        {
+            InterviewPrepModes.Screening =>
+            [
+                opening,
+                new("motivation_fit", "Motivation and fit", "Probe role motivation, company interest, and career direction."),
+                new("cv_walkthrough", "CV walkthrough", "Ask for a concise walkthrough grounded in the Structured CV."),
+                close,
+                debrief
+            ],
+            InterviewPrepModes.Behavioral =>
+            [
+                opening,
+                new("behavior_story", "Behavioral story", "Ask for one real story with situation, action, and result."),
+                new("evidence_probe", "Evidence probe", "Probe ownership, trade-offs, conflict, or learning without looping."),
+                close,
+                debrief
+            ],
+            InterviewPrepModes.ProblemSolving =>
+            [
+                opening,
+                new("case_setup", "Scenario setup", "Present a realistic problem for the inferred profession."),
+                new("approach_tradeoffs", "Approach and trade-offs", "Probe clarifying questions, prioritization, and decision criteria."),
+                close,
+                debrief
+            ],
+            InterviewPrepModes.ProcessSystems =>
+            [
+                opening,
+                new("process_map", "Process map", "Ask how work flows end to end in the candidate's profession."),
+                new("failure_modes", "Failure modes", "Probe handoffs, bottlenecks, quality checks, and improvements."),
+                close,
+                debrief
+            ],
+            InterviewPrepModes.LanguagePractice =>
+            [
+                opening,
+                new("phrasing_practice", "Phrasing practice", "Ask a realistic interview question and focus on clarity and natural wording."),
+                new("rephrase_probe", "Rephrase probe", "Ask for a tighter or more natural version without changing facts."),
+                close,
+                debrief
+            ],
+            InterviewPrepModes.FullLoop =>
+            [
+                opening,
+                new("motivation_fit", "Motivation and fit", "Start like a recruiter with motivation and role fit."),
+                new("behavior_story", "Behavioral story", "Probe one concrete past situation."),
+                new("role_depth", "Role depth", "Probe role/domain judgment using CV and job evidence."),
+                new("scenario_probe", "Scenario probe", "Ask a practical scenario or case question."),
+                close,
+                debrief
+            ],
+            _ =>
+            [
+                opening,
+                new("role_depth", "Role depth", "Probe role/domain judgment using CV and job evidence."),
+                new("evidence_probe", "Evidence probe", "Ask one focused follow-up to test evidence and ownership."),
+                close,
+                debrief
+            ]
+        };
+
+        if (interviewerProfile == InterviewPrepInterviewerProfiles.BarRaiser
+            && !steps.Any((step) => step.Id == "challenge_claims"))
+        {
+            var mutable = steps.ToList();
+            mutable.Insert(
+                Math.Max(1, mutable.Count - 2),
+                new InterviewPrepAgendaStep(
+                    "challenge_claims",
+                    "Challenge claims",
+                    "Professionally challenge weak evidence or unsupported claims."));
+            return mutable;
+        }
+
+        return steps;
+    }
+
+    private static string ResolveNextAgendaStep(
+        string agendaJson,
+        string currentAgendaStep,
+        InterviewPrepTurnStateDto? turnState,
+        string phase)
+    {
+        if (string.Equals(phase, InterviewPrepPhases.Debrief, StringComparison.Ordinal))
+        {
+            return "debrief";
+        }
+
+        var candidate = NullIfWhiteSpace(turnState?.NextAgendaStep)
+            ?? NullIfWhiteSpace(turnState?.AgendaStep)
+            ?? NullIfWhiteSpace(currentAgendaStep)
+            ?? "opening";
+
+        var steps = DeserializeOptional<List<InterviewPrepAgendaStep>>(agendaJson) ?? [];
+        if (steps.Count == 0 || steps.Any((step) => step.Id == candidate))
+        {
+            return candidate;
+        }
+
+        return currentAgendaStep;
+    }
+
     private async Task<InterviewPrepAiTurnResult> GenerateTurnWithDuplicateGateAsync(
         InterviewPrepAiTurnRequest aiRequest,
         IReadOnlyList<InterviewPrepPriorTurnDto>? fullPriorTurns,
@@ -461,8 +652,11 @@ public sealed class InterviewPrepService(
         var recentAnsweredCoachPrompts = CollectRecentAnsweredCoachPrompts(
             fullPriorTurns,
             aiRequest.UserMessage);
+        var effectiveRequest = IsUserEchoingLastCoachPrompt(fullPriorTurns, aiRequest.UserMessage)
+            ? aiRequest with { CorrectiveNudge = CombineCorrectiveNudges(aiRequest.CorrectiveNudge, UserEchoedCoachQuestionNudge) }
+            : aiRequest;
 
-        var result = await interviewPrepAiClient.GenerateTurnAsync(aiRequest, cancellationToken);
+        var result = await interviewPrepAiClient.GenerateTurnAsync(effectiveRequest, cancellationToken);
 
         for (var attempt = 0; attempt < maxRetries; attempt++)
         {
@@ -474,7 +668,12 @@ public sealed class InterviewPrepService(
                     maxRetries);
 
                 result = await interviewPrepAiClient.GenerateTurnAsync(
-                    aiRequest with { CorrectiveNudge = CoachDuplicateRetryNudge },
+                    effectiveRequest with
+                    {
+                        CorrectiveNudge = CombineCorrectiveNudges(
+                            effectiveRequest.CorrectiveNudge,
+                            CoachDuplicateRetryNudge)
+                    },
                     cancellationToken);
 
                 continue;
@@ -488,7 +687,12 @@ public sealed class InterviewPrepService(
                     maxRetries);
 
                 result = await interviewPrepAiClient.GenerateTurnAsync(
-                    aiRequest with { CorrectiveNudge = AnsweredQuestionStallRetryNudge },
+                    effectiveRequest with
+                    {
+                        CorrectiveNudge = CombineCorrectiveNudges(
+                            effectiveRequest.CorrectiveNudge,
+                            AnsweredQuestionStallRetryNudge)
+                    },
                     cancellationToken);
 
                 continue;
@@ -511,6 +715,54 @@ public sealed class InterviewPrepService(
         }
 
         return result;
+    }
+
+    private static bool IsUserEchoingLastCoachPrompt(
+        IReadOnlyList<InterviewPrepPriorTurnDto>? priorTurns,
+        string currentUserMessage)
+    {
+        if (priorTurns is null || priorTurns.Count == 0 || string.IsNullOrWhiteSpace(currentUserMessage))
+        {
+            return false;
+        }
+
+        var lastCoachPrompt = priorTurns
+            .LastOrDefault((turn) =>
+                string.Equals(turn.Role, InterviewPrepTurnRoles.Coach, StringComparison.Ordinal)
+                && string.Equals(
+                    string.IsNullOrWhiteSpace(turn.Phase) ? InterviewPrepPhases.Interview : turn.Phase,
+                    InterviewPrepPhases.Interview,
+                    StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(turn.Text));
+
+        if (lastCoachPrompt is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(
+                NormalizeForDuplicateCompare(currentUserMessage),
+                NormalizeForDuplicateCompare(lastCoachPrompt.Text),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var userTokens = TokenizeForStallCompare(currentUserMessage);
+        var coachTokens = TokenizeForStallCompare(lastCoachPrompt.Text);
+        return userTokens.Count >= MinTokensForStallCompare
+            && coachTokens.Count >= MinTokensForStallCompare
+            && HasHighLexicalOverlap(userTokens, coachTokens);
+    }
+
+    private static string CombineCorrectiveNudges(string? existing, string next)
+    {
+        if (string.IsNullOrWhiteSpace(existing))
+        {
+            return next;
+        }
+
+        return existing.Trim() + "\n\n" + next;
     }
 
     private static List<string> CollectRecentAnsweredCoachPrompts(
@@ -580,15 +832,22 @@ public sealed class InterviewPrepService(
         }
 
         var generatedTokens = TokenizeForStallCompare(result.CoachMessage);
-        if (generatedTokens.Count < MinTokensForStallCompare)
+        if (generatedTokens.Count == 0)
         {
             return false;
         }
 
-        foreach (var prompt in recentAnsweredCoachPrompts)
+        for (var index = 0; index < recentAnsweredCoachPrompts.Count; index++)
         {
+            var prompt = recentAnsweredCoachPrompts[index];
             var promptTokens = TokenizeForStallCompare(prompt);
-            if (promptTokens.Count < MinTokensForStallCompare)
+            if (index == 0 && IsImmediateAnsweredPromptRepeat(result.CoachMessage, prompt, generatedTokens, promptTokens))
+            {
+                return true;
+            }
+
+            if (generatedTokens.Count < MinTokensForStallCompare
+                || promptTokens.Count < MinTokensForStallCompare)
             {
                 continue;
             }
@@ -600,6 +859,29 @@ public sealed class InterviewPrepService(
         }
 
         return false;
+    }
+
+    private static bool IsImmediateAnsweredPromptRepeat(
+        string coachMessage,
+        string latestAnsweredCoachPrompt,
+        HashSet<string> generatedTokens,
+        HashSet<string> promptTokens)
+    {
+        var normalizedCoachMessage = NormalizeForDuplicateCompare(coachMessage);
+        var normalizedPrompt = NormalizeForDuplicateCompare(latestAnsweredCoachPrompt);
+        if (normalizedCoachMessage.Length == 0 || normalizedPrompt.Length == 0)
+        {
+            return false;
+        }
+
+        if (normalizedCoachMessage.Contains(normalizedPrompt, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return generatedTokens.Count >= MinTokensForImmediatePromptRepeatCompare
+            && promptTokens.Count >= MinTokensForImmediatePromptRepeatCompare
+            && HasImmediatePromptRepeatOverlap(generatedTokens, promptTokens);
     }
 
     private static List<string> CollectCoachInterviewTexts(
@@ -738,6 +1020,32 @@ public sealed class InterviewPrepService(
             || containment >= AnsweredPromptContainmentThreshold;
     }
 
+    private static bool HasImmediatePromptRepeatOverlap(
+        HashSet<string> generatedTokens,
+        HashSet<string> answeredPromptTokens)
+    {
+        var shared = 0;
+        foreach (var token in generatedTokens)
+        {
+            if (answeredPromptTokens.Contains(token))
+            {
+                shared++;
+            }
+        }
+
+        if (shared < MinSharedTokensForImmediatePromptRepeat)
+        {
+            return false;
+        }
+
+        var union = generatedTokens.Count + answeredPromptTokens.Count - shared;
+        var jaccard = union == 0 ? 0 : (double)shared / union;
+        var containment = (double)shared / Math.Min(generatedTokens.Count, answeredPromptTokens.Count);
+
+        return jaccard >= ImmediatePromptRepeatJaccardThreshold
+            || containment >= ImmediatePromptRepeatContainmentThreshold;
+    }
+
     private static string NormalizeForDuplicateCompare(string text)
     {
         var trimmed = text.Trim();
@@ -866,7 +1174,26 @@ public sealed class InterviewPrepService(
             result.FollowUps ?? [],
             result.DebriefBullets ?? [],
             result.ModelAnswer,
-            sessionId);
+            sessionId,
+            MapTurnState(result.TurnState));
+    }
+
+    private static InterviewPrepTurnStateDto? MapTurnState(InterviewPrepAiTurnState? turnState)
+    {
+        if (turnState is null)
+        {
+            return null;
+        }
+
+        return new InterviewPrepTurnStateDto(
+            turnState.InterviewMove,
+            turnState.QuestionType,
+            turnState.PressureLevel,
+            turnState.InterviewerIntent,
+            turnState.AgendaStep,
+            turnState.NextAgendaStep,
+            turnState.MemorySummary,
+            turnState.ListeningNotes ?? []);
     }
 
     private static InterviewPrepSessionSummaryDto MapSessionSummary(InterviewPrepSessionEntity entity) =>
@@ -875,6 +1202,11 @@ public sealed class InterviewPrepService(
             entity.Mode,
             entity.LanguageMix,
             entity.HiringMarket,
+            string.IsNullOrWhiteSpace(entity.InterviewerProfile)
+                ? InterviewPrepInterviewerProfiles.HiringManager
+                : entity.InterviewerProfile,
+            string.IsNullOrWhiteSpace(entity.CurrentAgendaStep) ? "opening" : entity.CurrentAgendaStep,
+            entity.LatestInterviewMove,
             entity.ScrapeResultId,
             entity.JobTitle,
             entity.CompanyName,
@@ -891,6 +1223,11 @@ public sealed class InterviewPrepService(
             entity.Mode,
             entity.LanguageMix,
             entity.HiringMarket,
+            string.IsNullOrWhiteSpace(entity.InterviewerProfile)
+                ? InterviewPrepInterviewerProfiles.HiringManager
+                : entity.InterviewerProfile,
+            string.IsNullOrWhiteSpace(entity.CurrentAgendaStep) ? "opening" : entity.CurrentAgendaStep,
+            entity.LatestInterviewMove,
             entity.ScrapeResultId,
             entity.JobTitle,
             entity.CompanyName,
@@ -917,6 +1254,7 @@ public sealed class InterviewPrepService(
             DeserializeStringList(message.DebriefBulletsJson),
             message.ModelAnswer,
             DeserializeOptional<InterviewPrepInferenceDto>(message.InferenceJson),
+            DeserializeOptional<InterviewPrepTurnStateDto>(message.TurnStateJson),
             message.CreatedAt);
 
     private static string? SerializeOptional<T>(T? value) where T : class =>

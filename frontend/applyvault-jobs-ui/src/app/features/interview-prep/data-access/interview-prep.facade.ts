@@ -9,12 +9,14 @@ import { JobResultsApiService } from '../../job-results/data-access/job-results-
 import { mapSavedJobResultToViewModel } from '../../job-results/utils/job-result.mapper';
 import { InterviewPrepApiService } from './interview-prep-api.service';
 import {
+  DEFAULT_INTERVIEW_PREP_INTERVIEWER_PROFILE,
   DEFAULT_INTERVIEW_PREP_HIRING_MARKET,
   DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX,
   DEFAULT_INTERVIEW_PREP_MODE,
   INTERVIEW_PREP_START_MESSAGE,
   InterviewPrepChatMessage,
   InterviewPrepHiringMarket,
+  InterviewPrepInterviewerProfile,
   InterviewPrepInference,
   InterviewPrepLanguageMix,
   InterviewPrepMode,
@@ -63,6 +65,9 @@ export class InterviewPrepFacade {
   readonly mode = signal<InterviewPrepMode>(DEFAULT_INTERVIEW_PREP_MODE);
   readonly languageMix = signal<InterviewPrepLanguageMix>(DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX);
   readonly hiringMarket = signal<InterviewPrepHiringMarket>(DEFAULT_INTERVIEW_PREP_HIRING_MARKET);
+  readonly interviewerProfile = signal<InterviewPrepInterviewerProfile>(
+    DEFAULT_INTERVIEW_PREP_INTERVIEWER_PROFILE
+  );
   readonly scrapeResultId = signal<string | null>(null);
 
   readonly jobOptions = signal<readonly InterviewPrepJobOption[]>([]);
@@ -93,6 +98,11 @@ export class InterviewPrepFacade {
   readonly debriefBullets = signal<readonly string[]>([]);
   readonly modelAnswer = signal<string | null>(null);
   readonly modelAnswerRevealed = signal(false);
+  readonly currentAgendaStep = signal('opening');
+  readonly latestInterviewMove = signal<string | null>(null);
+  readonly interviewerIntent = signal<string | null>(null);
+  readonly listeningNotes = signal<readonly string[]>([]);
+  readonly coachMode = signal(false);
 
   readonly sessionStarted = computed(
     () => this.sessionId() != null || this.messages().length > 0
@@ -210,6 +220,14 @@ export class InterviewPrepFacade {
     this.hiringMarket.set(hiringMarket);
   }
 
+  setInterviewerProfile(interviewerProfile: InterviewPrepInterviewerProfile): void {
+    if (this.setupLocked()) {
+      return;
+    }
+
+    this.interviewerProfile.set(interviewerProfile);
+  }
+
   /**
    * Maps deep-link / picker `jobId` → API `scrapeResultId`.
    * Resolves company/title once owned jobs are loaded; invalid ids clear targeting.
@@ -304,6 +322,7 @@ export class InterviewPrepFacade {
         mode: this.mode(),
         languageMix: this.languageMix(),
         hiringMarket: this.hiringMarket(),
+        interviewerProfile: this.interviewerProfile(),
         scrapeResultId: this.scrapeResultId()
       })
       .subscribe({
@@ -443,6 +462,10 @@ export class InterviewPrepFacade {
     this.modelAnswerRevealed.update((current) => !current);
   }
 
+  toggleCoachMode(): void {
+    this.coachMode.update((current) => !current);
+  }
+
   resetSession(): void {
     this.cancelTurn();
     this.cancelCreateSession();
@@ -539,6 +562,12 @@ export class InterviewPrepFacade {
     ]);
     this.phase.set(coachPhase);
     this.inference.set(response.inference);
+    this.latestInterviewMove.set(response.turnState?.interviewMove ?? null);
+    this.interviewerIntent.set(response.turnState?.interviewerIntent?.trim() || null);
+    this.listeningNotes.set(response.turnState?.listeningNotes ?? []);
+    this.currentAgendaStep.set(
+      response.turnState?.nextAgendaStep || response.turnState?.agendaStep || this.currentAgendaStep()
+    );
     // Null scorecard on setup/continuation turns must not wipe a prior scorecard.
     if (response.scorecard) {
       this.scorecard.set(response.scorecard);
@@ -563,6 +592,9 @@ export class InterviewPrepFacade {
     this.mode.set(this.asMode(detail.mode));
     this.languageMix.set(this.asLanguageMix(detail.languageMix));
     this.hiringMarket.set(this.asHiringMarket(detail.hiringMarket));
+    this.interviewerProfile.set(this.asInterviewerProfile(detail.interviewerProfile));
+    this.currentAgendaStep.set(detail.currentAgendaStep || 'opening');
+    this.latestInterviewMove.set(detail.latestInterviewMove);
     this.scrapeResultId.set(detail.scrapeResultId);
     this.pendingJobId = detail.scrapeResultId;
     this.resolvePendingJobLink();
@@ -574,6 +606,8 @@ export class InterviewPrepFacade {
     let latestDebrief: readonly string[] = [];
     let latestModelAnswer: string | null = null;
     let latestInference: InterviewPrepInference | null = null;
+    let latestIntent: string | null = null;
+    let latestListeningNotes: readonly string[] = [];
     let latestPhase = detail.phase || 'interview';
 
     for (const message of detail.messages) {
@@ -604,6 +638,14 @@ export class InterviewPrepFacade {
         if (message.inference) {
           latestInference = message.inference;
         }
+        if (message.turnState) {
+          latestIntent = message.turnState.interviewerIntent?.trim() || null;
+          latestListeningNotes = message.turnState.listeningNotes;
+          this.latestInterviewMove.set(message.turnState.interviewMove);
+          this.currentAgendaStep.set(
+            message.turnState.nextAgendaStep || message.turnState.agendaStep || this.currentAgendaStep()
+          );
+        }
       }
     }
 
@@ -616,6 +658,8 @@ export class InterviewPrepFacade {
     this.debriefBullets.set(latestDebrief);
     this.modelAnswer.set(detail.status === 'completed' ? null : latestModelAnswer);
     this.modelAnswerRevealed.set(false);
+    this.interviewerIntent.set(latestIntent);
+    this.listeningNotes.set(latestListeningNotes);
     this.draftMessage.set('');
     this.sending.set(false);
   }
@@ -635,6 +679,11 @@ export class InterviewPrepFacade {
     this.debriefBullets.set([]);
     this.modelAnswer.set(null);
     this.modelAnswerRevealed.set(false);
+    this.currentAgendaStep.set('opening');
+    this.latestInterviewMove.set(null);
+    this.interviewerIntent.set(null);
+    this.listeningNotes.set([]);
+    this.coachMode.set(false);
     this.sessionId.set(null);
     this.sessionStatus.set(null);
 
@@ -754,6 +803,18 @@ export class InterviewPrepFacade {
     return (allowed.includes(value as InterviewPrepHiringMarket)
       ? value
       : DEFAULT_INTERVIEW_PREP_HIRING_MARKET) as InterviewPrepHiringMarket;
+  }
+
+  private asInterviewerProfile(value: string): InterviewPrepInterviewerProfile {
+    const allowed: readonly InterviewPrepInterviewerProfile[] = [
+      'recruiter',
+      'hiring_manager',
+      'senior_peer',
+      'bar_raiser'
+    ];
+    return (allowed.includes(value as InterviewPrepInterviewerProfile)
+      ? value
+      : DEFAULT_INTERVIEW_PREP_INTERVIEWER_PROFILE) as InterviewPrepInterviewerProfile;
   }
 
   private resolvePendingJobLink(): void {

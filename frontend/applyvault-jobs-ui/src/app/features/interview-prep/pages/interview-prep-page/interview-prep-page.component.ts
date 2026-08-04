@@ -18,11 +18,14 @@ import { readInputValue } from '../../../../core/dom/input-value.util';
 import { InterviewPrepFacade } from '../../data-access/interview-prep.facade';
 import {
   INTERVIEW_PREP_HIRING_MARKETS,
+  INTERVIEW_PREP_INTERVIEWER_PROFILES,
   INTERVIEW_PREP_LANGUAGE_MIXES,
   INTERVIEW_PREP_MODES,
   INTERVIEW_PREP_SCORECARD_DIMENSION_LABELS,
   InterviewPrepHiringMarket,
   InterviewPrepHiringMarketOption,
+  InterviewPrepInterviewerProfile,
+  InterviewPrepInterviewerProfileOption,
   InterviewPrepLanguageMix,
   InterviewPrepLanguageOption,
   InterviewPrepMode,
@@ -34,7 +37,13 @@ import {
 type InterviewPrepHelpKey =
   | `mode:${InterviewPrepMode}`
   | `language:${InterviewPrepLanguageMix}`
-  | `hiring:${InterviewPrepHiringMarket}`;
+  | `hiring:${InterviewPrepHiringMarket}`
+  | `profile:${InterviewPrepInterviewerProfile}`;
+
+interface InterviewPrepStageItem {
+  readonly id: string;
+  readonly label: string;
+}
 
 @Component({
   selector: 'app-interview-prep-page',
@@ -48,6 +57,7 @@ export class InterviewPrepPageComponent implements OnInit {
   protected readonly modes = INTERVIEW_PREP_MODES;
   protected readonly languageMixes = INTERVIEW_PREP_LANGUAGE_MIXES;
   protected readonly hiringMarkets = INTERVIEW_PREP_HIRING_MARKETS;
+  protected readonly interviewerProfiles = INTERVIEW_PREP_INTERVIEWER_PROFILES;
   protected readonly readInputValue = readInputValue;
 
   /** While set, hide that chip's hover/focus popover until the pointer leaves. */
@@ -67,6 +77,45 @@ export class InterviewPrepPageComponent implements OnInit {
     (): InterviewPrepHiringMarketOption | undefined =>
       this.hiringMarkets.find((option) => option.id === this.facade.hiringMarket())
   );
+
+  protected readonly selectedInterviewerProfile = computed(
+    (): InterviewPrepInterviewerProfileOption | undefined =>
+      this.interviewerProfiles.find((option) => option.id === this.facade.interviewerProfile())
+  );
+
+  protected readonly agendaStageItems = computed(
+    (): readonly InterviewPrepStageItem[] =>
+      this.stageItemsForMode(this.facade.mode(), this.facade.interviewerProfile())
+  );
+
+  protected readonly currentStageIndex = computed(() => {
+    const current = this.facade.currentAgendaStep();
+    const index = this.agendaStageItems().findIndex((stage) => stage.id === current);
+    return index >= 0 ? index : 0;
+  });
+
+  protected readonly stageProgressLabel = computed(() => {
+    const total = this.agendaStageItems().length;
+    return `Step ${Math.min(this.currentStageIndex() + 1, total)} of ${total}`;
+  });
+
+  protected readonly currentStageLabel = computed(() =>
+    this.agendaStepLabel(this.facade.currentAgendaStep())
+  );
+
+  protected readonly interviewMoveTone = computed(() => {
+    const move = this.facade.latestInterviewMove();
+    const tones: Record<string, string> = {
+      ask_new_question: 'The interviewer is opening a new topic.',
+      probe_evidence: 'The interviewer is probing for concrete evidence.',
+      clarify_ambiguity: 'The interviewer needs a clearer answer.',
+      challenge_claim: 'The interviewer is challenging weak or unsupported claims.',
+      transition_topic: 'The interviewer is moving to the next topic.',
+      close_round: 'The interviewer is closing the round.'
+    };
+
+    return move ? tones[move] ?? 'The interviewer is steering the conversation.' : 'Answer naturally.';
+  });
 
   @ViewChild('messagesList') private messagesList?: ElementRef<HTMLElement>;
   @ViewChild('composerInput') private composerInput?: ElementRef<HTMLTextAreaElement>;
@@ -114,6 +163,14 @@ export class InterviewPrepPageComponent implements OnInit {
     this.dismissChipHelp(this.hiringHelpKey(hiringMarket), event);
   }
 
+  protected selectInterviewerProfile(
+    interviewerProfile: InterviewPrepInterviewerProfile,
+    event: Event
+  ): void {
+    this.facade.setInterviewerProfile(interviewerProfile);
+    this.dismissChipHelp(this.profileHelpKey(interviewerProfile), event);
+  }
+
   protected modeHelpKey(mode: InterviewPrepMode): InterviewPrepHelpKey {
     return `mode:${mode}`;
   }
@@ -124,6 +181,12 @@ export class InterviewPrepPageComponent implements OnInit {
 
   protected hiringHelpKey(hiringMarket: InterviewPrepHiringMarket): InterviewPrepHelpKey {
     return `hiring:${hiringMarket}`;
+  }
+
+  protected profileHelpKey(
+    interviewerProfile: InterviewPrepInterviewerProfile
+  ): InterviewPrepHelpKey {
+    return `profile:${interviewerProfile}`;
   }
 
   protected isHelpSuppressed(key: InterviewPrepHelpKey): boolean {
@@ -166,6 +229,141 @@ export class InterviewPrepPageComponent implements OnInit {
       return 'In progress';
     }
     return status.replace(/_/g, ' ');
+  }
+
+  protected agendaStepLabel(step: string): string {
+    const labels: Record<string, string> = {
+      opening: 'Opening',
+      motivation_fit: 'Motivation and fit',
+      cv_walkthrough: 'CV walkthrough',
+      behavior_story: 'Behavioral story',
+      evidence_probe: 'Evidence probe',
+      case_setup: 'Scenario setup',
+      approach_tradeoffs: 'Approach and trade-offs',
+      process_map: 'Process map',
+      failure_modes: 'Failure modes',
+      phrasing_practice: 'Phrasing practice',
+      rephrase_probe: 'Rephrase probe',
+      role_depth: 'Role depth',
+      scenario_probe: 'Scenario probe',
+      challenge_claims: 'Challenge claims',
+      candidate_questions: 'Candidate questions',
+      debrief: 'Debrief'
+    };
+
+    return labels[step] ?? step.replace(/_/g, ' ');
+  }
+
+  protected interviewMoveLabel(move: string | null): string | null {
+    if (!move) {
+      return null;
+    }
+
+    const labels: Record<string, string> = {
+      ask_new_question: 'New question',
+      probe_evidence: 'Evidence probe',
+      clarify_ambiguity: 'Clarification',
+      challenge_claim: 'Challenge',
+      transition_topic: 'Topic transition',
+      close_round: 'Closing'
+    };
+
+    return labels[move] ?? move.replace(/_/g, ' ');
+  }
+
+  protected stageItemState(index: number): 'complete' | 'current' | 'upcoming' {
+    const current = this.currentStageIndex();
+    if (index < current) {
+      return 'complete';
+    }
+
+    return index === current ? 'current' : 'upcoming';
+  }
+
+  private stageItemsForMode(
+    mode: InterviewPrepMode,
+    interviewerProfile: InterviewPrepInterviewerProfile
+  ): readonly InterviewPrepStageItem[] {
+    const opening: InterviewPrepStageItem = { id: 'opening', label: 'Opening' };
+    const candidateQuestions: InterviewPrepStageItem = {
+      id: 'candidate_questions',
+      label: 'Candidate questions'
+    };
+    const debrief: InterviewPrepStageItem = { id: 'debrief', label: 'Debrief' };
+
+    const base = (() => {
+      switch (mode) {
+        case 'screening':
+          return [
+            opening,
+            { id: 'motivation_fit', label: 'Motivation' },
+            { id: 'cv_walkthrough', label: 'CV walkthrough' },
+            candidateQuestions,
+            debrief
+          ];
+        case 'behavioral':
+          return [
+            opening,
+            { id: 'behavior_story', label: 'Behavioral story' },
+            { id: 'evidence_probe', label: 'Evidence probe' },
+            candidateQuestions,
+            debrief
+          ];
+        case 'problem_solving':
+          return [
+            opening,
+            { id: 'case_setup', label: 'Scenario' },
+            { id: 'approach_tradeoffs', label: 'Trade-offs' },
+            candidateQuestions,
+            debrief
+          ];
+        case 'process_systems':
+          return [
+            opening,
+            { id: 'process_map', label: 'Process map' },
+            { id: 'failure_modes', label: 'Failure modes' },
+            candidateQuestions,
+            debrief
+          ];
+        case 'language_practice':
+          return [
+            opening,
+            { id: 'phrasing_practice', label: 'Phrasing' },
+            { id: 'rephrase_probe', label: 'Rephrase probe' },
+            candidateQuestions,
+            debrief
+          ];
+        case 'full_loop':
+          return [
+            opening,
+            { id: 'motivation_fit', label: 'Motivation' },
+            { id: 'behavior_story', label: 'Behavioral' },
+            { id: 'role_depth', label: 'Role depth' },
+            { id: 'scenario_probe', label: 'Scenario' },
+            candidateQuestions,
+            debrief
+          ];
+        default:
+          return [
+            opening,
+            { id: 'role_depth', label: 'Role depth' },
+            { id: 'evidence_probe', label: 'Evidence probe' },
+            candidateQuestions,
+            debrief
+          ];
+      }
+    })();
+
+    if (interviewerProfile !== 'bar_raiser') {
+      return base;
+    }
+
+    const insertAt = Math.max(1, base.length - 2);
+    return [
+      ...base.slice(0, insertAt),
+      { id: 'challenge_claims', label: 'Challenge' },
+      ...base.slice(insertAt)
+    ];
   }
 
   protected historyJobLabel(item: InterviewPrepSessionSummary): string | null {

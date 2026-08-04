@@ -12,6 +12,16 @@ public sealed class InterviewPrepSessionEntity
 
     public required string HiringMarket { get; set; }
 
+    public required string InterviewerProfile { get; set; }
+
+    public required string AgendaJson { get; set; }
+
+    public required string CurrentAgendaStep { get; set; }
+
+    public string? InterviewerMemoryJson { get; set; }
+
+    public string? LatestInterviewMove { get; set; }
+
     public Guid? ScrapeResultId { get; set; }
 
     public string? JobTitle { get; set; }
@@ -64,6 +74,8 @@ public sealed class InterviewPrepSessionMessageEntity
     public string? ModelAnswer { get; set; }
 
     public string? InferenceJson { get; set; }
+
+    public string? TurnStateJson { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

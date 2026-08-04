@@ -19,6 +19,22 @@ export type InterviewPrepTurnRole = 'user' | 'coach';
 
 export type InterviewPrepSessionStatus = 'in_progress' | 'completed';
 
+export type InterviewPrepInterviewerProfile =
+  | 'recruiter'
+  | 'hiring_manager'
+  | 'senior_peer'
+  | 'bar_raiser';
+
+export type InterviewPrepInterviewMove =
+  | 'ask_new_question'
+  | 'probe_evidence'
+  | 'clarify_ambiguity'
+  | 'challenge_claim'
+  | 'transition_topic'
+  | 'close_round';
+
+export type InterviewPrepPressureLevel = 'low' | 'medium' | 'high';
+
 export type InterviewPrepScorecardDimensionId =
   | 'clarity'
   | 'evidence'
@@ -51,6 +67,13 @@ export interface InterviewPrepHiringMarketOption {
   readonly detail: string;
 }
 
+export interface InterviewPrepInterviewerProfileOption {
+  readonly id: InterviewPrepInterviewerProfile;
+  readonly label: string;
+  readonly description: string;
+  readonly detail: string;
+}
+
 export interface InterviewPrepPriorTurn {
   readonly role: InterviewPrepTurnRole;
   readonly text: string;
@@ -73,6 +96,7 @@ export interface InterviewPrepCreateSessionRequest {
   readonly languageMix?: InterviewPrepLanguageMix;
   readonly hiringMarket?: InterviewPrepHiringMarket;
   readonly scrapeResultId?: string | null;
+  readonly interviewerProfile?: InterviewPrepInterviewerProfile | null;
 }
 
 export interface InterviewPrepSessionSummary {
@@ -80,6 +104,9 @@ export interface InterviewPrepSessionSummary {
   readonly mode: InterviewPrepMode | string;
   readonly languageMix: InterviewPrepLanguageMix | string;
   readonly hiringMarket: InterviewPrepHiringMarket | string;
+  readonly interviewerProfile: InterviewPrepInterviewerProfile | string;
+  readonly currentAgendaStep: string;
+  readonly latestInterviewMove: InterviewPrepInterviewMove | string | null;
   readonly scrapeResultId: string | null;
   readonly jobTitle: string | null;
   readonly companyName: string | null;
@@ -107,6 +134,7 @@ export interface InterviewPrepSessionMessage {
   readonly debriefBullets: readonly string[];
   readonly modelAnswer: string | null;
   readonly inference: InterviewPrepInference | null;
+  readonly turnState: InterviewPrepTurnState | null;
   readonly createdAt: string;
 }
 
@@ -140,10 +168,22 @@ export interface InterviewPrepTurnResponse {
   readonly scorecard: InterviewPrepScorecard | null;
   readonly followUps: readonly string[];
   readonly debriefBullets: readonly string[];
-  /** Sample spoken answer for the current coach question; null when unused / debrief. */
+  /** Grounded answer guide for the current coach question; null when unused / debrief. */
   readonly modelAnswer: string | null;
   /** Echoed when the turn was durable (ADR-0016). */
   readonly sessionId?: string | null;
+  readonly turnState?: InterviewPrepTurnState | null;
+}
+
+export interface InterviewPrepTurnState {
+  readonly interviewMove: InterviewPrepInterviewMove | string;
+  readonly questionType: string;
+  readonly pressureLevel: InterviewPrepPressureLevel | string;
+  readonly interviewerIntent: string;
+  readonly agendaStep: string;
+  readonly nextAgendaStep: string | null;
+  readonly memorySummary: string | null;
+  readonly listeningNotes: readonly string[];
 }
 
 /** Display transcript row (hydrated from durable session or live turns). */
@@ -253,6 +293,37 @@ export const INTERVIEW_PREP_HIRING_MARKETS: readonly InterviewPrepHiringMarketOp
   }
 ] as const;
 
+export const INTERVIEW_PREP_INTERVIEWER_PROFILES: readonly InterviewPrepInterviewerProfileOption[] = [
+  {
+    id: 'recruiter',
+    label: 'Recruiter',
+    description: 'Motivation, fit, clarity, and practical expectations.',
+    detail:
+      'Feels like an early screening conversation: concise career pitch, why this role, communication, and general fit.'
+  },
+  {
+    id: 'hiring_manager',
+    label: 'Hiring manager',
+    description: 'Role depth, judgment, ownership, and team fit.',
+    detail:
+      'Feels like the person responsible for the role is testing whether your experience maps to the work.'
+  },
+  {
+    id: 'senior_peer',
+    label: 'Senior peer',
+    description: 'Practical craft, trade-offs, handoffs, and collaboration.',
+    detail:
+      'Feels like a future colleague asking how you actually solve problems and work with others.'
+  },
+  {
+    id: 'bar_raiser',
+    label: 'Bar raiser',
+    description: 'Sharper probes and more challenge on vague claims.',
+    detail:
+      'Feels more demanding: the interviewer asks for evidence, trade-offs, and clearer examples before moving on.'
+  }
+] as const;
+
 export const INTERVIEW_PREP_SCORECARD_DIMENSION_LABELS: Readonly<
   Record<InterviewPrepScorecardDimensionId, string>
 > = {
@@ -266,4 +337,5 @@ export const INTERVIEW_PREP_SCORECARD_DIMENSION_LABELS: Readonly<
 export const DEFAULT_INTERVIEW_PREP_MODE: InterviewPrepMode = 'behavioral';
 export const DEFAULT_INTERVIEW_PREP_LANGUAGE_MIX: InterviewPrepLanguageMix = 'en';
 export const DEFAULT_INTERVIEW_PREP_HIRING_MARKET: InterviewPrepHiringMarket = 'general';
+export const DEFAULT_INTERVIEW_PREP_INTERVIEWER_PROFILE: InterviewPrepInterviewerProfile = 'hiring_manager';
 export const INTERVIEW_PREP_START_MESSAGE = "Let's start.";

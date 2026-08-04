@@ -52,15 +52,24 @@ public sealed class InterviewPrepAiOptions
           (e.g. structure cues, what to emphasize, a clarifying angle). 2–4 items when phase is interview
           and coachMessage asks or continues a question. Do not wait for the candidate to answer first.
           Use [] only in debrief, or when no useful tip applies.
-        - modelAnswer: REQUIRED sample spoken answer for the CURRENT coach question whenever phase is
-          interview and coachMessage asks or continues an answerable question. Always populate it in that
-          case — do not omit it to save tokens or because of anti-repeat rules. Distinct from followUps:
-          tips are brief structure/angle cues; modelAnswer is a short spoken sample (one short paragraph /
-          STAR-like when behavioral), not an essay and not a second chat message. Must be null when phase
-          is debrief. May be null only on setup / acknowledgment / score-only turns with no answerable
-          question. Ground in Structured CV ± optional job + inference; honor languageMix and hiring-market
-          bias. Never invent employers, credentials, visa, or work-permit facts. Never put the full sample
-          into coachMessage or followUps.
+        - modelAnswer: REQUIRED answer guide (orientation outline) for the CURRENT coach question whenever
+          phase is interview and coachMessage asks or continues an answerable question. Always populate it
+          in that case — do not omit it to save tokens or because of anti-repeat rules. Distinct from
+          followUps: tips are brief structure/angle cues; modelAnswer is a fuller orientation brief — not
+          an essay, not a second chat message, and NOT a first-person spoken script. Write in second-person
+          / imperative coaching voice (e.g. "Use STAR. Pick a real example from your CV… Cover: …").
+          Include recommended structure (STAR when behavioral, or another fit for the mode/question),
+          3–5 points to cover, and optional hooks that appear in Structured CV and/or optional job JSON
+          only. Must be null when phase is debrief. May be null only on setup / acknowledgment /
+          score-only turns with no answerable question. Honor languageMix and hiring-market bias.
+          Hard bans: never write a first-person "In my previous role…" narrative; never invent employers,
+          credentials, projects, tech stacks/protocols, metrics, timelines, PoC outcomes, visa, or
+          work-permit facts; never name tools or stacks not present in the Structured CV / job JSON for
+          that evidence; plain text only — no markdown (no **, *, #, backticks, fences, or - / 1. bullet
+          lists). Use one short paragraph or sentences joined with "→" / commas. If the CV lacks a concrete
+          example, tell the seeker to choose a real one and keep missing tech/outcome slots generic
+          (e.g. [your stack], [outcome]) rather than inventing details. Never put the full guide into
+          coachMessage or followUps.
         - debriefBullets is a string array (use [] when none / not in debrief).
         - scorecard may be null on setup / pure interview turns. When scoring an answer or ending a round, return
           scorecard with overall (0–100), optional summary, and dimensions with exactly these ids in this order:
@@ -88,7 +97,8 @@ public sealed class InterviewPrepAiOptions
 
         THIS TURN (read first):
         - If coachMessage asks or continues a question (phase=interview): you MUST return non-empty
-          followUps (2–4 tips) AND a non-null modelAnswer (sample spoken answer for that question).
+          followUps (2–4 tips) AND a non-null modelAnswer (answer guide / orientation outline for that
+          question — not a first-person spoken script; no invented tech or outcomes; plain text, no markdown).
           Anti-repeat rules never justify omitting modelAnswer or followUps.
         - alreadyAskedJson is a BLOCKLIST of older coach questions — do not ask them again (exact or paraphrase).
         - priorTurnsJson shows recent chat — do not re-ask those coach questions either.

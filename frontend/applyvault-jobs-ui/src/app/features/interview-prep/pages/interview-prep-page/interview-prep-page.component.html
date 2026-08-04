@@ -462,14 +462,14 @@
           @if (facade.modelAnswer(); as modelAnswer) {
             @if (!facade.isDebrief()) {
               <section class="interview-prep__side-block" aria-labelledby="model-answer-heading">
-                <h2 id="model-answer-heading" class="interview-prep__side-title">Sample answer</h2>
+                <h2 id="model-answer-heading" class="interview-prep__side-title">Answer guide</h2>
                 <button
                   type="button"
                   class="interview-prep__secondary interview-prep__reveal-btn"
                   [attr.aria-expanded]="facade.modelAnswerRevealed()"
                   [attr.aria-controls]="'model-answer-body'"
                   (click)="facade.revealModelAnswer()">
-                  {{ facade.modelAnswerRevealed() ? 'Hide sample answer' : 'Reveal sample answer' }}
+                  {{ facade.modelAnswerRevealed() ? 'Hide answer guide' : 'Reveal answer guide' }}
                 </button>
                 @if (facade.modelAnswerRevealed()) {
                   <p id="model-answer-body" class="interview-prep__model-answer" aria-live="polite">

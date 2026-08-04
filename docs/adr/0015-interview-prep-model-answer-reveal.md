@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (2026-08-03 — operate `interview-prep-reveal-answer-2026-08-03`, human-approved option 1)
+Accepted (2026-08-03 — operate `interview-prep-reveal-answer-2026-08-03`, human-approved option 1).
+**Superseded in part** by ADR-0018 for `modelAnswer` **content semantics** (orientation answer guide, not fabricated spoken script). Field name, nullability, client reveal UX, and exclusion from `priorTurns` remain as decided here.
 
 ## Context
 

@@ -434,7 +434,7 @@ export class InterviewPrepFacade {
     this.draftMessage.set(trimmed);
   }
 
-  /** Toggle visibility of the latest-turn sample answer (client-only; not chat/composer). */
+  /** Toggle visibility of the latest-turn answer guide (client-only; not chat/composer). */
   revealModelAnswer(): void {
     if (!this.modelAnswer() || this.isDebrief()) {
       return;

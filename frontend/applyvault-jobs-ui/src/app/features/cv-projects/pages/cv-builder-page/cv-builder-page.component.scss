@@ -93,14 +93,21 @@
 .cv-builder--edit {
   background:
     linear-gradient(180deg, #eceff4 0%, var(--cv-desk) 40%, var(--cv-desk-deep) 100%);
-  min-height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
+  /* Cap height so desk-scroll (overflow + overscroll contain) can actually scroll on touch. */
+  height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
+  height: calc(100dvh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
+  max-height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
+  max-height: calc(100dvh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
+  min-height: 0;
+  overflow: hidden;
 }
 
 .cv-builder__desk {
   position: relative;
-  min-height: inherit;
+  height: 100%;
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .cv-builder__topbar {
@@ -265,9 +272,11 @@
 }
 
 .cv-builder__desk-scroll {
+  min-height: 0;
   padding: 1rem clamp(0.75rem, 2vw, 1.25rem) 5rem;
   display: grid;
   justify-items: center;
+  align-content: start;
   gap: 0.65rem;
   /* Allow zoomed paper to remain reachable (scale transform overflows layout box). */
   overflow-x: auto;

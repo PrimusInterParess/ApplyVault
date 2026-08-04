@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
 }
@@ -598,7 +600,7 @@ h2 {
   border-color: var(--app-danger);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: $app-bp-compact) {
   .jobs-page {
     padding: 1.25rem 1rem 2rem;
   }
@@ -633,7 +635,7 @@ h2 {
     display: grid;
     gap: 0.35rem;
     position: sticky;
-    top: 0;
+    top: var(--app-header-offset, var(--app-header-height));
     z-index: 3;
     margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;
@@ -642,7 +644,7 @@ h2 {
 
   .jobs-page__back-button {
     justify-self: start;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
     padding: 0.45rem 0;
     border: 0;
     background: transparent;
@@ -658,6 +660,53 @@ h2 {
     font-weight: 600;
     line-height: 1.4;
     overflow-wrap: anywhere;
+  }
+
+  .jobs-page__primary-action,
+  .jobs-page__secondary-action {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: $app-bp-phone) {
+  .jobs-page {
+    padding: 0.85rem 0.85rem 1.75rem;
+  }
+
+  .jobs-page__title {
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+  }
+
+  .jobs-page__attention,
+  .jobs-page__toolbar,
+  .jobs-page__banner,
+  .jobs-page__error-bar {
+    margin-bottom: 0.65rem;
+  }
+
+  .jobs-page__attention-trigger,
+  .jobs-page__toolbar-trigger {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .jobs-page__attention-hint {
+    display: none;
+  }
+
+  .jobs-page__field input,
+  .jobs-page__field select,
+  .jobs-page__state button,
+  .jobs-page__primary-action,
+  .jobs-page__secondary-action,
+  .jobs-page__banner-dismiss {
+    min-height: 2.75rem;
+  }
+
+  .jobs-page__workflow-chip {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.85rem;
   }
 }
 

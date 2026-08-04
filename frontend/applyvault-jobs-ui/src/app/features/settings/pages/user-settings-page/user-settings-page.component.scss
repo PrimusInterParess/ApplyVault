@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
 }
@@ -524,7 +526,7 @@
   background: color-mix(in srgb, var(--app-danger-soft) 70%, var(--app-danger) 30%);
 }
 
-@media (max-width: 900px) {
+@media (max-width: $app-bp-compact) {
   .settings-page {
     padding: 1.25rem;
   }
@@ -557,5 +559,85 @@
 
   .settings-page__skeleton-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: $app-bp-phone) {
+  .settings-page {
+    padding: 1rem max(0.85rem, env(safe-area-inset-left, 0px))
+      calc(1.5rem + env(safe-area-inset-bottom, 0px))
+      max(0.85rem, env(safe-area-inset-right, 0px));
+  }
+
+  .settings-page__hero {
+    padding: 1.25rem 1rem;
+  }
+
+  .settings-page__panel {
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  .settings-page__provider-actions {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .settings-page__provider-action {
+    width: 100%;
+    min-height: 2.75rem;
+    gap: 0.65rem;
+    padding: 0.85rem;
+  }
+
+  .settings-page__provider-action-label {
+    white-space: nowrap;
+  }
+
+  .settings-page__connection-row {
+    padding: 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .settings-page__connection-action,
+  .settings-page__help-wrap--action .settings-page__secondary-action,
+  .settings-page__help-wrap--block .settings-page__provider-action {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .settings-page__primary-action,
+  .settings-page__secondary-action {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .settings-page__dialog-backdrop {
+    padding: max(0.85rem, env(safe-area-inset-top, 0px))
+      max(0.85rem, env(safe-area-inset-right, 0px))
+      max(0.85rem, env(safe-area-inset-bottom, 0px))
+      max(0.85rem, env(safe-area-inset-left, 0px));
+    align-items: end;
+  }
+
+  .settings-page__dialog {
+    width: 100%;
+    max-width: none;
+    padding: 1.15rem;
+  }
+
+  .settings-page__dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .settings-page__help-popover {
+    width: min(22rem, calc(100vw - 1.7rem));
+    max-width: calc(100vw - 1.7rem);
+  }
+
+  .settings-page__section-title-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

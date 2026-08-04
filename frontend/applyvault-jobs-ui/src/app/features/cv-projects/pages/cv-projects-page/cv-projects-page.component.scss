@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
 }
@@ -691,7 +693,7 @@
   align-content: start;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: $app-bp-compact) {
   .cv-projects-page__content {
     grid-template-columns: 1fr;
   }
@@ -717,7 +719,12 @@
   .cv-projects-page__mobile-back {
     display: grid;
     gap: 0.35rem;
+    position: sticky;
+    top: var(--app-header-offset, var(--app-header-height));
+    z-index: 3;
     margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    background: var(--app-bg);
   }
 
   .cv-projects-page__back-button {
@@ -738,9 +745,7 @@
     font-weight: 600;
     line-height: 1.35;
   }
-}
 
-@media (max-width: 960px) {
   .cv-projects-page__banner,
   .cv-projects-page__detail-header,
   .cv-projects-page__detail-section-header,

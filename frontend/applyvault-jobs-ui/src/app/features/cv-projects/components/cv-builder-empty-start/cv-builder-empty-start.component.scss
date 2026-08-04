@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: contents;
 }
@@ -88,4 +90,15 @@
   margin: 0;
   color: #b42318;
   font-size: 0.85rem;
+}
+
+@media (max-width: $app-bp-phone) {
+  .cv-builder__empty {
+    margin: 2rem auto 1.5rem;
+  }
+
+  .cv-builder__cta,
+  .cv-builder__ghost-btn {
+    min-height: 2.75rem;
+  }
 }

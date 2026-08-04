@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 .job-search-source-toggle {
   display: inline-flex;
   gap: 0.35rem;
@@ -22,4 +24,22 @@
   background: var(--app-surface);
   color: var(--app-text);
   box-shadow: var(--app-shadow-sm);
+}
+
+.job-search-source-toggle__option:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--app-accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: $app-bp-phone) {
+  .job-search-source-toggle {
+    width: 100%;
+    max-width: 22rem;
+  }
+
+  .job-search-source-toggle__option {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+  }
 }

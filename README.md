@@ -38,6 +38,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Filter saved jobs by debounced search term, source hostname, and workflow state (needs review, interview, rejected, hide rejected), with sort options for saved date, title, company, and interview date.
 - Show a live filter summary and workspace stats that reflect the full saved dataset, not just the filtered subset.
 - Share one authenticated app shell across Jobs, Search, My CV, Projects, and Settings with active nav highlighting and sign-out.
+- Use the dashboard on phone-width viewports: compact shell navigation, list/detail workspaces for Jobs and Search, and phone-oriented chrome for CV Builder, Interview Prep, and Settings.
 - Render untrusted HTML safely in job and external-listing detail views via centralized sanitization.
 - Confirm destructive actions in modal dialogs before deleting saved jobs, removing an uploaded CV, or disconnecting calendar, GitHub, and mail providers.
 - Schedule and edit interview events in a modal dialog from the job detail panel.

@@ -19,6 +19,7 @@ import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { filter, skip } from 'rxjs';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
+import { APP_BP_COMPACT_MAX_MQ } from '../../../../core/config/app-breakpoints';
 import { JobResultsFacade } from '../../../job-results/data-access/job-results.facade';
 import { SkeletonBlockComponent } from '../../../../shared/ui/skeleton-block.component';
 import { EuresJobsFacade } from '../../data-access/eures-jobs.facade';
@@ -557,7 +558,7 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   private isMobileViewport(): boolean {
-    return typeof window !== 'undefined' && window.matchMedia('(max-width: 1080px)').matches;
+    return typeof window !== 'undefined' && window.matchMedia(APP_BP_COMPACT_MAX_MQ).matches;
   }
 
   private showLoadBanner(message: string): void {

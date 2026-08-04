@@ -4,12 +4,14 @@ import {
   computed,
   effect,
   ElementRef,
+  HostListener,
   inject,
   OnDestroy,
   signal,
   viewChild
 } from '@angular/core';
 
+import { APP_BP_PHONE_MAX_MQ } from '../../../../core/config/app-breakpoints';
 import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CvBuilderAssistPanelComponent } from '../../components/cv-builder-assist-panel/cv-builder-assist-panel.component';
 import { CvBuilderCheckExportComponent } from '../../components/cv-builder-check-export/cv-builder-check-export.component';
@@ -65,6 +67,7 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly pdfFileInput = viewChild<ElementRef<HTMLInputElement>>('pdfFileInput');
   protected readonly profilePhotoFileInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoFileInput');
+  private readonly topbar = viewChild<ElementRef<HTMLElement>>('topbar');
 
   protected readonly templates = CV_EXPORT_TEMPLATES;
 
@@ -75,7 +78,10 @@ export class CvBuilderPageComponent implements OnDestroy {
   /** Exclusive panel mutex — at most one of assist / structure / projects / checkExport. */
   protected readonly activePanel = signal<CvBuilderPanel | null>(null);
   protected readonly pendingAddSectionType = signal<CvSectionType>('Experience');
-  protected readonly zoom = signal(1);
+  /** Phone More disclosure (Projects / zoom / photo / Upload PDF). */
+  protected readonly topbarMoreOpen = signal(false);
+  /** Desktop default 1; phone init once at 0.85 so A4 fits ~390 better. */
+  protected readonly zoom = signal(CvBuilderPageComponent.initialZoom());
 
   protected readonly selectedProjectSummaryIds = signal<string[]>([]);
   protected readonly importingProjectsBusy = signal(false);
@@ -151,10 +157,20 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
 
+  private static readonly PHONE_DEFAULT_ZOOM = 0.85;
+
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
   /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
   private structuredLoadDocumentId: string | null = null;
+
+  private static initialZoom(): number {
+    if (typeof matchMedia === 'undefined') {
+      return 1;
+    }
+
+    return matchMedia(APP_BP_PHONE_MAX_MQ).matches ? CvBuilderPageComponent.PHONE_DEFAULT_ZOOM : 1;
+  }
 
   constructor() {
     // Load structured only when document identity appears/changes — not on export-prefs metadata echo.
@@ -292,6 +308,47 @@ export class CvBuilderPageComponent implements OnDestroy {
       this.cvStructured.discardSummaryProposal();
       this.cvStructured.discardUpdateProposal();
     }
+
+    // Keep More open while Projects dropdown is active (panel lives inside overflow).
+    if (panel !== 'projects' && panel !== null) {
+      this.topbarMoreOpen.set(false);
+    }
+  }
+
+  protected toggleTopbarMore(): void {
+    this.topbarMoreOpen.update((open) => !open);
+  }
+
+  protected closeTopbarMore(): void {
+    if (!this.topbarMoreOpen()) {
+      return;
+    }
+
+    this.topbarMoreOpen.set(false);
+
+    if (this.activePanel() === 'projects') {
+      this.setActivePanel(null);
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.closeTopbarMore();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.topbarMoreOpen()) {
+      return;
+    }
+
+    const topbarEl = this.topbar()?.nativeElement;
+    const target = event.target;
+    if (topbarEl && target instanceof Node && !topbarEl.contains(target)) {
+      this.closeTopbarMore();
+    }
   }
 
   protected openAssist(): void {
@@ -346,6 +403,7 @@ export class CvBuilderPageComponent implements OnDestroy {
       return;
     }
 
+    this.topbarMoreOpen.set(true);
     this.setActivePanel('projects');
     this.cvProjects.loadSummaries();
   }

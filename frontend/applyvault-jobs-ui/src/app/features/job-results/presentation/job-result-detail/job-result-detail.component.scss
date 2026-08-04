@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 .job-detail {
   min-height: 100%;
   padding: 1.5rem;
@@ -52,7 +54,7 @@
 
 .job-detail__header {
   position: sticky;
-  top: calc(var(--app-header-height) + 0.75rem);
+  top: calc(var(--app-header-offset, var(--app-header-height)) + 0.75rem);
   z-index: 2;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
@@ -498,7 +500,7 @@ h3 {
   font-size: 0.88rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: $app-bp-compact) {
   .job-detail {
     padding: 1.25rem;
   }
@@ -512,6 +514,27 @@ h3 {
   .job-detail__calendar-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .job-detail__actions {
+    width: 100%;
+  }
+
+  .job-detail__primary-link,
+  :is(.job-detail__reject, .job-detail__primary-action, .job-detail__secondary-action) {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: $app-bp-phone) {
+  .job-detail__actions--primary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .job-detail__primary-link,
+  :is(.job-detail__reject, .job-detail__primary-action, .job-detail__secondary-action) {
+    width: 100%;
   }
 }
 

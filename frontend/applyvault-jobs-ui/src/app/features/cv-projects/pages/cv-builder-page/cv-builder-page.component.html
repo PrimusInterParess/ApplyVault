@@ -13,7 +13,10 @@
     (change)="onProfilePhotoFileSelected($event)" />
 
   <div class="cv-builder__desk">
-    <header class="cv-builder__topbar">
+    <header
+      #topbar
+      class="cv-builder__topbar"
+      [class.cv-builder__topbar--more-open]="topbarMoreOpen()">
       <div class="cv-builder__topbar-left">
         <label class="cv-builder__select-wrap">
           <span class="cv-builder__sr-only">Template</span>
@@ -42,64 +45,72 @@
 
       <div class="cv-builder__topbar-right">
         @if (hasStructuredCv()) {
-          <div class="cv-builder__zoom" role="group" aria-label="Zoom">
-            <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">−</button>
-            <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
-            <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">+</button>
-          </div>
           <button
             type="button"
-            class="cv-builder__ghost-btn"
+            class="cv-builder__ghost-btn cv-builder__topbar-essential"
             [attr.aria-expanded]="activePanel() === 'structure'"
             aria-controls="cv-builder-structure-panel"
             (click)="toggleStructure()">
             Structure
           </button>
-          <div class="cv-builder__projects">
-            <button
-              type="button"
-              class="cv-builder__ghost-btn"
-              [attr.aria-expanded]="activePanel() === 'projects'"
-              aria-controls="cv-builder-projects-panel"
-              (click)="toggleProjects()">
-              Projects
-            </button>
-            <app-cv-builder-projects-panel
-              [open]="activePanel() === 'projects'"
-              [summaries]="cvProjects.savedSummaries()"
-              [loadingSummaries]="cvProjects.loadingSummaries()"
-              [summariesError]="cvProjects.summariesError()"
-              [saveError]="cvStructured.saveError()"
-              [importingBusy]="importingProjectsBusy()"
-              [selectedImportableCount]="selectedImportableProjectSummaries().length"
-              [canImportSelected]="canImportSelectedProjectSummaries()"
-              [canToggleSelection]="canToggleProjectSummarySelection()"
-              [selectedSummaryIds]="selectedProjectSummaryIds()"
-              [importedSummaryIds]="importedProjectSummaryIds()"
-              (closePanel)="closeProjects()"
-              (refresh)="cvProjects.loadSummaries()"
-              (importSelected)="importSelectedProjectSummaries()"
-              (toggleSelection)="toggleProjectSummarySelection($event)" />
-          </div>
-          <button type="button" class="cv-builder__ghost-btn" (click)="openAssist()">AI assist</button>
           <button
             type="button"
-            class="cv-builder__ghost-btn"
-            [disabled]="
-              cvDocument.uploadingProfilePhoto() ||
-              cvDocument.deletingProfilePhoto() ||
-              cvDocument.loadingProfilePhoto()
-            "
-            (click)="openProfilePhotoFilePicker()">
-            {{
-              cvDocument.uploadingProfilePhoto()
-                ? 'Uploading photo…'
-                : cvDocument.document()?.hasProfilePhoto
-                  ? 'Replace photo'
-                  : 'Upload photo'
-            }}
+            class="cv-builder__ghost-btn cv-builder__topbar-essential"
+            (click)="openAssist()">
+            AI assist
           </button>
-          @if (cvDocument.document()?.hasProfilePhoto) {
+          <button
+            type="button"
+            class="cv-builder__ghost-btn cv-builder__topbar-essential"
+            [attr.aria-expanded]="activePanel() === 'checkExport'"
+            aria-controls="cv-builder-check-export-dialog"
+            (click)="openCheckExport()">
+            Check export
+          </button>
+          <button
+            type="button"
+            class="cv-builder__cta cv-builder__cta--compact cv-builder__topbar-essential"
+            [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
+            (click)="exportPdf()">
+            {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
+          </button>
+
+          <div class="cv-builder__topbar-overflow" id="cv-builder-topbar-more">
+            <div class="cv-builder__zoom" role="group" aria-label="Zoom">
+              <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">
+                −
+              </button>
+              <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
+              <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">
+                +
+              </button>
+            </div>
+            <div class="cv-builder__projects">
+              <button
+                type="button"
+                class="cv-builder__ghost-btn"
+                [attr.aria-expanded]="activePanel() === 'projects'"
+                aria-controls="cv-builder-projects-panel"
+                (click)="toggleProjects()">
+                Projects
+              </button>
+              <app-cv-builder-projects-panel
+                [open]="activePanel() === 'projects'"
+                [summaries]="cvProjects.savedSummaries()"
+                [loadingSummaries]="cvProjects.loadingSummaries()"
+                [summariesError]="cvProjects.summariesError()"
+                [saveError]="cvStructured.saveError()"
+                [importingBusy]="importingProjectsBusy()"
+                [selectedImportableCount]="selectedImportableProjectSummaries().length"
+                [canImportSelected]="canImportSelectedProjectSummaries()"
+                [canToggleSelection]="canToggleProjectSummarySelection()"
+                [selectedSummaryIds]="selectedProjectSummaryIds()"
+                [importedSummaryIds]="importedProjectSummaryIds()"
+                (closePanel)="closeProjects()"
+                (refresh)="cvProjects.loadSummaries()"
+                (importSelected)="importSelectedProjectSummaries()"
+                (toggleSelection)="toggleProjectSummarySelection($event)" />
+            </div>
             <button
               type="button"
               class="cv-builder__ghost-btn"
@@ -108,31 +119,44 @@
                 cvDocument.deletingProfilePhoto() ||
                 cvDocument.loadingProfilePhoto()
               "
-              (click)="cvDocument.deleteProfilePhoto()">
-              {{ cvDocument.deletingProfilePhoto() ? 'Removing…' : 'Remove photo' }}
+              (click)="openProfilePhotoFilePicker()">
+              {{
+                cvDocument.uploadingProfilePhoto()
+                  ? 'Uploading photo…'
+                  : cvDocument.document()?.hasProfilePhoto
+                    ? 'Replace photo'
+                    : 'Upload photo'
+              }}
             </button>
-          }
+            @if (cvDocument.document()?.hasProfilePhoto) {
+              <button
+                type="button"
+                class="cv-builder__ghost-btn"
+                [disabled]="
+                  cvDocument.uploadingProfilePhoto() ||
+                  cvDocument.deletingProfilePhoto() ||
+                  cvDocument.loadingProfilePhoto()
+                "
+                (click)="cvDocument.deleteProfilePhoto()">
+                {{ cvDocument.deletingProfilePhoto() ? 'Removing…' : 'Remove photo' }}
+              </button>
+            }
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [disabled]="cvDocument.uploading()"
+              (click)="openPdfPicker()">
+              {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
+            </button>
+          </div>
+
           <button
             type="button"
-            class="cv-builder__ghost-btn"
-            [disabled]="cvDocument.uploading()"
-            (click)="openPdfPicker()">
-            {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
-          </button>
-          <button
-            type="button"
-            class="cv-builder__ghost-btn"
-            [attr.aria-expanded]="activePanel() === 'checkExport'"
-            aria-controls="cv-builder-check-export-dialog"
-            (click)="openCheckExport()">
-            Check export
-          </button>
-          <button
-            type="button"
-            class="cv-builder__cta cv-builder__cta--compact"
-            [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
-            (click)="exportPdf()">
-            {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
+            class="cv-builder__topbar-more-toggle"
+            [attr.aria-expanded]="topbarMoreOpen()"
+            aria-controls="cv-builder-topbar-more"
+            (click)="toggleTopbarMore(); $event.stopPropagation()">
+            More
           </button>
         }
         @if (cvDocument.profilePhotoError(); as error) {
@@ -162,6 +186,9 @@
         <p class="cv-builder__desk-hint">
           Edit on the canvas · Structure for sections · Projects to import · Check export / Download PDF for
           print fidelity · autosaves
+        </p>
+        <p class="cv-builder__desk-hint cv-builder__desk-hint--pan" aria-hidden="true">
+          Scroll to pan · Zoom in More for size
         </p>
         <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
           <div class="cv-builder__paper cv-builder__paper--editor">

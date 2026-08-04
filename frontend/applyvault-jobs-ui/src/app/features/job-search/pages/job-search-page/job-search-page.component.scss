@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
 }
@@ -753,13 +755,13 @@ h1 {
   cursor: not-allowed;
 }
 
-@media (max-width: 1280px) and (min-width: 1081px) {
+@media (max-width: 1280px) and (min-width: ($app-bp-compact + 1px)) {
   .eures-page__filter-row--eures {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: $app-bp-compact) {
   .eures-page {
     padding: 1.25rem 1rem 2rem;
   }
@@ -768,6 +770,11 @@ h1 {
   .eures-page__filter-row--eures,
   .eures-page__filter-row--jobnet {
     grid-template-columns: 1fr;
+  }
+
+  .eures-page__search-action {
+    width: 100%;
+    min-width: 0;
   }
 
   .jobs-page__controls-row {
@@ -787,6 +794,7 @@ h1 {
 
   .jobs-page__control-field select {
     width: 100%;
+    min-height: 2.75rem;
   }
 
   .eures-page__suggestions {
@@ -818,12 +826,17 @@ h1 {
   .jobs-page__mobile-back {
     display: grid;
     gap: 0.35rem;
+    position: sticky;
+    top: var(--app-header-offset, var(--app-header-height));
+    z-index: 3;
     margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    background: var(--app-bg);
   }
 
   .jobs-page__back-button {
     justify-self: start;
-    min-height: 40px;
+    min-height: 2.75rem;
     padding: 0.45rem 0;
     border: 0;
     background: transparent;
@@ -840,6 +853,11 @@ h1 {
     line-height: 1.35;
   }
 
+  .jobs-page__primary-action,
+  .jobs-page__secondary-action {
+    min-height: 2.75rem;
+  }
+
   .eures-page__suggestion-group {
     grid-template-columns: 1fr;
     gap: 0.35rem;
@@ -847,6 +865,73 @@ h1 {
 
   .eures-page__suggestion-label {
     padding-top: 0;
+  }
+}
+
+@media (max-width: $app-bp-phone) {
+  .eures-page {
+    padding: 0.85rem 0.85rem 1.75rem;
+  }
+
+  .eures-page__hero {
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .eures-page h1 {
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+
+  .eures-page__intro {
+    max-width: none;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .eures-page__filters {
+    gap: 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .eures-page__selected-keyword,
+  .eures-page__clear-keywords,
+  .eures-page__workflow-chip {
+    min-height: 2.75rem;
+  }
+
+  .eures-page__selected-keyword {
+    padding: 0.45rem 0.65rem 0.45rem 0.75rem;
+  }
+
+  .eures-page__clear-keywords {
+    padding: 0.45rem 0.65rem;
+  }
+
+  .eures-page__workflow-chip {
+    padding: 0.45rem 0.75rem;
+  }
+
+  .eures-page__suggestions {
+    padding: 0.65rem 0.85rem 0.75rem;
+    margin: 0 0 0.85rem;
+  }
+
+  .eures-page__suggestions-toggle {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .eures-page__suggestions-hint {
+    font-size: 0.78rem;
+  }
+
+  .eures-page__filter-control input,
+  .eures-page__filter-control select,
+  .eures-page__search-action,
+  .eures-page__board-context-value {
+    min-height: 2.75rem;
   }
 }
 

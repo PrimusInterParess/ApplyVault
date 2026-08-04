@@ -3,6 +3,7 @@ using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests;
@@ -179,7 +180,8 @@ public sealed class InterviewPrepServiceTests
             structuredDocumentService,
             scrapeResultStore,
             aiClient,
-            Microsoft.Extensions.Options.Options.Create(options ?? new InterviewPrepAiOptions()));
+            Microsoft.Extensions.Options.Options.Create(options ?? new InterviewPrepAiOptions()),
+            NullLogger<InterviewPrepService>.Instance);
 
     private static ApplyVaultDbContext CreateDbContext()
     {

@@ -1,0 +1,5 @@
+// Single source for @media breakpoints. Keep equal to :root --app-bp-* in styles.scss
+// and APP_BP_*_PX in app/core/config/app-breakpoints.ts.
+// CSS custom properties cannot be used inside @media conditions.
+$app-bp-compact: 1080px;
+$app-bp-phone: 640px;

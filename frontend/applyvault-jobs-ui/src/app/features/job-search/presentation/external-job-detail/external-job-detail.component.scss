@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 .job-detail {
   min-height: 100%;
   padding: 0.85rem 1rem;
@@ -245,6 +247,32 @@ h2 {
 
   100% {
     background-position: -100% 0;
+  }
+}
+
+@media (max-width: $app-bp-compact) {
+  .job-detail__actions {
+    width: 100%;
+  }
+
+  .job-detail__primary-link,
+  .job-detail__primary-action,
+  .job-detail__secondary-action {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: $app-bp-phone) {
+  .job-detail__actions--primary,
+  .job-detail__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .job-detail__primary-link,
+  .job-detail__primary-action,
+  .job-detail__secondary-action {
+    width: 100%;
   }
 }
 

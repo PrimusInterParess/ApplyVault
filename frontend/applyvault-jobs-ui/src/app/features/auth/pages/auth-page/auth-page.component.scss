@@ -1,16 +1,23 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
 }
 
 .auth-page {
+  box-sizing: border-box;
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 2rem 1.5rem;
+  overflow-x: hidden;
 }
 
 .auth-page__card {
+  box-sizing: border-box;
   width: min(100%, 29rem);
+  max-width: 100%;
   padding: 2rem;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
@@ -49,6 +56,8 @@
 .auth-page h1 {
   font-size: clamp(1.65rem, 4vw, 2rem);
   line-height: 1.15;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .auth-page__subtitle {
@@ -81,6 +90,7 @@
 }
 
 .auth-page__mode-switch button {
+  min-height: 2.75rem;
   padding: 0.75rem 1rem;
   border: 0;
   background: transparent;
@@ -99,6 +109,7 @@
   display: grid;
   gap: 0.45rem;
   margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .auth-page__field span {
@@ -110,7 +121,10 @@
 }
 
 .auth-page__field input {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  min-height: 2.75rem;
   padding: 0.85rem 1rem;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
@@ -137,6 +151,7 @@
 
 .auth-page__submit {
   width: 100%;
+  min-height: 2.75rem;
   padding: 0.9rem 1.1rem;
   border: 0;
   background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-dark) 100%);
@@ -158,4 +173,36 @@
 .auth-page__submit:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+@media (max-width: $app-bp-phone) {
+  .auth-page {
+    place-items: start center;
+    padding: max(1.25rem, env(safe-area-inset-top, 0px))
+      max(0.85rem, env(safe-area-inset-right, 0px))
+      max(1.25rem, env(safe-area-inset-bottom, 0px))
+      max(0.85rem, env(safe-area-inset-left, 0px));
+  }
+
+  .auth-page__card {
+    width: 100%;
+    padding: 1.35rem 1.1rem;
+  }
+
+  .auth-page h1 {
+    font-size: 1.45rem;
+  }
+
+  .auth-page__subtitle {
+    margin: 0.55rem 0 1.15rem;
+    font-size: 0.88rem;
+  }
+
+  .auth-page__mode-switch {
+    margin-bottom: 1rem;
+  }
+
+  .auth-page__submit {
+    min-height: 2.75rem;
+  }
 }

@@ -1,51 +1,68 @@
 <div class="app-shell">
-  <header class="app-shell__header">
+  <header
+    #shellHeader
+    class="app-shell__header"
+    [class.app-shell__header--more-open]="moreMenuOpen()">
     <div class="app-shell__header-inner">
       <a routerLink="/jobs" class="app-shell__brand" aria-label="ApplyVault home">
         <span class="app-shell__logo-mark" aria-hidden="true">AV</span>
         <span class="app-shell__logo-text">ApplyVault</span>
       </a>
 
-      <nav class="app-shell__nav" aria-label="Primary navigation">
+      <nav class="app-shell__nav" aria-label="Primary navigation" id="app-shell-primary-nav">
         <a
           routerLink="/jobs"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           Jobs
         </a>
         <a
           routerLink="/search"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           Search
         </a>
         <a
           routerLink="/cv-builder"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           CV Builder
         </a>
         <a
           routerLink="/cv-projects"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           Projects
         </a>
         <a
           routerLink="/interview-prep"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           Interview Prep
         </a>
         <a
           routerLink="/settings"
           routerLinkActive="app-shell__nav-link--active"
-          class="app-shell__nav-link">
+          class="app-shell__nav-link"
+          (click)="closeMoreMenu()">
           Settings
         </a>
       </nav>
 
       <div class="app-shell__actions">
+        <button
+          type="button"
+          class="app-shell__more-toggle"
+          [attr.aria-expanded]="moreMenuOpen()"
+          aria-controls="app-shell-primary-nav"
+          (click)="toggleMoreMenu(); $event.stopPropagation()">
+          More
+        </button>
         @if (auth.currentUser(); as currentUser) {
           <p class="app-shell__session">
             {{ currentUser.displayName || currentUser.email || currentUser.supabaseUserId }}

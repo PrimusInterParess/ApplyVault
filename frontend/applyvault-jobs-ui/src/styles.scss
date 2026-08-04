@@ -1,3 +1,5 @@
+@use './styles/app-breakpoints' as *;
+
 :root {
   color-scheme: light;
   font-family: 'Inter', sans-serif;
@@ -32,11 +34,23 @@
   --app-radius: 10px;
   --app-radius-sm: 6px;
   --app-radius-lg: 14px;
+  --app-bp-compact: #{$app-bp-compact};
+  --app-bp-phone: #{$app-bp-phone};
   --app-header-height: 4.25rem;
+  /* Prefer for sticky/drawer tops; shell ResizeObserver keeps this in sync with rendered header. */
+  --app-header-offset: var(--app-header-height);
   --app-content-max-width: 1280px;
   --app-transition: all 0.2s ease;
   background: var(--app-bg);
   color: var(--app-text);
+}
+
+/* Phone chrome estimate before shell ResizeObserver; keep in sync with $app-bp-phone. */
+@media (max-width: $app-bp-phone) {
+  :root {
+    --app-header-height: 3rem;
+    --app-header-offset: 3rem;
+  }
 }
 
 *,

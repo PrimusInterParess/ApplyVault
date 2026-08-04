@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: contents;
 }
@@ -11,7 +13,7 @@
 
 .cv-builder-assist {
   position: fixed;
-  top: var(--app-header-height, 4.25rem);
+  top: var(--app-header-offset, var(--app-header-height, 4.25rem));
   right: 0;
   bottom: 0;
   z-index: 120;
@@ -26,9 +28,14 @@
   animation: cv-assist-in 0.2s ease;
 }
 
-@media (max-width: 39.999rem) {
+@media (max-width: $app-bp-phone) {
   .cv-builder-assist {
     width: 100vw;
+  }
+
+  .cv-builder-assist__close {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }
 

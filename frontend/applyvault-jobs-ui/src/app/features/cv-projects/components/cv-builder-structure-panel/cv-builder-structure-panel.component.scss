@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: contents;
   --cv-ink: #1c2330;
@@ -28,7 +30,7 @@
 
 .cv-builder__drawer {
   position: fixed;
-  top: var(--app-header-height, 4.25rem);
+  top: var(--app-header-offset, var(--app-header-height, 4.25rem));
   right: 0;
   bottom: 0;
   z-index: 105;
@@ -248,4 +250,31 @@
 .cv-builder__structure-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+@media (max-width: $app-bp-phone) {
+  .cv-builder__drawer--structure {
+    width: 100vw;
+  }
+
+  .cv-builder__drawer-close {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .cv-builder__icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .cv-builder__structure-remove {
+    min-height: 2.75rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .cv-builder__structure-add-btn,
+  .cv-builder__structure-select {
+    min-height: 2.75rem;
+  }
 }

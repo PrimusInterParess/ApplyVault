@@ -1,3 +1,5 @@
+@use 'app-breakpoints' as *;
+
 :host {
   display: block;
   width: 100%;
@@ -17,7 +19,9 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: calc(100vh - var(--app-header-height, 4.25rem) - 4rem);
+  min-height: calc(
+    100vh - var(--app-header-offset, var(--app-header-height, 4.25rem)) - 4rem
+  );
 }
 
 .cv-builder__sr-only,
@@ -89,7 +93,7 @@
 .cv-builder--edit {
   background:
     linear-gradient(180deg, #eceff4 0%, var(--cv-desk) 40%, var(--cv-desk-deep) 100%);
-  min-height: calc(100vh - 5.5rem);
+  min-height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
 }
 
 .cv-builder__desk {
@@ -163,6 +167,42 @@
   }
 }
 
+.cv-builder__topbar-overflow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cv-builder__topbar-more-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cv-line);
+  background: #fff;
+  color: var(--cv-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  min-height: 2.75rem;
+}
+
+.cv-builder__topbar-more-toggle:hover {
+  background: rgb(28 35 48 / 6%);
+}
+
+.cv-builder__topbar-more-toggle[aria-expanded='true'] {
+  background: rgb(28 35 48 / 8%);
+}
+
+.cv-builder__topbar-more-toggle:focus-visible {
+  outline: 2px solid var(--cv-focus);
+  outline-offset: 2px;
+}
+
 .cv-builder__zoom {
   display: inline-flex;
   align-items: center;
@@ -232,6 +272,8 @@
   /* Allow zoomed paper to remain reachable (scale transform overflows layout box). */
   overflow-x: auto;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .cv-builder__desk-hint {
@@ -239,6 +281,10 @@
   font-size: 0.8rem;
   color: var(--cv-muted);
   letter-spacing: 0.02em;
+}
+
+.cv-builder__desk-hint--pan {
+  display: none;
 }
 
 .cv-builder__paper-wrap {
@@ -332,12 +378,118 @@
   margin-top: 1.15rem;
 }
 
-@media (max-width: 960px) {
+/* Compact: lift FAB above shell footer. */
+@media (max-width: $app-bp-compact) {
+  .cv-builder__fab {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    right: max(1.25rem, env(safe-area-inset-right, 0px));
+  }
+
+  .cv-builder__desk-scroll {
+    padding-bottom: 6.5rem;
+  }
+}
+
+/* Phone: primary essentials + More overflow; larger zoom targets. */
+@media (max-width: $app-bp-phone) {
   .cv-builder__topbar {
     position: sticky;
+    gap: 0.5rem;
+    padding: 0.55rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.55rem
+      max(0.75rem, env(safe-area-inset-left, 0px));
+  }
+
+  .cv-builder__select-wrap {
+    min-width: 0;
+    flex: 1 1 8rem;
+  }
+
+  .cv-builder__sync {
+    display: none;
+  }
+
+  .cv-builder__topbar-essential {
+    min-height: 2.75rem;
+  }
+
+  .cv-builder__cta--compact {
+    min-height: 2.75rem;
+  }
+
+  .cv-builder__topbar-more-toggle {
+    display: inline-flex;
+  }
+
+  .cv-builder__topbar-overflow {
+    display: none;
+    position: absolute;
+    top: calc(100% + 1px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0.35rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.5rem
+      max(0.75rem, env(safe-area-inset-left, 0px));
+    border-bottom: 1px solid rgb(28 35 48 / 8%);
+    background: rgb(255 255 255 / 98%);
+    box-shadow: 0 12px 28px rgb(28 35 48 / 12%);
+  }
+
+  .cv-builder__topbar--more-open .cv-builder__topbar-overflow {
+    display: flex;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__ghost-btn,
+  .cv-builder__topbar-overflow .cv-builder__zoom {
+    min-height: 2.75rem;
+    border-radius: 0;
+    border: 0;
+    border-bottom: 1px solid rgb(28 35 48 / 8%);
+    justify-content: flex-start;
+    width: 100%;
+    padding-inline: 0.25rem;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__zoom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    background: transparent;
+    padding-block: 0.25rem;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    font-size: 1.35rem;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__zoom-label {
+    min-width: 3rem;
+    font-size: 0.9rem;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__projects {
+    width: 100%;
+  }
+
+  .cv-builder__topbar-overflow .cv-builder__projects > .cv-builder__ghost-btn {
+    width: 100%;
+  }
+
+  .cv-builder__desk-hint--pan {
+    display: block;
+    font-size: 0.72rem;
+    opacity: 0.9;
   }
 
   .cv-builder__fab {
-    bottom: 5.5rem;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }

@@ -55,6 +55,16 @@ public sealed class InterviewPrepService(
     private const string CoachDuplicateRetryNudge =
         "Corrective instruction (server retry): Your previous coachMessage duplicated an earlier coach question. Ask a NEW competency/topic for this mode. Do not paraphrase the same theme or story.";
 
+    private const string AnsweredQuestionStallRetryNudge =
+        "Corrective instruction (server retry): The previous user message counts as an answer to the immediately preceding coach question. Do not ask for the same elaboration, stakeholder/support details, technical-choice explanation, or same theme again. Move to a clearly new competency/topic for this mode, or debrief.";
+
+    private const int MaxRecentAnsweredCoachPrompts = 3;
+    private const int MinSignificantTokenLength = 6;
+    private const int MinTokensForStallCompare = 4;
+    private const int MinSharedTokensForStall = 3;
+    private const double AnsweredPromptJaccardThreshold = 0.45;
+    private const double AnsweredPromptContainmentThreshold = 0.72;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -448,24 +458,43 @@ public sealed class InterviewPrepService(
     {
         var maxRetries = Math.Clamp(interviewPrepAiOptions.Value.MaxCoachDuplicateRetries, 0, 2);
         var priorCoachTexts = CollectCoachInterviewTexts(fullPriorTurns);
+        var recentAnsweredCoachPrompts = CollectRecentAnsweredCoachPrompts(
+            fullPriorTurns,
+            aiRequest.UserMessage);
 
         var result = await interviewPrepAiClient.GenerateTurnAsync(aiRequest, cancellationToken);
 
         for (var attempt = 0; attempt < maxRetries; attempt++)
         {
-            if (!IsExactDuplicateCoachInterviewMessage(result, priorCoachTexts))
+            if (IsExactDuplicateCoachInterviewMessage(result, priorCoachTexts))
             {
-                return result;
+                logger.LogInformation(
+                    "Interview Prep coachMessage exact duplicate detected; silent regenerate {Attempt}/{MaxRetries}.",
+                    attempt + 1,
+                    maxRetries);
+
+                result = await interviewPrepAiClient.GenerateTurnAsync(
+                    aiRequest with { CorrectiveNudge = CoachDuplicateRetryNudge },
+                    cancellationToken);
+
+                continue;
             }
 
-            logger.LogInformation(
-                "Interview Prep coachMessage exact duplicate detected; silent regenerate {Attempt}/{MaxRetries}.",
-                attempt + 1,
-                maxRetries);
+            if (IsAnsweredQuestionStall(result, recentAnsweredCoachPrompts))
+            {
+                logger.LogInformation(
+                    "Interview Prep answered-question stall detected; silent regenerate {Attempt}/{MaxRetries}.",
+                    attempt + 1,
+                    maxRetries);
 
-            result = await interviewPrepAiClient.GenerateTurnAsync(
-                aiRequest with { CorrectiveNudge = CoachDuplicateRetryNudge },
-                cancellationToken);
+                result = await interviewPrepAiClient.GenerateTurnAsync(
+                    aiRequest with { CorrectiveNudge = AnsweredQuestionStallRetryNudge },
+                    cancellationToken);
+
+                continue;
+            }
+
+            return result;
         }
 
         if (IsExactDuplicateCoachInterviewMessage(result, priorCoachTexts))
@@ -474,8 +503,103 @@ public sealed class InterviewPrepService(
                 "Interview Prep coachMessage still an exact duplicate after {MaxRetries} regenerat(e/es); accepting last result.",
                 maxRetries);
         }
+        else if (IsAnsweredQuestionStall(result, recentAnsweredCoachPrompts))
+        {
+            logger.LogWarning(
+                "Interview Prep coachMessage still appears to re-ask a recently answered prompt after {MaxRetries} regenerat(e/es); accepting last result.",
+                maxRetries);
+        }
 
         return result;
+    }
+
+    private static List<string> CollectRecentAnsweredCoachPrompts(
+        IReadOnlyList<InterviewPrepPriorTurnDto>? priorTurns,
+        string currentUserMessage)
+    {
+        var timeline = new List<InterviewPrepPriorTurnDto>();
+        if (priorTurns is not null)
+        {
+            timeline.AddRange(priorTurns);
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentUserMessage))
+        {
+            timeline.Add(new InterviewPrepPriorTurnDto(
+                InterviewPrepTurnRoles.User,
+                currentUserMessage,
+                InterviewPrepPhases.Interview));
+        }
+
+        var prompts = new List<string>();
+        for (var index = timeline.Count - 2; index >= 0; index--)
+        {
+            if (prompts.Count >= MaxRecentAnsweredCoachPrompts)
+            {
+                break;
+            }
+
+            var coachTurn = timeline[index];
+            var userTurn = timeline[index + 1];
+
+            if (!string.Equals(coachTurn.Role, InterviewPrepTurnRoles.Coach, StringComparison.Ordinal)
+                || !string.Equals(userTurn.Role, InterviewPrepTurnRoles.User, StringComparison.Ordinal)
+                || string.IsNullOrWhiteSpace(coachTurn.Text)
+                || string.IsNullOrWhiteSpace(userTurn.Text))
+            {
+                continue;
+            }
+
+            var coachPhase = string.IsNullOrWhiteSpace(coachTurn.Phase)
+                ? InterviewPrepPhases.Interview
+                : coachTurn.Phase;
+
+            if (!string.Equals(coachPhase, InterviewPrepPhases.Interview, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            prompts.Add(coachTurn.Text);
+        }
+
+        return prompts;
+    }
+
+    private static bool IsAnsweredQuestionStall(
+        InterviewPrepAiTurnResult result,
+        IReadOnlyList<string> recentAnsweredCoachPrompts)
+    {
+        if (recentAnsweredCoachPrompts.Count == 0)
+        {
+            return false;
+        }
+
+        if (!string.Equals(result.Phase, InterviewPrepPhases.Interview, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var generatedTokens = TokenizeForStallCompare(result.CoachMessage);
+        if (generatedTokens.Count < MinTokensForStallCompare)
+        {
+            return false;
+        }
+
+        foreach (var prompt in recentAnsweredCoachPrompts)
+        {
+            var promptTokens = TokenizeForStallCompare(prompt);
+            if (promptTokens.Count < MinTokensForStallCompare)
+            {
+                continue;
+            }
+
+            if (HasHighLexicalOverlap(generatedTokens, promptTokens))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static List<string> CollectCoachInterviewTexts(
@@ -546,6 +670,72 @@ public sealed class InterviewPrepService(
         }
 
         return false;
+    }
+
+    private static HashSet<string> TokenizeForStallCompare(string text)
+    {
+        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return tokens;
+        }
+
+        var builder = new StringBuilder();
+        foreach (var ch in text)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToLowerInvariant(ch));
+                continue;
+            }
+
+            AddStallCompareToken(tokens, builder);
+        }
+
+        AddStallCompareToken(tokens, builder);
+        return tokens;
+    }
+
+    private static void AddStallCompareToken(
+        HashSet<string> tokens,
+        StringBuilder builder)
+    {
+        if (builder.Length < MinSignificantTokenLength)
+        {
+            builder.Clear();
+            return;
+        }
+
+        var token = builder.ToString();
+        builder.Clear();
+
+        tokens.Add(token);
+    }
+
+    private static bool HasHighLexicalOverlap(
+        HashSet<string> generatedTokens,
+        HashSet<string> answeredPromptTokens)
+    {
+        var shared = 0;
+        foreach (var token in generatedTokens)
+        {
+            if (answeredPromptTokens.Contains(token))
+            {
+                shared++;
+            }
+        }
+
+        if (shared < MinSharedTokensForStall)
+        {
+            return false;
+        }
+
+        var union = generatedTokens.Count + answeredPromptTokens.Count - shared;
+        var jaccard = union == 0 ? 0 : (double)shared / union;
+        var containment = (double)shared / Math.Min(generatedTokens.Count, answeredPromptTokens.Count);
+
+        return jaccard >= AnsweredPromptJaccardThreshold
+            || containment >= AnsweredPromptContainmentThreshold;
     }
 
     private static string NormalizeForDuplicateCompare(string text)

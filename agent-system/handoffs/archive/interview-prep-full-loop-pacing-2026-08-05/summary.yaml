@@ -1,0 +1,21 @@
+task_id: interview-prep-full-loop-pacing-2026-08-05
+reviewer: principal-software-architect
+status: REQUEST_COMPLETE_WITH_DOCUMENTED_LIMITATIONS
+summary: >
+  ADR-0024 Full-loop interviewer-led pacing delivered across AI transport, adaptive
+  runtime/planning, and Interview Prep UI. Soft/hard question budgets, mid-loop
+  stageHandoff auto-advance, Close-after-answer, live SummarizeConversation/EvaluateStage,
+  and FE transition banner + recovery-only next stage. Principal added turn.actionType
+  on InterviewPrepTurnDto after FE noted the wire gap.
+agents:
+  - ai-llm-engineer: READY (live SummarizeConversation + EvaluateStage)
+  - backend-engineer: READY (pacing/runtime/budgets/contracts)
+  - frontend-engineer: READY (banner + canAdvanceFullLoop recovery)
+limitations:
+  - No automated test run; existing InterviewPlanBudgets positional test fixtures may need TargetQuestions
+  - No manual Full-loop smoke in this operate cycle
+  - stage_handoff interviewer wording may use deterministic fallback if Gemini omits the action
+  - full-loop/next-stage remains for recovery only (ADR-0024)
+next_actions:
+  - User smoke-test Full loop: long stage, auto handoff banner, final Candidate questions + Close answer
+  - Optional QA Task to update unit fixtures / exercise Close-after-answer

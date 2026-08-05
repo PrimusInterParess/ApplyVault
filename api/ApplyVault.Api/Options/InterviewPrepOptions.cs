@@ -17,6 +17,9 @@ public sealed class InterviewPrepLoopGuardOptions
 
     public int MaxSessionTurns { get; set; } = 40;
 
+    /// <summary>Session-turn ceiling for Full-loop sessions (~80–100).</summary>
+    public int MaxSessionTurnsFullLoop { get; set; } = 90;
+
     public int MaxConsecutiveSameCompetency { get; set; } = 3;
 
     /// <summary>Max times the same question intent may be reused before fallback.</summary>

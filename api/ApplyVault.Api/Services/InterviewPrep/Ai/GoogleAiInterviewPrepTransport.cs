@@ -33,6 +33,8 @@ public sealed class GoogleAiInterviewPrepTransport(
         InterviewPrepAiOperation.AssessAnswer,
         InterviewPrepAiOperation.SelectNextAction,
         InterviewPrepAiOperation.GenerateInterviewerMessage,
+        InterviewPrepAiOperation.SummarizeConversation,
+        InterviewPrepAiOperation.EvaluateStage,
         InterviewPrepAiOperation.PlanFullLoop
     ];
 

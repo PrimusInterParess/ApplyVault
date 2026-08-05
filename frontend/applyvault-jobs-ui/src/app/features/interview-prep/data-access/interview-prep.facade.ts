@@ -86,6 +86,8 @@ export class InterviewPrepFacade {
 
   readonly startingSession = signal(false);
   readonly submittingAnswer = signal(false);
+  /** Last turn-submit reported a mid-loop Stage auto-advance (cleared on next submit). */
+  readonly lastStageTransitionOccurred = signal(false);
   readonly lifecycleBusy = signal(false);
   readonly resultsTab = signal<InterviewPrepResultsTab>('report');
 
@@ -143,17 +145,42 @@ export class InterviewPrepFacade {
     return `${active.stageType} (${active.status})`;
   });
 
+  /**
+   * Recovery-only: prior Stage finished (completed/assessed) with no live Stage and a Planned next.
+   * Happy path auto-advances via POST /turns — do not gate the interview on this control.
+   */
   readonly canAdvanceFullLoop = computed(() => {
     const detail = this.sessionDetail();
     if (!detail || detail.mode !== 'fullLoop') {
       return false;
     }
-    if (detail.status !== 'inProgress' && detail.status !== 'paused') {
+    if (detail.status !== 'inProgress' && detail.status !== 'ready') {
+      return false;
+    }
+    if (this.submittingAnswer() || this.lifecycleBusy()) {
       return false;
     }
     const stages = detail.stages;
-    const active = stages.find((stage) => stage.status !== 'completed' && stage.status !== 'assessed');
-    return active?.status === 'completed' || active?.status === 'assessed';
+    const hasActiveInterviewStage = stages.some((stage) => isActiveInterviewStageStatus(stage.status));
+    if (hasActiveInterviewStage) {
+      return false;
+    }
+    const hasCompletedPrior = stages.some(
+      (stage) => stage.status === 'completed' || stage.status === 'assessed'
+    );
+    const hasPlannedNext = stages.some((stage) => stage.status === 'planned');
+    return hasCompletedPrior && hasPlannedNext;
+  });
+
+  /**
+   * Full-loop turn submit may auto-advance Stages (assessment + handoff + next open).
+   * Status banner only — not a chat bubble.
+   */
+  readonly fullLoopTransitionBanner = computed((): string | null => {
+    if (!this.isFullLoop() || !this.submittingAnswer()) {
+      return null;
+    }
+    return 'Transitioning to the next interviewer…';
   });
 
   readonly allFullLoopStagesDone = computed(() => {
@@ -411,6 +438,7 @@ export class InterviewPrepFacade {
     this.pendingClientTurnId = clientTurnId;
     this.turnSubscription?.unsubscribe();
     this.submittingAnswer.set(true);
+    this.lastStageTransitionOccurred.set(false);
     this.sessionError.set(null);
     this.turnSubscription = this.api
       .submitTurn(sessionId, { clientTurnId, answer: trimmed }, etag)
@@ -418,13 +446,19 @@ export class InterviewPrepFacade {
         next: ({ result, eTag }) => {
           this.pendingClientTurnId = null;
           this.submittingAnswer.set(false);
+          this.lastStageTransitionOccurred.set(result.stageTransitionOccurred === true);
+          // Prefer session.turns (includes stageHandoff + next-stage opening) over nextInterviewerTurn alone.
           this.applySessionDetail(result.session, eTag || result.session.eTag);
           if (result.interviewComplete || result.session.status === 'completing') {
             this.loadResults();
           }
+          if (result.session.mode === 'fullLoop' && this.allFullLoopStagesDone()) {
+            this.loadPanelDebrief();
+          }
         },
         error: (error) => {
           this.submittingAnswer.set(false);
+          this.lastStageTransitionOccurred.set(false);
           this.sessionError.set(this.mapSessionMutationError(error));
         }
       });
@@ -574,6 +608,8 @@ export class InterviewPrepFacade {
     this.sessionDetail.set(null);
     this.sessionEtag.set(null);
     this.sessionLoadStatus.set('idle');
+    this.submittingAnswer.set(false);
+    this.lastStageTransitionOccurred.set(false);
     this.transcript.set(null);
     this.report.set(null);
     this.competencies.set(null);
@@ -650,4 +686,16 @@ export class InterviewPrepFacade {
     }
     return fallback;
   }
+}
+
+/** Stage statuses that still accept interview turns (mirrors GetActiveInterviewStage). */
+function isActiveInterviewStageStatus(status: string): boolean {
+  return (
+    status === 'opening' ||
+    status === 'warmUp' ||
+    status === 'coreAssessment' ||
+    status === 'candidateQuestions' ||
+    status === 'closing' ||
+    status === 'assessmentPending'
+  );
 }

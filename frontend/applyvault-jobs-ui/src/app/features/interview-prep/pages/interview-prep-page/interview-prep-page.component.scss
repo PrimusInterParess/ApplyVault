@@ -450,6 +450,20 @@
   font-weight: 600;
 }
 
+.interview-prep__transition-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 28%, var(--app-border));
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+  color: var(--app-text, inherit);
+  font-size: 0.95rem;
+}
+
+.interview-prep__message--handoff {
+  border-left: 3px solid color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .interview-prep__message,
   .interview-prep__coaching-slot,

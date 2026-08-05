@@ -57,7 +57,8 @@ public sealed record InterviewPrepTurnDto(
     string? CompetencyTag,
     string? Language,
     string? ClientTurnId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? ActionType = null);
 
 public sealed record InterviewPrepBriefDto(
     string Summary,
@@ -92,6 +93,7 @@ public sealed record InterviewPrepQuestionIntentDto(
     int ProbeBudget);
 
 public sealed record InterviewPrepPlanBudgetsDto(
+    int TargetQuestions,
     int MaxQuestions,
     int MaxProbes,
     int MaxTurns);
@@ -157,7 +159,8 @@ public sealed record InterviewPrepTurnSubmitResponseDto(
     InterviewPrepSessionDetailDto Session,
     InterviewPrepTurnDto CandidateTurn,
     InterviewPrepTurnDto? NextInterviewerTurn,
-    bool InterviewComplete);
+    bool InterviewComplete,
+    bool StageTransitionOccurred = false);
 
 public sealed record InterviewPrepTranscriptTurnDto(
     Guid Id,

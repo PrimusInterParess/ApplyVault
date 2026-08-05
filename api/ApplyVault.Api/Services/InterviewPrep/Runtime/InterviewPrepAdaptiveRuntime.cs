@@ -182,12 +182,18 @@ public sealed class InterviewPrepAdaptiveRuntime(
                         caseState,
                         counters with { MainQuestionCount = runtime.MainQuestionCount }))
                 {
-                    if (await TryCompleteInterviewSegmentAsync(session, stage, utcNow, cancellationToken))
-                    {
-                        WriteRuntime(session, runtime);
-                        await dbContext.SaveChangesAsync(cancellationToken);
-                        return (caseTurn, true);
-                    }
+                    var caseEnd = await TransitionTowardStageEndAsync(
+                        session,
+                        stage,
+                        plan,
+                        config,
+                        runtime,
+                        utcNow,
+                        cancellationToken);
+                    runtime = ReadRuntime(session);
+                    WriteRuntime(session, runtime);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    return caseEnd.Next is null ? (caseTurn, caseEnd.Complete) : caseEnd;
                 }
 
                 WriteRuntime(session, runtime);
@@ -197,12 +203,18 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
             if (caseRuntime.IsCaseComplete(caseDefinition, caseState, counters))
             {
-                if (await TryCompleteInterviewSegmentAsync(session, stage, utcNow, cancellationToken))
-                {
-                    WriteRuntime(session, runtime);
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                    return (null, true);
-                }
+                var caseEnd = await TransitionTowardStageEndAsync(
+                    session,
+                    stage,
+                    plan,
+                    config,
+                    runtime,
+                    utcNow,
+                    cancellationToken);
+                runtime = ReadRuntime(session);
+                WriteRuntime(session, runtime);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return caseEnd;
             }
         }
 
@@ -222,7 +234,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         if (ShouldForceClose(session, stage, plan, runtime))
         {
-            var closing = await TransitionTowardCloseAsync(
+            var closing = await TransitionTowardStageEndAsync(
                 session,
                 stage,
                 plan,
@@ -230,6 +242,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
                 runtime,
                 utcNow,
                 cancellationToken);
+            runtime = ReadRuntime(session);
             WriteRuntime(session, runtime);
             await dbContext.SaveChangesAsync(cancellationToken);
             return closing;
@@ -246,10 +259,18 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         if (next is null)
         {
-            var segmentComplete = await TryCompleteInterviewSegmentAsync(session, stage, utcNow, cancellationToken);
+            var closing = await TransitionTowardStageEndAsync(
+                session,
+                stage,
+                plan,
+                config,
+                runtime,
+                utcNow,
+                cancellationToken);
+            runtime = ReadRuntime(session);
             WriteRuntime(session, runtime);
             await dbContext.SaveChangesAsync(cancellationToken);
-            return (null, segmentComplete);
+            return closing;
         }
 
         var action = InterviewPrepRuntimeNames.NormalizeAction(next.ActionType);
@@ -276,9 +297,10 @@ public sealed class InterviewPrepAdaptiveRuntime(
         }
         else if (action is InterviewPrepRuntimeActionType.CandidateQuestions
             or InterviewPrepRuntimeActionType.WrapUp
-            or InterviewPrepRuntimeActionType.Close)
+            or InterviewPrepRuntimeActionType.Close
+            or InterviewPrepRuntimeActionType.StageHandoff)
         {
-            // Stage transitions handled inside Resolve / TransitionTowardClose.
+            // Stage transitions handled inside Resolve / TransitionTowardStageEnd.
         }
 
         WriteRuntime(session, runtime);
@@ -287,6 +309,103 @@ public sealed class InterviewPrepAdaptiveRuntime(
         var complete = InterviewPrepEnumNames.TryParseSessionStatus(session.Status, out var status)
             && status is InterviewPrepSessionStatus.Completing or InterviewPrepSessionStatus.Completed;
         return (next, complete);
+    }
+
+    private async Task<(InterviewPrepTurnEntity? Next, bool Complete)> TransitionTowardStageEndAsync(
+        InterviewPrepSessionEntity session,
+        InterviewPrepStageEntity stage,
+        InterviewPlan plan,
+        InterviewPrepAiSessionConfig config,
+        InterviewPrepCombinedRuntimeState runtime,
+        DateTimeOffset utcNow,
+        CancellationToken cancellationToken)
+    {
+        if (fullLoopService.IsFullLoopSession(session)
+            && fullLoopService.GetNextPlannedStage(session) is not null
+            && InterviewPrepEnumNames.TryParseStageStatus(stage.Status, out var midStatus)
+            && midStatus is InterviewPrepStageStatus.CoreAssessment
+                or InterviewPrepStageStatus.WarmUp
+                or InterviewPrepStageStatus.Opening)
+        {
+            return await AutoAdvanceFullLoopStageAsync(
+                session,
+                stage,
+                plan,
+                config,
+                runtime,
+                utcNow,
+                cancellationToken);
+        }
+
+        return await TransitionTowardCloseAsync(
+            session,
+            stage,
+            plan,
+            config,
+            runtime,
+            utcNow,
+            cancellationToken);
+    }
+
+    private async Task<(InterviewPrepTurnEntity? Next, bool Complete)> AutoAdvanceFullLoopStageAsync(
+        InterviewPrepSessionEntity session,
+        InterviewPrepStageEntity stage,
+        InterviewPlan plan,
+        InterviewPrepAiSessionConfig config,
+        InterviewPrepCombinedRuntimeState runtime,
+        DateTimeOffset utcNow,
+        CancellationToken cancellationToken)
+    {
+        Trace(session.Id, "RUNTIME:fullLoop mid-stage handoff + auto-advance");
+
+        var handoff = await ResolveNextActionAndWordingAsync(
+            session,
+            stage,
+            plan,
+            config,
+            runtime,
+            forceAction: InterviewPrepRuntimeActionType.StageHandoff,
+            cancellationToken);
+
+        if (handoff is null)
+        {
+            handoff = AppendInterviewerTurn(
+                session,
+                stage,
+                plan,
+                runtime.MainQuestionCount,
+                InterviewPrepRuntimeActionType.StageHandoff,
+                "Thanks — that covers what I needed for this part. I'll hand you to the next interviewer.",
+                competencyTag: null,
+                intentId: "stage-handoff",
+                targetEvidenceKey: null,
+                utcNow);
+        }
+
+        await fullLoopService.HandleStageInterviewEndAsync(session, stage, cancellationToken);
+
+        var nextStage = fullLoopService.GetNextPlannedStage(session);
+        if (nextStage is null)
+        {
+            WriteRuntime(session, runtime);
+            return (handoff, true);
+        }
+
+        await fullLoopService.OpenPlannedStageAsync(session, nextStage, cancellationToken);
+        await StartAdaptiveAsync(session, nextStage, cancellationToken);
+
+        var latest = session.Turns
+            .Where((turn) =>
+                turn.StageId == nextStage.Id
+                && string.Equals(
+                    turn.Role,
+                    InterviewPrepPersistence.Role(InterviewPrepTurnRole.Interviewer),
+                    StringComparison.Ordinal))
+            .OrderByDescending((turn) => turn.Sequence)
+            .FirstOrDefault()
+            ?? handoff;
+
+        return (latest, false);
     }
 
     private async Task<(InterviewPrepTurnEntity? Next, bool Complete)> TransitionTowardCloseAsync(
@@ -342,8 +461,9 @@ public sealed class InterviewPrepAdaptiveRuntime(
                 forceAction: InterviewPrepRuntimeActionType.Close,
                 cancellationToken);
 
-            var complete = await TryCompleteInterviewSegmentAsync(session, stage, utcNow, cancellationToken);
-            return (closing, complete);
+            // Complete only after the seeker answers Close (Closing branch below).
+            WriteRuntime(session, runtime);
+            return (closing, false);
         }
 
         if (stageStatus == InterviewPrepStageStatus.Closing)
@@ -457,6 +577,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         if (runtime.MainQuestionCount >= Math.Max(1, plan.Budgets.MaxQuestions))
         {
+            // Hard question safety only — soft TargetQuestions does not force Stage end.
             return true;
         }
 
@@ -486,7 +607,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         InterviewPrepRuntimeActionType? forceAction,
         CancellationToken cancellationToken)
     {
-        var loopOptions = options.Value.LoopGuard;
+        var loopOptions = EffectiveLoopGuardOptions(session);
         var covered = GetCoveredCompetencyIds(session);
         var remaining = GetRemainingCompetencyIds(session, plan);
         var recent = BuildRecentSnippets(session);
@@ -504,6 +625,14 @@ public sealed class InterviewPrepAdaptiveRuntime(
             intentId = "candidate-questions";
             targetEvidenceKey = null;
             rationale = "Transition to candidate questions.";
+        }
+        else if (forceAction is InterviewPrepRuntimeActionType.StageHandoff)
+        {
+            action = InterviewPrepRuntimeActionType.StageHandoff;
+            competencyId = null;
+            intentId = "stage-handoff";
+            targetEvidenceKey = null;
+            rationale = "Full-loop mid-stage handoff to the next interviewer.";
         }
         else if (forceAction is InterviewPrepRuntimeActionType.Close or InterviewPrepRuntimeActionType.WrapUp)
         {
@@ -562,9 +691,10 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
                 if (action is InterviewPrepRuntimeActionType.CandidateQuestions
                     or InterviewPrepRuntimeActionType.WrapUp
-                    or InterviewPrepRuntimeActionType.Close)
+                    or InterviewPrepRuntimeActionType.Close
+                    or InterviewPrepRuntimeActionType.StageHandoff)
                 {
-                    return (await TransitionTowardCloseAsync(
+                    return (await TransitionTowardStageEndAsync(
                         session,
                         stage,
                         plan,
@@ -581,7 +711,22 @@ public sealed class InterviewPrepAdaptiveRuntime(
             && InterviewPrepEnumNames.TryParseStageStatus(stage.Status, out var st)
             && st == InterviewPrepStageStatus.CoreAssessment)
         {
-            return (await TransitionTowardCloseAsync(
+            return (await TransitionTowardStageEndAsync(
+                session,
+                stage,
+                plan,
+                config,
+                runtime,
+                DateTimeOffset.UtcNow,
+                cancellationToken)).Next;
+        }
+
+        if (action is InterviewPrepRuntimeActionType.StageHandoff
+            && forceAction is null
+            && InterviewPrepEnumNames.TryParseStageStatus(stage.Status, out var handoffStatus)
+            && handoffStatus == InterviewPrepStageStatus.CoreAssessment)
+        {
+            return (await TransitionTowardStageEndAsync(
                 session,
                 stage,
                 plan,
@@ -635,7 +780,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         string rationale,
         CancellationToken cancellationToken)
     {
-        var loopOptions = options.Value.LoopGuard;
+        var loopOptions = EffectiveLoopGuardOptions(session);
         var blocked = session.Turns
             .Where((turn) =>
                 string.Equals(turn.Role, InterviewPrepPersistence.Role(InterviewPrepTurnRole.Interviewer), StringComparison.Ordinal)
@@ -648,6 +793,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         {
             InterviewPrepRuntimeActionType.CandidateQuestions => "candidate questions",
             InterviewPrepRuntimeActionType.Close => "closing thanks",
+            InterviewPrepRuntimeActionType.StageHandoff => "hand off to the next interviewer",
             _ => ResolveCompetencyTopicHint(competencyId)
         };
 
@@ -712,6 +858,8 @@ public sealed class InterviewPrepAdaptiveRuntime(
                 "Before we wrap up, what questions do you have for me about the role or team?",
             InterviewPrepRuntimeActionType.Close =>
                 "Thank you for your time today. We'll be in touch with next steps.",
+            InterviewPrepRuntimeActionType.StageHandoff =>
+                "Thanks — that covers what I needed for this part. I'll hand you to the next interviewer.",
             _ => string.IsNullOrWhiteSpace(emergencyHint)
                 ? "Could you share a concrete example from your recent work that we have not covered yet?"
                 : $"Could you share a concrete example related to {emergencyHint} that we have not covered yet?"
@@ -776,7 +924,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         return null;
     }
 
-    private static (InterviewPrepRuntimeActionType Action, string? CompetencyId, string? IntentId, string? TargetEvidenceKey, string Rationale)
+    private (InterviewPrepRuntimeActionType Action, string? CompetencyId, string? IntentId, string? TargetEvidenceKey, string Rationale)
         ApplyDeterministicFallback(
             InterviewPrepSessionEntity session,
             InterviewPlan plan,
@@ -784,7 +932,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
             IReadOnlyList<string> remaining,
             string reason)
     {
-        // different intent → next competency → candidate questions → close
+        // different intent → next competency → stage handoff / candidate questions → close
         var nextCompetency = remaining
             .FirstOrDefault((id) => !string.Equals(id, runtime.CurrentCompetencyId, StringComparison.Ordinal))
             ?? remaining.FirstOrDefault()
@@ -807,9 +955,20 @@ public sealed class InterviewPrepAdaptiveRuntime(
                 $"Loop Guard fallback ({reason}): switch competency.");
         }
 
-        if (InterviewPrepEnumNames.TryParseStageStatus(
-                session.Stages.OrderBy((s) => s.SortOrder).FirstOrDefault()?.Status,
-                out var stageStatus)
+        if (fullLoopService.IsFullLoopSession(session)
+            && fullLoopService.GetNextPlannedStage(session) is not null)
+        {
+            return (
+                InterviewPrepRuntimeActionType.StageHandoff,
+                null,
+                "stage-handoff",
+                null,
+                $"Loop Guard fallback ({reason}): full-loop stage handoff.");
+        }
+
+        var activeStage = fullLoopService.GetActiveInterviewStage(session);
+        if (activeStage is not null
+            && InterviewPrepEnumNames.TryParseStageStatus(activeStage.Status, out var stageStatus)
             && stageStatus == InterviewPrepStageStatus.CoreAssessment)
         {
             return (
@@ -959,6 +1118,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
             InterviewPrepRuntimeActionType.Probe => "probe",
             InterviewPrepRuntimeActionType.CandidateQuestions => "candidate_questions",
             InterviewPrepRuntimeActionType.Close or InterviewPrepRuntimeActionType.WrapUp => "wrap_up",
+            InterviewPrepRuntimeActionType.StageHandoff => "stage_handoff",
             InterviewPrepRuntimeActionType.Opening => "opening",
             InterviewPrepRuntimeActionType.DiscloseFact => "disclose_fact",
             InterviewPrepRuntimeActionType.OfferHint => "offer_hint",
@@ -1288,6 +1448,11 @@ public sealed class InterviewPrepAdaptiveRuntime(
             return "candidate-questions";
         }
 
+        if (action == InterviewPrepRuntimeActionType.StageHandoff)
+        {
+            return "stage-handoff";
+        }
+
         if (action is InterviewPrepRuntimeActionType.Close or InterviewPrepRuntimeActionType.WrapUp)
         {
             return "closing";
@@ -1404,6 +1569,28 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         var trimmed = value.Trim();
         return trimmed.Length <= max ? trimmed : trimmed[..max];
+    }
+
+    private InterviewPrepLoopGuardOptions EffectiveLoopGuardOptions(InterviewPrepSessionEntity session)
+    {
+        var configured = options.Value.LoopGuard;
+        if (!fullLoopService.IsFullLoopSession(session))
+        {
+            return configured;
+        }
+
+        return new InterviewPrepLoopGuardOptions
+        {
+            NearDuplicateThreshold = configured.NearDuplicateThreshold,
+            MaxExactRetries = configured.MaxExactRetries,
+            MaxSessionTurns = Math.Max(1, configured.MaxSessionTurnsFullLoop),
+            MaxConsecutiveSameCompetency = configured.MaxConsecutiveSameCompetency,
+            MaxIntentRepeats = configured.MaxIntentRepeats,
+            MaxFollowUpsPerIntent = configured.MaxFollowUpsPerIntent,
+            MaxNoProgressStreak = configured.MaxNoProgressStreak,
+            MaxTargetEvidenceRepeats = configured.MaxTargetEvidenceRepeats,
+            MaxWordingRetries = configured.MaxWordingRetries
+        };
     }
 
     private void Trace(Guid sessionId, string line)

@@ -1,8 +1,8 @@
-# ApplyVault — CV structuring
+# ApplyVault
 
-ApplyVault turns a CV document—whether started blank or imported from PDF—into an editable Structured CV the user refines and exports in the CV builder.
+ApplyVault helps seekers build a Structured CV and practice interviews grounded in that CV and optional saved jobs.
 
-## Language
+## CV structuring
 
 **CV document**:
 The single per-user container for the original PDF (when uploaded), Structured CV, and profile photo.
@@ -55,3 +55,45 @@ _Avoid_: Hardcoded section rules, prompt-only schema
 **Project summary import**:
 Adding saved project summaries from the Projects surface into the Structured CV as Projects Entries, tracked by source summary identity so the same summary is not imported twice.
 _Avoid_: Merge projects, paste README (when meaning this product action)
+
+## Interview Preparation
+
+**Interview Prep session**:
+One durable practice interview for a seeker, with turns, Stages, and configuration (mode, persona, language, market).
+_Avoid_: Coach chat (MVP), ephemeral turn thread
+
+**Full loop**:
+A single Interview Prep session that runs multiple Stages in one continuous interview day, advanced by the interviewer—not by the seeker clicking between Stages.
+_Avoid_: Multi-session panel, manual next-stage interview
+
+**Stage**:
+One interviewer block inside a session (mode × persona plan, coverage, and turns). In Full loop, a Stage ends with a Stage handoff to the next Stage, not with Close—except the final Stage of the loop.
+_Avoid_: Round (when meaning Stage), child session
+
+**Stage handoff**:
+The interviewer-led transition from a completed Full-loop Stage to the next: outgoing persona acknowledgment, private factual Stage assessment for later context, then the next Stage opening—without seeker orchestration.
+_Avoid_: Next stage button (happy path), per-stage wrap-up
+
+**Main question**:
+An interviewer Ask-question turn that advances assessment coverage for a competency.
+_Avoid_: Turn (when meaning only mains), prompt
+
+**Probe**:
+An interviewer clarification or follow-up under the current intent; it does not by itself end a Stage or the Full loop.
+_Avoid_: Follow-up as Stage end, clarification as Close
+
+**Soft question target**:
+The intended band of Main questions per Stage (~8–12) that the interviewer aims for when coverage allows.
+_Avoid_: Hard cap, MaxQuestions (when meaning the soft band)
+
+**Hard question safety**:
+The Main-question ceiling (~15–18) that forces Stage end (handoff or, for standalone, toward Close)—not probes alone.
+_Avoid_: Soft target, default budget (legacy four-question force close)
+
+**Candidate questions**:
+The beat where the seeker may ask the interviewer. In Full loop, once at the end of the whole loop; in standalone modes, at session end before Close.
+_Avoid_: Per-stage Q&A close, wrap-up questions (when meaning Close)
+
+**Close**:
+The terminal interviewer turn that ends the practice interview (or the whole Full loop). The Stage or session completes after the seeker’s reply to Close—not when Close is emitted.
+_Avoid_: Handoff, Candidate questions

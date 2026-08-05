@@ -11,6 +11,8 @@ internal static class GoogleAiInterviewPrepResponseSchemas
             InterviewPrepAiOperation.AssessAnswer => AssessAnswerSchema(),
             InterviewPrepAiOperation.SelectNextAction => SelectNextActionSchema(),
             InterviewPrepAiOperation.GenerateInterviewerMessage => GenerateInterviewerMessageSchema(),
+            InterviewPrepAiOperation.SummarizeConversation => SummarizeConversationSchema(),
+            InterviewPrepAiOperation.EvaluateStage => EvaluateStageSchema(),
             InterviewPrepAiOperation.PlanFullLoop => PlanFullLoopSchema(),
             _ => throw new InvalidOperationException($"No response schema for {operation}.")
         };
@@ -159,6 +161,40 @@ internal static class GoogleAiInterviewPrepResponseSchemas
                     messageText = new { type = "STRING" },
                     intent = new { type = "STRING" },
                     competencyId = new { type = "STRING" }
+                }
+            }
+        };
+
+    private static object SummarizeConversationSchema() =>
+        new
+        {
+            responseMimeType = "application/json",
+            responseSchema = new
+            {
+                type = "OBJECT",
+                required = new[] { "summary", "keyMoments" },
+                properties = new
+                {
+                    summary = new { type = "STRING" },
+                    keyMoments = new { type = "ARRAY", items = new { type = "STRING" } }
+                }
+            }
+        };
+
+    private static object EvaluateStageSchema() =>
+        new
+        {
+            responseMimeType = "application/json",
+            responseSchema = new
+            {
+                type = "OBJECT",
+                required = new[] { "score", "summary", "achievedGoals", "missedGoals" },
+                properties = new
+                {
+                    score = new { type = "INTEGER" },
+                    summary = new { type = "STRING" },
+                    achievedGoals = new { type = "ARRAY", items = new { type = "STRING" } },
+                    missedGoals = new { type = "ARRAY", items = new { type = "STRING" } }
                 }
             }
         };

@@ -17,6 +17,7 @@ public enum InterviewPrepRuntimeActionType
     CandidateQuestions,
     WrapUp,
     Close,
+    StageHandoff,
     DiscloseFact,
     OfferHint,
     IntroduceComplication
@@ -61,6 +62,7 @@ public static class InterviewPrepRuntimeNames
             "candidate_questions" or "candidatequestions" => InterviewPrepRuntimeActionType.CandidateQuestions,
             "wrap_up" or "wrapup" => InterviewPrepRuntimeActionType.WrapUp,
             "close" or "closing" => InterviewPrepRuntimeActionType.Close,
+            "stage_handoff" or "stagehandoff" or "handoff" => InterviewPrepRuntimeActionType.StageHandoff,
             "opening" => InterviewPrepRuntimeActionType.Opening,
             "disclose_fact" or "disclosefact" => InterviewPrepRuntimeActionType.DiscloseFact,
             "offer_hint" or "offerhint" => InterviewPrepRuntimeActionType.OfferHint,

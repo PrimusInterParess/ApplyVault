@@ -44,6 +44,8 @@ public static class InterviewPrepStageStateMachine
         (InterviewPrepStageStatus.WarmUp, InterviewPrepStageStatus.CoreAssessment),
         (InterviewPrepStageStatus.CoreAssessment, InterviewPrepStageStatus.CandidateQuestions),
         (InterviewPrepStageStatus.CoreAssessment, InterviewPrepStageStatus.Closing),
+        // Mid-loop Full-loop handoff skips CandidateQuestions/Close (ADR-0024).
+        (InterviewPrepStageStatus.CoreAssessment, InterviewPrepStageStatus.AssessmentPending),
         (InterviewPrepStageStatus.CandidateQuestions, InterviewPrepStageStatus.Closing),
         (InterviewPrepStageStatus.Closing, InterviewPrepStageStatus.AssessmentPending),
         (InterviewPrepStageStatus.AssessmentPending, InterviewPrepStageStatus.Assessed),

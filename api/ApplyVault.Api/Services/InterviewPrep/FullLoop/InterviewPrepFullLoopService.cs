@@ -848,7 +848,8 @@ internal static class InterviewPrepSessionServiceMap
                     turn.CompetencyTag,
                     turn.Language,
                     turn.ClientTurnId,
-                    turn.CreatedAt))
+                    turn.CreatedAt,
+                    turn.ActionType))
                 .ToArray());
 
     private static InterviewPrepBriefDto? DeserializeBrief(string? briefJson)
@@ -879,7 +880,7 @@ internal static class InterviewPrepSessionServiceMap
                     orchestration.LoopSummary,
                     [],
                     [],
-                    new InterviewPrepPlanBudgetsDto(0, 0, 0),
+                    new InterviewPrepPlanBudgetsDto(0, 0, 0, 0),
                     [],
                     new InterviewPrepCompletionConditionsDto([], 0, false),
                     orchestration.StageSlots
@@ -936,6 +937,7 @@ internal static class InterviewPrepSessionServiceMap
                     intent.ProbeBudget))
                 .ToArray(),
             new InterviewPrepPlanBudgetsDto(
+                plan.Budgets.TargetQuestions,
                 plan.Budgets.MaxQuestions,
                 plan.Budgets.MaxProbes,
                 plan.Budgets.MaxTurns),

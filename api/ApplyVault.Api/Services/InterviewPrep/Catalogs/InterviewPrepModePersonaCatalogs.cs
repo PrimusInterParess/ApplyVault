@@ -7,7 +7,8 @@ public sealed record InterviewModeDefinition(
     string DisplayName,
     string Description,
     IReadOnlyList<string> PriorityCompetencyIds,
-    int DefaultQuestionBudget,
+    int SoftQuestionTarget,
+    int HardQuestionSafety,
     int DefaultProbeBudget);
 
 public sealed record InterviewPersonaDefinition(
@@ -45,7 +46,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Ownership,
                 InterviewPrepCompetencyCatalog.Execution
             ],
-            DefaultQuestionBudget: 4,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 1),
         new(
             InterviewPrepMode.BehavioralAndCulture,
@@ -58,7 +60,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Leadership,
                 InterviewPrepCompetencyCatalog.Ownership
             ],
-            DefaultQuestionBudget: 4,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 2),
         new(
             InterviewPrepMode.RoleAndDomainDepth,
@@ -71,7 +74,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Ownership,
                 InterviewPrepCompetencyCatalog.Communication
             ],
-            DefaultQuestionBudget: 5,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 2),
         new(
             InterviewPrepMode.ProcessAndSystems,
@@ -84,7 +88,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Ownership,
                 InterviewPrepCompetencyCatalog.Leadership
             ],
-            DefaultQuestionBudget: 4,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 2),
         new(
             InterviewPrepMode.ProblemSolvingCase,
@@ -96,7 +101,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Communication,
                 InterviewPrepCompetencyCatalog.Ownership
             ],
-            DefaultQuestionBudget: 5,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 1),
         new(
             InterviewPrepMode.LanguagePractice,
@@ -107,7 +113,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Communication,
                 InterviewPrepCompetencyCatalog.Motivation
             ],
-            DefaultQuestionBudget: 4,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 1),
         new(
             InterviewPrepMode.FullLoop,
@@ -123,7 +130,8 @@ public sealed class InterviewPrepModeCatalog : IInterviewPrepModeCatalog
                 InterviewPrepCompetencyCatalog.Ownership,
                 InterviewPrepCompetencyCatalog.Leadership
             ],
-            DefaultQuestionBudget: 6,
+            SoftQuestionTarget: 10,
+            HardQuestionSafety: 16,
             DefaultProbeBudget: 2)
     ];
 

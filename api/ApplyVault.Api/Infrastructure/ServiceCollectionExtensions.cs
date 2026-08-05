@@ -223,7 +223,10 @@ public static class ServiceCollectionExtensions
                 "InterviewPrep:LoopGuard:NearDuplicateThreshold must be between 0 and 1.")
             .Validate(
                 (options) => options.LoopGuard.MaxSessionTurns > 0,
-                "InterviewPrep:LoopGuard:MaxSessionTurns must be greater than 0.");
+                "InterviewPrep:LoopGuard:MaxSessionTurns must be greater than 0.")
+            .Validate(
+                (options) => options.LoopGuard.MaxSessionTurnsFullLoop > 0,
+                "InterviewPrep:LoopGuard:MaxSessionTurnsFullLoop must be greater than 0.");
 
         services
             .AddOptions<InterviewPrepAiOptions>()

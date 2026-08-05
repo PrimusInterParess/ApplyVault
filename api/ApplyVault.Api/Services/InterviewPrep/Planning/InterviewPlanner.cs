@@ -121,14 +121,20 @@ public sealed class InterviewPlanner(
             .ToArray();
 
         var intents = BuildQuestionIntents(spokenQuestions, prioritized, mode.DefaultProbeBudget);
+        var targetQuestions = Math.Max(1, mode.SoftQuestionTarget);
+        var maxQuestions = Math.Max(targetQuestions, mode.HardQuestionSafety);
+        var maxTurns = context.Mode == InterviewPrepMode.FullLoop
+            ? Math.Max(1, loopGuard.MaxSessionTurnsFullLoop)
+            : Math.Max(1, loopGuard.MaxSessionTurns);
         var budgets = new InterviewPlanBudgets(
-            MaxQuestions: Math.Max(spokenQuestions.Count, mode.DefaultQuestionBudget),
+            TargetQuestions: targetQuestions,
+            MaxQuestions: maxQuestions,
             MaxProbes: mode.DefaultProbeBudget * Math.Max(1, competencies.Length),
-            MaxTurns: loopGuard.MaxSessionTurns);
+            MaxTurns: maxTurns);
 
         var languageAllocation = InterviewPrepTurnLanguage.BuildAllocation(
             context.Language,
-            budgets.MaxQuestions);
+            budgets.TargetQuestions);
 
         var evidenceExpectations = competencies
             .Select((competency) => new InterviewEvidenceExpectation(

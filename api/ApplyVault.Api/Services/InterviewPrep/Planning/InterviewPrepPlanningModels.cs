@@ -50,7 +50,12 @@ public sealed record InterviewQuestionIntent(
 /// Public plan DTO fields must not include private rubrics or system prompts.
 /// Candidate-facing wording lives on stage PlanJson (fixed bank) for M1/M3 turns.
 /// </summary>
+/// <summary>
+/// Soft <see cref="TargetQuestions"/> guides pacing (~8–12). Hard <see cref="MaxQuestions"/>
+/// is the safety ceiling that forces Stage end (~15–18).
+/// </summary>
 public sealed record InterviewPlanBudgets(
+    int TargetQuestions,
     int MaxQuestions,
     int MaxProbes,
     int MaxTurns);

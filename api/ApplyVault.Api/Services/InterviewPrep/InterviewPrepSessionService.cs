@@ -676,7 +676,8 @@ public sealed class InterviewPrepSessionService(
                 MapTurn(existing),
                 nextExisting is null ? null : MapTurn(nextExisting),
                 InterviewPrepEnumNames.TryParseSessionStatus(session.Status, out var replayStatus)
-                    && replayStatus is InterviewPrepSessionStatus.Completing or InterviewPrepSessionStatus.Completed);
+                    && replayStatus is InterviewPrepSessionStatus.Completing or InterviewPrepSessionStatus.Completed,
+                StageTransitionOccurred: false);
         }
 
         if (!InterviewPrepEnumNames.TryParseSessionStatus(session.Status, out var status)
@@ -766,11 +767,18 @@ public sealed class InterviewPrepSessionService(
         }
 
         debugTraceContext.CurrentSessionId = null;
+        var stageTransitionOccurred = session.Turns.Any((turn) =>
+            turn.Sequence > candidateTurn.Sequence
+            && string.Equals(
+                turn.ActionType,
+                InterviewPrepRuntimeNames.ToWire(InterviewPrepRuntimeActionType.StageHandoff),
+                StringComparison.OrdinalIgnoreCase));
         return new InterviewPrepTurnSubmitResponseDto(
             MapDetail(session),
             MapTurn(candidateTurn),
             nextInterviewer is null ? null : MapTurn(nextInterviewer),
-            interviewComplete);
+            interviewComplete,
+            stageTransitionOccurred);
     }
 
     public async Task<InterviewPrepSessionDetailDto> StartNextFullLoopStageAsync(
@@ -970,7 +978,7 @@ public sealed class InterviewPrepSessionService(
                     orchestration.LoopSummary,
                     [],
                     [],
-                    new InterviewPrepPlanBudgetsDto(0, 0, 0),
+                    new InterviewPrepPlanBudgetsDto(0, 0, 0, 0),
                     [],
                     new InterviewPrepCompletionConditionsDto([], 0, false),
                     orchestration.StageSlots
@@ -1022,6 +1030,7 @@ public sealed class InterviewPrepSessionService(
                     intent.ProbeBudget))
                 .ToArray(),
             new InterviewPrepPlanBudgetsDto(
+                plan.Budgets.TargetQuestions,
                 plan.Budgets.MaxQuestions,
                 plan.Budgets.MaxProbes,
                 plan.Budgets.MaxTurns),
@@ -1117,7 +1126,8 @@ public sealed class InterviewPrepSessionService(
             turn.CompetencyTag,
             turn.Language,
             turn.ClientTurnId,
-            turn.CreatedAt);
+            turn.CreatedAt,
+            turn.ActionType);
 
     internal static string ToETag(Guid concurrencyStamp) =>
         $"\"{concurrencyStamp:N}\"";

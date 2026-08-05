@@ -122,6 +122,20 @@ export interface InterviewPrepStage {
   readonly completedAt: string | null;
 }
 
+/** Wire action types for interviewer turns (camelCase). */
+export type InterviewPrepTurnActionType =
+  | 'opening'
+  | 'askQuestion'
+  | 'probe'
+  | 'candidateQuestions'
+  | 'wrapUp'
+  | 'close'
+  | 'stageHandoff'
+  | 'discloseFact'
+  | 'offerHint'
+  | 'introduceComplication'
+  | string;
+
 export interface InterviewPrepTurn {
   readonly id: string;
   readonly stageId: string;
@@ -133,6 +147,8 @@ export interface InterviewPrepTurn {
   readonly language: string | null;
   readonly clientTurnId: string | null;
   readonly createdAt: string;
+  /** Present when API includes turn actionType (e.g. stageHandoff). */
+  readonly actionType?: InterviewPrepTurnActionType | null;
 }
 
 export interface InterviewPrepBriefUnknown {
@@ -153,10 +169,20 @@ export interface InterviewPrepBrief {
   readonly usedAiFallback: boolean;
 }
 
+export interface InterviewPrepPlanBudgets {
+  /** Soft Main-question target (~8–12; catalog default ~10). */
+  readonly targetQuestions: number;
+  /** Hard Main-question safety (~15–18; catalog default ~16). */
+  readonly maxQuestions: number;
+  readonly maxProbes: number;
+  readonly maxTurns: number;
+}
+
 export interface InterviewPrepPlan {
   readonly planSummary: string;
   readonly source: string;
   readonly usedAiFallback: boolean;
+  readonly budgets?: InterviewPrepPlanBudgets | null;
 }
 
 export interface InterviewPrepSessionDetail {
@@ -194,6 +220,11 @@ export interface InterviewPrepTurnSubmitResponse {
   readonly candidateTurn: InterviewPrepTurn;
   readonly nextInterviewerTurn: InterviewPrepTurn | null;
   readonly interviewComplete: boolean;
+  /**
+   * True when this answer triggered a Full-loop mid-stage Stage handoff + next Stage open
+   * in the same response. Mid-loop auto-advance keeps interviewComplete false.
+   */
+  readonly stageTransitionOccurred?: boolean;
 }
 
 export interface InterviewPrepTranscriptTurn {

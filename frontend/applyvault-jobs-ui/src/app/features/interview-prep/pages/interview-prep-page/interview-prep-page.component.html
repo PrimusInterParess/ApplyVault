@@ -349,9 +349,13 @@
                     <article
                       class="interview-prep__message"
                       [class.interview-prep__message--candidate]="turn.role === 'candidate'"
-                      [class.interview-prep__message--coach]="turn.role === 'coach'">
+                      [class.interview-prep__message--coach]="turn.role === 'coach'"
+                      [class.interview-prep__message--handoff]="turn.actionType === 'stageHandoff'">
                       <header>
                         <span>{{ turnRoleLabel(turn) }}</span>
+                        @if (turn.actionType === 'stageHandoff') {
+                          <span class="interview-prep__tag">Stage handoff</span>
+                        }
                         @if (showTurnLanguage(turn)) {
                           <span class="interview-prep__tag">{{ languageLabel(turn.language) }}</span>
                         }
@@ -373,8 +377,20 @@
 
               <div
                 class="interview-prep__composer-wrap"
-                [class.interview-prep__composer-wrap--idle]="!facade.canAnswer()">
-                @if (facade.canAnswer()) {
+                [class.interview-prep__composer-wrap--idle]="
+                  !facade.canAnswer() && !facade.submittingAnswer()
+                ">
+                @if (facade.fullLoopTransitionBanner(); as transitionBanner) {
+                  <p
+                    class="interview-prep__transition-banner"
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true">
+                    {{ transitionBanner }}
+                  </p>
+                }
+
+                @if (facade.canAnswer() || facade.submittingAnswer()) {
                   <form class="interview-prep__composer" (submit)="submitAnswer(); $event.preventDefault()">
                     <label class="interview-prep__label" for="prep-answer">Your answer</label>
                     <textarea
@@ -423,8 +439,12 @@
                   </button>
                 }
                 @if (facade.canAdvanceFullLoop()) {
-                  <button type="button" class="interview-prep__cta" (click)="facade.advanceFullLoopStage()">
-                    Next stage
+                  <button
+                    type="button"
+                    class="interview-prep__secondary"
+                    [disabled]="facade.lifecycleBusy()"
+                    (click)="facade.advanceFullLoopStage()">
+                    Recover next stage
                   </button>
                 }
                 <button type="button" class="interview-prep__link" (click)="facade.resetActiveSession()">

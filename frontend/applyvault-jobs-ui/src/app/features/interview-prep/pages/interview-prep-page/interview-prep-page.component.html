@@ -1,11 +1,9 @@
 <main class="interview-prep">
-  <header class="interview-prep__hero">
-    <h1>Interview prep</h1>
-    <p class="interview-prep__subtitle">Practice from your Structured CV · text-only sessions</p>
-  </header>
-
   @if (facade.cvGateStatus() === 'loading' || facade.cvGateStatus() === 'unknown') {
-    <section class="interview-prep__panel interview-prep__panel--quiet" aria-busy="true">
+    <section
+      class="interview-prep__panel interview-prep__panel--quiet"
+      role="status"
+      aria-busy="true">
       <p class="interview-prep__muted">Checking Structured CV…</p>
     </section>
   } @else if (facade.cvGateStatus() === 'missing') {
@@ -21,7 +19,13 @@
     </section>
   } @else {
     <section class="interview-prep__layout">
-      <div class="interview-prep__main">
+      <div
+        class="interview-prep__main"
+        [class.interview-prep__main--setup]="
+          !facade.sessionDetail() && !facade.startingSession() && facade.sessionLoadStatus() !== 'loading'
+        "
+        [class.interview-prep__main--session]="facade.sessionDetail() && !facade.showResults()"
+        [class.interview-prep__main--results]="facade.showResults()">
         @if (facade.sessionError()) {
           <section class="interview-prep__alert" role="alert">
             <p>{{ facade.sessionError() }}</p>
@@ -33,8 +37,12 @@
 
         @if (!facade.sessionDetail()) {
           @if (facade.startingSession()) {
-            <section class="interview-prep__panel interview-prep__panel--quiet" aria-busy="true">
+            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
               <p class="interview-prep__muted">Preparing your session…</p>
+            </section>
+          } @else if (facade.sessionLoadStatus() === 'loading') {
+            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
+              <p class="interview-prep__muted">Loading session…</p>
             </section>
           } @else {
             <section class="interview-prep__setup" aria-labelledby="setup-heading">
@@ -140,335 +148,431 @@
             </section>
           }
         } @else {
-          <section class="interview-prep__session-meta">
-            <p>
-              <strong>{{ modeLabel(facade.sessionDetail()?.mode) }}</strong>
-              · {{ personaLabel(facade.sessionDetail()?.persona) }}
-              · <span class="interview-prep__status">{{ sessionStatusLabel(facade.sessionDetail()?.status) }}</span>
-            </p>
-            @if (facade.sessionDetail()?.jobTitle) {
-              <p class="interview-prep__muted">
-                {{ facade.sessionDetail()?.jobTitle }}
-                @if (facade.sessionDetail()?.companyName) {
-                  · {{ facade.sessionDetail()?.companyName }}
-                }
+          @if (facade.sessionLoadStatus() === 'loading') {
+            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
+              <p class="interview-prep__muted">Loading session…</p>
+            </section>
+          } @else {
+            <section class="interview-prep__session-meta interview-prep__session-meta--sticky">
+              <p>
+                <strong>{{ modeLabel(facade.sessionDetail()?.mode) }}</strong>
+                · {{ personaLabel(facade.sessionDetail()?.persona) }}
+                · <span class="interview-prep__status">{{ sessionStatusLabel(facade.sessionDetail()?.status) }}</span>
               </p>
-            }
-            @if (facade.isFullLoop() && facade.activeStageLabel()) {
-              <p class="interview-prep__muted">Stage: {{ facade.activeStageLabel() }}</p>
-            }
-          </section>
-
-          @if (needsContinue()) {
-            <section class="interview-prep__panel">
-              <p>Session is ready to start.</p>
-              <button
-                type="button"
-                class="interview-prep__cta"
-                [disabled]="facade.lifecycleBusy()"
-                (click)="facade.continueLoadedSession()">
-                Start interview
-              </button>
-            </section>
-          }
-
-          @if (facade.sessionDetail()?.brief; as brief) {
-            <section class="interview-prep__panel interview-prep__brief">
-              <h3>Brief</h3>
-              <p>{{ brief.summary }}</p>
-              @if (brief.talkingPoints.length) {
-                <ul>
-                  @for (point of brief.talkingPoints; track point) {
-                    <li>{{ point }}</li>
+              @if (facade.sessionDetail()?.jobTitle) {
+                <p class="interview-prep__muted">
+                  {{ facade.sessionDetail()?.jobTitle }}
+                  @if (facade.sessionDetail()?.companyName) {
+                    · {{ facade.sessionDetail()?.companyName }}
                   }
-                </ul>
+                </p>
+              }
+              @if (facade.isFullLoop() && facade.activeStageLabel()) {
+                <p class="interview-prep__muted">Stage: {{ facade.activeStageLabel() }}</p>
               }
             </section>
-          }
 
-          <section class="interview-prep__chat" aria-label="Interview conversation">
-            @for (turn of facade.chatTurns(); track turn.id) {
-              <article
-                class="interview-prep__message"
-                [class.interview-prep__message--candidate]="turn.role === 'candidate'"
-                [class.interview-prep__message--coach]="turn.role === 'coach'">
-                <header>
-                  <span>{{ turnRoleLabel(turn) }}</span>
-                  @if (showTurnLanguage(turn)) {
-                    <span class="interview-prep__tag">{{ languageLabel(turn.language) }}</span>
-                  }
-                </header>
-                <p>{{ turn.text }}</p>
-                @if (turn.role === 'candidate' && facade.canCoach()) {
-                  <button
-                    type="button"
-                    class="interview-prep__link"
-                    (click)="facade.openCoachingReview(turn.id)">
-                    Review answer
-                  </button>
-                }
-              </article>
-            }
-          </section>
-
-          @if (facade.canAnswer()) {
-            <form class="interview-prep__composer" (submit)="submitAnswer(); $event.preventDefault()">
-              <label class="interview-prep__label" for="prep-answer">Your answer</label>
-              <textarea
-                id="prep-answer"
-                rows="4"
-                class="interview-prep__textarea"
-                [disabled]="facade.submittingAnswer()"
-                [ngModel]="answerDraft()"
-                (ngModelChange)="answerDraft.set($event)"
-                name="answer"></textarea>
-              <button
-                type="submit"
-                class="interview-prep__cta"
-                [disabled]="facade.submittingAnswer() || !answerDraft().trim()">
-                {{ facade.submittingAnswer() ? 'Sending…' : 'Send answer' }}
-              </button>
-            </form>
-          }
-
-          <div class="interview-prep__lifecycle">
-            @if (facade.sessionDetail()?.status === 'inProgress') {
-              <button type="button" class="interview-prep__secondary" (click)="facade.pauseSession()">
-                Pause
-              </button>
-            }
-            @if (facade.sessionDetail()?.status === 'paused') {
-              <button type="button" class="interview-prep__secondary" (click)="facade.resumeSession()">
-                Resume
-              </button>
-            }
-            @if (
-              facade.sessionDetail()?.status === 'inProgress' ||
-              facade.sessionDetail()?.status === 'paused'
-            ) {
-              <button type="button" class="interview-prep__secondary" (click)="facade.completeSession()">
-                Complete
-              </button>
-              <button type="button" class="interview-prep__secondary" (click)="facade.cancelSession()">
-                Cancel
-              </button>
-            }
-            @if (facade.canAdvanceFullLoop()) {
-              <button type="button" class="interview-prep__cta" (click)="facade.advanceFullLoopStage()">
-                Next stage
-              </button>
-            }
-            <button type="button" class="interview-prep__link" (click)="facade.resetActiveSession()">
-              New session
-            </button>
-          </div>
-
-          @if (facade.coachingReview(); as review) {
-            <section class="interview-prep__panel interview-prep__coaching">
-              <h3>Answer review</h3>
-              <p class="interview-prep__muted">{{ review.questionText }}</p>
-              <p>{{ review.coachingFeedback }}</p>
-              @if (review.strengths.length) {
-                <p><strong>Strengths</strong></p>
-                <ul>
-                  @for (item of review.strengths; track item) {
-                    <li>{{ item }}</li>
-                  }
-                </ul>
-              }
-              @if (review.gaps.length) {
-                <p><strong>Gaps</strong></p>
-                <ul>
-                  @for (item of review.gaps; track item) {
-                    <li>{{ item }}</li>
-                  }
-                </ul>
-              }
-              @if (review.coachingTips.length) {
-                <p><strong>Tips</strong></p>
-                <ul>
-                  @for (item of review.coachingTips; track item) {
-                    <li>{{ item }}</li>
-                  }
-                </ul>
-              }
-              <label class="interview-prep__label" for="prep-retry">Try a revised answer</label>
-              <textarea
-                id="prep-retry"
-                rows="3"
-                class="interview-prep__textarea"
-                [ngModel]="retryDraft()"
-                (ngModelChange)="retryDraft.set($event)"
-                name="retry"></textarea>
-              <button type="button" class="interview-prep__secondary" (click)="submitRetry()">
-                Submit retry
-              </button>
-              <button type="button" class="interview-prep__link" (click)="facade.clearCoaching()">
-                Close
-              </button>
-              @if (facade.coachingRetry(); as retry) {
-                <p>{{ retry.comparisonSummary ?? retry.coachingFeedback }}</p>
-                @if (retry.improved !== null) {
+            @if (facade.showResults()) {
+              <section class="interview-prep__results interview-prep__results--elevated" aria-label="Session results">
+                <header class="interview-prep__results-header">
+                  <h2>Session complete</h2>
                   <p class="interview-prep__muted">
-                    Improved: {{ retry.improved ? 'Yes' : 'No' }}
+                    {{ sessionStatusLabel(facade.sessionDetail()?.status) }}
                   </p>
-                }
-              }
-            </section>
-          }
+                </header>
 
-          @if (facade.showResults()) {
-            <section class="interview-prep__results" aria-label="Session results">
-              <div class="interview-prep__tabs">
-                <button
-                  type="button"
-                  class="interview-prep__tab"
-                  [class.interview-prep__tab--active]="facade.resultsTab() === 'report'"
-                  (click)="facade.setResultsTab('report')">
-                  Report
-                </button>
-                <button
-                  type="button"
-                  class="interview-prep__tab"
-                  [class.interview-prep__tab--active]="facade.resultsTab() === 'transcript'"
-                  (click)="facade.setResultsTab('transcript')">
-                  Transcript
-                </button>
-                <button
-                  type="button"
-                  class="interview-prep__tab"
-                  [class.interview-prep__tab--active]="facade.resultsTab() === 'competencies'"
-                  (click)="facade.setResultsTab('competencies')">
-                  Competencies
-                </button>
-                @if (facade.isFullLoop()) {
+                @if (facade.resultsError()) {
+                  <section class="interview-prep__alert" role="alert">
+                    <p>{{ facade.resultsError() }}</p>
+                    <button type="button" class="interview-prep__secondary" (click)="facade.loadResults()">
+                      Retry
+                    </button>
+                  </section>
+                }
+
+                <div class="interview-prep__tabs">
                   <button
                     type="button"
                     class="interview-prep__tab"
-                    [class.interview-prep__tab--active]="facade.resultsTab() === 'panel'"
-                    (click)="facade.setResultsTab('panel')">
-                    Panel debrief
+                    [class.interview-prep__tab--active]="facade.resultsTab() === 'report'"
+                    (click)="facade.setResultsTab('report')">
+                    Report
                   </button>
+                  <button
+                    type="button"
+                    class="interview-prep__tab"
+                    [class.interview-prep__tab--active]="facade.resultsTab() === 'transcript'"
+                    (click)="facade.setResultsTab('transcript')">
+                    Transcript
+                  </button>
+                  <button
+                    type="button"
+                    class="interview-prep__tab"
+                    [class.interview-prep__tab--active]="facade.resultsTab() === 'competencies'"
+                    (click)="facade.setResultsTab('competencies')">
+                    Competencies
+                  </button>
+                  @if (facade.isFullLoop()) {
+                    <button
+                      type="button"
+                      class="interview-prep__tab"
+                      [class.interview-prep__tab--active]="facade.resultsTab() === 'panel'"
+                      (click)="facade.setResultsTab('panel')">
+                      Panel debrief
+                    </button>
+                  }
+                </div>
+
+                @if (facade.resultsLoading()) {
+                  <p class="interview-prep__muted">Loading results…</p>
+                } @else {
+                  @if (facade.resultsTab() === 'report') {
+                    @if (facade.report(); as report) {
+                      <p class="interview-prep__disclaimer">{{ report.disclaimer }}</p>
+                      <p>{{ report.summary }}</p>
+                      @if (report.strengths.length) {
+                        <h4>Strengths</h4>
+                        <ul>
+                          @for (item of report.strengths; track item) {
+                            <li>{{ item }}</li>
+                          }
+                        </ul>
+                      }
+                      @if (report.developmentAreas.length) {
+                        <h4>Development areas</h4>
+                        <ul>
+                          @for (item of report.developmentAreas; track item) {
+                            <li>{{ item }}</li>
+                          }
+                        </ul>
+                      }
+                      @if (report.missingEvidence.length) {
+                        <h4>Missing evidence</h4>
+                        <ul>
+                          @for (item of report.missingEvidence; track item.signal) {
+                            <li>
+                              {{ item.signal }} — {{ item.reason }}
+                              @if (item.isUnknownNotWeakness) {
+                                <span class="interview-prep__tag">Not a weakness</span>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+                      @if (report.practiceRecommendations.length) {
+                        <h4>Practice recommendations</h4>
+                        <ul>
+                          @for (item of report.practiceRecommendations; track item) {
+                            <li>{{ item }}</li>
+                          }
+                        </ul>
+                      }
+                    }
+                  }
+                  @if (facade.resultsTab() === 'transcript') {
+                    @if (facade.transcript(); as transcript) {
+                      @for (turn of transcript.turns; track turn.id) {
+                        <p><strong>{{ turn.role }}</strong>: {{ turn.text }}</p>
+                      }
+                    }
+                  }
+                  @if (facade.resultsTab() === 'competencies') {
+                    @if (facade.competencies(); as comp) {
+                      <p class="interview-prep__disclaimer">{{ comp.disclaimer }}</p>
+                      @for (item of comp.competencies; track item.competencyId) {
+                        <article class="interview-prep__competency">
+                          <h4>{{ item.displayName }}</h4>
+                          <p>Coverage: {{ item.coverageState }} · Confidence: {{ item.confidence }}</p>
+                          @if (item.observedGaps.length) {
+                            <ul>
+                              @for (gap of item.observedGaps; track gap) {
+                                <li>{{ gap }}</li>
+                              }
+                            </ul>
+                          }
+                        </article>
+                      }
+                    }
+                  }
+                  @if (facade.resultsTab() === 'panel') {
+                    @if (facade.panelDebrief(); as panel) {
+                      <p>{{ panel.overallDebrief }}</p>
+                      @for (perspective of panel.perspectives; track perspective.personaLabel) {
+                        <article>
+                          <h4>{{ perspective.personaLabel }} ({{ perspective.score }})</h4>
+                          <p>{{ perspective.assessment }}</p>
+                        </article>
+                      }
+                    }
+                  }
+                }
+              </section>
+
+              <div class="interview-prep__lifecycle interview-prep__lifecycle--secondary">
+                <button type="button" class="interview-prep__secondary" (click)="facade.resetActiveSession()">
+                  New session
+                </button>
+              </div>
+            }
+
+            @if (!facade.showResults()) {
+              @if (needsContinue()) {
+                <section class="interview-prep__panel interview-prep__continue">
+                  <p>Session is ready to start.</p>
+                  <button
+                    type="button"
+                    class="interview-prep__cta"
+                    [disabled]="facade.lifecycleBusy()"
+                    (click)="facade.continueLoadedSession()">
+                    Start interview
+                  </button>
+                </section>
+              }
+
+              @if (facade.sessionDetail()?.brief; as brief) {
+                <section class="interview-prep__panel interview-prep__brief">
+                  <h3>Brief</h3>
+                  <p>{{ brief.summary }}</p>
+                  @if (brief.talkingPoints.length) {
+                    <ul>
+                      @for (point of brief.talkingPoints; track point) {
+                        <li>{{ point }}</li>
+                      }
+                    </ul>
+                  }
+                </section>
+              }
+
+              <section class="interview-prep__chat" aria-label="Interview conversation">
+                <div #chatScroll class="interview-prep__chat-scroll">
+                  @for (turn of facade.chatTurns(); track turn.id) {
+                    <article
+                      class="interview-prep__message"
+                      [class.interview-prep__message--candidate]="turn.role === 'candidate'"
+                      [class.interview-prep__message--coach]="turn.role === 'coach'">
+                      <header>
+                        <span>{{ turnRoleLabel(turn) }}</span>
+                        @if (showTurnLanguage(turn)) {
+                          <span class="interview-prep__tag">{{ languageLabel(turn.language) }}</span>
+                        }
+                      </header>
+                      <p>{{ turn.text }}</p>
+                      @if (turn.role === 'candidate' && facade.canCoach()) {
+                        <button
+                          type="button"
+                          class="interview-prep__ghost"
+                          [disabled]="facade.coachingBusy()"
+                          (click)="facade.openCoachingReview(turn.id)">
+                          Review answer
+                        </button>
+                      }
+                    </article>
+                  }
+                </div>
+              </section>
+
+              <div
+                class="interview-prep__composer-wrap"
+                [class.interview-prep__composer-wrap--idle]="!facade.canAnswer()">
+                @if (facade.canAnswer()) {
+                  <form class="interview-prep__composer" (submit)="submitAnswer(); $event.preventDefault()">
+                    <label class="interview-prep__label" for="prep-answer">Your answer</label>
+                    <textarea
+                      id="prep-answer"
+                      rows="4"
+                      class="interview-prep__textarea"
+                      [disabled]="facade.submittingAnswer()"
+                      [ngModel]="answerDraft()"
+                      (ngModelChange)="answerDraft.set($event)"
+                      name="answer"></textarea>
+                    <button
+                      type="submit"
+                      class="interview-prep__cta"
+                      [disabled]="facade.submittingAnswer() || !answerDraft().trim()"
+                      [attr.aria-disabled]="facade.submittingAnswer() || !answerDraft().trim()">
+                      {{ facade.submittingAnswer() ? 'Sending…' : 'Send answer' }}
+                    </button>
+                  </form>
+                } @else if (facade.sessionDetail()?.status === 'inProgress') {
+                  <p class="interview-prep__muted interview-prep__composer-idle" role="status">
+                    Waiting for the next question…
+                  </p>
                 }
               </div>
 
-              @if (facade.resultsLoading()) {
-                <p class="interview-prep__muted">Loading results…</p>
-              } @else {
-                @if (facade.resultsTab() === 'report') {
-                  @if (facade.report(); as report) {
-                    <p class="interview-prep__disclaimer">{{ report.disclaimer }}</p>
-                    <p>{{ report.summary }}</p>
-                    @if (report.strengths.length) {
-                      <h4>Strengths</h4>
-                      <ul>
-                        @for (item of report.strengths; track item) {
-                          <li>{{ item }}</li>
-                        }
-                      </ul>
-                    }
-                    @if (report.developmentAreas.length) {
-                      <h4>Development areas</h4>
-                      <ul>
-                        @for (item of report.developmentAreas; track item) {
-                          <li>{{ item }}</li>
-                        }
-                      </ul>
-                    }
-                    @if (report.missingEvidence.length) {
-                      <h4>Missing evidence</h4>
-                      <ul>
-                        @for (item of report.missingEvidence; track item.signal) {
-                          <li>
-                            {{ item.signal }} — {{ item.reason }}
-                            @if (item.isUnknownNotWeakness) {
-                              <span class="interview-prep__tag">Not a weakness</span>
-                            }
-                          </li>
-                        }
-                      </ul>
-                    }
-                    @if (report.practiceRecommendations.length) {
-                      <h4>Practice recommendations</h4>
-                      <ul>
-                        @for (item of report.practiceRecommendations; track item) {
-                          <li>{{ item }}</li>
-                        }
-                      </ul>
-                    }
-                  }
+              <div class="interview-prep__lifecycle">
+                @if (facade.sessionDetail()?.status === 'inProgress') {
+                  <button type="button" class="interview-prep__secondary" (click)="facade.pauseSession()">
+                    Pause
+                  </button>
                 }
-                @if (facade.resultsTab() === 'transcript') {
-                  @if (facade.transcript(); as transcript) {
-                    @for (turn of transcript.turns; track turn.id) {
-                      <p><strong>{{ turn.role }}</strong>: {{ turn.text }}</p>
-                    }
-                  }
+                @if (facade.sessionDetail()?.status === 'paused') {
+                  <button type="button" class="interview-prep__secondary" (click)="facade.resumeSession()">
+                    Resume
+                  </button>
                 }
-                @if (facade.resultsTab() === 'competencies') {
-                  @if (facade.competencies(); as comp) {
-                    <p class="interview-prep__disclaimer">{{ comp.disclaimer }}</p>
-                    @for (item of comp.competencies; track item.competencyId) {
-                      <article class="interview-prep__competency">
-                        <h4>{{ item.displayName }}</h4>
-                        <p>Coverage: {{ item.coverageState }} · Confidence: {{ item.confidence }}</p>
-                        @if (item.observedGaps.length) {
-                          <ul>
-                            @for (gap of item.observedGaps; track gap) {
-                              <li>{{ gap }}</li>
-                            }
-                          </ul>
-                        }
-                      </article>
-                    }
-                  }
+                @if (
+                  facade.sessionDetail()?.status === 'inProgress' ||
+                  facade.sessionDetail()?.status === 'paused'
+                ) {
+                  <button type="button" class="interview-prep__secondary" (click)="facade.completeSession()">
+                    Complete
+                  </button>
+                  <button type="button" class="interview-prep__secondary" (click)="facade.cancelSession()">
+                    Cancel
+                  </button>
                 }
-                @if (facade.resultsTab() === 'panel') {
-                  @if (facade.panelDebrief(); as panel) {
-                    <p>{{ panel.overallDebrief }}</p>
-                    @for (perspective of panel.perspectives; track perspective.personaLabel) {
-                      <article>
-                        <h4>{{ perspective.personaLabel }} ({{ perspective.score }})</h4>
-                        <p>{{ perspective.assessment }}</p>
-                      </article>
-                    }
-                  }
+                @if (facade.canAdvanceFullLoop()) {
+                  <button type="button" class="interview-prep__cta" (click)="facade.advanceFullLoopStage()">
+                    Next stage
+                  </button>
                 }
-              }
-            </section>
+                <button type="button" class="interview-prep__link" (click)="facade.resetActiveSession()">
+                  New session
+                </button>
+              </div>
+            }
           }
         }
       </div>
 
-      <aside class="interview-prep__history" aria-labelledby="history-heading">
-        <h2 id="history-heading">History</h2>
-        @if (facade.historyStatus() === 'loading') {
-          <p class="interview-prep__muted">Loading…</p>
-        } @else if (facade.historyError()) {
-          <p>{{ facade.historyError() }}</p>
-        } @else if (!facade.historyItems().length) {
-          <p class="interview-prep__muted">No sessions yet.</p>
-        } @else {
-          <ul class="interview-prep__history-list">
-            @for (item of facade.historyItems(); track item.id) {
-              <li>
-                <a href="#" (click)="openHistorySession(item, $event)">
-                  <span>{{ modeLabel(item.mode) }} · {{ sessionStatusLabel(item.status) }}</span>
-                  @if (historyJobLabel(item); as jobLabel) {
-                    <span class="interview-prep__muted">{{ jobLabel }}</span>
-                  }
-                </a>
+      <div class="interview-prep__rail">
+        <aside class="interview-prep__history" aria-labelledby="history-heading">
+          <h2 id="history-heading">History</h2>
+          @if (facade.historyStatus() === 'loading') {
+            <p class="interview-prep__muted" role="status">Loading…</p>
+          } @else if (facade.historyError()) {
+            <section class="interview-prep__alert" role="alert">
+              <p>{{ facade.historyError() }}</p>
+              <button type="button" class="interview-prep__secondary" (click)="facade.loadHistory()">
+                Retry
+              </button>
+            </section>
+          } @else if (!facade.historyItems().length) {
+            <p class="interview-prep__muted">No practice sessions yet. Start one from Setup.</p>
+          } @else {
+            <ul class="interview-prep__history-list">
+              @for (item of facade.historyItems(); track item.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="interview-prep__history-item"
+                    [class.interview-prep__history-item--active]="isHistoryActive(item)"
+                    (click)="openHistorySession(item)">
+                    <span>{{ modeLabel(item.mode) }} · {{ sessionStatusLabel(item.status) }}</span>
+                    @if (historyJobLabel(item); as jobLabel) {
+                      <span class="interview-prep__muted">{{ jobLabel }}</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="interview-prep__link"
+                    (click)="confirmDeleteSession(item, $event)">
+                    Delete
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </aside>
+
+        <div
+          class="interview-prep__coaching-slot"
+          [class.interview-prep__coaching-slot--open]="
+            facade.coachingReview() || facade.coachingBusy() || !!facade.coachingError()
+          ">
+          <div class="interview-prep__coaching-slot-inner">
+            @if (facade.coachingError() && !facade.coachingReview() && !facade.coachingBusy()) {
+              <section class="interview-prep__alert interview-prep__coaching-alert" role="alert">
+                <p>{{ facade.coachingError() }}</p>
+                <button type="button" class="interview-prep__secondary" (click)="facade.clearCoaching()">
+                  Dismiss
+                </button>
+              </section>
+            }
+
+            @if (facade.coachingReview(); as review) {
+              <section class="interview-prep__panel interview-prep__coaching" aria-labelledby="coaching-heading">
+                <h3 id="coaching-heading">Answer review</h3>
+                @if (facade.coachingBusy()) {
+                  <p class="interview-prep__muted" role="status" aria-busy="true">Updating review…</p>
+                }
+                @if (facade.coachingError()) {
+                  <section class="interview-prep__alert" role="alert">
+                    <p>{{ facade.coachingError() }}</p>
+                    <button
+                      type="button"
+                      class="interview-prep__secondary"
+                      (click)="retryCoachingReview(review.candidateTurnId)">
+                      Retry
+                    </button>
+                  </section>
+                }
+                <blockquote class="interview-prep__coaching-question">{{ review.questionText }}</blockquote>
+                <p>{{ review.coachingFeedback }}</p>
+                @if (review.strengths.length) {
+                  <p><strong>Strengths</strong></p>
+                  <ul>
+                    @for (item of review.strengths; track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                }
+                @if (review.gaps.length) {
+                  <p><strong>Gaps</strong></p>
+                  <ul>
+                    @for (item of review.gaps; track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                }
+                @if (review.coachingTips.length) {
+                  <p><strong>Tips</strong></p>
+                  <ul>
+                    @for (item of review.coachingTips; track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                }
+                <label class="interview-prep__label" for="prep-retry">Try a revised answer</label>
+                <textarea
+                  id="prep-retry"
+                  rows="3"
+                  class="interview-prep__textarea"
+                  [disabled]="facade.coachingBusy()"
+                  [ngModel]="retryDraft()"
+                  (ngModelChange)="retryDraft.set($event)"
+                  name="retry"></textarea>
                 <button
                   type="button"
-                  class="interview-prep__link"
-                  (click)="confirmDeleteSession(item, $event)">
-                  Delete
+                  class="interview-prep__secondary"
+                  [disabled]="facade.coachingBusy()"
+                  (click)="submitRetry()">
+                  Submit retry
                 </button>
-              </li>
+                <button type="button" class="interview-prep__link" (click)="facade.clearCoaching()">
+                  Close
+                </button>
+                @if (facade.coachingRetry(); as retry) {
+                  <p>{{ retry.comparisonSummary ?? retry.coachingFeedback }}</p>
+                  @if (retry.improved !== null) {
+                    <p class="interview-prep__muted">
+                      Improved: {{ retry.improved ? 'Yes' : 'No' }}
+                    </p>
+                  }
+                }
+              </section>
+            } @else if (facade.coachingBusy()) {
+              <section
+                class="interview-prep__panel interview-prep__coaching interview-prep__coaching--loading"
+                role="status"
+                aria-busy="true">
+                <p class="interview-prep__muted">Loading answer review…</p>
+              </section>
             }
-          </ul>
-        }
-      </aside>
+          </div>
+        </div>
+      </div>
     </section>
   }
 </main>

@@ -1,20 +1,11 @@
 <main class="eures-page">
-  <section class="eures-page__hero">
-    @if (showSourceToggle) {
+  @if (showSourceToggle) {
+    <section class="eures-page__hero" aria-label="Job search source">
       <app-job-search-source-toggle
         [source]="facade.source()"
         (sourceChange)="onSourceChange($event)" />
-    }
-
-    <h1>{{ facade.providerLabel() }} job search</h1>
-    <p class="eures-page__intro">
-      @if (facade.source() === 'jobnet') {
-        Search Work in Denmark listings from Jobnet, then save promising roles to your review workspace.
-      } @else {
-        Combine keywords and a country to narrow EURES listings, then save promising roles to your review workspace.
-      }
-    </p>
-  </section>
+    </section>
+  }
 
   <section class="eures-page__filters" aria-label="Search filters">
     @if (facade.keywords().length > 0) {
@@ -36,10 +27,10 @@
     }
 
     <div
-      class="eures-page__filter-row"
-      [class.eures-page__filter-row--eures]="facade.source() === 'eures'"
-      [class.eures-page__filter-row--jobnet]="facade.source() === 'jobnet'">
-      <label class="eures-page__filter">
+      class="eures-page__filter-bar"
+      [class.eures-page__filter-bar--eures]="facade.source() === 'eures'"
+      [class.eures-page__filter-bar--jobnet]="facade.source() === 'jobnet'">
+      <label class="eures-page__filter eures-page__filter--keywords">
         <span class="eures-page__filter-label">Keywords</span>
         <div class="eures-page__filter-control">
           <input
@@ -98,20 +89,20 @@
       } @else {
         <p class="eures-page__board-context" role="status">
           <span class="eures-page__filter-label">Board</span>
-          <span class="eures-page__board-context-value">Work in Denmark · Denmark</span>
+          <span class="eures-page__board-context-value">Work in Denmark</span>
         </p>
       }
-    </div>
 
-    <div class="eures-page__filter-actions">
-      <button
-        type="button"
-        class="eures-page__search-action"
-        (click)="runSearch()"
-        [disabled]="!canSearch()"
-        [attr.aria-describedby]="searchDisabledHint() ? 'job-search-hint' : null">
-        {{ searchActionLabel() }}
-      </button>
+      <div class="eures-page__filter-actions">
+        <button
+          type="button"
+          class="eures-page__search-action"
+          (click)="runSearch()"
+          [disabled]="!canSearch()"
+          [attr.aria-describedby]="searchDisabledHint() ? 'job-search-hint' : null">
+          {{ searchActionLabel() }}
+        </button>
+      </div>
     </div>
 
     @if (searchDisabledHint(); as hint) {

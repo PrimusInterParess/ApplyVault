@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  viewChild
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -30,6 +40,9 @@ import {
 export class InterviewPrepPageComponent implements OnInit {
   protected readonly facade = inject(InterviewPrepFacade);
   private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
+
+  private readonly chatScroll = viewChild<ElementRef<HTMLElement>>('chatScroll');
 
   protected readonly answerDraft = signal('');
   protected readonly retryDraft = signal('');
@@ -39,6 +52,32 @@ export class InterviewPrepPageComponent implements OnInit {
   protected readonly languages = INTERVIEW_PREP_LANGUAGES;
   protected readonly markets = INTERVIEW_PREP_MARKETS;
   protected readonly experienceTypes = INTERVIEW_PREP_EXPERIENCE_TYPES;
+
+  constructor() {
+    effect(() => {
+      const turnCount = this.facade.chatTurns().length;
+      if (turnCount === 0) {
+        return;
+      }
+      // Scroll inside the fixed chat pane only — never grow the page.
+      afterNextRender(
+        () => {
+          const el = this.chatScroll()?.nativeElement;
+          if (!el) {
+            return;
+          }
+          const reduceMotion =
+            typeof matchMedia === 'function' &&
+            matchMedia('(prefers-reduced-motion: reduce)').matches;
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: reduceMotion ? 'auto' : 'smooth'
+          });
+        },
+        { injector: this.injector }
+      );
+    });
+  }
 
   ngOnInit(): void {
     this.facade.loadCvGate();
@@ -96,9 +135,17 @@ export class InterviewPrepPageComponent implements OnInit {
     this.answerDraft.set('');
   }
 
-  protected openHistorySession(item: InterviewPrepSessionSummary, event: Event): void {
-    event.preventDefault();
+  protected openHistorySession(item: InterviewPrepSessionSummary, event?: Event): void {
+    event?.preventDefault();
     this.facade.loadSession(item.id);
+  }
+
+  protected isHistoryActive(item: InterviewPrepSessionSummary): boolean {
+    return this.facade.sessionId() === item.id;
+  }
+
+  protected retryCoachingReview(candidateTurnId: string): void {
+    this.facade.openCoachingReview(candidateTurnId);
   }
 
   protected confirmDeleteSession(item: InterviewPrepSessionSummary, event: Event): void {

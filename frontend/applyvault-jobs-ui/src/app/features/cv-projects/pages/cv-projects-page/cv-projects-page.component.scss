@@ -11,11 +11,6 @@
   font-size: 0.92rem;
 }
 
-.cv-projects-page__header {
-  display: grid;
-  gap: 0.45rem;
-}
-
 .cv-projects-page__banner,
 .cv-projects-page__toolbar,
 .cv-projects-page__empty,
@@ -125,15 +120,9 @@
   font-size: 0.98rem;
 }
 
-.cv-projects-page__intro,
 .cv-projects-page__muted {
   color: var(--app-text-muted);
   line-height: 1.65;
-}
-
-.cv-projects-page__intro {
-  max-width: 48ch;
-  font-size: 0.95rem;
 }
 
 .cv-projects-page__search {

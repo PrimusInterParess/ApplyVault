@@ -1,11 +1,4 @@
 <main class="cv-projects-page">
-  <header class="cv-projects-page__header">
-    <h1>Projects</h1>
-    <p class="cv-projects-page__intro">
-      Turn GitHub repositories into concise personal-project copy for your CV.
-    </p>
-  </header>
-
   @if (!gitHubConnections.loading() && !facade.isGitHubConnected()) {
     <section class="cv-projects-page__banner" role="status">
       <div>

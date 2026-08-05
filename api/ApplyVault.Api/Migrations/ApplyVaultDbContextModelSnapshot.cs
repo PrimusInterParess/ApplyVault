@@ -182,155 +182,6 @@ namespace ApplyVault.Api.Migrations
                     b.ToTable("InterviewEvents");
                 });
 
-            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CompanyName")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("AgendaJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CurrentAgendaStep")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("HiringMarket")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<string>("InferenceJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InterviewerMemoryJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InterviewerProfile")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("JobTitle")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<string>("LanguageMix")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<int?>("LatestOverallScore")
-                        .HasColumnType("int");
-
-                    b.Property<string>("LatestScorecardJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LatestInterviewMove")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Phase")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<Guid?>("ScrapeResultId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ScrapeResultId");
-
-                    b.HasIndex("UserId", "UpdatedAt")
-                        .IsDescending(false, true);
-
-                    b.ToTable("InterviewPrepSessions");
-                });
-
-            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionMessageEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("DebriefBulletsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FollowUpsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InferenceJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ModelAnswer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Phase")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<string>("ScorecardJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Sequence")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TurnStateJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SessionId", "Sequence")
-                        .IsUnique();
-
-                    b.ToTable("InterviewPrepSessionMessages");
-                });
-
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultContactEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -771,35 +622,6 @@ namespace ApplyVault.Api.Migrations
                     b.Navigation("ScrapeResult");
                 });
 
-            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
-                {
-                    b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", "ScrapeResult")
-                        .WithMany()
-                        .HasForeignKey("ScrapeResultId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("ApplyVault.Api.Data.AppUserEntity", "User")
-                        .WithMany("InterviewPrepSessions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ScrapeResult");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionMessageEntity", b =>
-                {
-                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
-                        .WithMany("Messages")
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
-                });
-
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultContactEntity", b =>
                 {
                     b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", null)
@@ -879,19 +701,12 @@ namespace ApplyVault.Api.Migrations
 
                     b.Navigation("CvProjectSummaries");
 
-                    b.Navigation("InterviewPrepSessions");
-
                     b.Navigation("ScrapeResults");
                 });
 
             modelBuilder.Entity("ApplyVault.Api.Data.ConnectedAccountEntity", b =>
                 {
                     b.Navigation("CalendarEventLinks");
-                });
-
-            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
-                {
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultEntity", b =>

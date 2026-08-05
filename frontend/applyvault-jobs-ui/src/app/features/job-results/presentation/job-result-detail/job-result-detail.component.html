@@ -240,12 +240,6 @@
           <h3>Interview</h3>
           <p class="job-detail__muted">Schedule or update interview timing for this role.</p>
         </div>
-        <a
-          routerLink="/interview-prep"
-          [queryParams]="{ jobId: selectedJob.id }"
-          class="job-detail__primary-link">
-          Prepare for interview
-        </a>
       </div>
 
       <app-job-result-interview-event-editor

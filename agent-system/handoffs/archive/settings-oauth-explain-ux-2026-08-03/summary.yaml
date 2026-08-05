@@ -2,7 +2,7 @@ task_id: settings-oauth-explain-ux-2026-08-03
 final_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
 closed_at: "2026-08-03T13:00:00Z"
 summary: >-
-  Settings Integrations explain UX: Interview Prep-style hover/focus popovers
+  Settings Integrations explain UX: hover/focus popovers
   on Connect / Refresh / Disconnect; copy matrix for Calendar, GitHub, and
   Gmail (Gmail-only mailbox); empty/partial connect UIs unified on
   provider-action cards. No API changes.

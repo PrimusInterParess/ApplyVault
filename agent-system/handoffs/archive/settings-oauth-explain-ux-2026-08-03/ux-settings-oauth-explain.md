@@ -11,7 +11,7 @@
 
 Users can connect Calendar, GitHub, and Gmail, but explanations are uneven: empty-state provider cards have a one-line blurb; connected-state connect buttons are bare labels; Refresh has no cue; Disconnect relies only on the confirm dialog after click.
 
-**Recommendation:** Reuse the Interview Prep setup **hover/focus popover** pattern (`role="tooltip"`, `aria-describedby`, suppress-on-click until mouseleave) on Connect / Refresh / Disconnect controls. Unify empty vs connected connect UI around the richer provider-action card. No API or facade contract changes.
+**Recommendation:** Reuse the hover/focus popover pattern (`role="tooltip"`, `aria-describedby`, suppress-on-click until mouseleave) on Connect / Refresh / Disconnect controls. Unify empty vs connected connect UI around the richer provider-action card. No API or facade contract changes.
 
 ---
 
@@ -28,13 +28,13 @@ Users can connect Calendar, GitHub, and Gmail, but explanations are uneven: empt
 
 ## 3. Verified Facts
 
-From current Settings template + Interview Prep page:
+From current Settings template:
 
 1. **Empty state** uses `.settings-page__provider-action` cards (badge + title + muted one-liner + Connect).
 2. **Connected / partial calendar state** switches to flat `.settings-page__primary-action` labels (`Connect Google`, `Microsoft connected` disabled) — weaker explanation than empty state.
 3. **Refresh** is a header secondary button with no help text.
 4. **Disconnect** opens an existing `alertdialog` with solid consequence copy (keep).
-5. Interview Prep chips use wrap → button + absolute popover; show on `:hover` / `:focus-within`; `--suppressed` after click + `blur()`; clear suppress on `mouseleave`.
+5. Hover/focus popovers: wrap → button + absolute popover; show on `:hover` / `:focus-within`; `--suppressed` after click + `blur()`; clear suppress on `mouseleave`.
 6. Tokens in use: `--app-*` on both surfaces. Prefer reuse over new system.
 7. **Gmail-only** mailbox sync today — must not imply Microsoft/Outlook mail.
 8. Facades already expose connect / disconnect / load — bindings stay.
@@ -44,9 +44,9 @@ From current Settings template + Interview Prep page:
 ## 4. Assumptions
 
 - Hover + keyboard focus is enough for progressive disclosure; no always-visible marketing paragraphs under every button.
-- FE may extract shared popover styles into Settings SCSS (mirror Interview Prep), or a tiny shared class later — either OK if visual parity holds.
+- FE may keep popover styles in Settings SCSS, or a tiny shared class later — either OK if visual parity holds.
 - Native `title` may remain as progressive enhancement but must **not** be the only explanation for Connect actions.
-- “Example” block used on Interview Prep Mode chips is **optional** here; Settings popovers stay shorter (title + lead + detail).
+- Settings popovers stay shorter (title + lead + detail).
 
 ---
 
@@ -54,7 +54,7 @@ From current Settings template + Interview Prep page:
 
 | ID | Decision |
 | --- | --- |
-| D1 | **Pattern:** Interview Prep chip-popover (not the older always-visible selection-note pattern from archived `ux-mode-language-hints.md`). |
+| D1 | **Pattern:** hover/focus chip-style popover on action controls. |
 | D2 | Apply popovers to **Connect**, **Refresh**, and **Disconnect** controls. |
 | D3 | **Unify connect UI:** when a provider is available to connect, always use the provider-action card (empty + partial). Do not show disabled “X connected” primary buttons — connected accounts already appear in the list with status chips. |
 | D4 | Keep section status chips, loading skeletons, error alerts, and disconnect confirm dialog. |
@@ -65,13 +65,9 @@ From current Settings template + Interview Prep page:
 
 ## 6. UX deliverables
 
-### 6.1 Interaction pattern (port from Interview Prep)
+### 6.1 Interaction pattern (hover/focus popover)
 
-**Reference implementation:**
-
-- `interview-prep-page.component.html` — `.interview-prep__chip-wrap` + `.interview-prep__chip-popover`
-- `interview-prep-page.component.ts` — `suppressedHelpKey`, `dismissChipHelp`, `onChipHelpMouseLeave`
-- `interview-prep-page.component.scss` — hover/focus-within visibility + suppressed hide
+**Behavior:** wrap → button + absolute popover; show on `:hover` / `:focus-within`; suppress after click + `blur()`; clear suppress on `mouseleave`.
 
 **Settings adaptation:**
 
@@ -105,7 +101,7 @@ From current Settings template + Interview Prep page:
 | Clear suppress | `mouseleave` on the wrap when that key is suppressed |
 | Keyboard | Focus on button reveals popover; Escape is not required beyond native blur |
 | Disabled | Disabled Connect/Refresh: still allow focus + popover if focusable; if not focusable, section intro remains the fallback |
-| Positioning | Prefer below control (`top: calc(100% + 0.5rem)`); flip/align right near viewport edge like Interview Prep last-child rule if needed |
+| Positioning | Prefer below control (`top: calc(100% + 0.5rem)`); flip/align right near viewport edge if needed |
 | Width | `min(22rem, calc(100vw - 2.5rem))` |
 | Pointer events | Popover `pointer-events: none` (tooltip, not dialog) |
 
@@ -235,7 +231,7 @@ Tooltip element ids must be unique in the document (e.g. `settings-help-calendar
 
 **Allowed FE-local additions:**
 
-- Help key signal + suppress helpers (mirror Interview Prep)
+- Help key signal + suppress helpers
 - Static copy map or inline strings in the settings page component
 - SCSS for `.settings-page__help-wrap` / `__help-popover*` (token-aligned)
 
@@ -265,7 +261,7 @@ Frontend-engineer should treat this as done when:
 - [ ] **A1** Hovering Connect Google / Microsoft / GitHub / Gmail shows a popover with title, lead, and detail from the copy matrix.
 - [ ] **A2** Keyboard focusing those Connect controls shows the same popover (`:focus-within`).
 - [ ] **A3** Each Connect control has `aria-describedby` pointing at a unique `role="tooltip"` id.
-- [ ] **A4** Activating Connect suppresses that popover until pointer leaves the wrap (and blurs the button), matching Interview Prep.
+- [ ] **A4** Activating Connect suppresses that popover until pointer leaves the wrap (and blurs the button).
 - [ ] **A5** Refresh buttons in all three sections have short popovers (title/lead/detail as matrix).
 - [ ] **A6** Disconnect buttons have short popovers; existing confirm dialog still runs and keeps consequence copy.
 - [ ] **A7** Empty and partial states use provider-action cards (not bare primary connect labels); no disabled “X connected” CTA when the account already appears in the list.

@@ -182,6 +182,450 @@ namespace ApplyVault.Api.Migrations
                     b.ToTable("InterviewEvents");
                 });
 
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepAnswerRetryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CandidateTurnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CoachingFeedbackJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ComparisonJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("InterviewerTurnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OriginalAnswerText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalAssessmentJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RevisedAnswerText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RevisedAssessmentJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateTurnId")
+                        .IsUnique();
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("InterviewPrepAnswerRetries", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepCompetencyCoverageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CompetencyId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CoverageState")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("EvidenceCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LastProgressClass")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "CompetencyId")
+                        .IsUnique();
+
+                    b.ToTable("InterviewPrepCompetencyCoverages", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepEvidenceItemEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CandidateTurnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Claim")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CompetencyId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EvidenceQuote")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Polarity")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Strength")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "CompetencyId");
+
+                    b.ToTable("InterviewPrepEvidenceItems", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepQuestionAttemptEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssessmentJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AssessmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid?>("CandidateTurnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CompetencyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("IntentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid?>("InterviewerTurnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProgressClass")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int?>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetEvidenceKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "CandidateTurnId");
+
+                    b.ToTable("InterviewPrepQuestionAttempts", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BriefJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CandidateReportJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CatalogVersion")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConversationSummary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CvDocumentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CvSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExperienceType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("InteractionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("JobSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Market")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PanelDebriefJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Persona")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PlanJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("PreparedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RuntimeStateJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ScrapeResultId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StageAssessmentsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScrapeResultId");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
+                    b.HasIndex("UserId", "UpdatedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("InterviewPrepSessions", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepStageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PlanJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StageType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("InterviewPrepStages", (string)null);
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepTurnEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActionType")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientTurnId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CompetencyTag")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("IntentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("QuestionSignature")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetEvidenceKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StageId");
+
+                    b.HasIndex("SessionId", "ClientTurnId")
+                        .IsUnique()
+                        .HasFilter("[ClientTurnId] IS NOT NULL");
+
+                    b.HasIndex("SessionId", "QuestionSignature");
+
+                    b.HasIndex("SessionId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("InterviewPrepTurns", (string)null);
+                });
+
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultContactEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -622,6 +1066,94 @@ namespace ApplyVault.Api.Migrations
                     b.Navigation("ScrapeResult");
                 });
 
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepAnswerRetryEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("AnswerRetries")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepCompetencyCoverageEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("CompetencyCoverages")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepEvidenceItemEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("EvidenceItems")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepQuestionAttemptEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("QuestionAttempts")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScrapeResultId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ApplyVault.Api.Data.AppUserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepStageEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("Stages")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepTurnEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepSessionEntity", "Session")
+                        .WithMany("Turns")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApplyVault.Api.Data.InterviewPrepStageEntity", "Stage")
+                        .WithMany("Turns")
+                        .HasForeignKey("StageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+
+                    b.Navigation("Stage");
+                });
+
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultContactEntity", b =>
                 {
                     b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", null)
@@ -707,6 +1239,26 @@ namespace ApplyVault.Api.Migrations
             modelBuilder.Entity("ApplyVault.Api.Data.ConnectedAccountEntity", b =>
                 {
                     b.Navigation("CalendarEventLinks");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
+                {
+                    b.Navigation("AnswerRetries");
+
+                    b.Navigation("CompetencyCoverages");
+
+                    b.Navigation("EvidenceItems");
+
+                    b.Navigation("QuestionAttempts");
+
+                    b.Navigation("Stages");
+
+                    b.Navigation("Turns");
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepStageEntity", b =>
+                {
+                    b.Navigation("Turns");
                 });
 
             modelBuilder.Entity("ApplyVault.Api.Data.ScrapeResultEntity", b =>

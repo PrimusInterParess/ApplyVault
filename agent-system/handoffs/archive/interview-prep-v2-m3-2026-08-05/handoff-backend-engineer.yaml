@@ -1,0 +1,89 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m3-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Milestone 3 delivers interview context builder + planner + config catalogs.
+  Prepare now captures snapshots, builds brief (AI gateway CreateInterviewBrief
+  with deterministic fallback), builds plan (PlanInterview + catalogs), and
+  persists both on the session. GET session detail returns brief + plan.
+  Fixed-question turns unchanged for M1 compatibility.
+
+scope_confirmation:
+  included:
+    - Catalogs (competency, mode, persona, evidence/coverage enums)
+    - InterviewContextBuilder + InterviewPlanner
+    - Prepare persistence of BriefJson / PlanJson
+    - Public DTOs on session detail
+    - Unit + integration test updates
+  excluded:
+    - M4 adaptive next-action / assess loop
+    - Frontend
+    - ADR edits
+
+decisions:
+  - spoken_questions: >
+      Stage PlanJson keeps FixedInterviewPrepQuestionBank wording for turns.
+      Session PlanJson stores internal question intents separately (no spoken text).
+  - ai_failure: >
+      Deterministic minimal brief/plan fallback → session Ready.
+      Hard validation failures (missing CV, bad config) still → Failed.
+  - missing_cv_info: marked unknown coverage, never weak
+  - persistence: session BriefJson + PlanJson columns (migration AddInterviewPrepBriefPlanJson)
+
+deliverables:
+  packages:
+    - api/ApplyVault.Api/Services/InterviewPrep/Catalogs/
+    - api/ApplyVault.Api/Services/InterviewPrep/Planning/
+  persistence:
+    - InterviewPrepSessions.BriefJson
+    - InterviewPrepSessions.PlanJson
+  contracts:
+    - InterviewPrepSessionDetailDto.brief
+    - InterviewPrepSessionDetailDto.plan (camelCase; no system prompts)
+
+catalogs:
+  competencies_core:
+    - motivation
+    - communication
+    - collaboration
+    - ownership
+    - problemSolving
+    - execution
+    - leadership
+  extension_point: roleDepth
+  evidence:
+    classification: [claimed, observed, corroborated, absent, unknown]
+    strength: [strong, moderate, weak, unknown]
+    confidence: [high, medium, low, unknown]
+    coverageState: [notStarted, inProgress, covered, gapsRemain, unknown]
+
+how_to_exercise:
+  - Create session → POST /api/interview-prep/sessions/{id}/prepare
+  - Assert response.brief and response.plan populated
+  - Start + submit turns — still 4 fixed-bank questions
+  - With InterviewPrep:Ai:UseFakeProvider=true (default), brief.source=ai
+  - Force gateway failure in unit tests → source=deterministicFallback, status still ready
+
+validation:
+  unit_command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  unit_result: "33 passed"
+  integration_command: >
+    dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  integration_result: "5 passed"
+
+limitations:
+  - M4 not started — intents stored but not driving turns
+  - Live Gemini brief/plan ops still OperationNotImplemented (fake path default)
+  - Migration must be applied to SQL Server before deploy
+
+handoffs:
+  - frontend may consume brief/plan on GET detail (optional UI)
+  - ai-llm may later flesh live CreateInterviewBrief/PlanInterview transport
+  - M4 should consume session PlanJson intents + Loop Guard
+
+m4_not_started: true

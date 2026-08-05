@@ -1,0 +1,18 @@
+﻿task_id: interview-prep-v2-m2-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: ai-llm-engineer
+summary: >
+  M2 AI gateway foundation: 13 named ops, prompt registry, validation/retries,
+  fake provider, partial Gemini transport (AssessAnswer + GenerateInterviewerMessage).
+  Unit 25/25 PASS. Session turns still use M1 fixed bank.
+limitations:
+  - Turns not wired to AI
+  - Live transport only 2 ops
+  - No public ai/* endpoints
+  - M3 not started
+artifacts:
+  - api/ApplyVault.Api/Services/InterviewPrep/Ai/
+  - api/ApplyVault.Api/Options/InterviewPrepAiOptions.cs
+next_milestone: M3 context builder + planner + competency defs

@@ -1,0 +1,10 @@
+task_id: interview-prep-v2-m5-2026-08-05
+reviewer: principal-software-architect
+status: INTEGRATED
+ready_reconciliation: PASS
+notes:
+  - ReportingService + GET transcript/report/competencies; CandidateReportJson migration.
+  - Tests 45 unit + 5 integration PASS.
+  - AssessmentJson not on public DTOs.
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+next: Offer operate C for M6 after human approval

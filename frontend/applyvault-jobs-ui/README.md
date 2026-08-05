@@ -11,6 +11,14 @@ npm start
 
 Open `http://localhost:4200/`. The app calls the API at `http://localhost:5173/api` (see `src/environments/environment.ts`).
 
+### Interview prep (v2)
+
+Route: `/interview-prep`. Optional query: `?jobId=<scrape-result-guid>`.
+
+1. Run the API locally with fake AI (default Interview Prep provider — no Gemini key required).
+2. Sign in, ensure a Structured CV exists in CV Builder.
+3. `npm start` and open Interview prep from the shell nav.
+
 ## Building
 
 Configuration is baked in at build time via `src/environments/`. See [plans/production-readiness/FRONTEND.md](../../plans/production-readiness/FRONTEND.md).

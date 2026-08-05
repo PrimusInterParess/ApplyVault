@@ -1,0 +1,75 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m7-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Milestone 7 delivers expanded interview modes (roleAndDomainDepth, processAndSystems)
+  and seniorPeer persona with operational create/prepare, catalog-driven planning,
+  fixed-question banks, and fake-provider persona boundaries. Unfinished enum values
+  (problemSolvingCase, languagePractice, fullLoop, barRaiser) deserialize but return 400 on create.
+
+scope_confirmation:
+  included:
+    - Enum extensions + camelCase wire names (existing JsonStringEnumConverter)
+    - InterviewPrepOperationalCatalog create gate on InterviewPrepSessionService
+    - Mode/persona competency priorities and SeniorPeer questionStyleHint peer_technical_depth
+    - Planner + context builder inject roleDepth when job snapshot present
+    - FixedInterviewPrepQuestionBank for all operational mode×persona pairs (12 combos)
+    - Fake provider brief/plan/message personaStyle and tone markers for tests
+    - Prompt registry bump generate-interviewer-message to 2026-08-05.2
+    - Unit + integration tests for M7 behavior
+  excluded:
+    - M8 ProblemSolvingCase operational surface
+    - M9 language/market expansion
+    - M10 full loop
+    - ADR edits
+    - Frontend
+    - Gateway/transport rebuild
+
+decisions:
+  - unfinished_enums: present on wire for forward compatibility; rejected at create via operational catalog
+  - role_depth: mode catalog lists roleDepth first for RoleAndDomainDepth; planner/context also promote when HasJob
+  - legacy_interview_prep_service: not registered in DI (unchanged); MVP file left in tree for separate cleanup
+  - adaptive_runtime: no code changes; existing runtime reads stored mode/persona strings
+
+contracts:
+  create_body:
+    operational_modes:
+      - screeningAndMotivation
+      - behavioralAndCulture
+      - roleAndDomainDepth
+      - processAndSystems
+    operational_personas:
+      - recruiter
+      - hiringManager
+      - seniorPeer
+    rejected_with_400:
+      modes: [problemSolvingCase, languagePractice, fullLoop]
+      personas: [barRaiser]
+
+deliverables:
+  domain: api/ApplyVault.Api/Services/InterviewPrep/Domain/
+  catalogs: api/ApplyVault.Api/Services/InterviewPrep/Catalogs/
+  planning: api/ApplyVault.Api/Services/InterviewPrep/Planning/
+  ai_fake: api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+  tests:
+    - api/ApplyVault.Api.Tests/InterviewPrep/InterviewPrepExpandedModesTests.cs
+    - api/ApplyVault.Api.IntegrationTests/InterviewPrepLifecycleIntegrationTests.cs
+
+validation:
+  unit_command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  unit_result: "60 passed"
+  integration_command: >
+    dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  integration_result: "9 passed"
+  scratch_dir: agent-system/scratch/interview-prep-v2-m7-2026-08-05/
+
+handoffs:
+  - frontend: expose new mode/persona pickers; hide unfinished enum values until M8–M10
+  - qa: verify 400 on fullLoop/barRaiser create; roleAndDomainDepth+seniorPeer prepare plan includes roleDepth
+
+m8_not_started: true

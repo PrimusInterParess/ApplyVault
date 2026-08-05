@@ -1,0 +1,17 @@
+﻿task_id: interview-prep-v2-m3-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: backend-engineer
+summary: >
+  M3: catalogs, context builder, planner; Prepare persists brief+plan; GET returns them.
+  Fixed-bank turns unchanged. Unit 33 + integration 5 PASS.
+limitations:
+  - No adaptive turns (M4)
+  - Live Gemini brief/plan still stubbed; fake provider default
+  - RoleDepth catalog extension only
+artifacts:
+  - api/ApplyVault.Api/Services/InterviewPrep/Catalogs/
+  - api/ApplyVault.Api/Services/InterviewPrep/Planning/
+  - api/ApplyVault.Api/Migrations/20260805160000_AddInterviewPrepBriefPlanJson.cs
+next_milestone: M4 adaptive runtime + Loop Guard AI path

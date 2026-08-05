@@ -1,0 +1,71 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m6-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Implemented M6 coaching: POST review, POST retry, GET retry/compare on candidate
+  turns; InterviewPrepAnswerRetries persistence; mode gate by experienceType
+  (GuidedCoaching vs RealisticSimulation). Reporting/adaptive runtime unchanged.
+
+scope_confirmation:
+  included:
+    - InterviewPrepCoachingService + IInterviewPrepCoachingService
+    - InterviewPrepAnswerRetryEntity + migration 20260805210000
+    - REST POST .../turns/{turnId}/review | retry; GET .../retry
+    - CompareAnswerRetry + AssessAnswer + GenerateFeedback via gateway
+    - Unit tests (InterviewPrepCoachingServiceTests) + integration coaching tests
+  excluded:
+    - M7 expanded modes
+    - Reporting/adaptive runtime rewrites
+    - Frontend
+    - ADR edits
+
+decisions:
+  - history_immutable: candidate turn Text never updated; OriginalAnswerText copied on review row
+  - private_payloads: OriginalAssessmentJson, RevisedAssessmentJson never on public DTOs
+  - guided_coaching: review/retry allowed inProgress | paused | completing | completed
+  - realistic_simulation: inProgress | paused | completing → 409 interview_prep_coaching_not_allowed_during_simulation; completed → review/retry OK (post-session only)
+  - flow: POST review required before POST retry (409 interview_prep_coaching_review_required)
+  - practice_recommendations: remain on GET report (M5); no separate endpoint added
+
+deliverables:
+  coaching: api/ApplyVault.Api/Services/InterviewPrep/Coaching/
+  contracts: api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepContracts.cs
+  entity: api/ApplyVault.Api/Data/InterviewPrepSessionEntity.cs
+  controller: api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  di: api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs
+  migration: api/ApplyVault.Api/Migrations/20260805210000_AddInterviewPrepAnswerRetry.cs
+  tests:
+    - api/ApplyVault.Api.Tests/InterviewPrep/InterviewPrepCoachingServiceTests.cs
+    - api/ApplyVault.Api.IntegrationTests/InterviewPrepCoachingIntegrationTests.cs
+
+how_to_exercise:
+  - GuidedCoaching session: submit turn → POST .../review → POST .../retry with longer answer → GET .../retry
+  - GET transcript: original candidate line unchanged
+  - RealisticSimulation inProgress: POST review → 409 with interview_prep_coaching_not_allowed_during_simulation
+  - RealisticSimulation completed: POST review succeeds
+
+validation:
+  unit_command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  unit_result: "48 passed"
+  integration_command: >
+    dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  integration_result: "7 passed"
+  logs:
+    - agent-system/scratch/interview-prep-v2-m6-2026-08-05/unit-test.log
+    - agent-system/scratch/interview-prep-v2-m6-2026-08-05/integration-test.log
+
+limitations:
+  - SQL migration required for InterviewPrepAnswerRetries table
+  - One retry record per candidate turn (unique CandidateTurnId)
+  - Coach turn role not used in live interview loop (side-channel retry only)
+
+handoffs:
+  - frontend: wire review/retry UI for GuidedCoaching; hide live coaching in RealisticSimulation until session completed
+  - qa: verify 409 codes and transcript immutability
+
+m7_not_started: true

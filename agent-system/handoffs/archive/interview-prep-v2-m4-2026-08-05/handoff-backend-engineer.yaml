@@ -1,0 +1,86 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m4-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Milestone 4 replaces fixed-bank turn advancement with an adaptive runtime.
+  Start opens via GenerateOpening (+ first question). SubmitTurn saves the
+  candidate answer first, then runs assess → evidence ledger → coverage →
+  conversation summary → SelectNextAction → Loop Guard → interviewer wording
+  (Loop Guard again) → persist. Deterministic fallback chain: different intent
+  → next competency → candidate questions → close. Fixed question bank remains
+  as wording fallback only.
+
+scope_confirmation:
+  included:
+    - InterviewPrepAdaptiveRuntime
+    - Expanded Loop Guard (exact/near/intent/target-evidence/no-progress/follow-up)
+    - EvidenceItem / CompetencyCoverage / QuestionAttempt EF entities + migration
+    - Start + SubmitTurn adaptive wiring
+    - LoopGuard options expansion
+    - Unit + integration tests
+  excluded:
+    - M5 report endpoints
+    - M6 coaching / answer retry
+    - Frontend
+    - ADR edits
+
+decisions:
+  - process_order: >
+      validate → save answer → assess → evidence → coverage → counters →
+      summary → next action → Loop Guard → fallback → wording → Loop Guard →
+      save interviewer turn → public state
+  - ai_failure: >
+      Candidate answer always persisted before AI. Assess/select/message use
+      gateway safe/deterministic fallbacks; never lose answer text.
+  - fixed_bank: >
+      Stage PlanJson still stores fixed-bank wording for fallback only.
+      Adaptive path drives turns from session PlanJson intents + AI gateway.
+  - privacy: >
+      AssessmentJson, ConversationSummary, Loop Guard reasons stay private;
+      public DTOs unchanged (no assessments/rubrics/prompts).
+  - realistic_simulation: >
+      Interviewer text sanitized to strip coaching-like prefixes.
+
+deliverables:
+  runtime: api/ApplyVault.Api/Services/InterviewPrep/Runtime/InterviewPrepAdaptiveRuntime.cs
+  loop_guard: api/ApplyVault.Api/Services/InterviewPrep/Domain/InterviewLoopGuard.cs
+  migration: api/ApplyVault.Api/Migrations/20260805190000_AddInterviewPrepAdaptiveRuntime.cs
+  options: InterviewPrep:LoopGuard (MaxIntentRepeats, MaxFollowUpsPerIntent, MaxNoProgressStreak, MaxTargetEvidenceRepeats, MaxWordingRetries)
+
+how_to_exercise:
+  - Create + prepare session (brief/plan from M3)
+  - POST start → assert opening + first interviewer question (not fixed-bank-only sequence)
+  - POST turns with clientTurnId; assert next interviewer turn and session remains inProgress
+  - Repeat until InterviewComplete / status completing (may pass candidateQuestions)
+  - Replay same clientTurnId → idempotent
+  - With UseFakeProvider=true (default), no live Gemini required
+  - Inspect DB: InterviewPrepEvidenceItems / CompetencyCoverages / QuestionAttempts populated
+  - GET session detail must not expose AssessmentJson / Loop Guard reasons
+
+validation:
+  unit_command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  unit_result: "40 passed"
+  integration_command: >
+    dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  integration_result: "5 passed"
+  logs:
+    - agent-system/scratch/interview-prep-v2-m4-2026-08-05/unit-test.log
+    - agent-system/scratch/interview-prep-v2-m4-2026-08-05/integration-test.log
+
+limitations:
+  - Apply migration AddInterviewPrepAdaptiveRuntime before SQL Server deploy
+  - Live Gemini ops may still be stubbed for some wording paths; fake provider is default
+  - Evidence/coverage not on public REST yet (M5 may surface summary/report views)
+  - M5 reporting and M6 coaching retry not started
+
+handoffs:
+  - frontend: turn flow may include opening + candidate-questions before completing; do not assume exactly 4 fixed questions
+  - ai-llm: may flesh live GenerateOpening/Assess/SelectNext/GenerateMessage/Summarize transport
+  - M5: report endpoints only
+
+m5_not_started: true

@@ -1,0 +1,55 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m8-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  M8 delivers controlled case interviews (problemSolvingCase) with two starter cases,
+  hint/clarification/complication runtime, and BarRaiser persona with consistency probing.
+  Adaptive runtime branches for case sessions without altering non-case behavior.
+
+scope_confirmation:
+  included:
+    - InterviewPrepOperationalCatalog: problemSolvingCase + barRaiser + mode×persona pairs
+    - InterviewPrepCaseCatalog (2 starter cases: b2b-saas-churn-spike, fulfillment-backlog-surge)
+    - InterviewPrepCaseRuntime + combined runtime state (hints, facts disclosed, completion)
+    - InterviewPrepAdaptiveRuntime case branch + BarRaiser contradiction probe priority
+    - Mode/persona catalogs, fixed question bank, planner case attachment
+    - Fake provider bar_raiser_consistency framing
+    - Unit tests (InterviewPrepM8CaseAndBarRaiserTests) + integration case/barRaiser smoke
+  excluded:
+    - M9 language/market
+    - M10 full loop
+    - ADR edits
+    - Frontend
+
+contracts:
+  create:
+    new_operational_mode: problemSolvingCase
+    new_operational_persona: barRaiser
+    example_valid_pair: [problemSolvingCase, barRaiser]
+    still_rejected_examples:
+      - [problemSolvingCase, recruiter]
+      - [screeningAndMotivation, barRaiser]
+  runtime_actions_added:
+    - discloseFact
+    - offerHint
+    - introduceComplication
+
+deliverables:
+  - api/ApplyVault.Api/Services/InterviewPrep/Catalogs/InterviewPrepCaseCatalog.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/Runtime/InterviewPrepCaseRuntime.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/Runtime/InterviewPrepCombinedRuntimeState.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/Runtime/InterviewPrepBarRaiserSignals.cs
+  - api/ApplyVault.Api.Tests/InterviewPrep/InterviewPrepM8CaseAndBarRaiserTests.cs
+
+validation:
+  unit: 67 passed (FullyQualifiedName~InterviewPrep)
+  integration: 10 passed (FullyQualifiedName~InterviewPrep)
+  scratch_dir: agent-system/scratch/interview-prep-v2-m8-2026-08-05/
+
+handoffs:
+  - frontend: expose problemSolvingCase + barRaiser for valid pairs; case opening uses server turns
+  - qa: case hint ladder, fact immutability, bar raiser contradiction probe smoke
+
+m9_not_started: true

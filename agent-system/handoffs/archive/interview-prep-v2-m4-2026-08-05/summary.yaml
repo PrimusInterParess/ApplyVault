@@ -1,0 +1,13 @@
+﻿task_id: interview-prep-v2-m4-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: backend-engineer
+summary: >
+  M4 adaptive Start/SubmitTurn with Loop Guard; private evidence/coverage/attempts;
+  fixed bank fallback-only. Unit 40 + integration 5 PASS.
+limitations:
+  - Fake AI by default; some Gemini ops may remain stubbed
+  - Assessments/evidence not on public API
+  - M5 reports / M6 coaching not started
+next_milestone: M5 reporting

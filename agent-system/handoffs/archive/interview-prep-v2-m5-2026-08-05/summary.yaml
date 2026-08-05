@@ -1,0 +1,13 @@
+﻿task_id: interview-prep-v2-m5-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: backend-engineer
+summary: >
+  M5 reporting: transcript, candidate report, competency results; generate on
+  complete or lazy GET. Unit 45 + integration 5 PASS. Migration AddInterviewPrepReporting.
+limitations:
+  - Apply migration before SQL deploy
+  - M6 coaching not started
+  - Fake AI default for EvaluateStage/GenerateFeedback
+next_milestone: M6 coaching retry

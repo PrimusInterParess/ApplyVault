@@ -83,6 +83,17 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'interview-prep',
+        title: 'Interview Prep',
+        data: {
+          shellSubtitle: 'Practice interviews from your Structured CV with adaptive text sessions.'
+        },
+        loadComponent: () =>
+          import('./features/interview-prep/pages/interview-prep-page/interview-prep-page.component').then(
+            (module) => module.InterviewPrepPageComponent
+          )
+      },
+      {
         path: 'settings',
         title: 'ApplyVault Settings',
         data: {

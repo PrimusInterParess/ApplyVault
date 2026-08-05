@@ -1,0 +1,12 @@
+﻿task_id: interview-prep-v2-m6-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: backend-engineer
+summary: >
+  M6 coaching: review/retry/compare endpoints; AnswerRetries table; GuidedCoaching
+  in-session vs RealisticSimulation post-session only. Unit 48 + integration 7 PASS.
+limitations:
+  - Migration 20260805210000_AddInterviewPrepAnswerRetry before deploy
+  - M7-M10 not started
+next_milestone: M7 expanded modes (optional)

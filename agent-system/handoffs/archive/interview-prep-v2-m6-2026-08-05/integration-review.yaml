@@ -1,0 +1,9 @@
+task_id: interview-prep-v2-m6-2026-08-05
+reviewer: principal-software-architect
+status: INTEGRATED
+ready_reconciliation: PASS
+notes:
+  - CoachingService + review/retry endpoints; AnswerRetries entity/migration present (verify filename on deploy).
+  - Tests 48 unit + 7 integration PASS.
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+next: M7+ optional; initial release backend scope largely complete per plan M1-M6

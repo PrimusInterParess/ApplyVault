@@ -1,0 +1,20 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-v2-m10-2026-08-05
+  agent: backend-engineer
+  status: READY
+  summary: |
+    M10 full loop: operational fullLoop mode, multi-stage orchestration in one session,
+    cross-stage Loop Guard + revisit approval, stage handoffs without score leakage,
+    panel debrief via PlanFullLoop + GeneratePanelDebrief gateway ops.
+  api_additions:
+    - POST /api/interview-prep/sessions/{id}/full-loop/next-stage
+    - POST /api/interview-prep/sessions/{id}/loop-guard/revisit
+    - GET /api/interview-prep/sessions/{id}/panel-debrief
+  persistence:
+    - InterviewPrepSessions.PanelDebriefJson (migration 20260805230000)
+  tests:
+    unit: "dotnet test api/ApplyVault.Api.Tests --filter FullyQualifiedName~InterviewPrep (79 passed)"
+  follow_up:
+    - Principal: review ADR-0023 proposal in scratch
+    - Frontend: full-loop stage UX + panel debrief surface

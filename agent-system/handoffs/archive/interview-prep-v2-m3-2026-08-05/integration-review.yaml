@@ -1,0 +1,10 @@
+task_id: interview-prep-v2-m3-2026-08-05
+reviewer: principal-software-architect
+status: INTEGRATED
+ready_reconciliation: PASS
+notes:
+  - Catalogs + Planning services present; BriefJson/PlanJson on session; DTOs expose brief+plan.
+  - Migration AddInterviewPrepBriefPlanJson claimed; tests 33 unit + 5 integration PASS.
+  - Turns remain fixed-bank by design until M4.
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+next: Offer operate C for M4 after human approval

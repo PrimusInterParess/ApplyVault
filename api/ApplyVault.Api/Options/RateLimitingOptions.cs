@@ -9,6 +9,7 @@ public sealed class RateLimitingOptions
     public const string PolicyEuresSearch = "eures-search";
     public const string PolicyJobnetSearch = "jobnet-search";
     public const string PolicyOAuthCallback = "oauth-callback";
+    public const string PolicyInterviewPrep = "interview-prep";
 
     public bool Enabled { get; set; } = true;
 
@@ -39,6 +40,12 @@ public sealed class RateLimitingOptions
     public RateLimitPolicyOptions OAuthCallback { get; set; } = new()
     {
         PermitLimit = 10,
+        WindowSeconds = 60
+    };
+
+    public RateLimitPolicyOptions InterviewPrep { get; set; } = new()
+    {
+        PermitLimit = 60,
         WindowSeconds = 60
     };
 }

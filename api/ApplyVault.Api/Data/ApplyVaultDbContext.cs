@@ -15,6 +15,13 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<UserCvDocumentEntity> UserCvDocuments => Set<UserCvDocumentEntity>();
     public DbSet<UserCvSectionEntity> UserCvSections => Set<UserCvSectionEntity>();
     public DbSet<UserCvEntryEntity> UserCvEntries => Set<UserCvEntryEntity>();
+    public DbSet<InterviewPrepSessionEntity> InterviewPrepSessions => Set<InterviewPrepSessionEntity>();
+    public DbSet<InterviewPrepStageEntity> InterviewPrepStages => Set<InterviewPrepStageEntity>();
+    public DbSet<InterviewPrepTurnEntity> InterviewPrepTurns => Set<InterviewPrepTurnEntity>();
+    public DbSet<InterviewPrepEvidenceItemEntity> InterviewPrepEvidenceItems => Set<InterviewPrepEvidenceItemEntity>();
+    public DbSet<InterviewPrepCompetencyCoverageEntity> InterviewPrepCompetencyCoverages => Set<InterviewPrepCompetencyCoverageEntity>();
+    public DbSet<InterviewPrepQuestionAttemptEntity> InterviewPrepQuestionAttempts => Set<InterviewPrepQuestionAttemptEntity>();
+    public DbSet<InterviewPrepAnswerRetryEntity> InterviewPrepAnswerRetries => Set<InterviewPrepAnswerRetryEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -182,6 +189,163 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
                 .WithMany()
                 .HasForeignKey((entry) => entry.SourceSummaryId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<InterviewPrepSessionEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepSessions");
+            entity.HasKey((session) => session.Id);
+            entity.Property((session) => session.Id).ValueGeneratedNever();
+            entity.Property((session) => session.Mode).IsRequired().HasMaxLength(64);
+            entity.Property((session) => session.Persona).IsRequired().HasMaxLength(64);
+            entity.Property((session) => session.Language).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.Market).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.ExperienceType).IsRequired().HasMaxLength(64);
+            entity.Property((session) => session.InteractionType).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.Status).IsRequired().HasMaxLength(32);
+            entity.Property((session) => session.CvSnapshotJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.JobSnapshotJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.BriefJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.PlanJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.ConversationSummary).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.RuntimeStateJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.CandidateReportJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.StageAssessmentsJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.PanelDebriefJson).HasColumnType("nvarchar(max)");
+            entity.Property((session) => session.JobTitle).HasMaxLength(512);
+            entity.Property((session) => session.CompanyName).HasMaxLength(512);
+            entity.Property((session) => session.CatalogVersion).HasMaxLength(32);
+            entity.Property((session) => session.IdempotencyKey).HasMaxLength(64);
+            entity.Property((session) => session.FailureReason).HasMaxLength(1024);
+            entity.Property((session) => session.ConcurrencyStamp).IsRequired();
+            entity.HasIndex((session) => new { session.UserId, session.UpdatedAt })
+                .IsDescending(false, true);
+            entity.HasIndex((session) => new { session.UserId, session.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("[IdempotencyKey] IS NOT NULL");
+            entity.HasOne<AppUserEntity>()
+                .WithMany()
+                .HasForeignKey((session) => session.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ScrapeResultEntity>()
+                .WithMany()
+                .HasForeignKey((session) => session.ScrapeResultId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany((session) => session.Stages)
+                .WithOne((stage) => stage.Session)
+                .HasForeignKey((stage) => stage.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((session) => session.Turns)
+                .WithOne((turn) => turn.Session)
+                .HasForeignKey((turn) => turn.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((session) => session.EvidenceItems)
+                .WithOne((item) => item.Session)
+                .HasForeignKey((item) => item.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((session) => session.CompetencyCoverages)
+                .WithOne((coverage) => coverage.Session)
+                .HasForeignKey((coverage) => coverage.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((session) => session.QuestionAttempts)
+                .WithOne((attempt) => attempt.Session)
+                .HasForeignKey((attempt) => attempt.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany((session) => session.AnswerRetries)
+                .WithOne((retry) => retry.Session)
+                .HasForeignKey((retry) => retry.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InterviewPrepAnswerRetryEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepAnswerRetries");
+            entity.HasKey((retry) => retry.Id);
+            entity.Property((retry) => retry.Id).ValueGeneratedNever();
+            entity.Property((retry) => retry.OriginalAnswerText).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.OriginalAssessmentJson).HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.CoachingFeedbackJson).HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.RevisedAnswerText).HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.RevisedAssessmentJson).HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.ComparisonJson).HasColumnType("nvarchar(max)");
+            entity.Property((retry) => retry.Status).IsRequired().HasMaxLength(32);
+            entity.HasIndex((retry) => retry.CandidateTurnId).IsUnique();
+        });
+
+        modelBuilder.Entity<InterviewPrepStageEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepStages");
+            entity.HasKey((stage) => stage.Id);
+            entity.Property((stage) => stage.Id).ValueGeneratedNever();
+            entity.Property((stage) => stage.StageType).IsRequired().HasMaxLength(64);
+            entity.Property((stage) => stage.Status).IsRequired().HasMaxLength(32);
+            entity.Property((stage) => stage.PlanJson).HasColumnType("nvarchar(max)");
+            entity.HasIndex((stage) => new { stage.SessionId, stage.SortOrder }).IsUnique();
+            entity.HasMany((stage) => stage.Turns)
+                .WithOne((turn) => turn.Stage)
+                .HasForeignKey((turn) => turn.StageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<InterviewPrepTurnEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepTurns");
+            entity.HasKey((turn) => turn.Id);
+            entity.Property((turn) => turn.Id).ValueGeneratedNever();
+            entity.Property((turn) => turn.Role).IsRequired().HasMaxLength(16);
+            entity.Property((turn) => turn.Text).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((turn) => turn.QuestionSignature).HasMaxLength(128);
+            entity.Property((turn) => turn.CompetencyTag).HasMaxLength(64);
+            entity.Property((turn) => turn.IntentId).HasMaxLength(128);
+            entity.Property((turn) => turn.ActionType).HasMaxLength(64);
+            entity.Property((turn) => turn.TargetEvidenceKey).HasMaxLength(128);
+            entity.Property((turn) => turn.ClientTurnId).HasMaxLength(64);
+            entity.Property((turn) => turn.Language).HasMaxLength(32);
+            entity.HasIndex((turn) => new { turn.SessionId, turn.Sequence }).IsUnique();
+            entity.HasIndex((turn) => new { turn.SessionId, turn.ClientTurnId })
+                .IsUnique()
+                .HasFilter("[ClientTurnId] IS NOT NULL");
+            entity.HasIndex((turn) => new { turn.SessionId, turn.QuestionSignature });
+        });
+
+        modelBuilder.Entity<InterviewPrepEvidenceItemEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepEvidenceItems");
+            entity.HasKey((item) => item.Id);
+            entity.Property((item) => item.Id).ValueGeneratedNever();
+            entity.Property((item) => item.CompetencyId).IsRequired().HasMaxLength(64);
+            entity.Property((item) => item.Classification).IsRequired().HasMaxLength(32);
+            entity.Property((item) => item.Strength).IsRequired().HasMaxLength(32);
+            entity.Property((item) => item.Confidence).IsRequired().HasMaxLength(32);
+            entity.Property((item) => item.Claim).IsRequired().HasMaxLength(1024);
+            entity.Property((item) => item.EvidenceQuote).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((item) => item.Polarity).IsRequired().HasMaxLength(32);
+            entity.HasIndex((item) => new { item.SessionId, item.CompetencyId });
+        });
+
+        modelBuilder.Entity<InterviewPrepCompetencyCoverageEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepCompetencyCoverages");
+            entity.HasKey((coverage) => coverage.Id);
+            entity.Property((coverage) => coverage.Id).ValueGeneratedNever();
+            entity.Property((coverage) => coverage.CompetencyId).IsRequired().HasMaxLength(64);
+            entity.Property((coverage) => coverage.CoverageState).IsRequired().HasMaxLength(32);
+            entity.Property((coverage) => coverage.LastProgressClass).HasMaxLength(32);
+            entity.HasIndex((coverage) => new { coverage.SessionId, coverage.CompetencyId }).IsUnique();
+        });
+
+        modelBuilder.Entity<InterviewPrepQuestionAttemptEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepQuestionAttempts");
+            entity.HasKey((attempt) => attempt.Id);
+            entity.Property((attempt) => attempt.Id).ValueGeneratedNever();
+            entity.Property((attempt) => attempt.IntentId).HasMaxLength(128);
+            entity.Property((attempt) => attempt.CompetencyId).HasMaxLength(64);
+            entity.Property((attempt) => attempt.TargetEvidenceKey).HasMaxLength(128);
+            entity.Property((attempt) => attempt.ProgressClass).HasMaxLength(32);
+            entity.Property((attempt) => attempt.AssessmentJson).HasColumnType("nvarchar(max)");
+            entity.Property((attempt) => attempt.AssessmentStatus).IsRequired().HasMaxLength(32);
+            entity.HasIndex((attempt) => new { attempt.SessionId, attempt.CandidateTurnId });
         });
     }
 }

@@ -8,6 +8,7 @@
 | `frontend/applyvault-jobs-ui/` | frontend-engineer | ui-ux-designer, qa-engineer | Angular 19 |
 | `extension/` | browser-extension-engineer | backend-engineer, qa-engineer | MV3 |
 | `api/ApplyVault.Api/` | backend-engineer | ai-llm-engineer, platform-engineer, qa-engineer | net10.0 |
+| Interview Prep v2 (`/api/interview-prep`, `Services/InterviewPrep/`) | backend-engineer | ai-llm-engineer, architecture-engineer, qa-engineer | ADR-0021; AI gateway clients secondary ai-llm |
 | `shared/cv-section-catalog/` | backend-engineer | frontend-engineer, ai-llm-engineer | ADR-0001 |
 | Gemini / GoogleAi* services | ai-llm-engineer | backend-engineer | No secret values in output |
 | Dashboard UX | ui-ux-designer | frontend-engineer | Respect job-results rule |

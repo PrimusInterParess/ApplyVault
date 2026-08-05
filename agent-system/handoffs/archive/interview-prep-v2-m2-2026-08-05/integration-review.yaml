@@ -1,0 +1,11 @@
+task_id: interview-prep-v2-m2-2026-08-05
+reviewer: principal-software-architect
+status: INTEGRATED
+ready_reconciliation: PASS
+notes:
+  - Ai/ gateway stack present (13 ops, prompts, validation, fake provider, partial Gemini transport).
+  - DI registers FakeDeterministic by default path + IInterviewPrepAiGateway.
+  - Test log: 25/25 PASS under InterviewPrep filter.
+  - M1 session path intentionally unwired to AI.
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+next: Offer operate C for M3 after human approval

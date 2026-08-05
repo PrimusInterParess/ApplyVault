@@ -61,5 +61,19 @@ contracts:
     secondary: backend-engineer
     evidence: WebApplicationExtensions; HealthController
 
+  - id: interview-prep-v2-sessions
+    status: APPROVED
+    description: >
+      Interview Prep v2 session lifecycle REST under /api/interview-prep/*
+      (create, prepare, start, pause, resume, cancel, complete, turns).
+      Immutable CV/job snapshots; app-owned state machines; Loop Guard.
+      ADR-0021. M1 fixed-question path landed; AI gateway is later milestones.
+    owner: backend-engineer
+    secondary: ai-llm-engineer
+    evidence: >
+      docs/adr/0021-interview-prep-v2-bounded-module.md;
+      api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
+      api/ApplyVault.Api/Services/InterviewPrep/
+
 proposed_contracts: []
 

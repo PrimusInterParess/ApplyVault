@@ -1,0 +1,18 @@
+task_id: interview-prep-v2-m1-2026-08-05
+reviewer: principal-software-architect
+status: INTEGRATED
+ready_reconciliation: PASS
+notes:
+  - Claimed M1 paths exist (controller, session service, domain, adapters, Loop Guard, question bank, migration, unit+integration tests).
+  - MVP leftovers not present on disk; DI registers only v2 session stack.
+  - Test logs confirm 17 unit + 5 integration PASS (filter InterviewPrep).
+  - Contract interview-prep-v2-sessions promoted APPROVED.
+  - ADR-0021 amended: ConcurrencyStamp + ETag (not SQL rowversion) for M1.
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+limitations:
+  - No Gemini Interview Prep client (M2+)
+  - No frontend
+  - ExperienceType accepted; InteractionType Text path only
+  - ConcurrencyStamp not SQL rowversion
+  - Sync prepare; hard delete; no TTL
+next: Offer operate C for Milestone 2 (AI gateway) after human approval

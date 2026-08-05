@@ -1,0 +1,21 @@
+﻿task_id: interview-prep-v2-m1-2026-08-05
+status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: ""2026-08-05""
+implemented_by: backend-engineer
+summary: >
+  Milestone 1 landed: lifecycle API, snapshots, state machines, Loop Guard,
+  fixed-question interview, migration AddInterviewPrepV2, 17 unit + 5
+  integration tests PASS. Contract interview-prep-v2-sessions APPROVED.
+  ADR-0021 concurrency note amended to ConcurrencyStamp.
+limitations:
+  - No Gemini Interview Prep client (M2+)
+  - No frontend
+  - Text interaction path only
+  - ConcurrencyStamp not SQL rowversion
+artifacts:
+  - docs/adr/0021-interview-prep-v2-bounded-module.md
+  - agent-system/implementation-plan-interview-prep-v2.md
+  - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/
+next_milestone: M2 AI gateway (requires human approval / operate C)

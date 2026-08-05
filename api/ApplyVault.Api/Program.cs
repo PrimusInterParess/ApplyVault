@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Services;
@@ -19,6 +20,8 @@ builder.Services
     .AddJsonOptions((options) =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();

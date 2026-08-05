@@ -1,0 +1,54 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m9-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Operational language/market dimensions, LanguagePractice mode, turn-level language persistence,
+  mixed EN/DA allocation in plan JSON, reporting languageFeedback, and AI prompt/fake updates.
+
+scope_confirmation:
+  included:
+    - InterviewPrepLanguage Danish + MixedEnglishDanish; InterviewPrepMarket Danish
+    - InterviewPrepLanguageMarketCatalog + InterviewPrepTurnLanguage allocation
+    - InterviewPrepOperationalCatalog languagePractice pairs (recruiter/hiringManager/seniorPeer)
+    - Turn.Language column + public TurnDto.language
+    - Adaptive runtime tags turns; candidate inherits pending question language
+    - Candidate report LanguageFeedback; languageFluency excluded from public competencies map
+    - Mode/competency/question bank for languagePractice
+    - Prompt registry 2026-08-05.3 (brief/plan/message/assess/feedback)
+    - Fake provider lang/market brief + [da]/[en] message framing
+    - Migration 20260805220000_AddInterviewPrepTurnLanguage
+    - Tests InterviewPrepM9LanguageMarketTests + integration danish/languagePractice
+  excluded:
+    - M10 full loop
+    - ADR edits (proposal in scratch only)
+    - Frontend
+
+contracts:
+  create:
+    operational_languages: [english, danish, mixedEnglishDanish]
+    operational_markets: [general, danish]
+    new_operational_mode: languagePractice
+    still_rejected: [fullLoop]
+  turn_dto:
+    added_field: language (nullable wire string)
+  report_dto:
+    added_field: languageFeedback (nullable string list)
+
+deliverables:
+  - api/ApplyVault.Api/Services/InterviewPrep/Domain/InterviewPrepTurnLanguage.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/Catalogs/InterviewPrepLanguageMarketCatalog.cs
+  - api/ApplyVault.Api.Tests/InterviewPrep/InterviewPrepM9LanguageMarketTests.cs
+
+validation:
+  unit: 74 passed
+  integration: 12 passed
+  scratch_dir: agent-system/scratch/interview-prep-v2-m9-2026-08-05/
+
+handoffs:
+  - frontend: expose danish/mixed/market danish + languagePractice; show turn.language when present
+  - qa: mixed allocation smoke, danish turn tags, language practice prepare plan
+  - principal: review scratch/adr-0021-extension-proposal.md for ADR update
+
+m10_not_started: true

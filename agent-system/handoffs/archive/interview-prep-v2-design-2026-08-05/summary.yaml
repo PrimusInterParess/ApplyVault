@@ -1,0 +1,13 @@
+﻿task_id: interview-prep-v2-design-2026-08-05
+status: REQUEST COMPLETE
+integration_status: REQUEST COMPLETE
+closed_at: ""2026-08-05""
+summary: >
+  Design approved by human with recommended §11 defaults (including separate
+  config dimensions). ADR-0021 written. Ownership matrix and proposed contract
+  registered. Milestone 1 delegated as interview-prep-v2-m1-2026-08-05.
+artifacts:
+  - docs/adr/0021-interview-prep-v2-bounded-module.md
+  - agent-system/implementation-plan-interview-prep-v2.md
+  - agent-system/handoffs/archive/interview-prep-v2-design-2026-08-05/architecture-design.md
+next_task_id: interview-prep-v2-m1-2026-08-05

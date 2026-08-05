@@ -1,0 +1,70 @@
+schema_version: "1.0.0"
+task_id: interview-prep-v2-m5-2026-08-05
+agent: backend-engineer
+status: READY
+
+executive_summary: >
+  Implemented Interview Prep v2 M5 reporting: evidence-traceable candidate feedback,
+  stage summaries via EvaluateStage, practice copy via GenerateFeedback, competency
+  safe summaries, transcript GET, persisted CandidateReportJson. Complete triggers
+  generation; GET report/competencies also generates once when completing/completed.
+
+scope_confirmation:
+  included:
+    - InterviewPrepReportingService + REST GET transcript/report/competencies
+    - CandidateReportJson / StageAssessmentsJson persistence + migration
+    - Gateway safe fallbacks for EvaluateStage / GenerateFeedback
+    - Unit + integration tests (privacy, missing≠weakness, no invented experience)
+  excluded:
+    - M6 CompareAnswerRetry / coaching retry
+    - Frontend
+    - ADR edits
+
+decisions:
+  - report_ready_states: completing | completed only for report/competencies; transcript anytime
+  - missing_vs_weak: unknown/notStarted without evidence → missingEvidence, not developmentAreas
+  - privacy: AssessmentJson, ConversationSummary, raw stage payloads never on public DTOs
+  - generation: idempotent via CandidateReportJson cache; CompleteAsync calls EnsureReportGeneratedAsync
+  - disclaimer: practice-only, not a hiring decision on all report/competency payloads
+
+deliverables:
+  reporting: api/ApplyVault.Api/Services/InterviewPrep/Reporting/
+  contracts: api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepContracts.cs
+  controller: api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+  migration: api/ApplyVault.Api/Migrations/20260805200000_AddInterviewPrepReporting.cs
+
+how_to_exercise:
+  - Run adaptive session through completing → POST complete
+  - GET /api/interview-prep/sessions/{id}/transcript → ordered interviewer/candidate turns
+  - GET /api/interview-prep/sessions/{id}/report → summary, strengths, developmentAreas,
+    missingEvidence, jobCoverage (if job snapshot), answerQualityPatterns, practiceRecommendations,
+    evidenceTrace, stageSummaries, disclaimer
+  - GET /api/interview-prep/sessions/{id}/competencies → per-competency coverage + quoted evidence
+  - Before complete: report/competencies → 409 interview_prep_report_not_ready
+  - UseFakeProvider=true (default) — no live Gemini required
+
+validation:
+  unit_command: >
+    dotnet test api/ApplyVault.Api.Tests/ApplyVault.Api.Tests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  unit_result: "45 passed"
+  integration_command: >
+    dotnet test api/ApplyVault.Api.IntegrationTests/ApplyVault.Api.IntegrationTests.csproj
+    --filter FullyQualifiedName~InterviewPrep
+  integration_result: "5 passed"
+  logs:
+    - agent-system/scratch/interview-prep-v2-m5-2026-08-05/unit-test.log
+    - agent-system/scratch/interview-prep-v2-m5-2026-08-05/integration-test.log
+
+limitations:
+  - SQL migration required for CandidateReportJson columns
+  - Stage evaluation uses plan stage keys with full transcript snippets (single EF stage)
+  - No dedicated employer-style scorecard; confidence labels only where evidence thin
+  - M6 not started
+
+handoffs:
+  - frontend: consume GET report/competencies/transcript after complete; show disclaimer
+  - qa: manual check job snapshot sessions for jobCoverage.requirements
+  - M6: coaching retry only
+
+m6_not_started: true

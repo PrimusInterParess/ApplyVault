@@ -79,9 +79,34 @@ public static class RateLimitingExtensions
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyEuresSearch, CreateEuresSlidingWindowPolicy);
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyJobnetSearch, CreateJobnetSlidingWindowPolicy);
             rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyOAuthCallback, CreateOAuthCallbackPolicy);
+            rateLimiterOptions.AddPolicy(RateLimitingOptions.PolicyInterviewPrep, CreateInterviewPrepPolicy);
         });
 
         return services;
+    }
+
+    private static RateLimitPartition<string> CreateInterviewPrepPolicy(HttpContext httpContext)
+    {
+        var options = httpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>()
+            .Value;
+
+        if (!options.Enabled)
+        {
+            return RateLimitPartition.GetNoLimiter(string.Empty);
+        }
+
+        var partitionKey = $"{RateLimitingOptions.PolicyInterviewPrep}:{RateLimitingPartitionKeys.GetUserOrClientIp(httpContext)}";
+        var policy = options.InterviewPrep;
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = policy.PermitLimit,
+                Window = TimeSpan.FromSeconds(policy.WindowSeconds),
+                QueueLimit = 0
+            });
     }
 
     private static RateLimitPartition<string> CreateFixedWindowPolicy(HttpContext httpContext)

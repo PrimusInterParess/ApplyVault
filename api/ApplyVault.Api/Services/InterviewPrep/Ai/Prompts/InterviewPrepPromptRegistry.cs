@@ -46,6 +46,8 @@ public sealed class InterviewPrepPromptRegistry : IInterviewPrepPromptRegistry
                 """
                 Write a short natural-language interviewer opening message.
                 Stay professional; do not invent company or candidate facts beyond the payload.
+                When candidateDisplayName is provided, you may greet the candidate by name.
+                When candidateDisplayName is null or empty, greet without a personal name — never use placeholders like [Candidate Name].
                 """,
                 "Generate the opening interviewer message from this payload:\n{{payloadJson}}"),
             Def(
@@ -79,6 +81,7 @@ public sealed class InterviewPrepPromptRegistry : IInterviewPrepPromptRegistry
                 intent describes the communicative purpose (question, probe, transition, close).
                 Match persona from config (recruiter screen vs hiring-manager depth vs senior-peer technical tone).
                 Honor config.language and config.market; use plannedLanguageOnTurn when present for mixed sessions.
+                When candidateDisplayName is provided, you may use it in greetings; when null, never use placeholders like [Candidate Name].
                 """,
                 "Generate the interviewer message from this payload:\n{{payloadJson}}"),
             Def(

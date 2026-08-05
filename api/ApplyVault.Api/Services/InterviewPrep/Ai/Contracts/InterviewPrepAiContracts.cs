@@ -97,7 +97,8 @@ public sealed record GenerateInterviewerMessageRequest(
     string? CompetencyId,
     string? TopicHint,
     IReadOnlyList<InterviewPrepAiTurnSnippet> RecentTurns,
-    IReadOnlyList<string> BlockedQuestionSignatures);
+    IReadOnlyList<string> BlockedQuestionSignatures,
+    string? CandidateDisplayName = null);
 
 public sealed record GenerateInterviewerMessageResponse(
     string MessageText,

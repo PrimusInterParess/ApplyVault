@@ -1,8 +1,11 @@
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.InterviewPrep.Ai;
 using ApplyVault.Api.Services.InterviewPrep.Ai.Contracts;
 using ApplyVault.Api.Services.InterviewPrep.Ai.Prompts;
 using ApplyVault.Api.Services.InterviewPrep.Ai.Validation;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests.InterviewPrep;
@@ -264,13 +267,25 @@ public sealed class InterviewPrepAiGatewayTests
             }),
             Microsoft.Extensions.Options.Options.Create(new InterviewPrepAiOptions { Enabled = true, UseFakeProvider = false }));
 
-        var prompt = new InterviewPrepPromptRegistry().Get(InterviewPrepAiOperation.CreateInterviewBrief);
+        var prompt = new InterviewPrepPromptRegistry().Get(InterviewPrepAiOperation.SummarizeConversation);
         var result = await transport.CompleteAsync(
             prompt,
-            new CreateInterviewBriefRequest(DefaultConfig, null, null));
+            new SummarizeConversationRequest([]));
 
         Assert.False(result.Succeeded);
         Assert.Equal(InterviewPrepAiErrorCodes.OperationNotImplemented, result.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData(InterviewPrepAiOperation.CreateInterviewBrief)]
+    [InlineData(InterviewPrepAiOperation.PlanInterview)]
+    [InlineData(InterviewPrepAiOperation.GenerateOpening)]
+    [InlineData(InterviewPrepAiOperation.PlanFullLoop)]
+    [InlineData(InterviewPrepAiOperation.SelectNextAction)]
+    public void Live_response_schema_For_planning_operations_does_not_throw(InterviewPrepAiOperation operation)
+    {
+        var schema = GoogleAiInterviewPrepResponseSchemas.For(operation);
+        Assert.NotNull(schema);
     }
 
     private static InterviewPrepAiGateway CreateGateway(
@@ -288,7 +303,10 @@ public sealed class InterviewPrepAiGatewayTests
                 AllowSafeFallback = true,
                 TimeoutSeconds = 5
             }),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false, TimeoutSeconds = 5 }));
+            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false, TimeoutSeconds = 5 }),
+            NullLogger<InterviewPrepAiGateway>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger());
 
     private sealed class AlwaysInvalidProvider : IInterviewPrepAiProvider
     {

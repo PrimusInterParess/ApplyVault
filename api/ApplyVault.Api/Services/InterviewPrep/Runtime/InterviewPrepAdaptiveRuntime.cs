@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ApplyVault.Api.Data;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.InterviewPrep.Ai;
 using ApplyVault.Api.Services.InterviewPrep.Ai.Contracts;
@@ -36,6 +37,8 @@ public sealed class InterviewPrepAdaptiveRuntime(
     IInterviewPrepCaseRuntime caseRuntime,
     IInterviewPrepCaseCatalog caseCatalog,
     IInterviewPrepFullLoopService fullLoopService,
+    IInterviewPrepDebugTraceContext debugTraceContext,
+    IInterviewPrepDebugFileTraceLogger debugFileTraceLogger,
     IOptions<InterviewPrepOptions> options) : IInterviewPrepAdaptiveRuntime
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -58,8 +61,11 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         ApplyStageHandoffContext(session);
 
+        Trace(session.Id, "RUNTIME:StartAdaptive opening+firstQuestion");
         // AI calls happen before final persist of opening/first question; session already transitioned.
         var openingText = await GenerateOpeningTextAsync(session, plan, config, cancellationToken);
+        Trace(session.Id,
+            $"RUNTIME:openingReady len={openingText.Length} preview='{InterviewPrepDebugTraceLabels.Preview(openingText, 200)}'");
         AppendInterviewerTurn(
             session,
             stage,
@@ -108,9 +114,13 @@ public sealed class InterviewPrepAdaptiveRuntime(
         var utcNow = DateTimeOffset.UtcNow;
 
         // Candidate answer already persisted by caller before this method invokes AI.
+        Trace(session.Id,
+            $"RUNTIME:AdvanceAfterAnswer questionCompetency={InterviewPrepDebugTraceLabels.Competency(pendingQuestion.CompetencyTag)} answerLen={candidateTurn.Text?.Length ?? 0}");
         var assessment = await AssessSafeAsync(session, pendingQuestion, candidateTurn, cancellationToken);
         var progress = InterviewPrepRuntimeNames.ClassifyScore(assessment.Score);
         var progressWire = InterviewPrepRuntimeNames.ToWire(progress);
+        Trace(session.Id,
+            $"RUNTIME:assessed score={assessment.Score} progressClass={progressWire} summaryPreview='{InterviewPrepDebugTraceLabels.Preview(assessment.Summary, 120)}'");
 
         var attempt = new InterviewPrepQuestionAttemptEntity
         {
@@ -647,6 +657,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         for (var attempt = 0; attempt <= Math.Max(0, loopOptions.MaxWordingRetries); attempt++)
         {
             var message = await GenerateMessageSafeAsync(
+                session,
                 config,
                 action,
                 competencyId,
@@ -831,10 +842,11 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         try
         {
+            var candidateDisplayName = ResolveCandidateDisplayName(session);
             var result = await aiGateway.GenerateOpeningAsync(
                 new GenerateOpeningRequest(
                     config,
-                    CandidateDisplayName: null,
+                    CandidateDisplayName: candidateDisplayName,
                     RoleTitle: session.JobTitle,
                     CompanyName: session.CompanyName),
                 cancellationToken);
@@ -933,6 +945,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
     }
 
     private async Task<GenerateInterviewerMessageResponse> GenerateMessageSafeAsync(
+        InterviewPrepSessionEntity session,
         InterviewPrepAiSessionConfig config,
         InterviewPrepRuntimeActionType action,
         string? competencyId,
@@ -959,7 +972,8 @@ public sealed class InterviewPrepAdaptiveRuntime(
             competencyId,
             topicHint,
             recent,
-            blocked);
+            blocked,
+            ResolveCandidateDisplayName(session));
 
         try
         {
@@ -1295,6 +1309,13 @@ public sealed class InterviewPrepAdaptiveRuntime(
     private static string SanitizeInterviewerText(InterviewPrepSessionEntity session, string text)
     {
         var trimmed = text.Trim();
+        var displayName = ResolveCandidateDisplayName(session);
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            trimmed = trimmed.Replace("[Candidate Name]", displayName, StringComparison.OrdinalIgnoreCase);
+            trimmed = trimmed.Replace("[candidate name]", displayName, StringComparison.OrdinalIgnoreCase);
+        }
+
         if (!InterviewPrepEnumNames.TryParseExperienceType(session.ExperienceType, out var experience)
             || experience != InterviewPrepExperienceType.RealisticSimulation)
         {
@@ -1318,6 +1339,9 @@ public sealed class InterviewPrepAdaptiveRuntime(
         fullLoopService.IsFullLoopSession(session)
             ? fullLoopService.BuildStageConfig(session, stage)
             : BuildSessionConfig(session);
+
+    private static string? ResolveCandidateDisplayName(InterviewPrepSessionEntity session) =>
+        InterviewPrepCandidateDisplayNameResolver.TryResolveFromCvSnapshotJson(session.CvSnapshotJson);
 
     private static string? ResolveCompetencyTopicHint(string? competencyId)
     {
@@ -1380,5 +1404,13 @@ public sealed class InterviewPrepAdaptiveRuntime(
 
         var trimmed = value.Trim();
         return trimmed.Length <= max ? trimmed : trimmed[..max];
+    }
+
+    private void Trace(Guid sessionId, string line)
+    {
+        if (debugTraceContext.CurrentSessionId == sessionId)
+        {
+            debugFileTraceLogger.Log(sessionId, line);
+        }
     }
 }

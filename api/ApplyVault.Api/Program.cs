@@ -34,6 +34,9 @@ builder.Services
     .AddApplyVaultRateLimiting(builder.Configuration)
     .AddApplyVaultApplicationServices(builder.Configuration);
 
+builder.Services.AddSingleton<IInterviewPrepDebugTraceContext, InterviewPrepDebugTraceContext>();
+builder.Services.AddSingleton<IInterviewPrepDebugFileTraceLogger, InterviewPrepDebugFileTraceLogger>();
+
 var app = builder.Build();
 
 app.UseApplyVaultPipeline();

@@ -4,10 +4,12 @@ using ApplyVault.Api.Models.InterviewPrep;
 using ApplyVault.Api.Services.InterviewPrep.Adapters;
 using ApplyVault.Api.Services.InterviewPrep.Catalogs;
 using ApplyVault.Api.Services.InterviewPrep.Domain;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Services.InterviewPrep.FullLoop;
 using ApplyVault.Api.Services.InterviewPrep.Planning;
 using ApplyVault.Api.Services.InterviewPrep.Reporting;
 using ApplyVault.Api.Services.InterviewPrep.Runtime;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Services.InterviewPrep;
@@ -97,6 +99,9 @@ public interface IInterviewPrepSessionService
 
 public sealed class InterviewPrepSessionService(
     ApplyVaultDbContext dbContext,
+    ILogger<InterviewPrepSessionService> logger,
+    IInterviewPrepDebugTraceContext debugTraceContext,
+    IInterviewPrepDebugFileTraceLogger debugFileTraceLogger,
     IInterviewPrepCandidateContextAdapter candidateAdapter,
     IInterviewPrepJobContextAdapter jobAdapter,
     IInterviewPrepQuestionBank questionBank,
@@ -211,6 +216,23 @@ public sealed class InterviewPrepSessionService(
 
         try
         {
+            debugTraceContext.CurrentSessionId = session.Id;
+            debugFileTraceLogger.Log(session.Id, "PREPARE:start");
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:config {InterviewPrepDebugTraceLabels.SessionConfigLine(session.Mode, session.Persona, session.Language, session.Market, session.ExperienceType, session.InteractionType)} scrapeResultId={(session.ScrapeResultId is Guid id ? id.ToString() : "none")}");
+
+            logger.LogInformation(
+                "InterviewPrep prepare start: sessionId={SessionId} userId={UserId} mode={Mode} persona={Persona} lang={Language} market={Market} experienceType={ExperienceType} interactionType={InteractionType} scrapeResultIdPresent={ScrapeResultIdPresent}",
+                session.Id,
+                user.Id,
+                session.Mode,
+                session.Persona,
+                session.Language,
+                session.Market,
+                session.ExperienceType,
+                session.InteractionType,
+                session.ScrapeResultId is Guid);
+
             var candidate = await candidateAdapter.CaptureAsync(user, cancellationToken);
             InterviewPrepJobSnapshot? job = null;
             if (session.ScrapeResultId is Guid scrapeResultId)
@@ -236,7 +258,23 @@ public sealed class InterviewPrepSessionService(
             session.CompanyName = job?.CompanyName;
             session.PreparedAt = utcNow;
 
+            var candidateDisplayName = InterviewPrepCandidateDisplayNameResolver.TryResolveFromCvSnapshotJson(session.CvSnapshotJson);
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:candidateDisplayName='{InterviewPrepDebugTraceLabels.Preview(candidateDisplayName, 80)}'");
+
             var comparison = contextBuilder.CompareSnapshots(session.CvSnapshotJson, session.JobSnapshotJson);
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:snapshots hasCv={comparison.HasCv} hasJob={comparison.HasJob} jobTitle='{InterviewPrepDebugTraceLabels.Preview(comparison.JobTitle, 80)}' company='{InterviewPrepDebugTraceLabels.Preview(comparison.CompanyName, 60)}' unknownSignals={comparison.UnknownSignals.Count}");
+
+            logger.LogInformation(
+                "InterviewPrep prepare context: sessionId={SessionId} hasCv={HasCv} hasJob={HasJob} unknownSignalsCount={UnknownSignalsCount} unknownSignalsPreview={UnknownSignalsPreview} cvPlainTextLen={CvPlainTextLen} jobPlainTextLen={JobPlainTextLen}",
+                session.Id,
+                comparison.HasCv,
+                comparison.HasJob,
+                comparison.UnknownSignals.Count,
+                string.Join(",", comparison.UnknownSignals.Take(5)),
+                comparison.CvPlainText?.Length ?? 0,
+                comparison.JobPlainText?.Length ?? 0);
             var planningContext = new InterviewPrepPlanningContext(
                 mode,
                 persona,
@@ -248,16 +286,44 @@ public sealed class InterviewPrepSessionService(
 
             // AI proposes; application validates/persists. On AI failure: deterministic minimal brief/plan
             // fallback — session still becomes Ready (never stuck in Preparing without Failed/Ready).
+            debugFileTraceLogger.Log(session.Id, "PREPARE:buildBrief");
             var brief = await contextBuilder.BuildBriefAsync(planningContext, cancellationToken);
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:brief source={InterviewPrepDebugTraceLabels.ArtifactSource(brief.Source)} usedAiFallback={brief.UsedAiFallback} themesCount={brief.Themes.Count} themesPreview='{InterviewPrepDebugTraceLabels.Preview(string.Join(", ", brief.Themes.Take(4)), 160)}'");
+
+            logger.LogInformation(
+                "InterviewPrep brief ready: sessionId={SessionId} source={BriefSource} usedAiFallback={UsedAiFallback} themesCount={ThemesCount} risksCount={RisksCount} unknownsCount={UnknownsCount}",
+                session.Id,
+                brief.Source,
+                brief.UsedAiFallback,
+                brief.Themes.Count,
+                brief.Risks.Count,
+                brief.Unknowns.Count);
+
             if (mode == InterviewPrepMode.FullLoop)
             {
+                debugFileTraceLogger.Log(session.Id, "PREPARE:fullLoop");
                 await fullLoopService.PrepareFullLoopAsync(session, planningContext, brief, cancellationToken);
                 session.BriefJson = JsonSerializer.Serialize(brief, PlanSerializerOptions);
+                debugFileTraceLogger.Log(session.Id,
+                    $"PREPARE:fullLoopDone stagesCount={session.Stages.Count}");
             }
             else
             {
                 var questions = questionBank.GetQuestions(mode, persona);
+                debugFileTraceLogger.Log(session.Id, "PREPARE:plan");
                 var plan = await planner.PlanAsync(planningContext, brief, questions, cancellationToken);
+                debugFileTraceLogger.Log(session.Id,
+                    $"PREPARE:plan source={InterviewPrepDebugTraceLabels.ArtifactSource(plan.Source)} usedAiFallback={plan.UsedAiFallback} competencies={plan.Competencies.Count} stages={plan.Stages.Count}");
+
+                logger.LogInformation(
+                    "InterviewPrep plan ready: sessionId={SessionId} source={PlanSource} usedAiFallback={UsedAiFallback} competenciesCount={CompetenciesCount} questionIntentsCount={QuestionIntentsCount} stagesCount={StagesCount}",
+                    session.Id,
+                    plan.Source,
+                    plan.UsedAiFallback,
+                    plan.Competencies.Count,
+                    plan.QuestionIntents.Count,
+                    plan.Stages.Count);
 
                 session.BriefJson = JsonSerializer.Serialize(brief, PlanSerializerOptions);
                 session.PlanJson = JsonSerializer.Serialize(plan, PlanSerializerOptions);
@@ -293,10 +359,15 @@ public sealed class InterviewPrepSessionService(
             session.UpdatedAt = utcNow;
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:ready sessionStatus={InterviewPrepDebugTraceLabels.SessionStatus(session.Status)} stagesCount={session.Stages.Count}");
+            debugTraceContext.CurrentSessionId = null;
             return MapDetail(session);
         }
         catch (InterviewPrepValidationException)
         {
+            debugFileTraceLogger.Log(session.Id, "PREPARE:failed reason=validation");
+            debugTraceContext.CurrentSessionId = null;
             session.Status = InterviewPrepPersistence.Status(InterviewPrepSessionStatus.Failed);
             session.FailureReason = "prepare_validation_failed";
             session.UpdatedAt = DateTimeOffset.UtcNow;
@@ -314,6 +385,9 @@ public sealed class InterviewPrepSessionService(
         }
         catch (Exception ex) when (ex is not InterviewPrepConflictException and not OperationCanceledException)
         {
+            debugFileTraceLogger.Log(session.Id,
+                $"PREPARE:failed reason=exception errorPreview='{InterviewPrepDebugTraceLabels.Preview(ex.Message, 160)}'");
+            debugTraceContext.CurrentSessionId = null;
             session.Status = InterviewPrepPersistence.Status(InterviewPrepSessionStatus.Failed);
             session.FailureReason = "prepare_failed";
             session.UpdatedAt = DateTimeOffset.UtcNow;
@@ -340,6 +414,13 @@ public sealed class InterviewPrepSessionService(
         EnsureIfMatch(session, ifMatch);
         EnsureSessionTransition(session, InterviewPrepSessionStatus.InProgress);
 
+        debugTraceContext.CurrentSessionId = session.Id;
+        debugFileTraceLogger.Log(session.Id,
+            $"START {InterviewPrepDebugTraceLabels.SessionConfigLine(session.Mode, session.Persona, session.Language, session.Market, session.ExperienceType, session.InteractionType)}");
+
+        try
+        {
+
         var stage = fullLoopService.GetActiveInterviewStage(session);
         if (stage is null && fullLoopService.IsFullLoopSession(session))
         {
@@ -348,6 +429,9 @@ public sealed class InterviewPrepSessionService(
 
         stage ??= session.Stages.OrderBy((entry) => entry.SortOrder).FirstOrDefault()
             ?? throw new InterviewPrepValidationException("Session has no stages. Prepare the session first.");
+
+        debugFileTraceLogger.Log(session.Id,
+            $"START:stage stageType={stage.StageType} stageStatus={InterviewPrepDebugTraceLabels.StageStatus(stage.Status)} sortOrder={stage.SortOrder}");
 
         if (!InterviewPrepEnumNames.TryParseStageStatus(stage.Status, out var stageStatus))
         {
@@ -384,13 +468,27 @@ public sealed class InterviewPrepSessionService(
 
         if (!hasInterviewer)
         {
+            debugFileTraceLogger.Log(session.Id, "START:adaptiveRuntime");
             await adaptiveRuntime.StartAdaptiveAsync(session, stage, cancellationToken);
             session.UpdatedAt = DateTimeOffset.UtcNow;
             BumpToken(session);
             await dbContext.SaveChangesAsync(cancellationToken);
+            debugFileTraceLogger.Log(session.Id,
+                $"START:adaptiveRuntimeDone interviewerTurns={session.Turns.Count(t => string.Equals(t.Role, InterviewPrepPersistence.Role(InterviewPrepTurnRole.Interviewer), StringComparison.Ordinal))}");
+        }
+        else
+        {
+            debugFileTraceLogger.Log(session.Id, "START:skippedAdaptive existingInterviewerTurns=true");
         }
 
+        debugFileTraceLogger.Log(session.Id,
+            $"START:done sessionStatus={InterviewPrepDebugTraceLabels.SessionStatus(session.Status)}");
         return MapDetail(session);
+        }
+        finally
+        {
+            debugTraceContext.CurrentSessionId = null;
+        }
     }
 
     public async Task<InterviewPrepSessionDetailDto> PauseAsync(
@@ -451,6 +549,9 @@ public sealed class InterviewPrepSessionService(
         var session = await LoadOwnedSessionAsync(user.Id, sessionId, tracking: true, cancellationToken);
         EnsureIfMatch(session, ifMatch);
 
+        debugTraceContext.CurrentSessionId = session.Id;
+        debugFileTraceLogger.Log(session.Id, "COMPLETE:called");
+
         if (!InterviewPrepEnumNames.TryParseSessionStatus(session.Status, out var status))
         {
             throw new InterviewPrepValidationException("Session status is invalid.");
@@ -458,6 +559,7 @@ public sealed class InterviewPrepSessionService(
 
         if (status == InterviewPrepSessionStatus.Completed)
         {
+            debugTraceContext.CurrentSessionId = null;
             return MapDetail(session);
         }
 
@@ -508,6 +610,8 @@ public sealed class InterviewPrepSessionService(
         BumpToken(session);
         await reportingService.EnsureReportGeneratedAsync(session, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        debugFileTraceLogger.Log(session.Id, "COMPLETE:reportGenerated");
+        debugTraceContext.CurrentSessionId = null;
         return MapDetail(session);
     }
 
@@ -549,6 +653,13 @@ public sealed class InterviewPrepSessionService(
         var clientTurnId = request.ClientTurnId.Trim();
         var session = await LoadOwnedSessionAsync(user.Id, sessionId, tracking: true, cancellationToken);
         EnsureIfMatch(session, ifMatch);
+        debugTraceContext.CurrentSessionId = session.Id;
+        var answerPreview = request.Answer.Trim();
+        if (answerPreview.Length > 200)
+        {
+            answerPreview = answerPreview.Substring(0, 200) + "...";
+        }
+        debugFileTraceLogger.Log(session.Id, $"TURN:submit clientTurnId={clientTurnId} answerPreview='{answerPreview}'");
 
         var existing = session.Turns.FirstOrDefault((turn) =>
             string.Equals(turn.ClientTurnId, clientTurnId, StringComparison.Ordinal));
@@ -640,6 +751,21 @@ public sealed class InterviewPrepSessionService(
         BumpToken(session);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        debugFileTraceLogger.Log(session.Id,
+            $"TURN:aiAdvanced interviewComplete={interviewComplete} nextInterviewerPresent={(nextInterviewer is not null)}");
+        if (nextInterviewer is not null)
+        {
+            var nextPreview = nextInterviewer.Text?.Trim() ?? string.Empty;
+            if (nextPreview.Length > 220)
+            {
+                nextPreview = nextPreview.Substring(0, 220) + "...";
+            }
+
+            debugFileTraceLogger.Log(session.Id,
+                $"TURN:nextInterviewer action={nextInterviewer.ActionType} competency={InterviewPrepDebugTraceLabels.Competency(nextInterviewer.CompetencyTag)} textPreview='{nextPreview}'");
+        }
+
+        debugTraceContext.CurrentSessionId = null;
         return new InterviewPrepTurnSubmitResponseDto(
             MapDetail(session),
             MapTurn(candidateTurn),

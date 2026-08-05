@@ -8,8 +8,9 @@ using Microsoft.Extensions.Options;
 namespace ApplyVault.Api.Services.InterviewPrep.Ai;
 
 /// <summary>
-/// Gemini raw HTTP transport (ADR-0008). Live JSON generation for AssessAnswer and
-/// GenerateInterviewerMessage; other operations return <see cref="InterviewPrepAiErrorCodes.OperationNotImplemented"/>.
+/// Gemini raw HTTP transport (ADR-0008). Live JSON generation for planning and in-session
+/// operations listed in <c>SupportedOperations</c>; others return
+/// <see cref="InterviewPrepAiErrorCodes.OperationNotImplemented"/>.
 /// </summary>
 public sealed class GoogleAiInterviewPrepTransport(
     HttpClient httpClient,
@@ -26,8 +27,13 @@ public sealed class GoogleAiInterviewPrepTransport(
 
     private static readonly HashSet<InterviewPrepAiOperation> SupportedOperations =
     [
+        InterviewPrepAiOperation.CreateInterviewBrief,
+        InterviewPrepAiOperation.PlanInterview,
+        InterviewPrepAiOperation.GenerateOpening,
         InterviewPrepAiOperation.AssessAnswer,
-        InterviewPrepAiOperation.GenerateInterviewerMessage
+        InterviewPrepAiOperation.SelectNextAction,
+        InterviewPrepAiOperation.GenerateInterviewerMessage,
+        InterviewPrepAiOperation.PlanFullLoop
     ];
 
     public string ProviderName => Name;
@@ -58,7 +64,7 @@ public sealed class GoogleAiInterviewPrepTransport(
         {
             return Fail(
                 InterviewPrepAiErrorCodes.OperationNotImplemented,
-                $"Live Gemini transport does not implement {prompt.Operation} in M2. Use UseFakeProvider or wait for later milestones.");
+                $"Live Gemini transport does not implement {prompt.Operation}. Use UseFakeProvider for stubbed operations.");
         }
 
         try

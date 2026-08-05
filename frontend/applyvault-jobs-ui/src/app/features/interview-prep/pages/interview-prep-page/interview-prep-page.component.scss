@@ -464,6 +464,10 @@
   border-left: 3px solid color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
 }
 
+.interview-prep__message--opening {
+  border-left: 3px solid color-mix(in srgb, var(--app-border) 70%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .interview-prep__message,
   .interview-prep__coaching-slot,

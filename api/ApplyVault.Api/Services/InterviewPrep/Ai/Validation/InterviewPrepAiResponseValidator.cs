@@ -42,10 +42,21 @@ public static class InterviewPrepAiResponseValidator
                 ? InterviewPrepAiValidationResult.Fail("Each stage requires stageKey and goal.")
                 : InterviewPrepAiValidationResult.Ok();
 
-    private static InterviewPrepAiValidationResult ValidateOpening(GenerateOpeningResponse? r) =>
-        r is null || string.IsNullOrWhiteSpace(r.MessageText)
-            ? InterviewPrepAiValidationResult.Fail("Opening requires messageText.")
-            : InterviewPrepAiValidationResult.Ok();
+    private static InterviewPrepAiValidationResult ValidateOpening(GenerateOpeningResponse? r)
+    {
+        if (r is null || string.IsNullOrWhiteSpace(r.MessageText))
+        {
+            return InterviewPrepAiValidationResult.Fail("Opening requires messageText.");
+        }
+
+        // Opening is rapport only; the first ask_question turn follows separately.
+        if (r.MessageText.Contains('?', StringComparison.Ordinal))
+        {
+            return InterviewPrepAiValidationResult.Fail("Opening must not ask a question (no '?').");
+        }
+
+        return InterviewPrepAiValidationResult.Ok();
+    }
 
     private static InterviewPrepAiValidationResult ValidateAssess(AssessAnswerResponse? r)
     {

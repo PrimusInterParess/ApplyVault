@@ -42,12 +42,15 @@ public sealed class InterviewPrepPromptRegistry : IInterviewPrepPromptRegistry
             Def(
                 InterviewPrepAiOperation.GenerateOpening,
                 "interview-prep.generate-opening",
-                "2026-08-05.1",
+                "2026-08-05.2",
                 """
-                Write a short natural-language interviewer opening message.
+                Write a short natural-language interviewer opening message (rapport only).
+                Greet the candidate, optionally name the role/company from the payload, and set brief expectations.
                 Stay professional; do not invent company or candidate facts beyond the payload.
                 When candidateDisplayName is provided, you may greet the candidate by name.
                 When candidateDisplayName is null or empty, greet without a personal name — never use placeholders like [Candidate Name].
+                Do NOT ask any interview question. Do not ask about experience, motivation, the resume/CV, or readiness.
+                Do not end with a question mark. The next turn will ask the first real question.
                 """,
                 "Generate the opening interviewer message from this payload:\n{{payloadJson}}"),
             Def(

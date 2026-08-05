@@ -180,7 +180,7 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
         var name = string.IsNullOrWhiteSpace(request.CandidateDisplayName) ? "there" : request.CandidateDisplayName.Trim();
         var role = string.IsNullOrWhiteSpace(request.RoleTitle) ? "this role" : request.RoleTitle.Trim();
         return new GenerateOpeningResponse(
-            $"Hello {name}, thanks for joining. I'll ask a few questions about {role}.",
+            $"Hello {name}, thanks for joining. Today we'll talk about the {role} role. I'll start with a few questions shortly.",
             "professional");
     }
 

@@ -350,9 +350,13 @@
                       class="interview-prep__message"
                       [class.interview-prep__message--candidate]="turn.role === 'candidate'"
                       [class.interview-prep__message--coach]="turn.role === 'coach'"
-                      [class.interview-prep__message--handoff]="turn.actionType === 'stageHandoff'">
+                      [class.interview-prep__message--handoff]="turn.actionType === 'stageHandoff'"
+                      [class.interview-prep__message--opening]="turn.actionType === 'opening'">
                       <header>
                         <span>{{ turnRoleLabel(turn) }}</span>
+                        @if (turn.actionType === 'opening') {
+                          <span class="interview-prep__tag">Opening</span>
+                        }
                         @if (turn.actionType === 'stageHandoff') {
                           <span class="interview-prep__tag">Stage handoff</span>
                         }

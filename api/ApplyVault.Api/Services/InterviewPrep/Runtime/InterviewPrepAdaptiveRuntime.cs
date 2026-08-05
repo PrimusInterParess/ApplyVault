@@ -1021,7 +1021,7 @@ public sealed class InterviewPrepAdaptiveRuntime(
         }
 
         var role = string.IsNullOrWhiteSpace(session.JobTitle) ? "this role" : session.JobTitle.Trim();
-        return $"Thanks for joining. I'll ask a few questions about {role}.";
+        return $"Thanks for joining. Today we'll talk about {role}. I'll start with a few questions shortly.";
     }
 
     private async Task<AssessAnswerResponse> AssessSafeAsync(

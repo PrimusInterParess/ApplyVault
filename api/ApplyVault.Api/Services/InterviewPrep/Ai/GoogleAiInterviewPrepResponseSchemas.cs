@@ -14,6 +14,7 @@ internal static class GoogleAiInterviewPrepResponseSchemas
             InterviewPrepAiOperation.SummarizeConversation => SummarizeConversationSchema(),
             InterviewPrepAiOperation.EvaluateStage => EvaluateStageSchema(),
             InterviewPrepAiOperation.PlanFullLoop => PlanFullLoopSchema(),
+            InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief => GenerateInterviewPrepStudyBriefSchema(),
             _ => throw new InvalidOperationException($"No response schema for {operation}.")
         };
 
@@ -196,6 +197,50 @@ internal static class GoogleAiInterviewPrepResponseSchemas
                     achievedGoals = new { type = "ARRAY", items = new { type = "STRING" } },
                     missedGoals = new { type = "ARRAY", items = new { type = "STRING" } }
                 }
+            }
+        };
+
+    private static object GenerateInterviewPrepStudyBriefSchema() =>
+        new
+        {
+            responseMimeType = "application/json",
+            responseSchema = new
+            {
+                type = "OBJECT",
+                required = new[] { "topics" },
+                properties = new
+                {
+                    topics = new { type = "ARRAY", items = StudyBriefTopicItemSchema() }
+                }
+            }
+        };
+
+    private static object StudyBriefTopicItemSchema() =>
+        new
+        {
+            type = "OBJECT",
+            required = new[] { "name", "gap", "priority", "coverageItems", "sampleQuestions", "talkingPoints" },
+            properties = new
+            {
+                name = new { type = "STRING" },
+                gap = new { type = "STRING" },
+                priority = new { type = "INTEGER" },
+                note = new { type = "STRING", nullable = true },
+                coverageItems = new { type = "ARRAY", items = StudyBriefItemSchema() },
+                sampleQuestions = new { type = "ARRAY", items = StudyBriefItemSchema() },
+                talkingPoints = new { type = "ARRAY", items = StudyBriefItemSchema() }
+            }
+        };
+
+    private static object StudyBriefItemSchema() =>
+        new
+        {
+            type = "OBJECT",
+            required = new[] { "text" },
+            properties = new
+            {
+                text = new { type = "STRING" },
+                note = new { type = "STRING", nullable = true }
             }
         };
 }

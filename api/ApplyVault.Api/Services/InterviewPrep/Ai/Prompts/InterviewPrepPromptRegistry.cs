@@ -148,6 +148,33 @@ public sealed class InterviewPrepPromptRegistry : IInterviewPrepPromptRegistry
                 Perspectives are proposals only; the application owns final assessment acceptance.
                 """,
                 "Generate a panel debrief from this payload:\n{{payloadJson}}"),
+            Def(
+                InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief,
+                "interview-prep.generate-study-brief",
+                "2026-08-05.2",
+                """
+                Produce a durable Interview Prep study brief (not a live practice session brief).
+                Return a root object with topics only — no brief-level sampleQuestions or talkingPoints,
+                and no markdown blob.
+                Topics must be profession-agnostic: skills, tools, domains, methods, responsibilities,
+                communication, or domain craft. Do NOT default to software-engineering “technologies”
+                (frameworks, languages, cloud stacks) unless the CV/job evidence clearly requires them.
+                Each topic needs: name (short label), gap (alreadyStrong|mustStudy|niceToHave|unclear),
+                priority (contiguous integers starting at 1; lower = higher priority), optional note,
+                and three independent sibling lists:
+                - coverageItems: required, min 1. Each is a leaf syllabus line (text + optional note) —
+                  what to study under this topic. Not a checklist, not a nested topic, not a second nesting level.
+                - sampleQuestions: required array (may be empty). Practice questions for this topic only
+                  (text + optional note). Do not link questions to a coverageItem.
+                - talkingPoints: required array (may be empty). CV-grounded talking points for this topic only
+                  (text + optional note). Do not link talking points to a coverageItem.
+                Gap and priority live only on the topic — never on coverageItems, sampleQuestions, or talkingPoints.
+                Use unclear when CV/job evidence is insufficient; do not invent employers, metrics, or claims.
+                Honor language and market from the payload; apply Danish-market guidance only when market is danish.
+                When focusNote is present, steer emphasis toward it without treating it as editable brief content.
+                When jobSnapshot is null, produce a CV-only study brief.
+                """,
+                "Generate the Interview Prep study brief from this payload:\n{{payloadJson}}"),
         };
 
         _byOperation = definitions.ToDictionary(d => d.Operation);

@@ -13,11 +13,17 @@ Open `http://localhost:4200/`. The app calls the API at `http://localhost:5173/a
 
 ### Interview prep (v2)
 
-Route: `/interview-prep`. Optional query: `?jobId=<scrape-result-guid>`.
+Route: `/interview-prep`.
+
+Optional query:
+
+- `?jobId=<scrape-result-guid>` — preselect saved job for practice (or study).
+- `?surface=study` — open the Study brief sibling surface.
+- Combined: `?jobId=<guid>&surface=study` — job-bound study brief generate/view.
 
 1. Run the API locally with fake AI (default Interview Prep provider — no Gemini key required).
 2. Sign in, ensure a Structured CV exists in CV Builder.
-3. `npm start` and open Interview prep from the shell nav.
+3. `npm start` and open Interview prep from the shell nav (or Study brief from a saved job).
 
 ## Building
 

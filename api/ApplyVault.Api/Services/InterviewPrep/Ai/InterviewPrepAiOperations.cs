@@ -14,7 +14,9 @@ public enum InterviewPrepAiOperation
     CompareAnswerRetry,
     ExtractProfessionalStory,
     PlanFullLoop,
-    GeneratePanelDebrief
+    GeneratePanelDebrief,
+    /// <summary>Durable study Interview Prep brief (ADR-0025) — not the session prepare brief.</summary>
+    GenerateInterviewPrepStudyBrief
 }
 
 public static class InterviewPrepAiOperationNames

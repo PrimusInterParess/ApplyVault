@@ -1,0 +1,95 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-2026-08-05
+  from_agent: ai-llm-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    M2 T5 complete: gateway operation GenerateInterviewPrepStudyBrief registered
+    with Gemini response schema, profession-agnostic prompts, validator (gap wire
+    alreadyStrong|mustStudy|niceToHave|unclear), live HTTP transport support
+    (ADR-0008), and FakeDeterministicInterviewPrepAiProvider fixed valid body.
+    No safe fallback — hard-fail for backend 503 interview_prep_brief_ai_unavailable.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/ai-handoff.yaml
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiOperations.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/Contracts/InterviewPrepAiContracts.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/Prompts/InterviewPrepPromptRegistry.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+  evidence:
+    files_touched:
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiOperations.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/IInterviewPrepAiGateway.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiGateway.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Contracts/InterviewPrepAiContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepTransport.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Prompts/InterviewPrepPromptRegistry.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Validation/InterviewPrepAiResponseValidator.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiGatewayDebugTrace.cs
+      - agent-system/handoffs/active/interview-prep-brief-2026-08-05/ai-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (AI body shape maps to frozen StudyBrief topics/sampleQuestions/talkingPoints)
+  residual_risks:
+    - >
+      Backend T6 must map GenerateInterviewPrepStudyBriefResponse into
+      InterviewPrepStudyBriefDto and surface Meta failure as 503
+      interview_prep_brief_ai_unavailable (no gateway safe fallback).
+    - >
+      Live Gemini quality for profession-agnostic topics not evaluated;
+      prompts constrain software-default bias but model may still drift.
+  open_questions: []
+  next_recommended_action: >
+    Delegate T6 to backend-engineer to wire generate/regenerate to
+    IInterviewPrepAiGateway.GenerateInterviewPrepStudyBriefAsync.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-2026-08-05/
+
+# --- AI contract for backend T6 ---
+ai_operation:
+  enum: GenerateInterviewPrepStudyBrief
+  gateway_method: GenerateInterviewPrepStudyBriefAsync
+  prompt_name: interview-prep.generate-study-brief
+  prompt_version: "2026-08-05.1"
+  schema_location: >
+    api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+    (GenerateInterviewPrepStudyBriefSchema)
+  hard_fail: true
+  safe_fallback: null
+  options: >
+    Reuses existing InterviewPrep:Ai (Enabled, UseFakeProvider, TimeoutSeconds,
+    MaxRetries, RetryDelayMilliseconds, AllowSafeFallback). No new keys.
+    Live path also requires GoogleAi:Enabled + GoogleAi:ApiKey (ADR-0008).
+
+request_type: GenerateInterviewPrepStudyBriefRequest
+request_fields:
+  - Language: string (wire english|danish|mixedEnglishDanish)
+  - Market: string (wire general|danish)
+  - FocusNote: string|null
+  - CvSnapshot: InterviewPrepAiDocumentSnapshot
+  - JobSnapshot: InterviewPrepAiDocumentSnapshot|null
+
+response_type: GenerateInterviewPrepStudyBriefResponse
+response_fields:
+  - topics: InterviewPrepAiStudyBriefTopic[] (name, gap, priority, note?)
+  - sampleQuestions: InterviewPrepAiStudyBriefItem[] (text, note?)
+  - talkingPoints: InterviewPrepAiStudyBriefItem[] (text, note?)
+gap_wire_values:
+  - alreadyStrong
+  - mustStudy
+  - niceToHave
+  - unclear
+
+fake_provider_behavior: >
+  FakeDeterministicInterviewPrepAiProvider returns a fixed valid structured body:
+  profession-agnostic topics (motivation/fit, ownership/outcomes, domain methods —
+  not software stacks); gaps mix alreadyStrong/mustStudy/niceToHave/unclear;
+  priorities contiguous from 1; sampleQuestions + talkingPoints with text.
+  Adds a mustStudy focus topic when FocusNote present; marks unclear when CV text empty.
+
+naming_note: >
+  Architecture suggested GenerateInterviewPrepBrief; implemented
+  GenerateInterviewPrepStudyBrief to distinguish from session CreateInterviewBrief
+  and align with InterviewPrepStudyBrief* CLR naming (frozen-contracts §0).

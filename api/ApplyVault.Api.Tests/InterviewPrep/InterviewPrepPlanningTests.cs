@@ -6,6 +6,8 @@ using ApplyVault.Api.Services.InterviewPrep.Ai.Prompts;
 using ApplyVault.Api.Services.InterviewPrep.Catalogs;
 using ApplyVault.Api.Services.InterviewPrep.Domain;
 using ApplyVault.Api.Services.InterviewPrep.Planning;
+using ApplyVault.Api.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests.InterviewPrep;
@@ -246,7 +248,10 @@ public sealed class InterviewPrepPlanningTests
                 MaxRetries = 0,
                 AllowSafeFallback = false
             }),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }));
+            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }),
+            NullLogger<InterviewPrepAiGateway>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger());
 
     private static InterviewPrepPlanningContext CreatePlanningContext(InterviewPrepSnapshotComparison comparison) =>
         new(
@@ -336,5 +341,10 @@ public sealed class InterviewPrepPlanningTests
             GeneratePanelDebriefRequest request,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(Fail<GeneratePanelDebriefResponse>());
+
+        public Task<InterviewPrepAiExecutionResult<GenerateInterviewPrepStudyBriefResponse>> GenerateInterviewPrepStudyBriefAsync(
+            GenerateInterviewPrepStudyBriefRequest request,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Fail<GenerateInterviewPrepStudyBriefResponse>());
     }
 }

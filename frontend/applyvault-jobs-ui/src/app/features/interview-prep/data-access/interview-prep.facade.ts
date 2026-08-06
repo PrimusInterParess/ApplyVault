@@ -13,16 +13,20 @@ import {
   defaultPersonaForMode,
   InterviewPrepAnswerRetryResult,
   InterviewPrepAnswerReview,
+  InterviewPrepApiErrorBody,
   InterviewPrepCandidateReport,
   InterviewPrepCompetencyResults,
   InterviewPrepExperienceType,
+  INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH,
   InterviewPrepLanguage,
   InterviewPrepMarket,
   InterviewPrepMode,
+  InterviewPrepPageSurface,
   InterviewPrepPanelDebrief,
   InterviewPrepPersona,
   InterviewPrepSessionDetail,
   InterviewPrepSessionSummary,
+  InterviewPrepStudyBrief,
   InterviewPrepTranscript,
   InterviewPrepTurn,
   isPersonaValidForMode,
@@ -36,6 +40,10 @@ export type InterviewPrepJobLinkStatus = 'idle' | 'loading' | 'ready' | 'invalid
 export type InterviewPrepHistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export type InterviewPrepSessionLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export type InterviewPrepStudyBriefListStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export type InterviewPrepStudyBriefBusy = 'idle' | 'generating' | 'regenerating' | 'deleting';
 
 export type InterviewPrepResultsTab = 'report' | 'transcript' | 'competencies' | 'panel';
 
@@ -57,8 +65,12 @@ export class InterviewPrepFacade {
   private turnSubscription: Subscription | null = null;
   private resultsSubscription: Subscription | null = null;
   private coachingSubscription: Subscription | null = null;
+  private studyBriefListSubscription: Subscription | null = null;
+  private studyBriefMutationSubscription: Subscription | null = null;
 
   private pendingClientTurnId: string | null = null;
+
+  readonly surface = signal<InterviewPrepPageSurface>('practice');
 
   readonly cvGateStatus = signal<InterviewPrepCvGateStatus>('unknown');
   readonly cvGateError = signal<string | null>(null);
@@ -103,6 +115,14 @@ export class InterviewPrepFacade {
   readonly coachingTurnId = signal<string | null>(null);
   readonly coachingBusy = signal(false);
   readonly coachingError = signal<string | null>(null);
+
+  readonly studyBriefListStatus = signal<InterviewPrepStudyBriefListStatus>('idle');
+  readonly studyBriefListError = signal<string | null>(null);
+  readonly studyBriefItems = signal<readonly InterviewPrepStudyBrief[]>([]);
+  readonly selectedStudyBrief = signal<InterviewPrepStudyBrief | null>(null);
+  readonly studyFocusNote = signal('');
+  readonly studyBriefBusy = signal<InterviewPrepStudyBriefBusy>('idle');
+  readonly studyBriefError = signal<string | null>(null);
 
   readonly availablePersonas = computed(() => personasForMode(this.mode()));
 
@@ -218,6 +238,17 @@ export class InterviewPrepFacade {
     this.experienceType.set(experienceType);
   }
 
+  setSurface(surface: InterviewPrepPageSurface): void {
+    this.surface.set(surface);
+    if (surface === 'study') {
+      this.loadStudyBriefs();
+    }
+  }
+
+  setStudyFocusNote(note: string): void {
+    this.studyFocusNote.set(note);
+  }
+
   setSelectedJob(scrapeResultId: string | null): void {
     this.selectedScrapeResultId.set(scrapeResultId);
   }
@@ -235,6 +266,9 @@ export class InterviewPrepFacade {
         if (match) {
           this.jobLinkStatus.set('ready');
           this.jobOptions.set(this.mapJobOptions(jobs));
+          if (this.surface() === 'study') {
+            this.loadStudyBriefsForJob(jobId);
+          }
         } else {
           this.jobLinkStatus.set('invalid');
           this.jobLinkError.set('Saved job not found — pick another or continue without a job.');
@@ -246,6 +280,12 @@ export class InterviewPrepFacade {
         this.jobLinkError.set(this.readError(error, 'Could not verify the linked job.'));
       }
     });
+  }
+
+  applySurfaceFromQuery(surface: string | null): void {
+    if (surface === 'study') {
+      this.surface.set('study');
+    }
   }
 
   loadCvGate(): void {
@@ -625,6 +665,233 @@ export class InterviewPrepFacade {
     }
   }
 
+  loadStudyBriefs(): void {
+    this.studyBriefListSubscription?.unsubscribe();
+    this.studyBriefListStatus.set('loading');
+    this.studyBriefListError.set(null);
+    this.studyBriefListSubscription = this.api.listStudyBriefs().subscribe({
+      next: (response) => {
+        const items = response.items ?? [];
+        this.studyBriefItems.set(items);
+        this.studyBriefListStatus.set('ready');
+        this.ensureSelectedStudyBrief(items);
+      },
+      error: (error) => {
+        this.studyBriefListStatus.set('error');
+        this.studyBriefListError.set(this.readError(error, 'Could not load study briefs.'));
+      }
+    });
+  }
+
+  loadStudyBriefsForJob(scrapeResultId: string): void {
+    this.studyBriefListSubscription?.unsubscribe();
+    this.studyBriefListStatus.set('loading');
+    this.studyBriefListError.set(null);
+    this.studyBriefListSubscription = this.api.listStudyBriefs().subscribe({
+      next: (response) => {
+        const items = response.items ?? [];
+        this.studyBriefItems.set(items);
+        this.studyBriefListStatus.set('ready');
+        const forJob = items.find((item) => item.scrapeResultId === scrapeResultId) ?? null;
+        this.selectedStudyBrief.set(forJob);
+      },
+      error: (error) => {
+        this.studyBriefListStatus.set('error');
+        this.studyBriefListError.set(this.readError(error, 'Could not load study briefs.'));
+      }
+    });
+  }
+
+  selectStudyBrief(brief: InterviewPrepStudyBrief): void {
+    this.selectedStudyBrief.set(brief);
+    this.studyBriefError.set(null);
+    if (brief.scrapeResultId) {
+      this.selectedScrapeResultId.set(brief.scrapeResultId);
+    } else {
+      this.selectedScrapeResultId.set(null);
+    }
+    if (isInterviewPrepLanguage(brief.language)) {
+      this.language.set(brief.language);
+    }
+    if (isInterviewPrepMarket(brief.market)) {
+      this.market.set(brief.market);
+    }
+  }
+
+  clearSelectedStudyBrief(): void {
+    this.selectedStudyBrief.set(null);
+    this.studyBriefError.set(null);
+  }
+
+  generateStudyBrief(): void {
+    const focusNote = this.normalizeFocusNote(this.studyFocusNote());
+    if (focusNote === undefined) {
+      return;
+    }
+    this.studyBriefMutationSubscription?.unsubscribe();
+    this.studyBriefBusy.set('generating');
+    this.studyBriefError.set(null);
+    const scrapeResultId = this.selectedScrapeResultId();
+    this.studyBriefMutationSubscription = this.api
+      .generateStudyBrief({
+        language: this.language(),
+        market: this.market(),
+        scrapeResultId: scrapeResultId ?? null,
+        focusNote
+      })
+      .subscribe({
+        next: (brief) => {
+          this.studyBriefBusy.set('idle');
+          this.studyFocusNote.set('');
+          this.applyStudyBrief(brief);
+        },
+        error: (error) => {
+          if (error instanceof HttpErrorResponse && error.status === 409) {
+            const body = error.error as InterviewPrepApiErrorBody | null;
+            if (body?.code === 'interview_prep_brief_exists' && body.existingBriefId) {
+              this.api.getStudyBrief(body.existingBriefId).subscribe({
+                next: (existing) => {
+                  this.studyBriefBusy.set('idle');
+                  this.applyStudyBrief(existing);
+                  this.studyBriefError.set(
+                    'A brief already exists for this binding — opened it. Use regenerate to refresh.'
+                  );
+                },
+                error: (loadError) => {
+                  this.studyBriefBusy.set('idle');
+                  this.studyBriefError.set(
+                    this.mapStudyBriefError(
+                      loadError,
+                      'A brief already exists but could not be loaded.'
+                    )
+                  );
+                }
+              });
+              return;
+            }
+          }
+          this.studyBriefBusy.set('idle');
+          this.studyBriefError.set(this.mapStudyBriefError(error, 'Could not generate study brief.'));
+        }
+      });
+  }
+
+  regenerateStudyBrief(): void {
+    const brief = this.selectedStudyBrief();
+    if (!brief) {
+      return;
+    }
+    const focusNote = this.normalizeFocusNote(this.studyFocusNote());
+    if (focusNote === undefined) {
+      return;
+    }
+    this.studyBriefMutationSubscription?.unsubscribe();
+    this.studyBriefBusy.set('regenerating');
+    this.studyBriefError.set(null);
+    this.studyBriefMutationSubscription = this.api
+      .regenerateStudyBrief(brief.id, {
+        focusNote,
+        language: this.language(),
+        market: this.market()
+      })
+      .subscribe({
+        next: (updated) => {
+          this.studyBriefBusy.set('idle');
+          this.studyFocusNote.set('');
+          this.applyStudyBrief(updated);
+        },
+        error: (error) => {
+          this.studyBriefBusy.set('idle');
+          this.studyBriefError.set(this.mapStudyBriefError(error, 'Could not regenerate study brief.'));
+        }
+      });
+  }
+
+  deleteStudyBrief(id: string): void {
+    this.studyBriefMutationSubscription?.unsubscribe();
+    this.studyBriefBusy.set('deleting');
+    this.studyBriefError.set(null);
+    this.studyBriefMutationSubscription = this.api.deleteStudyBrief(id).subscribe({
+      next: () => {
+        this.studyBriefBusy.set('idle');
+        this.studyBriefItems.update((items) => items.filter((item) => item.id !== id));
+        if (this.selectedStudyBrief()?.id === id) {
+          this.selectedStudyBrief.set(null);
+        }
+      },
+      error: (error) => {
+        this.studyBriefBusy.set('idle');
+        this.studyBriefError.set(this.readError(error, 'Could not delete study brief.'));
+      }
+    });
+  }
+
+  private applyStudyBrief(brief: InterviewPrepStudyBrief): void {
+    this.selectedStudyBrief.set(brief);
+    this.studyBriefItems.update((items) => {
+      const without = items.filter((item) => item.id !== brief.id);
+      return [brief, ...without];
+    });
+    if (brief.scrapeResultId) {
+      this.selectedScrapeResultId.set(brief.scrapeResultId);
+    }
+    if (isInterviewPrepLanguage(brief.language)) {
+      this.language.set(brief.language);
+    }
+    if (isInterviewPrepMarket(brief.market)) {
+      this.market.set(brief.market);
+    }
+  }
+
+  private ensureSelectedStudyBrief(items: readonly InterviewPrepStudyBrief[]): void {
+    const selected = this.selectedStudyBrief();
+    if (!selected) {
+      return;
+    }
+    const match = items.find((item) => item.id === selected.id);
+    if (match) {
+      this.selectedStudyBrief.set(match);
+    } else {
+      this.selectedStudyBrief.set(null);
+    }
+  }
+
+  /**
+   * Returns null when omitted, trimmed string when valid, undefined when invalid (sets error).
+   */
+  private normalizeFocusNote(raw: string): string | null | undefined {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.length > INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH) {
+      this.studyBriefError.set(
+        `Focus note must be at most ${INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH} characters.`
+      );
+      return undefined;
+    }
+    return trimmed;
+  }
+
+  private mapStudyBriefError(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error as InterviewPrepApiErrorBody | null;
+      if (body?.code === 'interview_prep_brief_body_stale') {
+        return 'This study brief needs to be regenerated — saved content is out of date.';
+      }
+      if (body?.message) {
+        return body.message;
+      }
+      if (error.status === 429) {
+        return 'Too many generate requests — wait a moment and try again.';
+      }
+      if (error.status === 503) {
+        return 'Study brief AI is temporarily unavailable.';
+      }
+    }
+    return this.readError(error, fallback);
+  }
+
   private runLifecycle(
     call: (id: string, etag: string) => ReturnType<InterviewPrepApiService['pauseSession']>,
     onSuccess?: () => void
@@ -698,4 +965,12 @@ function isActiveInterviewStageStatus(status: string): boolean {
     status === 'closing' ||
     status === 'assessmentPending'
   );
+}
+
+function isInterviewPrepLanguage(value: string): value is InterviewPrepLanguage {
+  return value === 'english' || value === 'danish' || value === 'mixedEnglishDanish';
+}
+
+function isInterviewPrepMarket(value: string): value is InterviewPrepMarket {
+  return value === 'general' || value === 'danish';
 }

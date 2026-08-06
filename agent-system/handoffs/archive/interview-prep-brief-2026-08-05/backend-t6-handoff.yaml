@@ -1,0 +1,41 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-2026-08-05
+  from_agent: backend-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    T6: InterviewPrepStudyBriefService generate/regenerate now call
+    IInterviewPrepAiGateway.GenerateInterviewPrepStudyBriefAsync. Stub removed.
+    Hard-fail (gateway !Succeeded, null value, or thrown exception) maps to
+    InterviewPrepAiUnavailableException → controller 503
+    interview_prep_brief_ai_unavailable. UsedAiFallback mirrors Meta.UsedFallback
+    (false for study-brief; gateway safe_fallback is null). Dev body comes from
+    FakeDeterministicInterviewPrepAiProvider when UseFakeProvider is on.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/backend-t6-handoff.yaml
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/ai-handoff.yaml
+  evidence:
+    files_touched:
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+      - agent-system/handoffs/active/interview-prep-brief-2026-08-05/backend-t6-handoff.yaml
+      - agent-system/scratch/interview-prep-brief-2026-08-05/backend-m1-notes.md
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (generate path now AI gateway)
+  residual_risks:
+    - >
+      Live Gemini quality not exercised here; fake provider covers Dev shape only.
+    - >
+      Application ValidateBody still runs after gateway validate; mismatch would
+      surface as 400 interview_prep_brief_validation (rare if AI validator stays aligned).
+  open_questions: []
+  next_recommended_action: >
+    Frontend can consume /briefs; smoke generate with UseFakeProvider=true then live Gemini.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-2026-08-05/
+
+generate_path: gateway
+generate_path_notes: >
+  GenerateBodyViaGatewayAsync → GenerateInterviewPrepStudyBriefAsync.
+  No BuildDeterministicStubBody. Fake provider is the configured AI provider in Dev,
+  not an application stub/fallback.

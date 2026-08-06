@@ -1,0 +1,48 @@
+task_id: interview-prep-brief-nested-2026-08-05
+closed_at: "2026-08-05"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+operate: D (Fresh start after ADR-0025 nested Coverage item amendment)
+mode: BROWNFIELD / BRIDGE
+
+summary: >
+  Reshaped Interview Prep study brief body to nested Coverage items per amended
+  ADR-0025 / CONTEXT.md. Each topic nests coverageItems (≥1), sampleQuestions,
+  and talkingPoints. Brief-root Q/talking lists removed. Legacy flat bodies:
+  GET 400 interview_prep_brief_body_stale; list omits invalid. Contract registry
+  updated. Architecture freeze + backend + ai-llm + frontend READY.
+
+agents:
+  - architecture-engineer: READY (frozen-contracts)
+  - backend-engineer: READY
+  - ai-llm-engineer: READY
+  - frontend-engineer: READY
+
+principal_decisions:
+  P1: accepted nested freeze
+  P2: body_stale on GET; list omits invalid
+  P3: contract-registry.yaml updated
+
+artifacts:
+  - docs/adr/0025-interview-prep-brief.md
+  - CONTEXT.md
+  - agent-system/handoffs/archive/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+  - agent-system/governance/contract-registry.yaml
+  - api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepStudyBriefContracts.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefBody.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+  - api/ApplyVault.Api/Services/InterviewPrep/Ai/
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+
+limitations:
+  - No automated tests added (user policy)
+  - No builds run in operate
+  - Existing flat persisted briefs need regenerate (body_stale)
+  - Plan/mapping docs still describe flat body in places (optional follow-up)
+
+residual_risks:
+  - Dev/demo data with flat JSON appears missing from list until regenerate
+  - Manual smoke recommended (generate, view nested Coverage, regenerate legacy)
+
+next_optional:
+  - Amend implementation-plan / repository-task-mapping to nested body
+  - Manual smoke after migrate/API run

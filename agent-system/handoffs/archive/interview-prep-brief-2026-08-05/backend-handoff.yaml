@@ -1,0 +1,70 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-2026-08-05
+  from_agent: backend-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    M1 T2–T4: Interview Prep study briefs persisted and exposed under
+    /api/interview-prep/briefs per frozen-contracts.md. Unique cardinality
+    via filtered indexes; POST create-only (409 exists); regenerate replaces
+    in place; outdated computed on read (structuredCvChanged | boundJobMissing).
+    Generate/regenerate use a local deterministic stub body matching StudyBrief
+    DTOs (UsedAiFallback=true). Gateway GenerateInterviewPrepBrief not present
+    yet — AI T5/T6 can swap the stub path. Sessions untouched.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/backend-handoff.yaml
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md
+  evidence:
+    files_touched:
+      - api/ApplyVault.Api/Data/InterviewPrepStudyBriefEntity.cs
+      - api/ApplyVault.Api/Data/ApplyVaultDbContext.cs
+      - api/ApplyVault.Api/Migrations/20260806120000_AddInterviewPrepStudyBriefs.cs
+      - api/ApplyVault.Api/Migrations/ApplyVaultDbContextModelSnapshot.cs
+      - api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepStudyBriefContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefBody.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Domain/InterviewPrepEnums.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Domain/InterviewPrepStateMachines.cs
+      - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+      - api/ApplyVault.Api/Infrastructure/ServiceCollectionExtensions.cs
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (implemented REST; registry still PROPOSED until Principal merge)
+  residual_risks:
+    - >
+      Generate/regenerate persist stub body until AI gateway operation lands;
+      UsedAiFallback always true on stub path.
+    - >
+      CV fingerprint = SHA256(documentId|StructuredImportedAt|SHA256(snapshotJson));
+      content-hash of adapter snapshot reduces false negatives vs imported-at alone.
+    - >
+      No Designer.cs for migration (matches recent panel-debrief style); apply via
+      EF migrate / EnsureCreated-compatible for LocalDB.
+  open_questions: []
+  next_recommended_action: >
+    Delegate AI T5/T6 to wire GenerateInterviewPrepBrief into
+    InterviewPrepStudyBriefService (replace BuildDeterministicStubBody);
+    frontend can consume /briefs once Principal closes M1 backend.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-2026-08-05/
+
+api_routes:
+  - POST /api/interview-prep/briefs (201 + Location; PolicyInterviewPrep)
+  - POST /api/interview-prep/briefs/{id}/regenerate (200; PolicyInterviewPrep)
+  - GET /api/interview-prep/briefs?scrapeResultId=&cvOnly=
+  - GET /api/interview-prep/briefs/{id}
+  - DELETE /api/interview-prep/briefs/{id}
+
+persistence:
+  table: InterviewPrepStudyBriefs
+  migration: 20260806120000_AddInterviewPrepStudyBriefs
+  unique:
+    - "(UserId, ScrapeResultId) WHERE ScrapeResultId IS NOT NULL"
+    - "(UserId) WHERE ScrapeResultId IS NULL (IX_InterviewPrepStudyBriefs_UserId_CvOnly)"
+  fk_scrape: ON DELETE SET NULL
+
+generate_path: stub
+generate_path_notes: >
+  Preferred gateway GenerateInterviewPrepBrief absent from IInterviewPrepAiGateway.
+  InterviewPrepStudyBriefService.BuildDeterministicStubBody produces valid
+  topics/sampleQuestions/talkingPoints; UsedAiFallback=true. Replace in T6.

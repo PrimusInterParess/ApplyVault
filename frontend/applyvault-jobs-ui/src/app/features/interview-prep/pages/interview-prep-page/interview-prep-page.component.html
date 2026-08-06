@@ -18,7 +18,25 @@
       <button type="button" class="interview-prep__secondary" (click)="facade.loadCvGate()">Retry</button>
     </section>
   } @else {
+    <nav class="interview-prep__surface" aria-label="Interview Prep surfaces">
+      <button
+        type="button"
+        class="interview-prep__surface-tab"
+        [class.interview-prep__surface-tab--active]="facade.surface() === 'practice'"
+        (click)="selectSurface('practice', $event)">
+        Practice
+      </button>
+      <button
+        type="button"
+        class="interview-prep__surface-tab"
+        [class.interview-prep__surface-tab--active]="facade.surface() === 'study'"
+        (click)="selectSurface('study', $event)">
+        Study brief
+      </button>
+    </nav>
+
     <section class="interview-prep__layout">
+      @if (facade.surface() === 'practice') {
       <div
         class="interview-prep__main"
         [class.interview-prep__main--setup]="
@@ -459,8 +477,277 @@
           }
         }
       </div>
+      } @else {
+      <div class="interview-prep__main interview-prep__main--study">
+        @if (facade.studyBriefError()) {
+          <section class="interview-prep__alert" role="alert">
+            <p>{{ facade.studyBriefError() }}</p>
+          </section>
+        }
+
+        @if (facade.studyBriefBusy() !== 'idle') {
+          <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
+            <p class="interview-prep__muted">{{ studyBusyLabel() }}</p>
+          </section>
+        }
+
+        @if (facade.selectedStudyBrief(); as brief) {
+          <section class="interview-prep__study" aria-labelledby="study-brief-heading">
+            <header class="interview-prep__study-header">
+              <div>
+                <h2 id="study-brief-heading">Study brief</h2>
+                <p class="interview-prep__muted">
+                  {{ studyBriefJobLabel(brief) }}
+                  · {{ languageLabel(brief.language) }}
+                  · {{ marketLabel(brief.market) }}
+                  · Generated {{ brief.generatedAt | date: 'medium' }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="interview-prep__link"
+                (click)="facade.clearSelectedStudyBrief()">
+                New brief
+              </button>
+            </header>
+
+            @if (brief.outdated) {
+              <section class="interview-prep__outdated" role="status">
+                <p><strong>Outdated</strong> — regenerate to refresh from your current CV{{ brief.scrapeResultId || brief.jobTitle ? ' / job' : '' }}.</p>
+                <ul>
+                  @for (reason of brief.outdatedReasons; track reason) {
+                    <li>{{ outdatedReasonLabel(reason) }}</li>
+                  }
+                </ul>
+              </section>
+            }
+
+            @if (brief.focusNoteSnapshot) {
+              <p class="interview-prep__hint">
+                Last focus note: {{ brief.focusNoteSnapshot }}
+              </p>
+            }
+
+            @if (brief.usedAiFallback) {
+              <p class="interview-prep__hint">Generated with fallback content (AI unavailable or stub).</p>
+            }
+
+            <section class="interview-prep__study-section" aria-labelledby="study-topics-heading">
+              <h3 id="study-topics-heading">Topics</h3>
+              <ul class="interview-prep__topic-list">
+                @for (topic of sortedTopics(brief); track topic.name + topic.priority) {
+                  <li class="interview-prep__topic">
+                    <div class="interview-prep__topic-row">
+                      <span class="interview-prep__topic-name">{{ topic.name }}</span>
+                      <span
+                        class="interview-prep__gap"
+                        [attr.data-gap]="topic.gap">
+                        {{ gapLabel(topic.gap) }}
+                      </span>
+                    </div>
+                    @if (topic.note) {
+                      <p class="interview-prep__muted">{{ topic.note }}</p>
+                    }
+
+                    <div class="interview-prep__topic-block">
+                      <h4 class="interview-prep__topic-subheading">Coverage</h4>
+                      <ul class="interview-prep__topic-items">
+                        @for (item of topic.coverageItems; track item.text) {
+                          <li>
+                            <span>{{ item.text }}</span>
+                            @if (item.note) {
+                              <p class="interview-prep__muted">{{ item.note }}</p>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </div>
+
+                    @if (topic.sampleQuestions.length) {
+                      <div class="interview-prep__topic-block">
+                        <h4 class="interview-prep__topic-subheading">Sample questions</h4>
+                        <ul class="interview-prep__topic-items">
+                          @for (item of topic.sampleQuestions; track item.text) {
+                            <li>
+                              <span>{{ item.text }}</span>
+                              @if (item.note) {
+                                <p class="interview-prep__muted">{{ item.note }}</p>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+
+                    @if (topic.talkingPoints.length) {
+                      <div class="interview-prep__topic-block">
+                        <h4 class="interview-prep__topic-subheading">CV talking points</h4>
+                        <ul class="interview-prep__topic-items">
+                          @for (item of topic.talkingPoints; track item.text) {
+                            <li>
+                              <span>{{ item.text }}</span>
+                              @if (item.note) {
+                                <p class="interview-prep__muted">{{ item.note }}</p>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
+
+            <section class="interview-prep__study-regen" aria-labelledby="study-regen-heading">
+              <h3 id="study-regen-heading">Regenerate</h3>
+              <p class="interview-prep__muted">
+                Replaces this brief in place. Binding stays the same; optional focus note steers this run only.
+              </p>
+
+              <div class="interview-prep__field">
+                <span class="interview-prep__label">Language</span>
+                <div class="interview-prep__chips">
+                  @for (option of languages; track option.id) {
+                    <button
+                      type="button"
+                      class="interview-prep__chip"
+                      [class.interview-prep__chip--active]="facade.language() === option.id"
+                      (click)="selectLanguage(option.id, $event)">
+                      {{ option.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="interview-prep__field">
+                <span class="interview-prep__label">Market</span>
+                <div class="interview-prep__chips">
+                  @for (option of markets; track option.id) {
+                    <button
+                      type="button"
+                      class="interview-prep__chip"
+                      [class.interview-prep__chip--active]="facade.market() === option.id"
+                      (click)="selectMarket(option.id, $event)">
+                      {{ option.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="interview-prep__field">
+                <label class="interview-prep__label" for="study-regen-focus">Focus note (optional)</label>
+                <textarea
+                  id="study-regen-focus"
+                  rows="3"
+                  class="interview-prep__textarea"
+                  [attr.maxlength]="focusNoteMaxLength"
+                  [ngModel]="facade.studyFocusNote()"
+                  (ngModelChange)="facade.setStudyFocusNote($event)"
+                  name="studyRegenFocus"
+                  [disabled]="facade.studyBriefBusy() !== 'idle'"></textarea>
+              </div>
+
+              <div class="interview-prep__lifecycle">
+                <button
+                  type="button"
+                  class="interview-prep__cta"
+                  [disabled]="facade.studyBriefBusy() !== 'idle'"
+                  (click)="facade.regenerateStudyBrief()">
+                  Regenerate brief
+                </button>
+                <button
+                  type="button"
+                  class="interview-prep__link"
+                  [disabled]="facade.studyBriefBusy() !== 'idle'"
+                  (click)="confirmDeleteStudyBrief(brief, $event)">
+                  Delete brief
+                </button>
+              </div>
+            </section>
+          </section>
+        } @else {
+          <section class="interview-prep__setup interview-prep__study-setup" aria-labelledby="study-setup-heading">
+            <h2 id="study-setup-heading">Generate study brief</h2>
+            <p class="interview-prep__muted">
+              Read-only study pack from your Structured CV and optional saved job. Independent of practice sessions.
+            </p>
+
+            <div class="interview-prep__field">
+              <span class="interview-prep__label">Language</span>
+              <div class="interview-prep__chips">
+                @for (option of languages; track option.id) {
+                  <button
+                    type="button"
+                    class="interview-prep__chip"
+                    [class.interview-prep__chip--active]="facade.language() === option.id"
+                    (click)="selectLanguage(option.id, $event)">
+                    {{ option.label }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="interview-prep__field">
+              <span class="interview-prep__label">Market</span>
+              <div class="interview-prep__chips">
+                @for (option of markets; track option.id) {
+                  <button
+                    type="button"
+                    class="interview-prep__chip"
+                    [class.interview-prep__chip--active]="facade.market() === option.id"
+                    (click)="selectMarket(option.id, $event)">
+                    {{ option.label }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="interview-prep__field">
+              <label class="interview-prep__label" for="study-job">Saved job (optional)</label>
+              <select
+                id="study-job"
+                class="interview-prep__select"
+                [value]="facade.selectedScrapeResultId() ?? ''"
+                (change)="onJobChange($any($event.target).value)">
+                <option value="">No job — CV only</option>
+                @for (job of facade.jobOptions(); track job.id) {
+                  <option [value]="job.id">{{ job.label }}</option>
+                }
+              </select>
+              @if (facade.jobLinkError()) {
+                <p class="interview-prep__hint">{{ facade.jobLinkError() }}</p>
+              }
+            </div>
+
+            <div class="interview-prep__field">
+              <label class="interview-prep__label" for="study-focus">Focus note (optional)</label>
+              <textarea
+                id="study-focus"
+                rows="3"
+                class="interview-prep__textarea"
+                [attr.maxlength]="focusNoteMaxLength"
+                [ngModel]="facade.studyFocusNote()"
+                (ngModelChange)="facade.setStudyFocusNote($event)"
+                name="studyFocus"
+                [disabled]="facade.studyBriefBusy() !== 'idle'"
+                placeholder="Steer this generate only — e.g. system design depth, stakeholder stories"></textarea>
+            </div>
+
+            <button
+              type="button"
+              class="interview-prep__cta"
+              [disabled]="facade.studyBriefBusy() !== 'idle'"
+              (click)="facade.generateStudyBrief()">
+              Generate study brief
+            </button>
+          </section>
+        }
+      </div>
+      }
 
       <div class="interview-prep__rail">
+        @if (facade.surface() === 'practice') {
         <aside class="interview-prep__history" aria-labelledby="history-heading">
           <h2 id="history-heading">History</h2>
           @if (facade.historyStatus() === 'loading') {
@@ -596,6 +883,49 @@
             }
           </div>
         </div>
+        } @else {
+        <aside class="interview-prep__history" aria-labelledby="study-list-heading">
+          <h2 id="study-list-heading">Your briefs</h2>
+          @if (facade.studyBriefListStatus() === 'loading') {
+            <p class="interview-prep__muted" role="status">Loading…</p>
+          } @else if (facade.studyBriefListError()) {
+            <section class="interview-prep__alert" role="alert">
+              <p>{{ facade.studyBriefListError() }}</p>
+              <button type="button" class="interview-prep__secondary" (click)="facade.loadStudyBriefs()">
+                Retry
+              </button>
+            </section>
+          } @else if (!facade.studyBriefItems().length) {
+            <p class="interview-prep__muted">No study briefs yet. Generate one from the form.</p>
+          } @else {
+            <ul class="interview-prep__history-list">
+              @for (item of facade.studyBriefItems(); track item.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="interview-prep__history-item"
+                    [class.interview-prep__history-item--active]="isStudyBriefActive(item)"
+                    (click)="openStudyBrief(item)">
+                    <span>{{ studyBriefJobLabel(item) }}</span>
+                    <span class="interview-prep__muted">
+                      {{ languageLabel(item.language) }}
+                      @if (item.outdated) {
+                        · Outdated
+                      }
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="interview-prep__link"
+                    (click)="confirmDeleteStudyBrief(item, $event)">
+                    Delete
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </aside>
+        }
       </div>
     </section>
   }

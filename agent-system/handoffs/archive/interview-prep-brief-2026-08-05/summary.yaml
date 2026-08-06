@@ -1,0 +1,47 @@
+task_id: interview-prep-brief-2026-08-05
+closed_at: "2026-08-05"
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+operate: C (after A/B/ADR approve go)
+mode: BROWNFIELD / BRIDGE
+
+summary: >
+  Shipped durable Interview Prep brief (study artifact) independent of practice
+  sessions: ADR-0025, frozen REST/DTOs, EF + /api/interview-prep/briefs,
+  AI gateway GenerateInterviewPrepStudyBrief, Angular Study brief sibling UI
+  and job deep-link (jobId + surface=study).
+
+agents:
+  - architecture-engineer: READY (frozen-contracts)
+  - backend-engineer: READY (M1 + T6)
+  - ai-llm-engineer: READY (T5)
+  - frontend-engineer: READY (M3)
+
+artifacts:
+  - docs/adr/0025-interview-prep-brief.md
+  - agent-system/implementation-plan-interview-prep-brief.md
+  - agent-system/repository-task-mapping-interview-prep-brief.md
+  - agent-system/handoffs/archive/interview-prep-brief-2026-08-05/frozen-contracts.md
+  - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+  - api/ApplyVault.Api/Data/InterviewPrepStudyBriefEntity.cs
+  - frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+
+limitations:
+  - No automated tests added (user policy)
+  - No builds/migrations run in operate
+  - GitHub Issue filing deferred (implement-first BRIDGE)
+  - Manual smoke still recommended (migrate DB, POST/GET briefs, Study UI)
+
+residual_risks:
+  - CV fingerprint false-positive outdated labels
+  - Null-safe unique index behavior must be verified on SQL Server after migrate
+  - Live Gemini path needs key + UseFakeProvider=false smoke
+
+next_optional:
+  - Approve Close wipe of `handoffs/active/...` and `scratch/...` (archived already)
+  - Apply EF migration and smoke Study brief UI
+  - File GitHub Issue for tracker hygiene
+  - Optional QA/code-review operate pass
+
+close_note: >
+  Archive copy complete. Active handoff + scratch wipe blocked by host approval;
+  run wipe when authorized (operate Close remaining step).

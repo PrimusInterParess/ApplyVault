@@ -62,6 +62,8 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
             InterviewPrepAiOperation.ExtractProfessionalStory => Serialize(BuildStories(As<ExtractProfessionalStoryRequest>(request))),
             InterviewPrepAiOperation.PlanFullLoop => Serialize(BuildFullLoop(As<PlanFullLoopRequest>(request))),
             InterviewPrepAiOperation.GeneratePanelDebrief => Serialize(BuildDebrief(As<GeneratePanelDebriefRequest>(request))),
+            InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief =>
+                Serialize(BuildStudyBrief(As<GenerateInterviewPrepStudyBriefRequest>(request))),
             _ => throw new InterviewPrepAiException(
                 InterviewPrepAiErrorCodes.OperationNotImplemented,
                 $"Fake provider has no handler for {prompt.Operation}.")
@@ -375,6 +377,120 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
                 new PanelPerspective("Recruiter", "Motivation and communication look workable.", 70),
                 new PanelPerspective("HiringManager", "Need stronger evidence of impact.", 62)
             ]);
+
+    /// <summary>
+    /// Deterministic nested study brief for Dev / AI-off (ADR-0025). Profession-agnostic topics;
+    /// each topic nests coverageItems (≥1), sampleQuestions, talkingPoints (sibling lists).
+    /// </summary>
+    private static GenerateInterviewPrepStudyBriefResponse BuildStudyBrief(GenerateInterviewPrepStudyBriefRequest request)
+    {
+        var hasCv = !string.IsNullOrWhiteSpace(request.CvSnapshot?.Text);
+        var hasJob = request.JobSnapshot is not null;
+        var role = request.JobSnapshot?.Title?.Trim();
+        var focus = string.IsNullOrWhiteSpace(request.FocusNote) ? null : request.FocusNote.Trim();
+
+        var topics = new List<InterviewPrepAiStudyBriefTopic>
+        {
+            new(
+                Name: "Role motivation and fit",
+                Gap: hasCv ? "alreadyStrong" : "unclear",
+                Priority: 1,
+                Note: hasJob && !string.IsNullOrWhiteSpace(role)
+                    ? $"Ground answers in why {role} matches your recent work."
+                    : "Prepare a clear motivation narrative from your CV.",
+                CoverageItems: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: "Map your recent responsibilities to the opportunity's stated purpose.",
+                        Note: "Syllabus leaf — study the fit story; not a checklist."),
+                    new(
+                        Text: "Prepare one concise motivation statement without inventing employers or metrics.",
+                        Note: null)
+                },
+                SampleQuestions: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: hasJob && !string.IsNullOrWhiteSpace(role)
+                            ? $"What in your background prepared you for the {role} responsibilities?"
+                            : "Walk me through a recent responsibility you owned end to end.",
+                        Note: "Keep the answer profession-agnostic: situation, your actions, outcome.")
+                },
+                TalkingPoints: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: hasCv
+                            ? "Lead with one concrete example from your most recent role (situation, actions, outcome)."
+                            : "Add Structured CV detail so talking points can cite real evidence.",
+                        Note: null)
+                }),
+            new(
+                Name: "Evidence of ownership and outcomes",
+                Gap: hasCv ? "mustStudy" : "unclear",
+                Priority: 2,
+                Note: "Rehearse one situation → action → result story with a measurable outcome.",
+                CoverageItems: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: "Choose one ownership story with a clear outcome you can defend from CV evidence.",
+                        Note: null),
+                    new(
+                        Text: "Identify where feedback changed your approach and what improved.",
+                        Note: "Study the adjustment, not a progress checkbox.")
+                },
+                SampleQuestions: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: "Tell me about a time you had to adjust your approach after feedback.",
+                        Note: null)
+                },
+                TalkingPoints: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: "Separate motivation for the opportunity from claims about tools or tech stacks.",
+                        Note: "Prefer domain craft and outcomes over software-default technology lists.")
+                }),
+            new(
+                Name: "Domain methods and collaboration",
+                Gap: hasJob ? "niceToHave" : "mustStudy",
+                Priority: 3,
+                Note: "Focus on how you work with others and apply methods in your field — not tool lists.",
+                CoverageItems: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(
+                        Text: "Review how you collaborate across roles and apply methods in your domain.",
+                        Note: null)
+                },
+                SampleQuestions: Array.Empty<InterviewPrepAiStudyBriefItem>(),
+                TalkingPoints: Array.Empty<InterviewPrepAiStudyBriefItem>())
+        };
+
+        if (!string.IsNullOrWhiteSpace(focus))
+        {
+            topics.Add(new InterviewPrepAiStudyBriefTopic(
+                Name: "Seeker focus area",
+                Gap: "mustStudy",
+                Priority: 4,
+                Note: Truncate(focus, 160),
+                CoverageItems: new List<InterviewPrepAiStudyBriefItem>
+                {
+                    new(Text: $"Study the seeker focus: {Truncate(focus, 120)}", Note: null)
+                },
+                SampleQuestions: Array.Empty<InterviewPrepAiStudyBriefItem>(),
+                TalkingPoints: Array.Empty<InterviewPrepAiStudyBriefItem>()));
+        }
+
+        if (!hasCv)
+        {
+            var first = topics[0];
+            topics[0] = first with
+            {
+                Gap = "unclear",
+                Note = "Limited CV evidence; strengthen source material before relying on this brief."
+            };
+        }
+
+        return new GenerateInterviewPrepStudyBriefResponse(topics);
+    }
 
     private static T As<T>(object request)
         where T : class =>

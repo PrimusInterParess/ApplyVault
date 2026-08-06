@@ -27,6 +27,8 @@ public static class InterviewPrepAiResponseValidator
             InterviewPrepAiOperation.ExtractProfessionalStory => ValidateStories(response as ExtractProfessionalStoryResponse),
             InterviewPrepAiOperation.PlanFullLoop => ValidateFullLoop(response as PlanFullLoopResponse),
             InterviewPrepAiOperation.GeneratePanelDebrief => ValidateDebrief(response as GeneratePanelDebriefResponse),
+            InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief =>
+                ValidateStudyBrief(response as GenerateInterviewPrepStudyBriefResponse),
             _ => InterviewPrepAiValidationResult.Fail($"Unknown operation {operation}.")
         };
 
@@ -166,6 +168,94 @@ public static class InterviewPrepAiResponseValidator
 
         return InterviewPrepAiValidationResult.Ok();
     }
+
+    private static InterviewPrepAiValidationResult ValidateStudyBrief(GenerateInterviewPrepStudyBriefResponse? r)
+    {
+        if (r is null || r.Topics is null)
+        {
+            return InterviewPrepAiValidationResult.Fail("Study brief requires topics.");
+        }
+
+        if (r.Topics.Count == 0)
+        {
+            return InterviewPrepAiValidationResult.Fail("Study brief requires at least one topic.");
+        }
+
+        var seenPriorities = new HashSet<int>();
+        foreach (var topic in r.Topics)
+        {
+            if (string.IsNullOrWhiteSpace(topic.Name))
+            {
+                return InterviewPrepAiValidationResult.Fail("Each topic requires name.");
+            }
+
+            if (!IsBriefTopicGap(topic.Gap))
+            {
+                return InterviewPrepAiValidationResult.Fail(
+                    "Topic gap must be alreadyStrong|mustStudy|niceToHave|unclear.");
+            }
+
+            if (topic.Priority < 1)
+            {
+                return InterviewPrepAiValidationResult.Fail("Topic priority must be >= 1.");
+            }
+
+            if (!seenPriorities.Add(topic.Priority))
+            {
+                return InterviewPrepAiValidationResult.Fail("Topic priorities must be unique within the brief.");
+            }
+
+            if (topic.CoverageItems is null || topic.CoverageItems.Count == 0)
+            {
+                return InterviewPrepAiValidationResult.Fail(
+                    "Each topic requires at least one coverageItem (syllabus leaf).");
+            }
+
+            if (topic.SampleQuestions is null)
+            {
+                return InterviewPrepAiValidationResult.Fail(
+                    "Each topic requires sampleQuestions (array; may be empty).");
+            }
+
+            if (topic.TalkingPoints is null)
+            {
+                return InterviewPrepAiValidationResult.Fail(
+                    "Each topic requires talkingPoints (array; may be empty).");
+            }
+
+            foreach (var item in topic.CoverageItems)
+            {
+                if (string.IsNullOrWhiteSpace(item.Text))
+                {
+                    return InterviewPrepAiValidationResult.Fail("Each coverageItem requires text.");
+                }
+            }
+
+            foreach (var item in topic.SampleQuestions)
+            {
+                if (string.IsNullOrWhiteSpace(item.Text))
+                {
+                    return InterviewPrepAiValidationResult.Fail("Each sample question requires text.");
+                }
+            }
+
+            foreach (var item in topic.TalkingPoints)
+            {
+                if (string.IsNullOrWhiteSpace(item.Text))
+                {
+                    return InterviewPrepAiValidationResult.Fail("Each talking point requires text.");
+                }
+            }
+        }
+
+        return InterviewPrepAiValidationResult.Ok();
+    }
+
+    private static bool IsBriefTopicGap(string? value) =>
+        string.Equals(value, "alreadyStrong", StringComparison.Ordinal)
+        || string.Equals(value, "mustStudy", StringComparison.Ordinal)
+        || string.Equals(value, "niceToHave", StringComparison.Ordinal)
+        || string.Equals(value, "unclear", StringComparison.Ordinal);
 
     private static bool IsPolarity(string? value) =>
         string.Equals(value, "positive", StringComparison.OrdinalIgnoreCase)

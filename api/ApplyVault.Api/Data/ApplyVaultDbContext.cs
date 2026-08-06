@@ -22,6 +22,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
     public DbSet<InterviewPrepCompetencyCoverageEntity> InterviewPrepCompetencyCoverages => Set<InterviewPrepCompetencyCoverageEntity>();
     public DbSet<InterviewPrepQuestionAttemptEntity> InterviewPrepQuestionAttempts => Set<InterviewPrepQuestionAttemptEntity>();
     public DbSet<InterviewPrepAnswerRetryEntity> InterviewPrepAnswerRetries => Set<InterviewPrepAnswerRetryEntity>();
+    public DbSet<InterviewPrepStudyBriefEntity> InterviewPrepStudyBriefs => Set<InterviewPrepStudyBriefEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -346,6 +347,37 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((attempt) => attempt.AssessmentJson).HasColumnType("nvarchar(max)");
             entity.Property((attempt) => attempt.AssessmentStatus).IsRequired().HasMaxLength(32);
             entity.HasIndex((attempt) => new { attempt.SessionId, attempt.CandidateTurnId });
+        });
+
+        modelBuilder.Entity<InterviewPrepStudyBriefEntity>((entity) =>
+        {
+            entity.ToTable("InterviewPrepStudyBriefs");
+            entity.HasKey((brief) => brief.Id);
+            entity.Property((brief) => brief.Id).ValueGeneratedNever();
+            entity.Property((brief) => brief.Language).IsRequired().HasMaxLength(32);
+            entity.Property((brief) => brief.Market).IsRequired().HasMaxLength(32);
+            entity.Property((brief) => brief.FocusNoteSnapshot).HasMaxLength(2000);
+            entity.Property((brief) => brief.BodyJson).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property((brief) => brief.CvFingerprint).IsRequired().HasMaxLength(128);
+            entity.Property((brief) => brief.JobTitle).HasMaxLength(512);
+            entity.Property((brief) => brief.CompanyName).HasMaxLength(512);
+            entity.HasIndex((brief) => new { brief.UserId, brief.ScrapeResultId })
+                .IsUnique()
+                .HasFilter("[ScrapeResultId] IS NOT NULL");
+            entity.HasIndex((brief) => brief.UserId)
+                .IsUnique()
+                .HasFilter("[ScrapeResultId] IS NULL")
+                .HasDatabaseName("IX_InterviewPrepStudyBriefs_UserId_CvOnly");
+            entity.HasIndex((brief) => new { brief.UserId, brief.GeneratedAt })
+                .IsDescending(false, true);
+            entity.HasOne<AppUserEntity>()
+                .WithMany()
+                .HasForeignKey((brief) => brief.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ScrapeResultEntity>()
+                .WithMany()
+                .HasForeignKey((brief) => brief.ScrapeResultId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -7,6 +7,8 @@ using ApplyVault.Api.Services.InterviewPrep.Ai.Prompts;
 using ApplyVault.Api.Services.InterviewPrep.Catalogs;
 using ApplyVault.Api.Services.InterviewPrep.Domain;
 using ApplyVault.Api.Services.InterviewPrep.Planning;
+using ApplyVault.Api.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests.InterviewPrep;
@@ -239,5 +241,8 @@ public sealed class InterviewPrepExpandedPlanningTests
                 MaxRetries = 0,
                 AllowSafeFallback = false
             }),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }));
+            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }),
+            NullLogger<InterviewPrepAiGateway>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger());
 }

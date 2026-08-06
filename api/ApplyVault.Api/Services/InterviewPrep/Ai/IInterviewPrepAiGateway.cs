@@ -56,4 +56,13 @@ public interface IInterviewPrepAiGateway
     Task<InterviewPrepAiExecutionResult<GeneratePanelDebriefResponse>> GeneratePanelDebriefAsync(
         GeneratePanelDebriefRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generate a durable study Interview Prep brief body (topics + gap, sample questions, talking points).
+    /// Hard-fails when AI is unavailable (no safe fallback) so callers can map to
+    /// <c>503 interview_prep_brief_ai_unavailable</c>.
+    /// </summary>
+    Task<InterviewPrepAiExecutionResult<GenerateInterviewPrepStudyBriefResponse>> GenerateInterviewPrepStudyBriefAsync(
+        GenerateInterviewPrepStudyBriefRequest request,
+        CancellationToken cancellationToken = default);
 }

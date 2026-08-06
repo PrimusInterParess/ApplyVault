@@ -79,6 +79,22 @@ public enum InterviewPrepTurnRole
     Coach
 }
 
+/// <summary>Brief topic gap for durable Interview Prep study briefs (ADR-0025).</summary>
+public enum InterviewPrepBriefTopicGap
+{
+    AlreadyStrong,
+    MustStudy,
+    NiceToHave,
+    Unclear
+}
+
+/// <summary>Outdated reason wire values for study briefs (computed on read).</summary>
+public enum InterviewPrepBriefOutdatedReason
+{
+    StructuredCvChanged,
+    BoundJobMissing
+}
+
 public static class InterviewPrepEnumNames
 {
     public static string ToWire(Enum value) =>
@@ -110,6 +126,12 @@ public static class InterviewPrepEnumNames
 
     public static bool TryParseTurnRole(string? value, out InterviewPrepTurnRole role) =>
         TryParse(value, out role);
+
+    public static bool TryParseBriefTopicGap(string? value, out InterviewPrepBriefTopicGap gap) =>
+        TryParse(value, out gap);
+
+    public static bool TryParseBriefOutdatedReason(string? value, out InterviewPrepBriefOutdatedReason reason) =>
+        TryParse(value, out reason);
 
     private static bool TryParse<TEnum>(string? value, out TEnum result)
         where TEnum : struct, Enum

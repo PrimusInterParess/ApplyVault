@@ -389,6 +389,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInterviewPrepCandidateContextAdapter, InterviewPrepCandidateContextAdapter>();
         services.AddScoped<IInterviewPrepJobContextAdapter, InterviewPrepJobContextAdapter>();
         services.AddScoped<IInterviewPrepSessionService, InterviewPrepSessionService>();
+        services.AddScoped<IInterviewPrepStudyBriefService, InterviewPrepStudyBriefService>();
 
         if (mailIntegration.Enabled)
         {

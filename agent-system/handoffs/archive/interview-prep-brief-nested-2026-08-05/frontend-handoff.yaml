@@ -1,0 +1,53 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-nested-2026-08-05
+  from_agent: frontend-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    Study brief Angular models and Study UI now consume nested topic wire
+    (coverageItems ≥1, sampleQuestions, talkingPoints under each topic).
+    Brief-root sampleQuestions/talkingPoints removed from types and rendering.
+    Coverage items render as readable syllabus lines (not checkboxes).
+    Facade maps interview_prep_brief_body_stale to a regenerate prompt.
+    No *.spec.ts changes; no builds/tests run; api/ untouched.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frontend-handoff.yaml
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+  evidence:
+    files_touched:
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.scss
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/interview-prep.facade.ts
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (FE client nested TopicDto / ItemDto)
+  residual_risks:
+    - >
+      Existing interview-prep *.spec.ts may still assume flat brief-root
+      sampleQuestions/talkingPoints — not updated per policy; QA follow-up.
+    - >
+      Live UX smoke against nested API not run (no builds/tests per constraints).
+    - >
+      Legacy flat bodies omitted from list / GET body_stale — seeker must
+      regenerate; UI surfaces regenerate CTA on selected brief and stale message
+      when GET fails with that code (e.g. 409 exists → GET path).
+  open_questions: []
+  next_recommended_action: >
+    Smoke Study brief generate/list/detail against nested API; QA if specs
+    must be aligned; then Principal Close / next fleet step.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/
+
+client_contract:
+  topic_lists:
+    - coverageItems
+    - sampleQuestions
+    - talkingPoints
+  item_shape: "{ text, note? }"
+  brief_root_removed:
+    - sampleQuestions
+    - talkingPoints
+  error_codes_mapped:
+    interview_prep_brief_body_stale: >
+      "This study brief needs to be regenerated — saved content is out of date."

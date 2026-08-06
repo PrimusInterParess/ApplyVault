@@ -1,4 +1,5 @@
 using ApplyVault.Api.Data;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Models.InterviewPrep;
 using ApplyVault.Api.Options;
@@ -15,6 +16,7 @@ using ApplyVault.Api.Services.InterviewPrep.Planning;
 using ApplyVault.Api.Services.InterviewPrep.Reporting;
 using ApplyVault.Api.Services.InterviewPrep.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ApplyVault.Api.Tests.InterviewPrep;
 
@@ -161,7 +163,10 @@ public sealed class InterviewPrepReportingTests
                 MaxRetries = 0,
                 AllowSafeFallback = true
             }),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }));
+            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }),
+            NullLogger<InterviewPrepAiGateway>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger());
         var modeCatalog = new InterviewPrepModeCatalog();
         var personaCatalog = new InterviewPrepPersonaCatalog();
         var contextBuilder = new InterviewContextBuilder(gateway, modeCatalog, personaCatalog);
@@ -184,10 +189,15 @@ public sealed class InterviewPrepReportingTests
             caseRuntime,
             caseCatalog,
             fullLoop,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger(),
             options);
         var reporting = new InterviewPrepReportingService(db, gateway, competencyCatalog, contextBuilder);
         var session = new InterviewPrepSessionService(
             db,
+            NullLogger<InterviewPrepSessionService>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger(),
             new InterviewPrepCandidateContextAdapter(structured, catalog),
             new InterviewPrepJobContextAdapter(new EfCoreScrapeResultStore(db)),
             questionBank,

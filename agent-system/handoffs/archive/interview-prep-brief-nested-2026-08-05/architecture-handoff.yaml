@@ -1,0 +1,163 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-nested-2026-08-05
+  from_agent: architecture-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    Frozen nested Interview Prep study-brief body: each topic nests
+    coverageItems (≥1), sampleQuestions, and talkingPoints as independent
+    sibling lists (one nesting level; no brief-root Q/talking lists).
+    REST/auth/cardinality/outdated unchanged. Breaking vs flat v1 storage/AI/FE
+    shapes; recommend new-shape-only validation + seeker regenerate (P2 default).
+    Artifacts under handoffs/active/interview-prep-brief-nested-2026-08-05/.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/architecture-handoff.yaml
+  evidence:
+    files_touched:
+      - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+      - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/architecture-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (APPROVED — body shape amendment; Principal update description/evidence)
+      - interview-prep-v2-sessions (unchanged; session InterviewPrepBriefDto still must not be overloaded)
+    source_evidence:
+      - docs/adr/0025-interview-prep-brief.md
+      - CONTEXT.md
+      - agent-system/handoffs/archive/interview-prep-brief-2026-08-05/frozen-contracts.md
+      - api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepStudyBriefContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefBody.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Contracts/InterviewPrepAiContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Validation/InterviewPrepAiResponseValidator.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Prompts/InterviewPrepPromptRegistry.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+  residual_risks:
+    - >
+      Existing persisted flat JSON bodies break nested-only deserialize until
+      regenerate (P2). Dev/demo data may look “missing” after deploy.
+    - >
+      Backend and ai-llm must land nested shape together before generate/regenerate
+      works end-to-end; FE can lag behind DTO freeze but cannot call successfully
+      until API returns nested topics.
+    - >
+      Plan/mapping docs still describe flat body until Principal amends
+      implementation-plan / repository-task-mapping (out of this design-only task).
+  open_questions:
+    - >
+      P1: Principal accepts frozen-contracts.md before implementers proceed.
+    - >
+      P2: Legacy flat read — recommend GET 400 interview_prep_brief_body_stale;
+      list omits invalid bodies.
+    - >
+      P3: Merge contract-registry description/evidence delta for interview-prep-briefs.
+  next_recommended_action: >
+    Principal accepts P1–P3, then delegate backend-engineer (DTO/persist/service/
+    validation + stale-body handling) and ai-llm-engineer (schema/prompts/fake/
+    validator) in parallel with care; frontend-engineer after nested DTO freeze
+    (topic cards with nested Coverage items).
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/
+
+# --- Thin design summary (architecture-engineer §14) ---
+architecture_design_summary:
+  request: redesign
+  status: COMPLETE
+  recommendation: >
+    Nest coverageItems (≥1), sampleQuestions, and talkingPoints under each topic;
+    drop brief-root Q/talking lists; validate new shape only; seeker regenerates
+    legacy rows.
+
+current_state:
+  - "ADR-0025 Amended Decision 4 + CONTEXT already describe nested Coverage items"
+  - "Code + prior freeze still flat: brief-root sampleQuestions/talkingPoints; topics lack children"
+  - "AI op GenerateInterviewPrepStudyBrief exists with flat response schema/validator/prompts/fake"
+  - "FE InterviewPrepStudyBrief mirrors flat root lists"
+  - "Routes/auth/cardinality/outdated already shipped per prior freeze"
+
+target_state:
+  - "StudyBriefDto.topics[*] carries coverageItems, sampleQuestions, talkingPoints"
+  - "AI JSON root topics-only; per-topic min 1 coverageItems; empty Q/talking OK"
+  - "Persist body topics-only; no dual-read of flat JSON"
+  - "FE topic cards render nested Coverage items + optional Q/talking; not checklists"
+  - "REST surface unchanged"
+
+options_considered:
+  recommended: >
+    Shared InterviewPrepStudyBriefItemDto for all three leaf lists; new-shape-only
+    validation; GET body_stale for legacy flat; parallel backend+ai after freeze.
+  alternatives_rejected:
+    - "Dual-read adapter mapping flat root Q/talking into topics — invents placement; out of locked product rules"
+    - "Per–Coverage-item gaps or Q→Coverage links — rejected in ADR-0025 amendment"
+    - "Multi-level syllabus trees — rejected; Coverage items are leaves"
+    - "Progress checklist fields on Coverage items — out of v1 / CONTEXT avoid"
+
+impacted_contracts:
+  - "interview-prep-briefs — BREAKING body shape (wire + AI + persist JSON)"
+  - "Unchanged routes/enums/request DTOs/outdated"
+
+impacted_paths_for_implementers:
+  backend_engineer:
+    - api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepStudyBriefContracts.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefBody.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+    - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+    - "(mapping/validation of nested body; stale-body error path)"
+  ai_llm_engineer:
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/Contracts/InterviewPrepAiContracts.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/Validation/InterviewPrepAiResponseValidator.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/Prompts/InterviewPrepPromptRegistry.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+    - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiGatewayDebugTrace.cs
+  frontend_engineer:
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/
+  principal_docs_optional:
+    - agent-system/governance/contract-registry.yaml
+    - agent-system/implementation-plan-interview-prep-brief.md
+    - agent-system/repository-task-mapping-interview-prep-brief.md
+
+migration_sequencing:
+  - "1. Principal accept frozen-contracts (P1–P3) — approval gate"
+  - "2. backend-engineer: reshape DTOs + persist body + service validation + body_stale"
+  - "3. ai-llm-engineer: parallel OK after freeze — reshape AI contracts/schema/prompts/fake/validator to match nested DTO (coordinate field names with backend)"
+  - "4. Wire generate/regenerate only when backend persist + AI response agree on nested shape"
+  - "5. frontend-engineer: after DTO freeze (can start types/UI from frozen-contracts; integrate when API returns nested)"
+  - "6. QA (separate): regenerate path + empty Q lists + ≥1 coverage + legacy row behavior — only if Principal requests tests"
+
+ownership_recommendations:
+  - "backend-engineer: REST DTO, EF JSON body, service validation, stale handling"
+  - "ai-llm-engineer: GenerateInterviewPrepStudyBrief response schema/prompts/fake/validator"
+  - "frontend-engineer: nested topic UI; no brief-root Q/talking piles"
+  - "architecture-engineer: design complete — no further unless Principal rejects P2"
+
+risks_and_open_decisions:
+  - "P1–P3 in frozen-contracts §12"
+  - "Parallel backend/ai drift if either lands without matching wire names"
+
+next_actions_for_implementers:
+  - "Await Principal accept of frozen-contracts.md"
+  - "backend-engineer: implement nested Topic DTO + BodyStorage; drop root lists; enforce ≥1 coverageItems"
+  - "ai-llm-engineer: nest AI schema under topics; update prompts + fake + validator"
+  - "frontend-engineer: update InterviewPrepStudyBriefTopic model + render Coverage items under topics"
+
+proposed_contract_registry_snippet: |
+  # Update existing contracts entry id: interview-prep-briefs
+  description: >
+    Durable Interview Prep brief REST under /api/interview-prep/briefs
+    (generate, regenerate, list, get, delete). Independent of sessions.
+    Topics nest coverageItems (≥1), sampleQuestions, talkingPoints
+    (sibling lists; one nesting level). Brief topic gap on topic only;
+    Language/Market as sessions; outdated labels; no version history;
+    no session seed. ADR-0025 amended body.
+  evidence: >
+    docs/adr/0025-interview-prep-brief.md;
+    agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+
+next_agents:
+  - backend-engineer
+  - ai-llm-engineer
+  - frontend-engineer

@@ -70,8 +70,18 @@ public static class InterviewPrepStageStateMachine
 public sealed class InterviewPrepConflictException(string message) : Exception(message)
 {
     public string ErrorCode { get; init; } = "interview_prep_conflict";
+
+    public Guid? ExistingBriefId { get; init; }
 }
 
-public sealed class InterviewPrepValidationException(string message) : Exception(message);
+public sealed class InterviewPrepValidationException(string message) : Exception(message)
+{
+    public string? ErrorCode { get; init; }
+}
 
 public sealed class InterviewPrepNotFoundException() : Exception("Interview prep session was not found.");
+
+public sealed class InterviewPrepAiUnavailableException(string message) : Exception(message)
+{
+    public string ErrorCode { get; init; } = "interview_prep_brief_ai_unavailable";
+}

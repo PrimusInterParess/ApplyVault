@@ -58,12 +58,14 @@ public sealed class InterviewPrepCandidateContextAdapter(
         }
 
         var capturedAt = DateTimeOffset.UtcNow;
+        // CapturedAt stays on the record only — do not embed in SnapshotJson.
+        // Study-brief fingerprints hash SnapshotJson; a clock field would make every
+        // post-regenerate outdated check look like the Structured CV changed.
         var payload = new
         {
             structured.DocumentId,
             structured.StructuredImportedAt,
             CatalogVersion = sectionCatalog.Version.ToString(),
-            CapturedAt = capturedAt,
             structured.Sections
         };
 
@@ -115,8 +117,7 @@ public sealed class InterviewPrepJobContextAdapter(
             JobTitle = title,
             CompanyName = company,
             JobDescription = description,
-            job.Payload.Url,
-            CapturedAt = capturedAt
+            job.Payload.Url
         };
 
         return new InterviewPrepJobSnapshot(

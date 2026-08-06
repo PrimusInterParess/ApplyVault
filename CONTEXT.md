@@ -58,6 +58,18 @@ _Avoid_: Merge projects, paste README (when meaning this product action)
 
 ## Interview Preparation
 
+**Interview Prep brief**:
+A durable, profession-agnostic study artifact for a seeker, generated from their Structured CV and optional saved job. Its body is structured parts—not a single prose blob: prioritized topics (skills, tools, domains, methods—not software-only “technologies”) each with a Brief topic gap, at least one nested Coverage item, and optional sample questions and CV talking points under that topic—each of those children may carry a short note. It is not a practice Interview Prep session and not an input to one. At most one brief per saved-job binding (and at most one CV-only brief); regenerating replaces that brief—no version history. The brief body is read-only (view/copy/regenerate only). First generate and regenerate may each take an optional free-text seeker focus note (what to emphasize or what a prior brief missed); the note steers generation and is not editable brief content. Generate uses the same language-mix and optional hiring-market choices as practice Interview Prep sessions. The brief is a snapshot at generate time; it is labeled outdated if the Structured CV has changed since then, or if its bound saved job is missing/deleted—never auto-regenerated.
+_Avoid_: Conspect, prep section, study notes (when meaning this product record), coach chat, brief history, session seed, technologies (when meaning the topic list as a whole), auto-refresh brief, editable brief, markdown-only brief, brief-level question list (when meaning sample questions or talking points outside a topic)
+
+**Coverage item**:
+One concrete leaf under a topic in an Interview Prep brief—a syllabus line to study, not a second topic, not a nested tree, and not a progress checklist.
+_Avoid_: Subtopic, extended topic, study point, checklist item (when meaning this brief child)
+
+**Brief topic gap**:
+The tag on a topic in an Interview Prep brief: already-strong, must-study, nice-to-have, or unclear (not enough CV/job evidence)—not a numeric priority alone.
+_Avoid_: Priority (when meaning this tag), strength score, gap score
+
 **Interview Prep session**:
 One durable practice interview for a seeker, with turns, Stages, and configuration (mode, persona, language, market).
 _Avoid_: Coach chat (MVP), ephemeral turn thread

@@ -18,6 +18,7 @@ namespace ApplyVault.Api.Controllers;
 public sealed class InterviewPrepController(
     IAppUserService appUserService,
     IInterviewPrepSessionService sessionService,
+    IInterviewPrepStudyBriefService studyBriefService,
     IInterviewPrepReportingService reportingService,
     IInterviewPrepCoachingService coachingService) : ControllerBase
 {
@@ -323,6 +324,114 @@ public sealed class InterviewPrepController(
         {
             return Conflict(new { message = ex.Message, code = ex.ErrorCode });
         }
+    }
+
+    [HttpPost("briefs")]
+    [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
+    public async Task<ActionResult<InterviewPrepStudyBriefDto>> GenerateStudyBrief(
+        [FromBody] InterviewPrepGenerateStudyBriefRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await appUserService.GetRequiredUserAsync();
+            var created = await studyBriefService.GenerateAsync(user, request, cancellationToken);
+            return CreatedAtAction(nameof(GetStudyBrief), new { id = created.Id }, created);
+        }
+        catch (InterviewPrepValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
+        }
+        catch (InterviewPrepConflictException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message,
+                code = ex.ErrorCode,
+                existingBriefId = ex.ExistingBriefId
+            });
+        }
+        catch (InterviewPrepAiUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = ex.Message,
+                code = ex.ErrorCode
+            });
+        }
+    }
+
+    [HttpPost("briefs/{id:guid}/regenerate")]
+    [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
+    public async Task<ActionResult<InterviewPrepStudyBriefDto>> RegenerateStudyBrief(
+        Guid id,
+        [FromBody] InterviewPrepRegenerateStudyBriefRequest? request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await appUserService.GetRequiredUserAsync();
+            return Ok(await studyBriefService.RegenerateAsync(
+                user,
+                id,
+                request ?? new InterviewPrepRegenerateStudyBriefRequest(),
+                cancellationToken));
+        }
+        catch (InterviewPrepNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InterviewPrepValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
+        }
+        catch (InterviewPrepAiUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = ex.Message,
+                code = ex.ErrorCode
+            });
+        }
+    }
+
+    [HttpGet("briefs")]
+    public async Task<ActionResult<InterviewPrepStudyBriefListResponseDto>> ListStudyBriefs(
+        [FromQuery] Guid? scrapeResultId,
+        [FromQuery] bool? cvOnly,
+        CancellationToken cancellationToken)
+    {
+        var user = await appUserService.GetRequiredUserAsync();
+        return Ok(await studyBriefService.ListAsync(user, scrapeResultId, cvOnly, cancellationToken));
+    }
+
+    [HttpGet("briefs/{id:guid}")]
+    public async Task<ActionResult<InterviewPrepStudyBriefDto>> GetStudyBrief(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await appUserService.GetRequiredUserAsync();
+            return Ok(await studyBriefService.GetAsync(user, id, cancellationToken));
+        }
+        catch (InterviewPrepNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InterviewPrepValidationException ex)
+        {
+            // Nested body stale / legacy flat → 400 interview_prep_brief_body_stale
+            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
+        }
+    }
+
+    [HttpDelete("briefs/{id:guid}")]
+    public async Task<IActionResult> DeleteStudyBrief(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await appUserService.GetRequiredUserAsync();
+        var deleted = await studyBriefService.DeleteAsync(user, id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 
     private async Task<ActionResult<InterviewPrepSessionDetailDto>> MutateAsync(

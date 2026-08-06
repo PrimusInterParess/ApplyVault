@@ -188,3 +188,31 @@ public sealed record PanelPerspective(
 public sealed record GeneratePanelDebriefResponse(
     string OverallDebrief,
     IReadOnlyList<PanelPerspective> Perspectives);
+
+// 14. GenerateInterviewPrepStudyBrief (ADR-0025 durable study brief — distinct from CreateInterviewBrief)
+public sealed record GenerateInterviewPrepStudyBriefRequest(
+    string Language,
+    string Market,
+    string? FocusNote,
+    InterviewPrepAiDocumentSnapshot CvSnapshot,
+    InterviewPrepAiDocumentSnapshot? JobSnapshot);
+
+public sealed record InterviewPrepAiStudyBriefItem(
+    string Text,
+    string? Note);
+
+public sealed record InterviewPrepAiStudyBriefTopic(
+    string Name,
+    string Gap,
+    int Priority,
+    string? Note,
+    IReadOnlyList<InterviewPrepAiStudyBriefItem> CoverageItems,
+    IReadOnlyList<InterviewPrepAiStudyBriefItem> SampleQuestions,
+    IReadOnlyList<InterviewPrepAiStudyBriefItem> TalkingPoints);
+
+/// <summary>
+/// AI JSON for durable study brief (ADR-0025 nested body). Root is topics only —
+/// coverageItems / sampleQuestions / talkingPoints nest under each topic.
+/// </summary>
+public sealed record GenerateInterviewPrepStudyBriefResponse(
+    IReadOnlyList<InterviewPrepAiStudyBriefTopic> Topics);

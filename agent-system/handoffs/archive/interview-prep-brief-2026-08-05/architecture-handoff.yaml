@@ -1,0 +1,116 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-2026-08-05
+  from_agent: architecture-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    Frozen v1 Interview Prep brief REST/DTO contracts under
+    handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md.
+    Study briefs use InterviewPrepStudyBrief* CLR names to avoid colliding with
+    existing session InterviewPrepBriefDto. Gap wire:
+    alreadyStrong|mustStudy|niceToHave|unclear. Outdated reasons:
+    structuredCvChanged|boundJobMissing. POST create-only (409 if binding
+    exists); regenerate replaces same id. Language/Market match sessions
+    (camelCase). Proposed registry entry interview-prep-briefs included below.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/architecture-handoff.yaml
+    - agent-system/scratch/interview-prep-brief-2026-08-05/architecture-t1-notes.md
+  evidence:
+    files_touched:
+      - agent-system/handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md
+      - agent-system/handoffs/active/interview-prep-brief-2026-08-05/architecture-handoff.yaml
+      - agent-system/scratch/interview-prep-brief-2026-08-05/architecture-t1-notes.md
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (PROPOSED — Principal merge)
+      - interview-prep-v2-sessions (unchanged; naming collision called out)
+  residual_risks:
+    - >
+      CLR name InterviewPrepStudyBriefDto differs from plan sketch "BriefDto";
+      wire path /briefs and product term Interview Prep brief unchanged.
+    - >
+      SQL null-safe unique index for CV-only brief is backend T2 detail;
+      contract specifies filtered-index semantics only.
+    - >
+      CV fingerprint source (updated-at vs hash) left to backend; false-positive
+      outdated risk noted in plan.
+  open_questions:
+    - >
+      U1–U4 in frozen-contracts.md §11 have recommended defaults; Principal may
+      accept as-is (no human choice required to unblock T2).
+  next_recommended_action: >
+    Principal accepts frozen contracts (approval gate), merges proposed
+    contract-registry snippet, then delegate M1 T2–T4 to backend-engineer and
+    M2 T5 schema/prompts to ai-llm-engineer against this freeze.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-2026-08-05/
+
+# --- Thin design summary (architecture-engineer §14) ---
+architecture_design_summary:
+  request: new-feature-shape
+  status: COMPLETE
+  recommendation: >
+    Additive /api/interview-prep/briefs resource with StudyBrief DTOs, create vs
+    regenerate split, session-parity Language/Market, and application-owned outdated.
+
+current_state:
+  - "/api/interview-prep/sessions* exists (InterviewPrepController); no durable study briefs"
+  - "InterviewPrepBriefDto already means session prepare brief — must not reuse for study artifact"
+  - "Language/Market camelCase via Program.cs JsonStringEnumConverter + InterviewPrepEnumNames"
+  - "ADR-0025 Accepted; plan+mapping APPROVED"
+
+target_state:
+  - "Auth'd briefs CRUD + regenerate under same route prefix"
+  - "One brief per job binding + one CV-only; regenerate in place"
+  - "Structured topics/gap/questions/talkingPoints; read-only body"
+  - "outdated computed on read; never auto-regen; independent of sessions"
+
+options_considered:
+  recommended: >
+    Distinct StudyBrief DTO names; POST 409 if exists; regenerate replaces;
+    list returns full DTOs; focus note per-call only.
+  alternatives_rejected:
+    - "Reuse InterviewPrepBriefDto — collides with session prepare brief"
+    - "POST upsert overwrite — hides regenerate semantics / conflict clarity"
+    - "Version history — out of ADR-0025 v1"
+
+impacted_contracts:
+  - "NEW proposed: interview-prep-briefs"
+  - "Unchanged: interview-prep-v2-sessions (document naming collision only)"
+
+migration_sequencing:
+  - "T1 freeze (this handoff) → Principal accept"
+  - "T2 EF unique cardinality → T3 service/controller → T4 outdated"
+  - "Parallel T5 AI schema against frozen DTOs → T6 wire generate"
+
+ownership_recommendations:
+  - "backend-engineer: entity, REST, outdated, persistence"
+  - "ai-llm-engineer: GenerateInterviewPrepBrief op, schema, prompts, fake provider"
+  - "frontend-engineer: after T1 accept + API land (T7+)"
+
+risks_and_open_decisions:
+  - "U1–U4 defaults in frozen-contracts §11 — accept or override"
+  - "Null scrape unique index implementation detail for T2"
+
+next_actions_for_implementers:
+  - "backend-engineer: implement T2–T4 from frozen-contracts.md"
+  - "ai-llm-engineer: design T5 AI JSON to map into StudyBrief body fields"
+
+proposed_contract_registry_snippet: |
+  - id: interview-prep-briefs
+    status: PROPOSED
+    description: >
+      Durable Interview Prep brief REST under /api/interview-prep/briefs
+      (generate, regenerate, list, get, delete). Independent of sessions.
+      Structured topics + Brief topic gap; Language/Market as sessions;
+      outdated labels; no version history; no session seed. ADR-0025.
+    owner: backend-engineer
+    secondary: ai-llm-engineer
+    evidence: >
+      docs/adr/0025-interview-prep-brief.md;
+      agent-system/handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md
+
+next_agents:
+  - backend-engineer
+  - ai-llm-engineer

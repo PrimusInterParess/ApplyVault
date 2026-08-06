@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
@@ -9,10 +9,15 @@ import {
   InterviewPrepCandidateReport,
   InterviewPrepCompetencyResults,
   InterviewPrepCreateSessionRequest,
+  InterviewPrepGenerateStudyBriefRequest,
   InterviewPrepPanelDebrief,
+  InterviewPrepRegenerateStudyBriefRequest,
   InterviewPrepSessionDetail,
   InterviewPrepSessionListResponse,
   InterviewPrepSessionSummary,
+  InterviewPrepStudyBrief,
+  InterviewPrepStudyBriefListQuery,
+  InterviewPrepStudyBriefListResponse,
   InterviewPrepSubmitTurnRequest,
   InterviewPrepTranscript,
   InterviewPrepTurnSubmitResponse
@@ -149,6 +154,45 @@ export class InterviewPrepApiService {
     return this.httpClient.get<InterviewPrepPanelDebrief>(
       this.url(`/sessions/${sessionId}/panel-debrief`)
     );
+  }
+
+  generateStudyBrief(
+    request: InterviewPrepGenerateStudyBriefRequest
+  ): Observable<InterviewPrepStudyBrief> {
+    return this.httpClient.post<InterviewPrepStudyBrief>(this.url('/briefs'), request);
+  }
+
+  regenerateStudyBrief(
+    id: string,
+    request: InterviewPrepRegenerateStudyBriefRequest
+  ): Observable<InterviewPrepStudyBrief> {
+    return this.httpClient.post<InterviewPrepStudyBrief>(
+      this.url(`/briefs/${id}/regenerate`),
+      request
+    );
+  }
+
+  listStudyBriefs(
+    query?: InterviewPrepStudyBriefListQuery
+  ): Observable<InterviewPrepStudyBriefListResponse> {
+    let params = new HttpParams();
+    if (query?.scrapeResultId) {
+      params = params.set('scrapeResultId', query.scrapeResultId);
+    }
+    if (query?.cvOnly === true) {
+      params = params.set('cvOnly', 'true');
+    }
+    return this.httpClient.get<InterviewPrepStudyBriefListResponse>(this.url('/briefs'), {
+      params
+    });
+  }
+
+  getStudyBrief(id: string): Observable<InterviewPrepStudyBrief> {
+    return this.httpClient.get<InterviewPrepStudyBrief>(this.url(`/briefs/${id}`));
+  }
+
+  deleteStudyBrief(id: string): Observable<void> {
+    return this.httpClient.delete<void>(this.url(`/briefs/${id}`));
   }
 
   private mutateSession(

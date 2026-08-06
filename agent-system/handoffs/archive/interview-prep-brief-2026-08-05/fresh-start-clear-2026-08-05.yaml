@@ -1,0 +1,9 @@
+task_id: interview-prep-brief-2026-08-05
+event: fresh_start_clear_leftover_active
+at: "2026-08-05"
+reason: >
+  Operate D nested Coverage-item body (ADR-0025 amended). User chose Fresh start.
+  Prior archive summary remains authoritative for flat-body v1 ship.
+  Leftover handoffs/active/interview-prep-brief-2026-08-05 cleared; superseded by
+  task_id interview-prep-brief-nested-2026-08-05.
+superseded_by: interview-prep-brief-nested-2026-08-05

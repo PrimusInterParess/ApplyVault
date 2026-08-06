@@ -14,6 +14,18 @@
         <a [href]="selectedJob.url" target="_blank" rel="noreferrer" class="job-detail__primary-link">
           Open source listing
         </a>
+        <a
+          routerLink="/interview-prep"
+          [queryParams]="{ jobId: selectedJob.id, surface: 'study' }"
+          class="job-detail__secondary-action">
+          Study brief
+        </a>
+        <a
+          routerLink="/interview-prep"
+          [queryParams]="{ jobId: selectedJob.id }"
+          class="job-detail__secondary-action">
+          Practice interview
+        </a>
       </div>
     </div>
 

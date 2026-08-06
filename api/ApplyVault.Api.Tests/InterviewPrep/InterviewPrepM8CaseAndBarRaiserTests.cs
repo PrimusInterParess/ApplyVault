@@ -1,5 +1,5 @@
 using ApplyVault.Api.Data;
-using ApplyVault.Api.Data;
+using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Models.InterviewPrep;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services.InterviewPrep;
@@ -10,6 +10,7 @@ using ApplyVault.Api.Services.InterviewPrep.Catalogs;
 using ApplyVault.Api.Services.InterviewPrep.Domain;
 using ApplyVault.Api.Services.InterviewPrep.Planning;
 using ApplyVault.Api.Services.InterviewPrep.Runtime;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Tests.InterviewPrep;
@@ -171,7 +172,7 @@ public sealed class InterviewPrepM8CaseAndBarRaiserTests
             "case plan",
             [],
             [],
-            new InterviewPlanBudgets(5, 2, 40),
+            new InterviewPlanBudgets(5, 2, 40, 50),
             [],
             new InterviewCompletionConditions([], 1, true),
             [],
@@ -214,5 +215,8 @@ public sealed class InterviewPrepM8CaseAndBarRaiserTests
                 MaxRetries = 0,
                 AllowSafeFallback = false
             }),
-            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }));
+            Microsoft.Extensions.Options.Options.Create(new GoogleAiOptions { Enabled = false }),
+            NullLogger<InterviewPrepAiGateway>.Instance,
+            new InterviewPrepDebugTraceContext(),
+            new InterviewPrepDebugFileTraceLogger());
 }

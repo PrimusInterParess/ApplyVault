@@ -79,7 +79,7 @@ public sealed class InterviewPrepM9LanguageMarketTests
             "Mixed plan",
             Competencies: [],
             QuestionIntents: [],
-            Budgets: new InterviewPlanBudgets(5, 2, 20),
+            Budgets: new InterviewPlanBudgets(5, 2, 20, 40),
             EvidenceExpectations: [],
             CompletionConditions: new InterviewCompletionConditions([], 0, true),
             Stages: [],

@@ -15,18 +15,24 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { InterviewPrepFacade } from '../../data-access/interview-prep.facade';
 import {
+  INTERVIEW_PREP_BRIEF_TOPIC_GAPS,
   INTERVIEW_PREP_EXPERIENCE_TYPES,
+  INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH,
   INTERVIEW_PREP_LANGUAGES,
   INTERVIEW_PREP_MARKETS,
   INTERVIEW_PREP_MODES,
   INTERVIEW_PREP_PERSONAS,
+  InterviewPrepBriefOutdatedReason,
+  InterviewPrepBriefTopicGap,
   InterviewPrepExperienceType,
   InterviewPrepLanguage,
   InterviewPrepMarket,
   InterviewPrepMode,
+  InterviewPrepPageSurface,
   InterviewPrepPersona,
   InterviewPrepSessionStatus,
   InterviewPrepSessionSummary,
+  InterviewPrepStudyBrief,
   InterviewPrepTurn
 } from '../../models/interview-prep.model';
 
@@ -52,6 +58,8 @@ export class InterviewPrepPageComponent implements OnInit {
   protected readonly languages = INTERVIEW_PREP_LANGUAGES;
   protected readonly markets = INTERVIEW_PREP_MARKETS;
   protected readonly experienceTypes = INTERVIEW_PREP_EXPERIENCE_TYPES;
+  protected readonly topicGaps = INTERVIEW_PREP_BRIEF_TOPIC_GAPS;
+  protected readonly focusNoteMaxLength = INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH;
 
   constructor() {
     effect(() => {
@@ -84,13 +92,25 @@ export class InterviewPrepPageComponent implements OnInit {
     this.facade.loadJobOptions();
     this.facade.loadHistory();
 
+    const surface = this.route.snapshot.queryParamMap.get('surface');
+    this.facade.applySurfaceFromQuery(surface);
+
     const jobId = this.route.snapshot.queryParamMap.get('jobId');
     this.facade.applyJobIdFromQuery(jobId);
 
+    if (this.facade.surface() === 'study' && !jobId) {
+      this.facade.loadStudyBriefs();
+    }
+
     const sessionId = this.route.snapshot.queryParamMap.get('sessionId');
-    if (sessionId) {
+    if (sessionId && this.facade.surface() === 'practice') {
       this.facade.loadSession(sessionId);
     }
+  }
+
+  protected selectSurface(surface: InterviewPrepPageSurface, event: Event): void {
+    event.preventDefault();
+    this.facade.setSurface(surface);
   }
 
   protected selectMode(mode: InterviewPrepMode, event: Event): void {
@@ -142,6 +162,64 @@ export class InterviewPrepPageComponent implements OnInit {
 
   protected isHistoryActive(item: InterviewPrepSessionSummary): boolean {
     return this.facade.sessionId() === item.id;
+  }
+
+  protected openStudyBrief(item: InterviewPrepStudyBrief, event?: Event): void {
+    event?.preventDefault();
+    this.facade.selectStudyBrief(item);
+  }
+
+  protected isStudyBriefActive(item: InterviewPrepStudyBrief): boolean {
+    return this.facade.selectedStudyBrief()?.id === item.id;
+  }
+
+  protected confirmDeleteStudyBrief(item: InterviewPrepStudyBrief, event: Event): void {
+    event.preventDefault();
+    if (window.confirm('Delete this study brief?')) {
+      this.facade.deleteStudyBrief(item.id);
+    }
+  }
+
+  protected studyBriefJobLabel(item: InterviewPrepStudyBrief): string {
+    if (item.jobTitle && item.companyName) {
+      return `${item.jobTitle} · ${item.companyName}`;
+    }
+    if (item.jobTitle || item.companyName) {
+      return item.jobTitle ?? item.companyName ?? 'Saved job';
+    }
+    return 'CV only';
+  }
+
+  protected gapLabel(gap: InterviewPrepBriefTopicGap | string): string {
+    return this.topicGaps.find((g) => g.id === gap)?.label ?? gap;
+  }
+
+  protected outdatedReasonLabel(reason: InterviewPrepBriefOutdatedReason | string): string {
+    if (reason === 'structuredCvChanged') {
+      return 'Structured CV changed since this brief was generated';
+    }
+    if (reason === 'boundJobMissing') {
+      return 'Bound saved job is missing or deleted';
+    }
+    return reason;
+  }
+
+  protected sortedTopics(brief: InterviewPrepStudyBrief) {
+    return [...brief.topics].sort((a, b) => a.priority - b.priority);
+  }
+
+  protected studyBusyLabel(): string {
+    const busy = this.facade.studyBriefBusy();
+    if (busy === 'generating') {
+      return 'Generating study brief…';
+    }
+    if (busy === 'regenerating') {
+      return 'Regenerating study brief…';
+    }
+    if (busy === 'deleting') {
+      return 'Deleting…';
+    }
+    return '';
   }
 
   protected retryCoachingReview(candidateTurnId: string): void {
@@ -214,6 +292,10 @@ export class InterviewPrepPageComponent implements OnInit {
 
   protected languageLabel(language: string | null | undefined): string {
     return this.languages.find((l) => l.id === language)?.label ?? language ?? '';
+  }
+
+  protected marketLabel(market: string | null | undefined): string {
+    return this.markets.find((m) => m.id === market)?.label ?? market ?? '';
   }
 
   protected showTurnLanguage(turn: InterviewPrepTurn): boolean {

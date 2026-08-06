@@ -1,0 +1,82 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-nested-2026-08-05
+  from_agent: ai-llm-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    GenerateInterviewPrepStudyBrief AI path reshaped to nested body per frozen-contracts
+    §7 / ADR-0025 amendment. Root is topics only; each topic nests coverageItems (min 1),
+    sampleQuestions, and talkingPoints as independent sibling leaf lists. Google response
+    schema, validator, prompts (v2026-08-05.2), FakeDeterministic provider, and debug
+    trace updated. Profession-agnostic; Coverage items framed as syllabus leaves not
+    checklists. No StudyBriefService/Controller/REST/test edits; no builds/tests run.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/ai-handoff.yaml
+  evidence:
+    files_touched:
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Contracts/InterviewPrepAiContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Validation/InterviewPrepAiResponseValidator.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/Prompts/InterviewPrepPromptRegistry.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/FakeDeterministicInterviewPrepAiProvider.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/Ai/InterviewPrepAiGatewayDebugTrace.cs
+      - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/ai-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (AI JSON nested under topics; maps 1:1 to frozen StudyBrief topic DTO)
+  residual_risks:
+    - >
+      Backend MapAiResponse already expects nested topic children; if any consumer still
+      deserializes the old flat GenerateInterviewPrepStudyBriefResponse (root Q/talking),
+      it will break until updated. Observed StudyBriefService MapAiResponse already nested.
+    - >
+      Live Gemini quality for nested Coverage items not evaluated; prompts constrain
+      checklist/software-default bias but model may still drift.
+    - >
+      Google responseSchema cannot express minItems:1 on coverageItems arrays; application
+      validator enforces ≥1 coverageItem per topic after parse.
+  open_questions: []
+  next_recommended_action: >
+    Integrate with backend nested persist/REST (parallel) then QA; no further AI work
+    unless Gemini rejects nested schema or mapping mismatches appear.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/
+
+# --- AI contract delta for backend / Principal ---
+ai_operation:
+  enum: GenerateInterviewPrepStudyBrief
+  gateway_method: GenerateInterviewPrepStudyBriefAsync
+  prompt_name: interview-prep.generate-study-brief
+  prompt_version: "2026-08-05.2"
+  schema_location: >
+    api/ApplyVault.Api/Services/InterviewPrep/Ai/GoogleAiInterviewPrepResponseSchemas.cs
+    (GenerateInterviewPrepStudyBriefSchema)
+  hard_fail: true
+  safe_fallback: null
+
+response_type: GenerateInterviewPrepStudyBriefResponse
+response_root_fields:
+  - topics: InterviewPrepAiStudyBriefTopic[] (min 1)
+
+topic_fields:
+  - name: string
+  - gap: alreadyStrong|mustStudy|niceToHave|unclear
+  - priority: int >= 1 (unique within brief)
+  - note: string|null
+  - coverageItems: InterviewPrepAiStudyBriefItem[] (min 1)
+  - sampleQuestions: InterviewPrepAiStudyBriefItem[] (may be empty)
+  - talkingPoints: InterviewPrepAiStudyBriefItem[] (may be empty)
+
+item_fields:
+  - text: string (required, non-empty after trim)
+  - note: string|null
+
+removed_from_ai_root:
+  - sampleQuestions
+  - talkingPoints
+
+validator_rules:
+  - topics non-null and length >= 1
+  - each topic: name, valid gap, priority >= 1, unique priorities
+  - each topic: coverageItems non-null length >= 1; each text non-empty
+  - each topic: sampleQuestions/talkingPoints non-null arrays (may be []); each present text non-empty

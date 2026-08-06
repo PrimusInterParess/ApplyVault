@@ -1,0 +1,69 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-2026-08-05
+  from_agent: frontend-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    M3 T7–T9: Typed Angular client for /api/interview-prep/briefs plus sibling
+    Study brief surface on /interview-prep (Practice | Study brief). Generate
+    (language, market, optional job, focus note), list/select, outdated banner,
+    regenerate with focus note, delete. Job detail deep-links with
+    jobId + surface=study (and practice with jobId alone). Practice UX preserved.
+    No *.spec.ts changes; no builds run.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/frontend-handoff.yaml
+    - agent-system/handoffs/active/interview-prep-brief-2026-08-05/frozen-contracts.md
+  evidence:
+    files_touched:
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/models/interview-prep.model.ts
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/interview-prep-api.service.ts
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/data-access/interview-prep.facade.ts
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.ts
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.scss
+      - frontend/applyvault-jobs-ui/src/app/features/job-results/presentation/job-result-detail/job-result-detail.component.html
+      - frontend/applyvault-jobs-ui/src/app/features/job-results/presentation/job-result-detail/job-result-detail.component.scss
+      - frontend/applyvault-jobs-ui/src/app/app.routes.ts
+      - frontend/applyvault-jobs-ui/README.md
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (FE client consumes frozen wire DTOs)
+  residual_risks:
+    - >
+      Specs not updated (policy); existing interview-prep *.spec.ts may not cover
+      briefs — QA / T10 if coverage required.
+    - >
+      UX smoke against live API not run here (no builds/tests per constraints).
+    - >
+      M4 T10 polish (copy, AI-disabled messaging) still open.
+  open_questions: []
+  next_recommended_action: >
+    Smoke Study brief generate/list/outdated/regenerate against local API;
+    then M4 T10 polish or operate Close / QA as Principal directs.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-2026-08-05/
+
+ux_entry_points:
+  - path: /interview-prep
+    note: Surface tabs Practice | Study brief
+  - path: /interview-prep?surface=study
+    note: Opens Study brief surface
+  - path: /interview-prep?jobId=<scrapeResultId>&surface=study
+    note: Preselects job; loads existing job-bound brief or generate form
+  - path: /interview-prep?jobId=<scrapeResultId>
+    note: Existing practice deep-link (unchanged)
+  - jobs_ui: job-result-detail header actions
+    links:
+      - Study brief → /interview-prep?jobId=&surface=study
+      - Practice interview → /interview-prep?jobId=
+
+client_api:
+  - POST /api/interview-prep/briefs
+  - POST /api/interview-prep/briefs/{id}/regenerate
+  - GET /api/interview-prep/briefs?scrapeResultId=&cvOnly=
+  - GET /api/interview-prep/briefs/{id}
+  - DELETE /api/interview-prep/briefs/{id}
+
+naming:
+  study_dto: InterviewPrepStudyBrief*
+  session_prepare_brief: InterviewPrepBrief (unchanged; not overloaded)

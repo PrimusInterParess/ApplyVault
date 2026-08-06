@@ -384,6 +384,85 @@ namespace ApplyVault.Api.Migrations
                     b.ToTable("InterviewPrepQuestionAttempts", (string)null);
                 });
 
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepStudyBriefEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BodyJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CvDocumentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CvFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FocusNoteSnapshot")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Market")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid?>("ScrapeResultId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("UsedAiFallback")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("WasJobBound")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScrapeResultId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_InterviewPrepStudyBriefs_UserId_CvOnly")
+                        .HasFilter("[ScrapeResultId] IS NULL");
+
+                    b.HasIndex("UserId", "GeneratedAt")
+                        .IsDescending(false, true);
+
+                    b.HasIndex("UserId", "ScrapeResultId")
+                        .IsUnique()
+                        .HasFilter("[ScrapeResultId] IS NOT NULL");
+
+                    b.ToTable("InterviewPrepStudyBriefs", (string)null);
+                });
+
             modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1111,6 +1190,20 @@ namespace ApplyVault.Api.Migrations
                 });
 
             modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepSessionEntity", b =>
+                {
+                    b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScrapeResultId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ApplyVault.Api.Data.AppUserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplyVault.Api.Data.InterviewPrepStudyBriefEntity", b =>
                 {
                     b.HasOne("ApplyVault.Api.Data.ScrapeResultEntity", null)
                         .WithMany()

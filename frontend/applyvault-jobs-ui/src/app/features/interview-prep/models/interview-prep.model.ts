@@ -390,7 +390,85 @@ export interface InterviewPrepPanelDebrief {
 export interface InterviewPrepApiErrorBody {
   readonly message?: string;
   readonly code?: string;
+  readonly existingBriefId?: string;
 }
+
+/** Durable study artifact (ADR-0025). Distinct from session prepare `InterviewPrepBrief`. */
+export type InterviewPrepBriefTopicGap =
+  | 'alreadyStrong'
+  | 'mustStudy'
+  | 'niceToHave'
+  | 'unclear';
+
+export type InterviewPrepBriefOutdatedReason = 'structuredCvChanged' | 'boundJobMissing';
+
+export type InterviewPrepPageSurface = 'practice' | 'study';
+
+export interface InterviewPrepGenerateStudyBriefRequest {
+  readonly language: InterviewPrepLanguage;
+  readonly market: InterviewPrepMarket;
+  readonly scrapeResultId?: string | null;
+  readonly focusNote?: string | null;
+}
+
+export interface InterviewPrepRegenerateStudyBriefRequest {
+  readonly focusNote?: string | null;
+  readonly language?: InterviewPrepLanguage | null;
+  readonly market?: InterviewPrepMarket | null;
+}
+
+export interface InterviewPrepStudyBriefItem {
+  readonly text: string;
+  readonly note?: string | null;
+}
+
+export interface InterviewPrepStudyBriefTopic {
+  readonly name: string;
+  readonly gap: InterviewPrepBriefTopicGap | string;
+  readonly priority: number;
+  readonly note?: string | null;
+  /** Coverage items (syllabus lines); ≥1 per topic. Not checklists. */
+  readonly coverageItems: readonly InterviewPrepStudyBriefItem[];
+  readonly sampleQuestions: readonly InterviewPrepStudyBriefItem[];
+  readonly talkingPoints: readonly InterviewPrepStudyBriefItem[];
+}
+
+export interface InterviewPrepStudyBrief {
+  readonly id: string;
+  readonly scrapeResultId: string | null;
+  readonly jobTitle: string | null;
+  readonly companyName: string | null;
+  readonly language: InterviewPrepLanguage | string;
+  readonly market: InterviewPrepMarket | string;
+  readonly focusNoteSnapshot: string | null;
+  readonly outdated: boolean;
+  readonly outdatedReasons: readonly (InterviewPrepBriefOutdatedReason | string)[];
+  readonly generatedAt: string;
+  readonly updatedAt: string;
+  readonly topics: readonly InterviewPrepStudyBriefTopic[];
+  readonly usedAiFallback: boolean;
+}
+
+export interface InterviewPrepStudyBriefListResponse {
+  readonly items: readonly InterviewPrepStudyBrief[];
+}
+
+export interface InterviewPrepStudyBriefListQuery {
+  readonly scrapeResultId?: string;
+  readonly cvOnly?: boolean;
+}
+
+export const INTERVIEW_PREP_BRIEF_TOPIC_GAPS: ReadonlyArray<{
+  readonly id: InterviewPrepBriefTopicGap;
+  readonly label: string;
+}> = [
+  { id: 'alreadyStrong', label: 'Already strong' },
+  { id: 'mustStudy', label: 'Must study' },
+  { id: 'niceToHave', label: 'Nice to have' },
+  { id: 'unclear', label: 'Unclear' }
+];
+
+export const INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH = 2000;
 
 /** Mirrors backend InterviewPrepOperationalCatalog mode×persona pairs. */
 export const INTERVIEW_PREP_MODE_PERSONA_PAIRS: ReadonlyArray<{

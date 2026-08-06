@@ -75,5 +75,23 @@ contracts:
       api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
       api/ApplyVault.Api/Services/InterviewPrep/
 
+  - id: interview-prep-briefs
+    status: APPROVED
+    description: >
+      Durable Interview Prep brief REST under /api/interview-prep/briefs
+      (generate, regenerate, list, get, delete). Independent of sessions.
+      Topics nest coverageItems (≥1), sampleQuestions, talkingPoints
+      (sibling lists; one nesting level). Brief topic gap on topic only;
+      Language/Market as sessions; outdated labels; no version history;
+      no session seed. ADR-0025 amended body.
+    owner: backend-engineer
+    secondary: ai-llm-engineer
+    evidence: >
+      docs/adr/0025-interview-prep-brief.md;
+      agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md;
+      api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs;
+      api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
+      frontend/applyvault-jobs-ui/src/app/features/interview-prep/
+
 proposed_contracts: []
 

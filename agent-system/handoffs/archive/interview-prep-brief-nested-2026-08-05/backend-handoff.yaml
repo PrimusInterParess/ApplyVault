@@ -1,0 +1,62 @@
+schema_version: "1.0.0"
+handoff:
+  task_id: interview-prep-brief-nested-2026-08-05
+  from_agent: backend-engineer
+  to_agent: principal-software-architect
+  status: READY
+  summary: >
+    Nested Interview Prep study-brief REST/persist/service per accepted
+    frozen-contracts (P1–P3). Topic DTO nests coverageItems (≥1),
+    sampleQuestions, talkingPoints (shared item DTO); brief-root Q/talking
+    removed. Persist body JSON is topics-only. GET by id returns 400
+    interview_prep_brief_body_stale for legacy/invalid nested bodies; list
+    omits invalid rows. MapAiResponse consumes nested AI topic shape
+    (InterviewPrepAiContracts already nested — ai-llm parallel). Ai/ folder
+    not edited. No tests created or run.
+  artifacts:
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/backend-handoff.yaml
+    - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/frozen-contracts.md
+  evidence:
+    files_touched:
+      - api/ApplyVault.Api/Models/InterviewPrep/InterviewPrepStudyBriefContracts.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefBody.cs
+      - api/ApplyVault.Api/Services/InterviewPrep/InterviewPrepStudyBriefService.cs
+      - api/ApplyVault.Api/Controllers/InterviewPrepController.cs
+      - agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/backend-handoff.yaml
+    tests_run: []
+    contracts_affected:
+      - interview-prep-briefs (nested body; registry description already merged P3)
+  residual_risks:
+    - >
+      Existing flat BodyJson rows are omitted from list and return body_stale
+      on GET until seeker regenerates (P2 Default A).
+    - >
+      Generate/regenerate correctness depends on ai-llm nested schema/fake/
+      validator landing with matching field names (observed AI contracts already
+      nested at handoff time).
+  open_questions: []
+  next_recommended_action: >
+    Frontend consume nested topic cards; QA optional after FE; confirm
+    ai-llm handoff READY for fake/validator/prompts.
+  handoff_path: agent-system/handoffs/active/interview-prep-brief-nested-2026-08-05/
+
+body_shape:
+  persist: InterviewPrepStudyBriefBodyStorage(Topics only)
+  topic_children: [coverageItems, sampleQuestions, talkingPoints]
+  item_dto: InterviewPrepStudyBriefItemDto(text, note?)
+  root_removed: [sampleQuestions, talkingPoints]
+
+legacy_policy:
+  get: "400 interview_prep_brief_body_stale"
+  list: omit_invalid_bodies
+  regenerate: allowed_overwrite_nested
+
+validation:
+  write_error: interview_prep_brief_validation
+  read_error: interview_prep_brief_body_stale
+  rules:
+    - topics_length_gte_1
+    - coverageItems_per_topic_gte_1
+    - sampleQuestions_talkingPoints_non_null_may_be_empty
+    - priority_gte_1_unique
+    - item_text_non_empty

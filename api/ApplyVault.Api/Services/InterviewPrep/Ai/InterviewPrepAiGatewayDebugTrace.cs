@@ -63,6 +63,11 @@ internal static class InterviewPrepAiGatewayDebugTrace
                     $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} gaps={feedback.Gaps.Count}");
                 return;
 
+            case GenerateInterviewPrepStudyBriefRequest studyBrief:
+                trace.Log(sessionId,
+                    $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} language={InterviewPrepDebugTraceLabels.Preview(studyBrief.Language, 40)} market={InterviewPrepDebugTraceLabels.Preview(studyBrief.Market, 40)} hasCv={studyBrief.CvSnapshot is not null} cvLen={studyBrief.CvSnapshot?.Text?.Length ?? 0} hasJob={studyBrief.JobSnapshot is not null} jobLen={studyBrief.JobSnapshot?.Text?.Length ?? 0} hasFocusNote={!string.IsNullOrWhiteSpace(studyBrief.FocusNote)}");
+                return;
+
             default:
                 trace.Log(sessionId, $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} requestType={request.GetType().Name}");
                 return;
@@ -131,6 +136,23 @@ internal static class InterviewPrepAiGatewayDebugTrace
                 trace.Log(sessionId,
                     $"AI Output {op}{fallbackTag} attempt={attempt} feedbackPreview='{InterviewPrepDebugTraceLabels.Preview(feedback.OverallFeedback, 200)}'");
                 return;
+
+            case GenerateInterviewPrepStudyBriefResponse studyBrief:
+            {
+                var coverage = 0;
+                var sampleQs = 0;
+                var talking = 0;
+                foreach (var t in studyBrief.Topics)
+                {
+                    coverage += t.CoverageItems?.Count ?? 0;
+                    sampleQs += t.SampleQuestions?.Count ?? 0;
+                    talking += t.TalkingPoints?.Count ?? 0;
+                }
+
+                trace.Log(sessionId,
+                    $"AI Output {op}{fallbackTag} attempt={attempt} topics={studyBrief.Topics.Count} coverageItems={coverage} sampleQuestions={sampleQs} talkingPoints={talking}");
+                return;
+            }
 
             default:
                 trace.Log(sessionId, $"AI Output {op}{fallbackTag} attempt={attempt} type={parsed.GetType().Name}");

@@ -15,6 +15,7 @@ internal static class GoogleAiInterviewPrepResponseSchemas
             InterviewPrepAiOperation.EvaluateStage => EvaluateStageSchema(),
             InterviewPrepAiOperation.PlanFullLoop => PlanFullLoopSchema(),
             InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief => GenerateInterviewPrepStudyBriefSchema(),
+            InterviewPrepAiOperation.GenerateAnswerReview => GenerateAnswerReviewSchema(),
             _ => throw new InvalidOperationException($"No response schema for {operation}.")
         };
 
@@ -211,6 +212,23 @@ internal static class GoogleAiInterviewPrepResponseSchemas
                 properties = new
                 {
                     topics = new { type = "ARRAY", items = StudyBriefTopicItemSchema() }
+                }
+            }
+        };
+
+    private static object GenerateAnswerReviewSchema() =>
+        new
+        {
+            responseMimeType = "application/json",
+            responseSchema = new
+            {
+                type = "OBJECT",
+                required = new[] { "modelAnswer", "coachingTips", "practiceSuggestions" },
+                properties = new
+                {
+                    modelAnswer = new { type = "STRING" },
+                    coachingTips = new { type = "ARRAY", items = new { type = "STRING" } },
+                    practiceSuggestions = new { type = "ARRAY", items = new { type = "STRING" } }
                 }
             }
         };

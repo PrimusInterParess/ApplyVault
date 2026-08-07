@@ -336,7 +336,9 @@ export interface InterviewPrepAnswerReview {
   readonly answerSummary: string;
   readonly strengths: readonly string[];
   readonly gaps: readonly string[];
+  /** @deprecated ADR-0026 — free-text blurb; unused in UI. Prefer modelAnswer. */
   readonly coachingFeedback: string;
+  readonly modelAnswer: string;
   readonly coachingTips: readonly string[];
   readonly practiceRecommendations: readonly string[];
   readonly status: string;
@@ -353,7 +355,9 @@ export interface InterviewPrepAnswerRetryResult {
   readonly answerSummary: string;
   readonly strengths: readonly string[];
   readonly gaps: readonly string[];
+  /** @deprecated ADR-0026 — free-text blurb; unused in UI. Prefer modelAnswer / comparisonSummary. */
   readonly coachingFeedback: string;
+  readonly modelAnswer: string;
   readonly coachingTips: readonly string[];
   readonly practiceRecommendations: readonly string[];
   readonly comparisonSummary: string | null;

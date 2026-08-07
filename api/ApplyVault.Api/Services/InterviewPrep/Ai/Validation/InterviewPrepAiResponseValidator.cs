@@ -29,6 +29,8 @@ public static class InterviewPrepAiResponseValidator
             InterviewPrepAiOperation.GeneratePanelDebrief => ValidateDebrief(response as GeneratePanelDebriefResponse),
             InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief =>
                 ValidateStudyBrief(response as GenerateInterviewPrepStudyBriefResponse),
+            InterviewPrepAiOperation.GenerateAnswerReview =>
+                ValidateAnswerReview(response as GenerateAnswerReviewResponse),
             _ => InterviewPrepAiValidationResult.Fail($"Unknown operation {operation}.")
         };
 
@@ -164,6 +166,27 @@ public static class InterviewPrepAiResponseValidator
             {
                 return InterviewPrepAiValidationResult.Fail("Each perspective requires personaLabel, assessment, score 0-100.");
             }
+        }
+
+        return InterviewPrepAiValidationResult.Ok();
+    }
+
+    private static InterviewPrepAiValidationResult ValidateAnswerReview(GenerateAnswerReviewResponse? r)
+    {
+        if (r is null || string.IsNullOrWhiteSpace(r.ModelAnswer))
+        {
+            return InterviewPrepAiValidationResult.Fail("Answer review requires non-empty modelAnswer.");
+        }
+
+        if (r.CoachingTips is null)
+        {
+            return InterviewPrepAiValidationResult.Fail("Answer review requires coachingTips (array; may be empty).");
+        }
+
+        if (r.PracticeSuggestions is null)
+        {
+            return InterviewPrepAiValidationResult.Fail(
+                "Answer review requires practiceSuggestions (array; may be empty).");
         }
 
         return InterviewPrepAiValidationResult.Ok();

@@ -7,7 +7,8 @@ internal sealed record PersistedCoachingFeedback(
     IReadOnlyList<string> PracticeSuggestions,
     string AnswerSummary,
     IReadOnlyList<string> Strengths,
-    IReadOnlyList<string> Gaps);
+    IReadOnlyList<string> Gaps,
+    string ModelAnswer);
 
 public static class InterviewPrepAnswerRetryStatuses
 {

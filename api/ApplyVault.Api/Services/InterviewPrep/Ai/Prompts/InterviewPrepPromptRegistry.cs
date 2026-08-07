@@ -175,6 +175,38 @@ public sealed class InterviewPrepPromptRegistry : IInterviewPrepPromptRegistry
                 When jobSnapshot is null, produce a CV-only study brief.
                 """,
                 "Generate the Interview Prep study brief from this payload:\n{{payloadJson}}"),
+            Def(
+                InterviewPrepAiOperation.GenerateAnswerReview,
+                "interview-prep.generate-answer-review",
+                "2026-08-06.1",
+                """
+                Produce Answer review coaching for one practice answer (ADR-0026).
+                Return JSON with modelAnswer, coachingTips, and practiceSuggestions only.
+                Do NOT return overallFeedback, strengths, gaps, or answerSummary.
+
+                modelAnswer (required): a full spoken-prose example reply the seeker could say aloud
+                to this question. Write in first person as the candidate speaking. It is the reply itself —
+                not tip-shaped hints, not labeled STAR blocks (Situation:/Task:/Action:/Result:), and not a
+                coach preamble. Do not restate or quote questionText inside modelAnswer
+                (no "Regarding the question…" / "To answer that…").
+
+                Ground modelAnswer only in cvSnapshot and optional jobSnapshot plus facts already present
+                in answerText. Do not invent roles, employers, projects, tools, dates, or metrics.
+                When CV/job evidence is thin or missing, still return a shorter honest modelAnswer
+                (never omit the field; never pad with invented detail).
+
+                coachingTips: delivery/technique only (structure, STAR usage as technique, language,
+                length/pacing). Must NOT restate or paraphrase the gaps array — gaps are content/evidence
+                holes; the Model answer carries the content fix. Tips arrays may be empty.
+
+                practiceSuggestions: short rehearsal actions; may be empty. Do not copy gaps verbatim.
+
+                Honor config.language and config.market; write modelAnswer and tips in that language.
+                Apply Danish-market guidance only when market is danish.
+                When config.language is danish or mixedEnglishDanish, keep language-delivery tips separate
+                from role-competence content.
+                """,
+                "Generate the Answer review Model answer and delivery tips from this payload:\n{{payloadJson}}"),
         };
 
         _byOperation = definitions.ToDictionary(d => d.Operation);

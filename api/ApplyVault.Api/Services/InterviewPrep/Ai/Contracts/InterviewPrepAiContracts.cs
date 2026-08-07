@@ -216,3 +216,22 @@ public sealed record InterviewPrepAiStudyBriefTopic(
 /// </summary>
 public sealed record GenerateInterviewPrepStudyBriefResponse(
     IReadOnlyList<InterviewPrepAiStudyBriefTopic> Topics);
+
+// 15. GenerateAnswerReview (ADR-0026 Answer review Model answer — distinct from GenerateFeedback)
+public sealed record GenerateAnswerReviewRequest(
+    InterviewPrepAiSessionConfig Config,
+    string QuestionText,
+    string AnswerText,
+    IReadOnlyList<string> Strengths,
+    IReadOnlyList<string> Gaps,
+    InterviewPrepAiDocumentSnapshot? CvSnapshot,
+    InterviewPrepAiDocumentSnapshot? JobSnapshot);
+
+/// <summary>
+/// AI JSON for Answer review coaching (ADR-0026). Strengths/gaps/summary stay on AssessAnswer;
+/// this op returns spoken Model answer + delivery tips + practice suggestions only.
+/// </summary>
+public sealed record GenerateAnswerReviewResponse(
+    string ModelAnswer,
+    IReadOnlyList<string> CoachingTips,
+    IReadOnlyList<string> PracticeSuggestions);

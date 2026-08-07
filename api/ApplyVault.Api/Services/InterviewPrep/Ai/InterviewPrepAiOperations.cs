@@ -16,7 +16,9 @@ public enum InterviewPrepAiOperation
     PlanFullLoop,
     GeneratePanelDebrief,
     /// <summary>Durable study Interview Prep brief (ADR-0025) — not the session prepare brief.</summary>
-    GenerateInterviewPrepStudyBrief
+    GenerateInterviewPrepStudyBrief,
+    /// <summary>Answer review Model answer + delivery tips (ADR-0026) — distinct from session GenerateFeedback.</summary>
+    GenerateAnswerReview
 }
 
 public static class InterviewPrepAiOperationNames

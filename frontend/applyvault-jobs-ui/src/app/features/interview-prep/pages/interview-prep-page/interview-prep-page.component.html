@@ -820,7 +820,6 @@
                   </section>
                 }
                 <blockquote class="interview-prep__coaching-question">{{ review.questionText }}</blockquote>
-                <p>{{ review.coachingFeedback }}</p>
                 @if (review.strengths.length) {
                   <p><strong>Strengths</strong></p>
                   <ul>
@@ -836,6 +835,12 @@
                       <li>{{ item }}</li>
                     }
                   </ul>
+                }
+                <p><strong>Model answer</strong></p>
+                @if (review.modelAnswer) {
+                  <p class="interview-prep__model-answer">{{ review.modelAnswer }}</p>
+                } @else {
+                  <p class="interview-prep__muted">Model answer unavailable for this older review.</p>
                 }
                 @if (review.coachingTips.length) {
                   <p><strong>Tips</strong></p>
@@ -865,7 +870,9 @@
                   Close
                 </button>
                 @if (facade.coachingRetry(); as retry) {
-                  <p>{{ retry.comparisonSummary ?? retry.coachingFeedback }}</p>
+                  @if (retry.comparisonSummary) {
+                    <p>{{ retry.comparisonSummary }}</p>
+                  }
                   @if (retry.improved !== null) {
                     <p class="interview-prep__muted">
                       Improved: {{ retry.improved ? 'Yes' : 'No' }}

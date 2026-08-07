@@ -65,4 +65,13 @@ public interface IInterviewPrepAiGateway
     Task<InterviewPrepAiExecutionResult<GenerateInterviewPrepStudyBriefResponse>> GenerateInterviewPrepStudyBriefAsync(
         GenerateInterviewPrepStudyBriefRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generate Answer review Model answer + delivery coaching tips (ADR-0026).
+    /// Uses safe fallback when AI is unavailable (short non-empty modelAnswer).
+    /// Does not replace session-level <see cref="GenerateFeedbackAsync"/>.
+    /// </summary>
+    Task<InterviewPrepAiExecutionResult<GenerateAnswerReviewResponse>> GenerateAnswerReviewAsync(
+        GenerateAnswerReviewRequest request,
+        CancellationToken cancellationToken = default);
 }

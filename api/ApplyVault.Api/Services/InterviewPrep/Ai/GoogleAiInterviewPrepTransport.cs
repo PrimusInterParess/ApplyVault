@@ -36,7 +36,8 @@ public sealed class GoogleAiInterviewPrepTransport(
         InterviewPrepAiOperation.SummarizeConversation,
         InterviewPrepAiOperation.EvaluateStage,
         InterviewPrepAiOperation.PlanFullLoop,
-        InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief
+        InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief,
+        InterviewPrepAiOperation.GenerateAnswerReview
     ];
 
     public string ProviderName => Name;

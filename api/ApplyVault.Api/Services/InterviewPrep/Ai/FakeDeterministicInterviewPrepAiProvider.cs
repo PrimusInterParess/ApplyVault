@@ -64,6 +64,8 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
             InterviewPrepAiOperation.GeneratePanelDebrief => Serialize(BuildDebrief(As<GeneratePanelDebriefRequest>(request))),
             InterviewPrepAiOperation.GenerateInterviewPrepStudyBrief =>
                 Serialize(BuildStudyBrief(As<GenerateInterviewPrepStudyBriefRequest>(request))),
+            InterviewPrepAiOperation.GenerateAnswerReview =>
+                Serialize(BuildAnswerReview(As<GenerateAnswerReviewRequest>(request))),
             _ => throw new InterviewPrepAiException(
                 InterviewPrepAiErrorCodes.OperationNotImplemented,
                 $"Fake provider has no handler for {prompt.Operation}.")
@@ -118,6 +120,13 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
                 "Rehearse one answer with a clear situation, action, and measurable result.",
                 "Note where evidence was missing and prepare one concrete example."
             ]);
+
+    /// <summary>
+    /// Safe Answer review fallback (ADR-0026): short non-empty spoken modelAnswer;
+    /// delivery tips that do not copy gaps verbatim.
+    /// </summary>
+    public static GenerateAnswerReviewResponse SafeAnswerReviewFallback(GenerateAnswerReviewRequest request) =>
+        BuildAnswerReview(request);
 
     private static CreateInterviewBriefResponse BuildBrief(CreateInterviewBriefRequest request)
     {
@@ -377,6 +386,59 @@ public sealed class FakeDeterministicInterviewPrepAiProvider : IInterviewPrepAiP
                 new PanelPerspective("Recruiter", "Motivation and communication look workable.", 70),
                 new PanelPerspective("HiringManager", "Need stronger evidence of impact.", 62)
             ]);
+
+    /// <summary>
+    /// Deterministic Answer review for Dev / AI-off / safe fallback (ADR-0026).
+    /// Spoken modelAnswer grounded in CV when present; delivery tips never restate gaps.
+    /// </summary>
+    private static GenerateAnswerReviewResponse BuildAnswerReview(GenerateAnswerReviewRequest request)
+    {
+        var hasCv = !string.IsNullOrWhiteSpace(request.CvSnapshot?.Text);
+        var cvSnippet = hasCv ? Truncate(request.CvSnapshot!.Text, 120) : null;
+        var role = request.JobSnapshot?.Title?.Trim();
+
+        var questionHook = Truncate(request.QuestionText?.Trim() ?? string.Empty, 80);
+        string modelAnswer;
+        if (hasCv && !string.IsNullOrWhiteSpace(cvSnippet))
+        {
+            modelAnswer = string.IsNullOrWhiteSpace(role)
+                ? $"On that question{(string.IsNullOrWhiteSpace(questionHook) ? "" : $" about {questionHook}")}, in my recent work {cvSnippet} I owned the outcome end to end and can walk through the situation, my actions, and the result."
+                : $"On that question{(string.IsNullOrWhiteSpace(questionHook) ? "" : $" about {questionHook}")}, for a role like {role}, I would draw on recent work where {cvSnippet} I owned the outcome and can explain the situation, my actions, and the result.";
+        }
+        else
+        {
+            modelAnswer = string.IsNullOrWhiteSpace(questionHook)
+                ? "I would answer with a short real example from my background: the situation, what I did, and the outcome — without inventing details I cannot support."
+                : $"For “{questionHook}”, I would answer with a short real example from my background: the situation, what I did, and the outcome — without inventing details I cannot support.";
+        }
+
+        // Delivery/technique only — must not paraphrase request.Gaps.
+        string[] tips =
+        [
+            "Lead with the result, then add just enough context.",
+            "Keep the spoken answer under about two minutes.",
+            "Name your specific contribution before describing the team."
+        ];
+
+        if (InterviewPrepEnumNames.TryParseLanguage(request.Config.Language, out var language)
+            && (language == InterviewPrepLanguage.Danish || language == InterviewPrepLanguage.MixedEnglishDanish))
+        {
+            tips =
+            [
+                .. tips.Take(2),
+                "Keep language delivery tips separate from role-competence content."
+            ];
+        }
+
+        return new GenerateAnswerReviewResponse(
+            ModelAnswer: modelAnswer,
+            CoachingTips: tips,
+            PracticeSuggestions:
+            [
+                "Rehearse one STAR story out loud once without notes.",
+                "Time yourself and cut filler before the result."
+            ]);
+    }
 
     /// <summary>
     /// Deterministic nested study brief for Dev / AI-off (ADR-0025). Profession-agnostic topics;

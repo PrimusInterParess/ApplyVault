@@ -1,0 +1,33 @@
+schema_version: "1.0.0"
+summary:
+  task_id: interview-prep-answer-review-2026-08-06
+  closed_at: "2026-08-06"
+  integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+  parent_request: >
+    Practice Answer review: tip/gap overlap, duplicated question, Model answer
+    instead of hints (grill-with-docs + /operate D). ADR if needed.
+  agents:
+    - architecture-engineer
+    - ai-llm-engineer
+    - backend-engineer
+    - frontend-engineer
+  artifacts:
+    - docs/adr/0026-interview-prep-answer-review-model-answer.md
+    - CONTEXT.md (Answer review, Answer gap, Model answer, Coaching tip)
+    - agent-system/governance/contract-registry.yaml (interview-prep-v2-sessions amend)
+  limitations:
+    - >
+      Existing ApplyVault.Api.Tests Interview Prep coaching tests were not
+      updated (user no-automatic-tests policy). Expect compile/test failures
+      until a follow-up updates DTO/record constructors for ModelAnswer.
+    - >
+      QA evidence not run this pass (no builds/tests authorized). Residual:
+      tip≠gap is prompt-enforced; thin-CV quality is qualitative.
+    - >
+      Legacy CoachingFeedbackJson without modelAnswer surfaces UI placeholder.
+  residual_risks:
+    - Tip≠gap model drift without automated checks
+    - Session report GenerateFeedback left unchanged (intentional)
+  next_actions:
+    - Optional: update coaching unit tests for ModelAnswer / GenerateAnswerReview
+    - Optional: /operate E or QA for tip≠gap and thin-CV smoke

@@ -45,7 +45,8 @@ public sealed class InterviewPrepCoachingService(
         Guid candidateTurnId,
         CancellationToken cancellationToken = default)
     {
-        var session = await LoadSessionAsync(user.Id, sessionId, tracking: false, cancellationToken);
+        // tracking:true — must persist new/updated CoachingFeedbackJson (AsNoTracking dropped writes).
+        var session = await LoadSessionAsync(user.Id, sessionId, tracking: true, cancellationToken);
         EnsureReviewAllowed(session);
 
         var (candidateTurn, interviewerTurn, attempt) = ResolveCandidateTurnContext(session, candidateTurnId);
@@ -54,7 +55,12 @@ public sealed class InterviewPrepCoachingService(
         var existing = session.AnswerRetries.FirstOrDefault((retry) => retry.CandidateTurnId == candidateTurnId);
         if (existing is not null && !string.IsNullOrWhiteSpace(existing.CoachingFeedbackJson))
         {
-            return MapReview(existing, candidateTurn, interviewerTurn);
+            var cached = DeserializeCoaching(existing.CoachingFeedbackJson);
+            // Legacy / empty Model answer: regenerate once so the section can renew.
+            if (!string.IsNullOrWhiteSpace(cached.ModelAnswer))
+            {
+                return MapReview(existing, candidateTurn, interviewerTurn);
+            }
         }
 
         var coaching = await BuildCoachingFeedbackAsync(session, interviewerTurn, candidateTurn, assessment, cancellationToken);
@@ -180,23 +186,40 @@ public sealed class InterviewPrepCoachingService(
             throw new InterviewPrepValidationException("Session configuration is invalid.");
         }
 
-        var feedbackRequest = new GenerateFeedbackRequest(
-            config,
-            $"Question: {interviewerTurn.Text}\nAnswer: {candidateTurn.Text}",
-            assessment.Strengths,
-            assessment.Gaps);
+        InterviewPrepAiDocumentSnapshot? cv = null;
+        InterviewPrepAiDocumentSnapshot? job = null;
+        if (!string.IsNullOrWhiteSpace(session.CvSnapshotJson))
+        {
+            cv = new InterviewPrepAiDocumentSnapshot(session.JobTitle, session.CvSnapshotJson);
+        }
 
-        var execution = await aiGateway.GenerateFeedbackAsync(feedbackRequest, cancellationToken);
-        var feedback = execution.Value
-            ?? FakeDeterministicInterviewPrepAiProvider.SafeFeedbackFallback(feedbackRequest);
+        if (!string.IsNullOrWhiteSpace(session.JobSnapshotJson))
+        {
+            job = new InterviewPrepAiDocumentSnapshot(session.JobTitle, session.JobSnapshotJson);
+        }
+
+        var reviewRequest = new GenerateAnswerReviewRequest(
+            config,
+            interviewerTurn.Text,
+            candidateTurn.Text,
+            assessment.Strengths,
+            assessment.Gaps,
+            cv,
+            job);
+
+        var execution = await aiGateway.GenerateAnswerReviewAsync(reviewRequest, cancellationToken);
+        // Gateway owns safe fallback; defensive coalesce if Value is still null.
+        var review = execution.Value
+            ?? FakeDeterministicInterviewPrepAiProvider.SafeAnswerReviewFallback(reviewRequest);
 
         return new PersistedCoachingFeedback(
-            feedback.OverallFeedback,
-            feedback.CoachingTips,
-            feedback.PracticeSuggestions,
+            string.Empty,
+            review.CoachingTips,
+            review.PracticeSuggestions,
             assessment.Summary,
             assessment.Strengths,
-            assessment.Gaps);
+            assessment.Gaps,
+            review.ModelAnswer ?? string.Empty);
     }
 
     private async Task<AssessAnswerResponse> AssessRetryAsync(
@@ -411,6 +434,7 @@ public sealed class InterviewPrepCoachingService(
             coaching.Strengths,
             coaching.Gaps,
             coaching.OverallFeedback,
+            coaching.ModelAnswer,
             coaching.CoachingTips,
             coaching.PracticeSuggestions,
             retry.Status,
@@ -440,6 +464,7 @@ public sealed class InterviewPrepCoachingService(
             coaching.Strengths,
             coaching.Gaps,
             coaching.OverallFeedback,
+            coaching.ModelAnswer,
             coaching.CoachingTips,
             coaching.PracticeSuggestions,
             comparison?.ComparisonSummary,
@@ -450,20 +475,29 @@ public sealed class InterviewPrepCoachingService(
             retry.UpdatedAt);
     }
 
+    private static PersistedCoachingFeedback EmptyCoaching() =>
+        new(string.Empty, [], [], string.Empty, [], [], string.Empty);
+
     private static PersistedCoachingFeedback DeserializeCoaching(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new PersistedCoachingFeedback(
-                string.Empty,
-                [],
-                [],
-                string.Empty,
-                [],
-                []);
+            return EmptyCoaching();
         }
 
-        return JsonSerializer.Deserialize<PersistedCoachingFeedback>(json, JsonOptions)
-            ?? new PersistedCoachingFeedback(string.Empty, [], [], string.Empty, [], []);
+        var coaching = JsonSerializer.Deserialize<PersistedCoachingFeedback>(json, JsonOptions)
+            ?? EmptyCoaching();
+
+        // Legacy rows omit modelAnswer; coalesce null/missing → "".
+        return coaching with
+        {
+            OverallFeedback = coaching.OverallFeedback ?? string.Empty,
+            CoachingTips = coaching.CoachingTips ?? [],
+            PracticeSuggestions = coaching.PracticeSuggestions ?? [],
+            AnswerSummary = coaching.AnswerSummary ?? string.Empty,
+            Strengths = coaching.Strengths ?? [],
+            Gaps = coaching.Gaps ?? [],
+            ModelAnswer = coaching.ModelAnswer ?? string.Empty
+        };
     }
 }

@@ -63,6 +63,11 @@ internal static class InterviewPrepAiGatewayDebugTrace
                     $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} gaps={feedback.Gaps.Count}");
                 return;
 
+            case GenerateAnswerReviewRequest answerReview:
+                trace.Log(sessionId,
+                    $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} config={InterviewPrepDebugTraceLabels.SessionConfigLine(answerReview.Config)} qLen={answerReview.QuestionText?.Length ?? 0} aLen={answerReview.AnswerText?.Length ?? 0} strengths={answerReview.Strengths?.Count ?? 0} gaps={answerReview.Gaps?.Count ?? 0} hasCv={answerReview.CvSnapshot is not null} cvLen={answerReview.CvSnapshot?.Text?.Length ?? 0} hasJob={answerReview.JobSnapshot is not null} jobLen={answerReview.JobSnapshot?.Text?.Length ?? 0}");
+                return;
+
             case GenerateInterviewPrepStudyBriefRequest studyBrief:
                 trace.Log(sessionId,
                     $"AI {InterviewPrepDebugTraceLabels.AiOperation(operation)} language={InterviewPrepDebugTraceLabels.Preview(studyBrief.Language, 40)} market={InterviewPrepDebugTraceLabels.Preview(studyBrief.Market, 40)} hasCv={studyBrief.CvSnapshot is not null} cvLen={studyBrief.CvSnapshot?.Text?.Length ?? 0} hasJob={studyBrief.JobSnapshot is not null} jobLen={studyBrief.JobSnapshot?.Text?.Length ?? 0} hasFocusNote={!string.IsNullOrWhiteSpace(studyBrief.FocusNote)}");
@@ -135,6 +140,11 @@ internal static class InterviewPrepAiGatewayDebugTrace
             case GenerateFeedbackResponse feedback:
                 trace.Log(sessionId,
                     $"AI Output {op}{fallbackTag} attempt={attempt} feedbackPreview='{InterviewPrepDebugTraceLabels.Preview(feedback.OverallFeedback, 200)}'");
+                return;
+
+            case GenerateAnswerReviewResponse answerReview:
+                trace.Log(sessionId,
+                    $"AI Output {op}{fallbackTag} attempt={attempt} modelAnswerPreview='{InterviewPrepDebugTraceLabels.Preview(answerReview.ModelAnswer, 220)}' tips={answerReview.CoachingTips?.Count ?? 0} practice={answerReview.PracticeSuggestions?.Count ?? 0}");
                 return;
 
             case GenerateInterviewPrepStudyBriefResponse studyBrief:

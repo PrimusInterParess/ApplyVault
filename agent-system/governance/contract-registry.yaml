@@ -67,11 +67,15 @@ contracts:
       Interview Prep v2 session lifecycle REST under /api/interview-prep/*
       (create, prepare, start, pause, resume, cancel, complete, turns).
       Immutable CV/job snapshots; app-owned state machines; Loop Guard.
-      ADR-0021. M1 fixed-question path landed; AI gateway is later milestones.
+      Answer review (POST .../turns/{turnId}/review|retry) wire includes modelAnswer;
+      coachingFeedback deprecated for UI. Answer-review AI uses GenerateAnswerReview
+      (CV/job grounded); session-report GenerateFeedback remains separate. ADR-0021;
+      ADR-0026.
     owner: backend-engineer
     secondary: ai-llm-engineer
     evidence: >
       docs/adr/0021-interview-prep-v2-bounded-module.md;
+      docs/adr/0026-interview-prep-answer-review-model-answer.md;
       api/ApplyVault.Api/Controllers/InterviewPrepController.cs;
       api/ApplyVault.Api/Services/InterviewPrep/
 

@@ -109,3 +109,19 @@ _Avoid_: Per-stage Q&A close, wrap-up questions (when meaning Close)
 **Close**:
 The terminal interviewer turn that ends the practice interview (or the whole Full loop). The Stage or session completes after the seeker’s reply to Close—not when Close is emitted.
 _Avoid_: Handoff, Candidate questions
+
+**Answer review**:
+The coaching panel for one seeker answer in an Interview Prep session, in this order: question once, Strengths, Gaps, Model answer, Coaching tips, optional retry—no free-text coaching blurb and no restated question.
+_Avoid_: Coach chat, feedback dump, suggested answer panel
+
+**Answer gap**:
+On Answer review, a content or evidence hole in this specific answer (missing outcome, weak structure claim, ignored part of the question)—not a Brief topic gap tag.
+_Avoid_: Brief topic gap (when meaning this), tip, coaching tip
+
+**Model answer**:
+On Answer review, the coach’s full example reply to that question as spoken prose (what the seeker could say out loud)—the primary “what good looks like” artifact, distinct from Gaps and Coaching tips. It uses only Structured CV and optional saved-job facts; it does not invent roles, projects, or metrics. When evidence is thin, it stays short and honest rather than omitting the section.
+_Avoid_: Suggested answer, sample answer (when meaning this), ideal answer, STAR script (when meaning labeled blocks)
+
+**Coaching tip**:
+On Answer review, delivery or technique advice only (structure, STAR, language, length)—not a restatement of content Gaps.
+_Avoid_: Tip (when meaning a Gap), practice recommendation (when meaning this)

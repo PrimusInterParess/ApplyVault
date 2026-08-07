@@ -587,6 +587,9 @@ export class InterviewPrepFacade {
       return;
     }
     this.coachingSubscription?.unsubscribe();
+    // Drop prior review/retry so the panel renews instead of keeping the last Model answer.
+    this.coachingReview.set(null);
+    this.coachingRetry.set(null);
     this.coachingBusy.set(true);
     this.coachingError.set(null);
     this.coachingTurnId.set(candidateTurnId);

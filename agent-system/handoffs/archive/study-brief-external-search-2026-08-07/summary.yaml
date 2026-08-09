@@ -1,0 +1,24 @@
+schema_version: "1.0.0"
+summary:
+  task_id: study-brief-external-search-2026-08-07
+  closed_at: "2026-08-07"
+  integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+  parent_request: >
+    /operate D — implement Interview Prep brief external study search UI
+    per ADR-0027 (follow-up after ADR-only pass).
+  agents:
+    - architecture-engineer
+    - frontend-engineer
+  artifacts:
+    - docs/adr/0027-interview-prep-brief-external-study-search.md
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.html
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.ts
+    - frontend/applyvault-jobs-ui/src/app/features/interview-prep/pages/interview-prep-page/interview-prep-page.component.scss
+  limitations:
+    - No automated tests or builds this pass (user policy / constraints).
+    - Manual UI verify recommended on Study brief topics + Coverage links.
+  residual_risks:
+    - Empty/whitespace topic or coverage text still encode but are unlikely from API.
+  next_actions:
+    - Optional manual spot-check in the SPA
+    - Optional /operate D qa-engineer if FE specs desired later

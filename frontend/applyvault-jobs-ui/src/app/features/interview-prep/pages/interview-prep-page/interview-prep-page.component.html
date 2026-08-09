@@ -538,7 +538,13 @@
                 @for (topic of sortedTopics(brief); track topic.name + topic.priority) {
                   <li class="interview-prep__topic">
                     <div class="interview-prep__topic-row">
-                      <span class="interview-prep__topic-name">{{ topic.name }}</span>
+                      <a
+                        class="interview-prep__topic-name interview-prep__study-search-link"
+                        [href]="googleStudySearchUrl(topic.name)"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        {{ topic.name }}
+                      </a>
                       <span
                         class="interview-prep__gap"
                         [attr.data-gap]="topic.gap">
@@ -554,7 +560,13 @@
                       <ul class="interview-prep__topic-items">
                         @for (item of topic.coverageItems; track item.text) {
                           <li>
-                            <span>{{ item.text }}</span>
+                            <a
+                              class="interview-prep__study-search-link"
+                              [href]="googleStudySearchUrl(topic.name, item.text)"
+                              target="_blank"
+                              rel="noopener noreferrer">
+                              {{ item.text }}
+                            </a>
                             @if (item.note) {
                               <p class="interview-prep__muted">{{ item.note }}</p>
                             }

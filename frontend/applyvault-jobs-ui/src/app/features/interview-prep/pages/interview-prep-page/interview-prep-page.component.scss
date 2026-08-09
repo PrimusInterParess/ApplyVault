@@ -572,6 +572,24 @@
   font-weight: 600;
 }
 
+.interview-prep__study-search-link {
+  color: var(--app-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  text-decoration-color: color-mix(in srgb, var(--app-accent) 45%, transparent);
+}
+
+.interview-prep__study-search-link:hover {
+  color: var(--app-accent-dark, var(--app-accent));
+  text-decoration-color: currentColor;
+}
+
+.interview-prep__study-search-link:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .interview-prep__topic-block {
   margin-top: 0.75rem;
 }

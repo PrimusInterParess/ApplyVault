@@ -208,6 +208,16 @@ export class InterviewPrepPageComponent implements OnInit {
     return [...brief.topics].sort((a, b) => a.priority - b.priority);
   }
 
+  /** ADR-0027: Google study search URL from topic name (and optional coverage text). */
+  protected googleStudySearchUrl(topicName: string, coverageText?: string): string {
+    const parts = [topicName.trim()];
+    if (coverageText?.trim()) {
+      parts.push(coverageText.trim());
+    }
+    parts.push('interview preparation');
+    return `https://www.google.com/search?q=${encodeURIComponent(parts.join(' '))}`;
+  }
+
   protected studyBusyLabel(): string {
     const busy = this.facade.studyBriefBusy();
     if (busy === 'generating') {

@@ -5,7 +5,7 @@ namespace ApplyVault.Api.Services;
 internal static class CvStructuredImportNotices
 {
     public const string EmptyExtraction =
-        "No readable text was found in this PDF. Upload a text-based PDF rather than a scanned image.";
+        "No readable text was found in this PDF. Upload the original resume PDF — not a downloaded empty export — or a file with selectable text.";
 
     public const string IncompleteReview =
         "Import may be incomplete — review sections in the CV builder.";

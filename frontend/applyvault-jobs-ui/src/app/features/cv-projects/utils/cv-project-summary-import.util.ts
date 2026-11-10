@@ -1,3 +1,4 @@
+import { normalizeToFixedSections } from '../models/cv-fixed-sections.model';
 import { CvProjectSummary } from '../models/cv-project.model';
 import { CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
 
@@ -18,7 +19,7 @@ export function collectImportedProjectSummaryIds(
   return ids;
 }
 
-/** Ensure a Projects section exists; mutates `sections` when appending a new one. */
+/** The Projects slot is part of the fixed layout; heal in place if a draft is missing it. */
 export function ensureProjectsSection(sections: CvStructuredSection[]): CvStructuredSection {
   const existing = sections.find((section) => section.sectionType === 'Projects');
 
@@ -26,16 +27,9 @@ export function ensureProjectsSection(sections: CvStructuredSection[]): CvStruct
     return existing;
   }
 
-  const section: CvStructuredSection = {
-    id: crypto.randomUUID(),
-    heading: 'Projects',
-    sectionType: 'Projects',
-    sortOrder: sections.length,
-    entries: []
-  };
-
-  sections.push(section);
-  return section;
+  const normalized = normalizeToFixedSections(sections);
+  sections.splice(0, sections.length, ...normalized);
+  return sections.find((section) => section.sectionType === 'Projects')!;
 }
 
 /** Map a saved project summary onto a Projects section entry (my-cv parity). */
@@ -83,5 +77,7 @@ export function appendProjectSummariesToSections(
     sortOrder: index
   }));
 
-  return projectsSection;
+  const normalized = normalizeToFixedSections(sections);
+  sections.splice(0, sections.length, ...normalized);
+  return sections.find((section) => section.sectionType === 'Projects')!;
 }

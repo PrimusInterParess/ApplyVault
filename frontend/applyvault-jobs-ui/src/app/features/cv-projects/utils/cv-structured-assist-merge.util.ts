@@ -1,3 +1,4 @@
+import { normalizeToFixedSections } from '../models/cv-fixed-sections.model';
 import { CvStructuredDocument, CvStructuredSection } from '../models/cv-structured.model';
 import { cloneSectionForDraft, toSaveRequest } from './cv-structured-draft.util';
 
@@ -10,6 +11,8 @@ import { cloneSectionForDraft, toSaveRequest } from './cv-structured-draft.util'
  *   other local sections (order preserved). Ignore non-focused AI sections.
  * - Without focus: treat AI sections as authoritative by id; preserve any local
  *   sections the payload omitted; append AI-only new sections at the end.
+ * Visibility is copied from the section being replaced before normalize, so an
+ * Assist proposal cannot include an omitted Section by adding Entries.
  */
 export function mergeAssistStructuredUpdate(
   previous: CvStructuredDocument | null,
@@ -17,7 +20,10 @@ export function mergeAssistStructuredUpdate(
   focusSectionIds?: readonly string[]
 ): CvStructuredDocument {
   if (!previous || previous.sections.length === 0) {
-    return aiResult;
+    return {
+      ...aiResult,
+      sections: normalizeToFixedSections(aiResult.sections)
+    };
   }
 
   const aiById = new Map(aiResult.sections.map((section) => [section.id, section]));
@@ -33,13 +39,13 @@ export function mergeAssistStructuredUpdate(
       }
 
       const fromAi = aiById.get(section.id);
-      return fromAi ? cloneSectionForDraft(fromAi) : cloneSectionForDraft(section);
+      return fromAi ? stampIncludedOnTemplate(fromAi, section) : cloneSectionForDraft(section);
     });
   } else {
     const previousIds = new Set(previous.sections.map((section) => section.id));
     mergedSections = previous.sections.map((section) => {
       const fromAi = aiById.get(section.id);
-      return fromAi ? cloneSectionForDraft(fromAi) : cloneSectionForDraft(section);
+      return fromAi ? stampIncludedOnTemplate(fromAi, section) : cloneSectionForDraft(section);
     });
 
     for (const section of aiResult.sections) {
@@ -49,14 +55,21 @@ export function mergeAssistStructuredUpdate(
     }
   }
 
-  mergedSections.forEach((section, index) => {
-    section.sortOrder = index;
-  });
-
   return {
     documentId: aiResult.documentId || previous.documentId,
     structuredImportedAt: aiResult.structuredImportedAt ?? previous.structuredImportedAt,
-    sections: mergedSections
+    sections: normalizeToFixedSections(mergedSections)
+  };
+}
+
+/** Visibility is seeker state. Copy it from the section being replaced. */
+function stampIncludedOnTemplate(
+  fromAi: CvStructuredSection,
+  previous: CvStructuredSection
+): CvStructuredSection {
+  return {
+    ...cloneSectionForDraft(fromAi),
+    includedOnTemplate: previous.includedOnTemplate
   };
 }
 

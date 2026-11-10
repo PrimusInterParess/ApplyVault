@@ -1,4 +1,3 @@
-import { CV_EXPORT_TEMPLATES } from '../models/cv-export-template.model';
 import { CvStructuredSection } from '../models/cv-structured.model';
 import { findContactNameEntry } from './cv-contact-channels.util';
 
@@ -45,20 +44,12 @@ export function resolveCvExportPersonName(
   return name || null;
 }
 
-export function resolveCvExportTemplateLabel(templateId: number): string {
-  return CV_EXPORT_TEMPLATES.find((template) => template.id === templateId)?.label ?? 'Modern';
-}
-
 /**
- * Download name for formatted CV PDF: `{PersonName}-{TemplateLabel}.pdf`.
- * Falls back to `CV-{TemplateLabel}.pdf` when the person name is missing.
+ * Download name for formatted CV PDF: `{PersonName}-CV.pdf` (matches server
+ * Content-Disposition). Falls back to `CV.pdf` when the person name is missing.
  */
-export function buildCvExportDownloadFileName(
-  personName: string | null | undefined,
-  templateLabel: string
-): string {
-  const templateSegment = sanitizeCvExportFileNameSegment(templateLabel) || 'Modern';
+export function buildCvExportDownloadFileName(personName: string | null | undefined): string {
   const personSegment = sanitizeCvExportFileNameSegment(personName);
-  const base = personSegment ? `${personSegment}-${templateSegment}` : `CV-${templateSegment}`;
+  const base = personSegment ? `${personSegment}-CV` : 'CV';
   return `${base}.pdf`;
 }

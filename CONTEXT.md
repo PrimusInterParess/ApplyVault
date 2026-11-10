@@ -9,7 +9,7 @@ The single per-user container for the original PDF (when uploaded), Structured C
 _Avoid_: Resume file (when meaning the whole product record), My CV (as a separate product surface)
 
 **CV builder**:
-The sole product surface for creating, editing, structuring, and exporting a Structured CV—including Template choice, Blank CV, PDF import, AI assist, profile photo, and project-summary import.
+The sole product surface for creating, editing, and exporting a Structured CV—including Blank CV, PDF import, Unplaced content, AI assist (Improve this section, Evaluate CV), profile photo, and project-summary import.
 _Avoid_: My CV, CV editor page (legacy surfaces)
 
 **Structured CV**:
@@ -21,11 +21,11 @@ A Structured CV created without PDF import, from starter Sections the user fills
 _Avoid_: Empty CV, new CV from scratch, template CV (when meaning the structured content, not the export layout)
 
 **Template**:
-The export layout applied when previewing or downloading a Structured CV—not the Structured CV content itself. Choosing a Template with an existing Structured CV keeps that content and only changes presentation.
+The single export layout applied when previewing or downloading a Structured CV—not the Structured CV content itself. One-column: name and contact in a header with the profile photo; Summary and every other Section span the full row below (ADR-0038). One page is the aim and two is the maximum the layout tries to meet; a longer CV still downloads with a warning (ADR-0028). There is no user-facing Template choice.
 _Avoid_: Theme (when meaning layout), resume design (when meaning Structured CV content)
 
 **PDF import**:
-Creating or replacing the Structured CV by uploading a PDF into the user's CV document. A later upload replaces the existing Structured CV after explicit confirmation.
+Creating or replacing the Structured CV by uploading a PDF into the user's CV document. A later upload replaces the existing Structured CV after explicit confirmation. PdfPig text first; if that is empty and Gemini is on, the PDF itself is sent to the model (ADR-0032). Failed import shows an error instead of an empty canvas.
 _Avoid_: Parse CV, OCR CV (when meaning the product action)
 
 **Starter Entry**:
@@ -33,8 +33,28 @@ An Entry shaped for filling (including labeled Contact field slots with empty va
 _Avoid_: Placeholder entry, demo entry, sample entry
 
 **Section**:
-A titled block in a structured CV (for example Experience or Education), kept in display order.
-_Avoid_: Block, chunk
+One of the seven fixed, ordered blocks of a Structured CV: Contact, Summary, Skills, Experience, Projects, Education, Certifications & Languages (ADR-0029). Headings and order are fixed; users edit Entries and set Section visibility, not the Section list.
+_Avoid_: Block, chunk, custom section (when meaning a user-added block)
+
+**Section visibility**:
+Whether a Section appears on the Template, as a content choice separate from Section placement (ADR-0033). An omitted Section leaves the edit canvas and the Template, and still feeds Evaluate CV and Interview Prep; a visibility change alone does not mark an Interview Prep brief outdated. It returns to the canvas and the Template only when included from the section list — adding Entries does not include it. Any Section except Contact may be omitted; Contact is always included when it has content, a Section with no Entry content is already omitted, and a new Structured CV starts with every Section included.
+_Avoid_: Remove section, delete section, disable section (when meaning the Entries are gone)
+
+**Section placement**:
+How a Section occupies the pages of the CV builder and the Template (ADR-0034, ADR-0037). A Section continues onto the next page between Entries, and an Entry stays whole. The space between content stays even, with the same inset on both sides. A taller Entry continues between bullets, with each bullet kept whole.
+_Avoid_: Page break, compact level
+
+**Fixed section layout**:
+The catalog-declared list of the seven Sections and their headings that every Structured CV is normalized to on save, read, Blank CV and import.
+_Avoid_: Section template, structure (when meaning the Section list)
+
+**Unplaced content**:
+Imported text the parser could not place into a Section, kept on the CV document and shown in a side drawer for copy/paste or dismissal. Never exported.
+_Avoid_: Additional information (legacy catch-all Section), residual, leftovers (in UI copy)
+
+**Improve this section**:
+The single AI assist action that proposes a rewritten Section (optionally guided by instructions) for review and approval. The Summary uses the same action.
+_Avoid_: Update with AI, Regenerate summary, suggestions (when meaning this action)
 
 **Entry**:
 One logical item inside a section (one role, one degree, one skill group).
@@ -59,7 +79,7 @@ _Avoid_: Merge projects, paste README (when meaning this product action)
 ## Interview Preparation
 
 **Interview Prep brief**:
-A durable, profession-agnostic study artifact for a seeker, generated from their Structured CV and optional saved job. Its body is structured parts—not a single prose blob: prioritized topics (skills, tools, domains, methods—not software-only “technologies”) each with a Brief topic gap, at least one nested Coverage item, and optional sample questions and CV talking points under that topic—each of those children may carry a short note. It is not a practice Interview Prep session and not an input to one. At most one brief per saved-job binding (and at most one CV-only brief); regenerating replaces that brief—no version history. The brief body is read-only (view/copy/regenerate only). First generate and regenerate may each take an optional free-text seeker focus note (what to emphasize or what a prior brief missed); the note steers generation and is not editable brief content. Generate uses the same language-mix and optional hiring-market choices as practice Interview Prep sessions. The brief is a snapshot at generate time; it is labeled outdated if the Structured CV has changed since then, or if its bound saved job is missing/deleted—never auto-regenerated.
+A durable, profession-agnostic study artifact for a seeker, generated from their Structured CV and optional saved job. Its body is structured parts—not a single prose blob: prioritized topics (skills, tools, domains, methods—not software-only “technologies”) each with a Brief topic gap, at least one nested Coverage item, and optional sample questions and CV talking points under that topic—each of those children may carry a short note. It is not a practice Interview Prep session and not an input to one. At most one brief per saved-job binding (and at most one CV-only brief); regenerating replaces that brief—no version history. The brief body is read-only (view/copy/regenerate only). First generate and regenerate may each take an optional free-text seeker focus note (what to emphasize or what a prior brief missed); the note steers generation and is not editable brief content. Generate uses the same language-mix and optional hiring-market choices as practice Interview Prep sessions. The brief is a snapshot at generate time; it is labeled outdated if the Structured CV's Entries have changed since then, or if its bound saved job is missing/deleted—never auto-regenerated. A Section visibility change alone does not mark it outdated.
 _Avoid_: Conspect, prep section, study notes (when meaning this product record), coach chat, brief history, session seed, technologies (when meaning the topic list as a whole), auto-refresh brief, editable brief, markdown-only brief, brief-level question list (when meaning sample questions or talking points outside a topic)
 
 **Coverage item**:

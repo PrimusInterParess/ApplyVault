@@ -27,16 +27,16 @@ public sealed record CvExportRenderRequest(
     byte[]? ProfilePhotoBytes,
     string? ProfilePhotoContentType);
 
-public sealed record CvExportPolishEntryInput(
-    string Title,
-    string? Subtitle,
-    string? DateRange,
-    string Summary,
-    IReadOnlyList<string> Bullets,
-    string TechStack);
-
-public sealed record CvExportSectionInput(
-    string Heading,
-    string SectionType,
-    int SortOrder,
-    IReadOnlyList<CvExportPolishEntryInput> Entries);
+internal static class CvExportLayoutDefaults
+{
+    public static CvExportDocumentLayout Document(bool hasProfilePhoto = false)
+    {
+        _ = hasProfilePhoto;
+        return new(
+            MarginPoints: 44,
+            PhotoPlacement: "topRight",
+            PhotoSizePoints: 92,
+            PhotoTopPoints: 40,
+            LineSpacingPoints: 5);
+    }
+}

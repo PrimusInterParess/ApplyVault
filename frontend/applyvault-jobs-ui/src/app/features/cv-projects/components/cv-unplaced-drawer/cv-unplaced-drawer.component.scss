@@ -1,0 +1,232 @@
+@use 'app-breakpoints' as *;
+
+:host {
+  display: contents;
+  --cv-ink: #1c2330;
+  --cv-muted: #5b6575;
+  --cv-line: rgb(28 35 48 / 10%);
+  --cv-cta: #1f6f5b;
+  --cv-cta-hover: #185a4a;
+}
+
+.cv-builder__drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(28 35 48 / 35%);
+}
+
+.cv-builder__drawer {
+  position: fixed;
+  top: var(--app-header-offset, var(--app-header-height, 4.25rem));
+  right: 0;
+  bottom: 0;
+  z-index: 105;
+  display: flex;
+  flex-direction: column;
+  max-width: 100vw;
+  background: #fff;
+  border-left: 1px solid rgb(28 35 48 / 10%);
+  box-shadow: -18px 0 50px rgb(15 23 42 / 18%);
+  animation: cv-builder-drawer-in 0.2s ease;
+}
+
+.cv-builder__drawer--unplaced {
+  width: min(26rem, 100vw);
+}
+
+.cv-builder__drawer--docked {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  box-shadow: none;
+  border-left: 0;
+  animation: none;
+}
+
+@keyframes cv-builder-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.cv-builder__drawer-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.9rem 1.15rem;
+  border-bottom: 1px solid rgb(28 35 48 / 8%);
+  background: #fff;
+}
+
+.cv-builder__drawer-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cv-builder__drawer-eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cv-muted);
+  font-weight: 700;
+}
+
+.cv-builder__drawer-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: var(--cv-ink);
+  line-height: 1.25;
+}
+
+.cv-builder__drawer-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -0.2rem -0.15rem 0 0;
+  border: 1px solid rgb(28 35 48 / 14%);
+  background: #f4f6f8;
+  color: var(--cv-ink);
+  cursor: pointer;
+  border-radius: 999px;
+  font-size: 1.65rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.cv-builder__drawer-close:hover {
+  background: #e8ebf0;
+}
+
+.cv-builder__drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.15rem 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.cv-builder__unplaced-hint,
+.cv-builder__unplaced-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cv-muted);
+  line-height: 1.45;
+}
+
+.cv-builder__error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.cv-builder__unplaced-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cv-builder__unplaced-item {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.65rem;
+  background: rgb(28 35 48 / 4%);
+}
+
+.cv-builder__unplaced-text {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--cv-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cv-builder__unplaced-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.cv-builder__unplaced-copy,
+.cv-builder__unplaced-dismiss,
+.cv-builder__unplaced-dismiss-all {
+  border: none;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+}
+
+.cv-builder__unplaced-copy {
+  background: rgb(31 111 91 / 12%);
+  color: var(--cv-cta);
+}
+
+.cv-builder__unplaced-copy:hover:not(:disabled) {
+  background: rgb(31 111 91 / 18%);
+}
+
+.cv-builder__unplaced-dismiss {
+  background: transparent;
+  color: #b42318;
+}
+
+.cv-builder__unplaced-dismiss:hover:not(:disabled) {
+  background: rgb(180 35 24 / 8%);
+}
+
+.cv-builder__unplaced-dismiss-all {
+  justify-self: start;
+  background: var(--cv-cta);
+  color: #fff;
+}
+
+.cv-builder__unplaced-dismiss-all:hover:not(:disabled) {
+  background: var(--cv-cta-hover);
+}
+
+.cv-builder__unplaced-copy:disabled,
+.cv-builder__unplaced-dismiss:disabled,
+.cv-builder__unplaced-dismiss-all:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: $app-bp-phone) {
+  .cv-builder__drawer--unplaced {
+    width: 100vw;
+  }
+
+  .cv-builder__drawer-close {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .cv-builder__unplaced-copy,
+  .cv-builder__unplaced-dismiss,
+  .cv-builder__unplaced-dismiss-all {
+    min-height: 2.75rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+  }
+}

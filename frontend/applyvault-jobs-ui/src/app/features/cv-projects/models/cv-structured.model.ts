@@ -47,6 +47,11 @@ export interface CvStructuredSection {
   heading: string;
   sectionType: CvSectionType;
   sortOrder: number;
+  /**
+   * False omits this Section from the Template. Omitted or true means included.
+   * Contact is always included. GET always sends a boolean once the column exists.
+   */
+  includedOnTemplate?: boolean;
   entries: CvStructuredEntry[];
 }
 
@@ -74,6 +79,8 @@ export interface CvStructuredSectionWrite {
   heading: string;
   sectionType: CvSectionType;
   sortOrder: number;
+  /** False omits the Section. True means included. Contact is always true. */
+  includedOnTemplate: boolean;
   entries: CvStructuredEntryWrite[];
 }
 

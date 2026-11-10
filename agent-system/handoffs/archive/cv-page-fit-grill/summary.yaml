@@ -1,0 +1,31 @@
+task_id: cv-page-fit-grill
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-10-19T19:10:00Z"
+summary: >
+  The CV builder keeps a fitting Section or Entry whole and moves it to the
+  next sheet when it does not fit in the room left, including a large empty
+  tail. A taller Section continues between Entries and keeps its heading with
+  the next Entry. A taller Entry continues between bullets. The Template
+  spacing search and the short first page of the PDF are unchanged.
+pr_links: []
+issue_links: []
+adrs:
+  - docs/adr/0036-cv-builder-canvas-section-placement.md
+agents:
+  - product-manager: READY
+  - architecture-engineer: READY
+  - ui-ux-designer: READY
+  - backend-engineer: READY
+  - frontend-engineer: READY
+limitations:
+  - The signed-in canvas was not edited in the browser. http://127.0.0.1:4201/cv-builder redirected to login. localhost:4200 is the previous Docker UI image and does not include this canvas change until the UI image is rebuilt.
+  - Canvas placement specs passed 25 of 25 under Chrome Headless after temporarily limiting tsconfig.spec.json. The full spec project still fails to compile on pre-existing interview-prep and job-search errors. tsconfig.spec.json was restored to include src/**/*.spec.ts.
+  - The empty tail on page 1 of the downloaded PDF stays. That is accepted Section placement, not a defect fixed in this run.
+residual_risks:
+  - A bullet taller than one page can still split.
+  - The CV builder keeps its editing size, so its sheet count can differ from the downloaded Template. Check export remains the fidelity view.
+next_action: >
+  Rebuild or serve the UI while signed in, edit a CV that runs past one page,
+  and confirm a fitting Section moves whole instead of painting across the
+  sheet edge. Confirm the PDF still ends page 1 short when the next Section
+  does not fit.

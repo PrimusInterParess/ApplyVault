@@ -4,6 +4,8 @@
 
 Accepted (2026-08-01 — operate `cv-summary-regenerate-approve-2026-08-01`)
 
+Superseded by [ADR-0031](0031-cv-ai-assist-improve-and-evaluate.md): the dedicated Regenerate Summary flow is replaced by Improve this section on the Summary slot. The propose-then-approve principle survives there.
+
 ## Context
 
 Assist **Update with instructions** routes through `POST .../structured/ai-update`, which runs Gemini and **persists immediately**. That path cannot support a review/discard gate for rewriting the Structured CV **Summary** section: by the time the UI shows new prose, the server (and often local merge) already applied changes.

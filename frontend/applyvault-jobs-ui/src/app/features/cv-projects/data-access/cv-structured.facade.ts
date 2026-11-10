@@ -12,6 +12,7 @@ import {
   CvSummaryProposal,
   CvUpdateProposal
 } from '../models/cv-structured.model';
+import { normalizeToFixedSections } from '../models/cv-fixed-sections.model';
 import { mergeAssistStructuredUpdate } from '../utils/cv-structured-assist-merge.util';
 import {
   cloneSectionsForDraft,
@@ -20,7 +21,6 @@ import {
   toSaveRequest
 } from '../utils/cv-structured-draft.util';
 import { normalizeSectionsForEditing } from '../utils/cv-structured-edit-normalizer.util';
-import { createSectionOfType } from '../utils/cv-starter-entry.util';
 import { resolveUpdateProposalCompareSectionIds } from '../utils/cv-update-proposal-compare.util';
 import { CvDocumentApiService } from './cv-document-api.service';
 
@@ -392,6 +392,16 @@ export class CvStructuredFacade {
     this.structured.set(this.hydrateForContentEditing(document));
   }
 
+  clearStructured(): void {
+    this.structured.set(null);
+    this.discardUpdateProposal();
+    this.discardSummaryProposal();
+    this.clearSuggestions();
+    this.clearEvaluation();
+    this.clearSaveError();
+    this.clearAiUpdateError();
+  }
+
   /**
    * Hydrate API payload and normalize edit slots (Summary/Skills/Contact),
    * including Contact modern expand + absorb/dedupe so Minimal/Modern canvases
@@ -404,7 +414,7 @@ export class CvStructuredFacade {
     return {
       ...hydrated,
       // Full Contact modernize + absorb/dedupe (not only per-entry summary→bullets).
-      sections: normalizeSectionsForEditing(hydrated.sections)
+      sections: normalizeSectionsForEditing(normalizeToFixedSections(hydrated.sections))
     };
   }
 
@@ -512,29 +522,20 @@ export class CvStructuredFacade {
   }
 
   /**
-   * Patch first Summary section (by sortOrder) entry `summary` field, or append a starter
-   * Summary section when absent. Other sections unchanged.
+   * Patch the Summary slot's first entry. Fixed layout already has the slot;
+   * missing entries get a starter. Then re-normalize as a safety net.
    */
   private patchSummaryOnly(
     sections: readonly CvStructuredSection[],
     proposedSummaryText: string
   ): { sections: CvStructuredSection[]; summarySectionId: string } {
-    const next = cloneSectionsForDraft(sections);
-    const summarySections = next
-      .filter((section) => section.sectionType === 'Summary')
-      .sort((left, right) => left.sortOrder - right.sortOrder);
-    const existing = summarySections[0];
+    const next = normalizeToFixedSections(cloneSectionsForDraft(sections));
+    const section = next.find((item) => item.sectionType === 'Summary');
 
-    if (!existing) {
-      const created = createSectionOfType('Summary', next.length);
-      const entry = created.entries[0] ?? createEmptyEntry(0);
-      created.entries = [{ ...entry, summary: proposedSummaryText }];
-      next.push(created);
-      return { sections: next, summarySectionId: created.id };
+    if (!section) {
+      return { sections: next, summarySectionId: next[0]?.id ?? 'summary' };
     }
 
-    const index = next.findIndex((section) => section.id === existing.id);
-    const section = next[index];
     const entriesByOrder = [...section.entries].sort((left, right) => left.sortOrder - right.sortOrder);
     const firstEntry = entriesByOrder[0];
 
@@ -546,7 +547,10 @@ export class CvStructuredFacade {
       );
     }
 
-    return { sections: next, summarySectionId: section.id };
+    return {
+      sections: normalizeToFixedSections(next),
+      summarySectionId: section.id
+    };
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {

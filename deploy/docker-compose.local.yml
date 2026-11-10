@@ -1,0 +1,90 @@
+# Local Docker stack: SQL Server, API, and Angular UI.
+# Does not replace deploy/docker-compose.yml (production API + Caddy).
+#
+# From the repo root:
+#   docker compose -f deploy/docker-compose.local.yml up --build
+#
+# UI:  http://localhost:4200
+# API: http://localhost:5173/health
+# SQL: localhost:1434 (sa / MSSQL_SA_PASSWORD). Host port 1434 avoids a local SQL Server already on 1433.
+#
+# Optional overrides (copy first; do not commit the copy):
+#   cp deploy/.env.local.example deploy/.env.local
+#   docker compose --env-file deploy/.env.local -f deploy/docker-compose.local.yml up --build
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-ApplyVault_local_1}
+    ports:
+      - "127.0.0.1:1434:1433"
+    volumes:
+      - applyvault_sql:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" -b || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: api/ApplyVault.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      JobnetIntegration__BaseUrl: https://workindenmark.jobnet.dk/bff
+      ConnectionStrings__ApplyVault: Server=db,1433;Database=ApplyVault;User Id=sa;Password=${MSSQL_SA_PASSWORD:-ApplyVault_local_1};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True
+      Database__MigrateAtStartup: "true"
+      Supabase__Url: ${SUPABASE_URL:-https://riglrazbjbucpyhaofvb.supabase.co}
+      InterviewPrep__Ai__UseFakeProvider: "false"
+      GoogleAi__Enabled: ${GOOGLE_AI_ENABLED:-false}
+      GoogleAi__ApiKey: ${GOOGLE_AI_API_KEY:-}
+      GoogleAi__Model: ${GOOGLE_AI_MODEL:-gemini-2.5-flash}
+      CalendarIntegration__Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      CalendarIntegration__Google__ClientSecret: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      MailIntegration__Enabled: ${GMAIL_ENABLED:-false}
+      MailIntegration__Gmail__ClientId: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      MailIntegration__Gmail__ClientSecret: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      GitHubIntegration__Enabled: ${GITHUB_ENABLED:-false}
+      GitHubIntegration__ClientId: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GitHubIntegration__ClientSecret: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+    ports:
+      - "5173:8080"
+    volumes:
+      - applyvault_cv:/app/App_Data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ../frontend/applyvault-jobs-ui
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  applyvault_sql:
+  applyvault_cv:

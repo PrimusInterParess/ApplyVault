@@ -10,6 +10,9 @@ public interface ICvSectionCatalog
 
     IReadOnlyList<CvSectionTypeDefinition> SectionTypes { get; }
 
+    /// <summary>Ordered fixed section slots of the Structured CV (see catalog <c>fixedLayout</c>).</summary>
+    IReadOnlyList<CvFixedSectionSlot> FixedLayout { get; }
+
     CvSectionTypeDefinition GetRequired(string sectionTypeId);
 
     bool IsKnown(string? sectionTypeId);
@@ -36,11 +39,13 @@ public sealed class CvSectionCatalogProvider : ICvSectionCatalog
     private readonly IReadOnlyDictionary<string, CvSectionTypeDefinition> _byId;
     private readonly IReadOnlyDictionary<string, string> _aliasToSectionType;
     private readonly IReadOnlyList<string> _headingPatternsLongestFirst;
+    private readonly IReadOnlyList<CvFixedSectionSlot> _fixedLayout;
 
     public CvSectionCatalogProvider(CvSectionCatalogDocument document)
     {
         _document = document;
         _byId = document.SectionTypes.ToDictionary((type) => type.Id, StringComparer.OrdinalIgnoreCase);
+        _fixedLayout = ValidateFixedLayout(document, _byId);
 
         var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var patterns = new List<string>();
@@ -87,6 +92,46 @@ public sealed class CvSectionCatalogProvider : ICvSectionCatalog
     public int Version => _document.Version;
 
     public IReadOnlyList<CvSectionTypeDefinition> SectionTypes => _document.SectionTypes;
+
+    public IReadOnlyList<CvFixedSectionSlot> FixedLayout => _fixedLayout;
+
+    private static IReadOnlyList<CvFixedSectionSlot> ValidateFixedLayout(
+        CvSectionCatalogDocument document,
+        IReadOnlyDictionary<string, CvSectionTypeDefinition> byId)
+    {
+        if (document.FixedLayout is not { Count: > 0 })
+        {
+            throw new InvalidOperationException("CV section catalog must define a non-empty 'fixedLayout'.");
+        }
+
+        var slots = new List<CvFixedSectionSlot>(document.FixedLayout.Count);
+        var seenTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var slot in document.FixedLayout)
+        {
+            if (string.IsNullOrWhiteSpace(slot.SectionType) || !byId.TryGetValue(slot.SectionType, out var definition))
+            {
+                throw new InvalidOperationException(
+                    $"CV section catalog 'fixedLayout' references unknown section type '{slot.SectionType}'.");
+            }
+
+            if (!seenTypes.Add(definition.Id))
+            {
+                throw new InvalidOperationException(
+                    $"CV section catalog 'fixedLayout' lists section type '{definition.Id}' more than once.");
+            }
+
+            if (string.IsNullOrWhiteSpace(slot.Heading))
+            {
+                throw new InvalidOperationException(
+                    $"CV section catalog 'fixedLayout' slot '{definition.Id}' must define a heading.");
+            }
+
+            slots.Add(new CvFixedSectionSlot(definition.Id, slot.Heading.Trim()));
+        }
+
+        return slots;
+    }
 
     public CvSectionTypeDefinition GetRequired(string sectionTypeId) =>
         _byId.TryGetValue(sectionTypeId, out var definition)
@@ -204,7 +249,8 @@ public sealed class CvSectionCatalogProvider : ICvSectionCatalog
                         .Select((field) => new CvSectionFieldCatalogDto(field.Id, field.Label, field.Kind))
                         .ToArray(),
                     type.ImportHints))
-                .ToArray());
+                .ToArray(),
+            FixedLayout);
 }
 
 public static class CvSectionHeadingNormalizer

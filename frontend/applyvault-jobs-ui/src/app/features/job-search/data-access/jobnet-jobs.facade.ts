@@ -171,6 +171,9 @@ export class JobnetJobsFacade {
 
         if (result.kind === 'error') {
           const message = this.resolveSearchError(result.error);
+          // #region agent log
+          fetch('http://127.0.0.1:7523/ingest/6e03b2ba-ae33-40d4-bdb6-c9ee52dd1f91',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'418485'},body:JSON.stringify({sessionId:'418485',hypothesisId:'E',location:'jobnet-jobs.facade.ts:search-error',message:'search failed',data:{message},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
 
           if (result.options.append) {
             this.loadMoreError.set(message);
@@ -187,6 +190,9 @@ export class JobnetJobsFacade {
         }
 
         const { response, options } = result;
+        // #region agent log
+        fetch('http://127.0.0.1:7523/ingest/6e03b2ba-ae33-40d4-bdb6-c9ee52dd1f91',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'418485'},body:JSON.stringify({sessionId:'418485',hypothesisId:'E',location:'jobnet-jobs.facade.ts:search',message:'search response',data:{jobCount:response.jobs?.length??0,totalResults:response.totalResults,upstreamTotal:response.upstreamTotalResults,page:response.page,truncated:response.resultsTruncated,append:options.append},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const mergedResults = this.mergeResults(this.results(), response.jobs, options.append);
 
         if (options.append && mergedResults.length === this.results().length) {

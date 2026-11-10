@@ -5,53 +5,75 @@ namespace ApplyVault.Api.Tests;
 
 public sealed class CvExportHtmlMapperLayoutTests
 {
-    private const string Template = "{{ProfilePhotoHtml}}|H:{{HeaderHtml}}|S:{{SidebarHtml}}|M:{{MainHtml}}";
+    private const string Template = "{{ProfilePhotoHtml}}|H:{{HeaderHtml}}|M:{{MainHtml}}";
 
     [Fact]
-    public void ApplyTemplate_Modern_puts_Skills_Summary_Contact_in_Sidebar()
+    public void ApplyTemplate_puts_Contact_in_Header_and_Summary_with_the_rest_in_Main()
     {
-        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest(), templateId: 2);
+        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest());
 
-        var header = Slice(html, "|H:", "|S:");
-        var sidebar = Slice(html, "|S:", "|M:");
-        var main = Slice(html, "|M:", null);
-
-        Assert.True(string.IsNullOrWhiteSpace(header));
-        Assert.Contains("Jane Doe", sidebar, StringComparison.Ordinal);
-        Assert.Contains("Experienced engineer.", sidebar, StringComparison.Ordinal);
-        Assert.Contains("C#", sidebar, StringComparison.Ordinal);
-        Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("Acme Corp", sidebar, StringComparison.Ordinal);
-        // Contact uses value lines (not Email/Phone entry titles), matching Minimal.
-        Assert.Contains("""class="cv-contact-line">""", sidebar, StringComparison.Ordinal);
-        Assert.Contains("jane@example.com", sidebar, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("""class="section-title">Contact</h2>""", sidebar, StringComparison.Ordinal);
-        Assert.DoesNotContain("""class="entry-title">Email</div>""", sidebar, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ApplyTemplate_Minimal_puts_Contact_and_Summary_in_Header()
-    {
-        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest(), templateId: 3);
-
-        var header = Slice(html, "|H:", "|S:");
-        var sidebar = Slice(html, "|S:", "|M:");
+        var header = Slice(html, "|H:", "|M:");
         var main = Slice(html, "|M:", null);
 
         Assert.Contains("Jane Doe", header, StringComparison.Ordinal);
         Assert.Contains("jane@example.com", header, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Experienced engineer.", header, StringComparison.Ordinal);
+        Assert.DoesNotContain("Experienced engineer.", header, StringComparison.Ordinal);
         Assert.DoesNotContain("Acme Corp", header, StringComparison.Ordinal);
 
-        Assert.True(string.IsNullOrWhiteSpace(sidebar));
+        Assert.Contains("Experienced engineer.", main, StringComparison.Ordinal);
+        Assert.Contains("""class="section-title">Summary</h2>""", main, StringComparison.Ordinal);
         Assert.Contains("Acme Corp", main, StringComparison.Ordinal);
         Assert.Contains("C#", main, StringComparison.Ordinal);
+        Assert.True(
+            main.IndexOf("Experienced engineer.", StringComparison.Ordinal)
+            < main.IndexOf("Acme Corp", StringComparison.Ordinal));
         Assert.DoesNotContain("Jane Doe", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("Experienced engineer.", main, StringComparison.Ordinal);
         Assert.DoesNotContain("jane@example.com", main, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("""class="section-title">Contact</h2>""", header, StringComparison.Ordinal);
         Assert.DoesNotContain("""class="section-title">Contact</h2>""", main, StringComparison.Ordinal);
-        Assert.DoesNotContain("""class="section-title">Summary</h2>""", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="section-title">Summary</h2>""", header, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplyTemplate_emits_contact_value_lines_without_channel_labels()
+    {
+        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest());
+
+        var header = Slice(html, "|H:", "|M:");
+
+        Assert.Contains("""class="cv-contact-line">""", header, StringComparison.Ordinal);
+        Assert.DoesNotContain("""class="entry-title">Email</div>""", header, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplyTemplate_leaves_no_unresolved_placeholders()
+    {
+        var html = CvExportHtmlMapper.ApplyTemplate(Template, BuildFixtureRequest());
+
+        Assert.DoesNotContain("{{", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplyTemplate_omits_non_contact_sections_that_only_have_a_heading()
+    {
+        var fixture = BuildFixtureRequest();
+        var request = fixture with
+        {
+            Sections =
+            [
+                ..fixture.Sections,
+                new CvExportSection(
+                    "Certifications & Languages",
+                    CvSectionTypes.Custom,
+                    6,
+                    [])
+            ]
+        };
+
+        var html = CvExportHtmlMapper.ApplyTemplate(Template, request);
+
+        Assert.DoesNotContain("Certifications", html, StringComparison.Ordinal);
+        Assert.Contains("Acme Corp", html, StringComparison.Ordinal);
     }
 
     private static CvExportRenderRequest BuildFixtureRequest() =>

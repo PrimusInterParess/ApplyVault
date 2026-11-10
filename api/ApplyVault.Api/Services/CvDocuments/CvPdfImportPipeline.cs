@@ -1,94 +1,61 @@
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Services;
 
 /// <summary>
-/// Internal PDF import orchestration (AI-first):
-/// Extract lines → AI fill (when enabled) → Normalize (+ Contact reshape) → Ground Contact to source → Residual → Notice.
-/// Heuristic runs only when AI is disabled or AI fails/returns empty.
+/// Extract → AI parser (strict slots) or contact-only fallback → FixedSectionLayout + Unplaced.
+/// When PdfPig finds no text and Gemini is on, the original PDF is sent to the model (ADR-0032).
 /// </summary>
 internal static class CvPdfImportPipeline
 {
+    public const string ImportedWithAiNotice = "Imported with AI.";
+    public const string ContactOnlyNotice =
+        "AI unavailable — contact placed, the rest is in Unplaced.";
+
     public static async Task<CvStructuredImportPreviewDto> BuildPreviewAsync(
         byte[] pdfBytes,
         ICvPdfFullTextExtractor fullTextExtractor,
         ICvStructuredImportAiClient importAiClient,
+        ICvSectionCatalog catalog,
         bool googleAiEnabled,
         CancellationToken cancellationToken = default)
     {
         using var pdfStream = new MemoryStream(pdfBytes);
         var extraction = fullTextExtractor.Extract(pdfStream);
 
-        // AI-first: ordered lines are enough. Sectionize is only for residual / heuristic fallback.
         if (extraction.Quality == CvPdfExtractionQuality.Empty || extraction.Lines.Count == 0)
         {
+            if (googleAiEnabled)
+            {
+                var pdfPreview = await TryParseAttachedPdfAsync(
+                    pdfBytes,
+                    importAiClient,
+                    catalog,
+                    cancellationToken);
+
+                if (pdfPreview is not null)
+                {
+                    return pdfPreview;
+                }
+            }
+
             throw new InvalidOperationException(CvStructuredImportNotices.EmptyExtraction);
         }
 
-        var extractedFullText = string.Join("\n", extraction.Lines.Select(static (line) => line.Text));
-        // Defer catalog Sectionize until residual / heuristic need it (AI fills from full text).
-        var rawSections = fullTextExtractor is CvPdfFullTextExtractor concreteExtractor
-            ? concreteExtractor.SectionizeForFallback(extraction.Lines)
-            : extraction.Sections.Count > 0
-                ? extraction.Sections
-                : [new CvPdfRawSection("Profile", "summary", 0, extractedFullText)];
-
-        IReadOnlyList<CvStructuredSectionWriteDto> sections;
-        IReadOnlyList<CvStructuredSectionWriteDto> baselineForNotices;
-        var usedCatchAll = false;
-        var usedAi = false;
-        var aiAttempted = false;
-        var aiFailed = false;
+        var lines = extraction.Lines.Select(static (line) => line.Text).ToArray();
+        var extractedFullText = string.Join("\n", lines);
 
         if (CvStructuredImportAiGate.ShouldCallAi(googleAiEnabled, extraction.Quality))
         {
-            aiAttempted = true;
-            CvStructuredImportResidualPlacement.Result? aiPlacement = null;
-
             try
             {
                 var aiResult = await importAiClient.ParseAsync(extractedFullText, cancellationToken);
+                var preview = TryMapAiResult(aiResult, catalog, extractedFullText, lines);
 
-                if (aiResult.Sections is null || aiResult.Sections.Count == 0)
+                if (preview is not null)
                 {
-                    aiFailed = true;
-                }
-                else
-                {
-                    var aiSections = CvStructuredImportNormalizer.Normalize(
-                        aiResult.Sections
-                            .Select((section, index) => new CvStructuredSectionWriteDto(
-                                null,
-                                section.Heading,
-                                CvSectionTypes.Normalize(section.SectionType),
-                                index,
-                                section.Entries
-                                    .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
-                                        null,
-                                        entry.Title,
-                                        entry.Subtitle,
-                                        entry.DateRange,
-                                        entry.Summary,
-                                        entry.Bullets,
-                                        entry.TechStack,
-                                        CvEntrySources.Import,
-                                        null,
-                                        entryIndex))
-                                    .ToArray()))
-                            .ToArray(),
-                        rawSections);
-
-                    aiSections = CvStructuredImportContactGrounding.FilterToSource(aiSections, extractedFullText);
-
-                    if (aiSections.Count > 0)
-                    {
-                        aiPlacement = CvStructuredImportResidualPlacement.Apply(aiSections, rawSections);
-                        usedAi = true;
-                    }
-                    else
-                    {
-                        aiFailed = true;
-                    }
+                    return preview;
                 }
             }
             catch (InvalidOperationException)
@@ -97,55 +64,85 @@ internal static class CvPdfImportPipeline
             }
             catch
             {
-                aiFailed = true;
-            }
-
-            if (aiPlacement is not null)
-            {
-                sections = aiPlacement.Sections;
-                usedCatchAll = aiPlacement.UsedCatchAll;
-                baselineForNotices = sections;
-            }
-            else
-            {
-                var fallback = RunHeuristicFallback(rawSections, extractedFullText);
-                sections = fallback.Sections;
-                usedCatchAll = fallback.UsedCatchAll;
-                baselineForNotices = sections;
+                // Contact-only fallback below.
             }
         }
-        else
-        {
-            var fallback = RunHeuristicFallback(rawSections, extractedFullText);
-            sections = fallback.Sections;
-            usedCatchAll = fallback.UsedCatchAll;
-            baselineForNotices = sections;
-        }
 
-        var notice = CvStructuredImportNotices.Build(
-            extraction.Quality,
-            baselineForNotices,
-            sections,
-            usedAi,
-            aiAttempted,
-            aiFailed,
-            usedCatchAll);
-
-        return new CvStructuredImportPreviewDto(sections, usedAi, notice);
+        var fallback = ContactOnlyCvParser.Parse(lines, catalog);
+        return new CvStructuredImportPreviewDto(
+            fallback.Sections,
+            false,
+            ContactOnlyNotice,
+            fallback.Unplaced);
     }
 
-    private static CvStructuredImportResidualPlacement.Result RunHeuristicFallback(
-        IReadOnlyList<CvPdfRawSection> rawSections,
-        string extractedFullText)
+    private static async Task<CvStructuredImportPreviewDto?> TryParseAttachedPdfAsync(
+        byte[] pdfBytes,
+        ICvStructuredImportAiClient importAiClient,
+        ICvSectionCatalog catalog,
+        CancellationToken cancellationToken)
     {
-        var heuristicSections = CvStructuredImportNormalizer.Normalize(
-            CvStructuredImportHeuristic.Parse(rawSections),
-            rawSections);
+        try
+        {
+            var aiResult = await importAiClient.ParsePdfAsync(pdfBytes, cancellationToken);
+            return TryMapAiResult(aiResult, catalog, extractedFullText: null, lines: []);
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
-        heuristicSections = CvStructuredImportContactGrounding.FilterToSource(
-            heuristicSections,
-            extractedFullText);
+    private static CvStructuredImportPreviewDto? TryMapAiResult(
+        CvStructuredImportResult aiResult,
+        ICvSectionCatalog catalog,
+        string? extractedFullText,
+        IReadOnlyList<string> lines)
+    {
+        if (aiResult.Sections is not { Count: > 0 })
+        {
+            return null;
+        }
 
-        return CvStructuredImportResidualPlacement.Apply(heuristicSections, rawSections);
+        var write = aiResult.Sections
+            .Select((section, index) => new CvStructuredSectionWriteDto(
+                null,
+                section.Heading,
+                CvSectionTypes.Normalize(section.SectionType),
+                index,
+                section.Entries
+                    .Select((entry, entryIndex) => new CvStructuredEntryWriteDto(
+                        null,
+                        entry.Title,
+                        entry.Subtitle,
+                        entry.DateRange,
+                        entry.Summary,
+                        entry.Bullets,
+                        entry.TechStack,
+                        CvEntrySources.Import,
+                        null,
+                        entryIndex))
+                    .ToArray()))
+            .ToArray();
+
+        if (!string.IsNullOrWhiteSpace(extractedFullText))
+        {
+            write = CvStructuredImportContactGrounding.FilterToSource(write, extractedFullText).ToArray();
+        }
+
+        var sections = FixedSectionLayout.Normalize(write, catalog);
+        var unplaced = lines.Count == 0
+            ? []
+            : CvStructuredImportCoverageAudit.CollectMissingSourceLines(lines, sections);
+
+        return new CvStructuredImportPreviewDto(
+            sections,
+            true,
+            ImportedWithAiNotice,
+            unplaced);
     }
 }

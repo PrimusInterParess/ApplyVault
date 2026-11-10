@@ -1,5 +1,6 @@
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Tests;
 
@@ -176,19 +177,15 @@ public sealed class CvStructuredUpdateNormalizerTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 1, "New AI summary")
         ]);
 
-        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(
-            current,
-            aiResult,
-            [summaryId]);
+        var merged = Merge(current, aiResult, [summaryId]);
 
-        Assert.Equal(
-            [contactId, summaryId, experienceId, educationId],
-            merged.Sections.Select((section) => section.Id!.Value).ToArray());
+        AssertCanonical(merged);
         Assert.Equal("Alice", EntryMarker(merged, contactId));
         Assert.Equal("New AI summary", EntryMarker(merged, summaryId));
         Assert.Equal("Acme", EntryMarker(merged, experienceId));
         Assert.Equal("Uni", EntryMarker(merged, educationId));
-        Assert.Equal([0, 1, 2, 3], merged.Sections.Select((section) => section.SortOrder).ToArray());
+        Assert.Equal(contactId, Slot(merged, CvSectionTypes.Contact).Id);
+        Assert.Equal(educationId, Slot(merged, CvSectionTypes.Education).Id);
     }
 
     [Fact]
@@ -207,11 +204,9 @@ public sealed class CvStructuredUpdateNormalizerTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 1, "Updated")
         ]);
 
-        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(
-            current,
-            aiResult,
-            [summaryId]);
+        var merged = Merge(current, aiResult, [summaryId]);
 
+        AssertCanonical(merged);
         Assert.Equal("Bob", EntryMarker(merged, contactId));
         Assert.Equal("Updated", EntryMarker(merged, summaryId));
     }
@@ -233,11 +228,9 @@ public sealed class CvStructuredUpdateNormalizerTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 0, "Rewritten")
         ]);
 
-        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(current, aiResult, focusSectionIds: null);
+        var merged = Merge(current, aiResult, focusSectionIds: null);
 
-        Assert.Equal(
-            [summaryId, experienceId, educationId],
-            merged.Sections.Select((section) => section.Id!.Value).ToArray());
+        AssertCanonical(merged);
         Assert.Equal("Rewritten", EntryMarker(merged, summaryId));
         Assert.Equal("Acme", EntryMarker(merged, experienceId));
         Assert.Equal("Uni", EntryMarker(merged, educationId));
@@ -258,14 +251,13 @@ public sealed class CvStructuredUpdateNormalizerTests
             WriteSection(skillsId, "Skills", CvSectionTypes.Skills, 1, "TS")
         ]);
 
-        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(current, aiResult, focusSectionIds: null);
+        var merged = Merge(current, aiResult, focusSectionIds: null);
 
-        Assert.Equal(
-            [summaryId, skillsId],
-            merged.Sections.Select((section) => section.Id!.Value).ToArray());
+        AssertCanonical(merged);
         Assert.Equal("S2", EntryMarker(merged, summaryId));
         Assert.Equal("TS", EntryMarker(merged, skillsId));
-        Assert.Equal([0, 1], merged.Sections.Select((section) => section.SortOrder).ToArray());
+        Assert.Equal(summaryId, Slot(merged, CvSectionTypes.Summary).Id);
+        Assert.Equal(skillsId, Slot(merged, CvSectionTypes.Skills).Id);
     }
 
     [Fact]
@@ -277,19 +269,41 @@ public sealed class CvStructuredUpdateNormalizerTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 5, "Only")
         ]);
 
-        var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(
-            EmptyCurrentDocument,
-            aiResult,
-            [summaryId]);
+        var merged = Merge(EmptyCurrentDocument, aiResult, [summaryId]);
 
-        var section = Assert.Single(merged.Sections);
-        Assert.Equal(summaryId, section.Id);
-        Assert.Equal(0, section.SortOrder);
+        AssertCanonical(merged);
+        Assert.Equal(summaryId, Slot(merged, CvSectionTypes.Summary).Id);
         Assert.Equal("Only", EntryMarker(merged, summaryId));
+        Assert.Equal(0, Slot(merged, CvSectionTypes.Contact).SortOrder);
     }
+
+    private static readonly ICvSectionCatalog Catalog = CvSectionCatalogProvider.LoadFromDefaultPath();
 
     private static CvStructuredDocumentDto EmptyCurrentDocument { get; } =
         new(Guid.NewGuid(), null, []);
+
+    private static SaveCvStructuredDocumentRequest Merge(
+        CvStructuredDocumentDto current,
+        SaveCvStructuredDocumentRequest aiResult,
+        IReadOnlyList<Guid>? focusSectionIds) =>
+        CvStructuredUpdateNormalizer.MergeAssistUpdate(current, aiResult, focusSectionIds, Catalog);
+
+    private static void AssertCanonical(SaveCvStructuredDocumentRequest request)
+    {
+        Assert.Equal(Catalog.FixedLayout.Count, request.Sections.Count);
+
+        for (var index = 0; index < Catalog.FixedLayout.Count; index++)
+        {
+            var slot = Catalog.FixedLayout[index];
+            var section = request.Sections[index];
+            Assert.Equal(index, section.SortOrder);
+            Assert.Equal(slot.SectionType, section.SectionType);
+            Assert.Equal(slot.Heading, section.Heading);
+        }
+    }
+
+    private static CvStructuredSectionWriteDto Slot(SaveCvStructuredDocumentRequest request, string sectionType) =>
+        request.Sections.Single((section) => section.SectionType == sectionType);
 
     private static CvStructuredDocumentDto Document(params CvStructuredSectionDto[] sections) =>
         new(Guid.NewGuid(), DateTimeOffset.UtcNow, sections);

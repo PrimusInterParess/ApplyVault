@@ -124,6 +124,7 @@ public sealed class CvPdfFormatCorpusTests
                         bytes,
                         extractor,
                         aiClient,
+                        catalog,
                         googleAiEnabled: true);
 
                     var contact = preview.Sections.FirstOrDefault(static (s) =>

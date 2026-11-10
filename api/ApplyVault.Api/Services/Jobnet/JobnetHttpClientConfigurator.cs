@@ -17,8 +17,19 @@ internal static class JobnetHttpClientConfigurator
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
             string.IsNullOrWhiteSpace(options.UserAgent) ? DefaultUserAgent : options.UserAgent.Trim());
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://jobnet.dk/find-job");
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://jobnet.dk");
+        var siteOrigin = ResolveSiteOrigin(options.BaseUrl);
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Referer", $"{siteOrigin}/find-job");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Origin", siteOrigin);
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-csrf", "1");
+    }
+
+    private static string ResolveSiteOrigin(string baseUrl)
+    {
+        if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
+        {
+            return uri.GetLeftPart(UriPartial.Authority);
+        }
+
+        return "https://workindenmark.jobnet.dk";
     }
 }

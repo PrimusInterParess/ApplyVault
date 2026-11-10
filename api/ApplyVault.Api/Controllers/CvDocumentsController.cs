@@ -156,24 +156,25 @@ public sealed class CvDocumentsController(
     public async Task<ActionResult<CvDocumentDto>> StartBlank(CancellationToken cancellationToken = default)
     {
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        return Ok(await cvDocumentService.StartBlankAsync(user, cancellationToken));
+        await cvDocumentService.StartBlankAsync(user, cancellationToken);
+        await cvStructuredDocumentService.SaveStructuredAsync(
+            user,
+            new SaveCvStructuredDocumentRequest(FixedSectionLayout.CreateBlank(sectionCatalog)),
+            markImported: false,
+            cancellationToken);
+
+        return Ok((await cvDocumentService.GetCurrentAsync(user, cancellationToken))!);
     }
 
-    [HttpPut("current/export-preferences")]
-    public async Task<ActionResult<CvDocumentDto>> UpdateExportPreferences(
-        [FromBody] CvExportPreferencesDto? preferences,
+    [HttpPut("current/unplaced-content")]
+    public async Task<ActionResult<CvDocumentDto>> ReplaceUnplacedContent(
+        [FromBody] ReplaceCvUnplacedContentRequest? request,
         CancellationToken cancellationToken = default)
     {
-        if (preferences is null)
-        {
-            return BadRequest("Export preferences are required.");
-        }
-
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var document = await cvDocumentService.UpdateExportPreferencesAsync(
+        var document = await cvDocumentService.ReplaceUnplacedContentAsync(
             user,
-            new CvExportPreferencesDto(
-                CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId)),
+            request?.Items ?? [],
             cancellationToken);
 
         return document is null ? NotFound() : Ok(document);
@@ -192,24 +193,17 @@ public sealed class CvDocumentsController(
     }
 
     [HttpGet("current/export/download")]
-    public async Task<IActionResult> DownloadFormattedExport(
-        [FromQuery] int? templateId = null,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> DownloadFormattedExport(CancellationToken cancellationToken = default)
     {
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var resolvedTemplateId = await ResolveExportTemplateIdAsync(user, templateId, cancellationToken);
 
         try
         {
-            var exportResult = await cvDocumentExportService.ExportPdfAsync(
-                user,
-                new CvPdfExportOptions(resolvedTemplateId),
-                cancellationToken);
+            var exportResult = await cvDocumentExportService.ExportPdfAsync(user, cancellationToken);
             var structured = await cvStructuredDocumentService.GetStructuredAsync(user, cancellationToken);
-            var fileName = CvExportDownloadFileName.BuildForExport(structured, resolvedTemplateId);
+            var fileName = CvExportDownloadFileName.BuildForExport(structured);
 
             AppendExportMetadataHeaders(exportResult);
-            Response.Headers["X-Cv-Export-Template-Id"] = resolvedTemplateId.ToString();
 
             return File(exportResult.PdfBytes, "application/pdf", fileName);
         }
@@ -228,21 +222,14 @@ public sealed class CvDocumentsController(
     }
 
     [HttpGet("current/export/preview")]
-    public async Task<IActionResult> PreviewFormattedExport(
-        [FromQuery] int? templateId = null,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> PreviewFormattedExport(CancellationToken cancellationToken = default)
     {
         var user = await appUserService.GetRequiredUserAsync(cancellationToken);
-        var resolvedTemplateId = await ResolveExportTemplateIdAsync(user, templateId, cancellationToken);
 
         try
         {
-            var exportResult = await cvDocumentExportService.ExportHtmlAsync(
-                user,
-                new CvPdfExportOptions(resolvedTemplateId),
-                cancellationToken);
+            var exportResult = await cvDocumentExportService.ExportHtmlAsync(user, cancellationToken);
 
-            Response.Headers["X-Cv-Export-Template-Id"] = exportResult.ResolvedTemplateId.ToString();
             Response.Headers["X-Cv-Export-Compact-Level"] = exportResult.CompactLevel.ToString();
 
             if (!string.IsNullOrWhiteSpace(exportResult.Notice))
@@ -264,21 +251,6 @@ public sealed class CvDocumentsController(
 
             return BadRequest(message);
         }
-    }
-
-    private async Task<int> ResolveExportTemplateIdAsync(
-        AppUserEntity user,
-        int? templateId,
-        CancellationToken cancellationToken)
-    {
-        if (templateId is not null)
-        {
-            return CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId.Value);
-        }
-
-        var document = await cvDocumentService.GetCurrentAsync(user, cancellationToken);
-        return CvExportHtmlTemplateCatalog.NormalizeTemplateId(
-            document?.TemplateId ?? CvExportHtmlTemplateCatalog.DefaultTemplateId);
     }
 
     private void AppendExportMetadataHeaders(CvPdfExportResult exportResult)

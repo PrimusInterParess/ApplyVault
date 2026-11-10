@@ -29,11 +29,23 @@ public sealed class GoogleAiCvStructuredImportClient(
                 "Extracted CV text is empty. PDF import must hard-fail empty extraction before calling AI.");
         }
 
-        return ParseCoreAsync(extractedFullText, cancellationToken);
+        return ParseCoreAsync(BuildTextRequest(extractedFullText), cancellationToken);
+    }
+
+    public Task<CvStructuredImportResult> ParsePdfAsync(
+        byte[] pdfBytes,
+        CancellationToken cancellationToken = default)
+    {
+        if (pdfBytes is not { Length: > 0 })
+        {
+            throw new InvalidOperationException(CvStructuredImportNotices.EmptyExtraction);
+        }
+
+        return ParseCoreAsync(BuildPdfRequest(pdfBytes), cancellationToken);
     }
 
     private async Task<CvStructuredImportResult> ParseCoreAsync(
-        string extractedFullText,
+        object request,
         CancellationToken cancellationToken)
     {
         var options = googleAiOptions.Value;
@@ -57,7 +69,7 @@ public sealed class GoogleAiCvStructuredImportClient(
 
         using var response = await httpClient.PostAsJsonAsync(
             endpoint,
-            BuildRequest(extractedFullText),
+            request,
             SerializerOptions,
             timeoutCts.Token);
 
@@ -88,10 +100,9 @@ public sealed class GoogleAiCvStructuredImportClient(
         };
     }
 
-    private object BuildRequest(string extractedFullText)
+    private object BuildTextRequest(string extractedFullText)
     {
         var prompts = importAiOptions.Value;
-        // Catalog owns ADR-0001 section/field rules; preface frames AI-first fill + Contact/Custom/link integrity.
         var systemPrompt = ComposeSystemPrompt(prompts.SystemPromptPreface, sectionCatalog.BuildImportSystemPrompt());
 
         return new
@@ -104,11 +115,55 @@ public sealed class GoogleAiCvStructuredImportClient(
             {
                 new
                 {
-                    parts = new[]
+                    parts = new object[]
                     {
                         new
                         {
                             text = ApplyUserPayload(prompts.UserPromptTemplate, extractedFullText)
+                        }
+                    }
+                }
+            },
+            generationConfig = GoogleAiCvSectionsResponseSchema.Create(sectionCatalog)
+        };
+    }
+
+    private object BuildPdfRequest(byte[] pdfBytes)
+    {
+        var prompts = importAiOptions.Value;
+        var systemPrompt = ComposeSystemPrompt(
+            prompts.SystemPromptPreface,
+            sectionCatalog.BuildImportSystemPrompt())
+            + "\n\nThe source is the attached PDF. Text extraction found no selectable text; read the PDF itself.";
+
+        return new
+        {
+            systemInstruction = new
+            {
+                parts = new[] { new { text = systemPrompt } }
+            },
+            contents = new[]
+            {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["inline_data"] = new Dictionary<string, string>(StringComparer.Ordinal)
+                            {
+                                ["mime_type"] = "application/pdf",
+                                ["data"] = Convert.ToBase64String(pdfBytes)
+                            }
+                        },
+                        new
+                        {
+                            text = """
+                                Read the attached CV PDF and structure it into JSON sections and entries.
+                                Use only facts visible in the document. Do not invent content.
+                                First extract Contact (name, address, phone, email, LinkedIn, GitHub).
+                                Then fill Experience, Projects, Education, Skills, Summary, and Certifications & Languages.
+                                """
                         }
                     }
                 }

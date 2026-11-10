@@ -29,4 +29,12 @@ public interface ICvStructuredImportAiClient
     Task<CvStructuredImportResult> ParseAsync(
         string extractedFullText,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Structure a CV from the original PDF bytes when PdfPig found no selectable text.
+    /// Gemini reads the attached PDF; this is not local OCR.
+    /// </summary>
+    Task<CvStructuredImportResult> ParsePdfAsync(
+        byte[] pdfBytes,
+        CancellationToken cancellationToken = default);
 }

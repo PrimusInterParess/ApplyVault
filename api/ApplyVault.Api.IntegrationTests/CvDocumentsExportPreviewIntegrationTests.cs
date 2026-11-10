@@ -21,7 +21,7 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
     {
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=2");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -34,67 +34,70 @@ public sealed class CvDocumentsExportPreviewIntegrationTests(ApplyVaultWebApplic
         var deleteResponse = await client.DeleteAsync("/api/cv-documents/current");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=2");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Theory]
-    [InlineData(2)]
-    [InlineData(3)]
-    public async Task Preview_returns_html_for_each_template_id(int templateId)
+    [Fact]
+    public async Task Preview_returns_single_template_html()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
         await UploadCvAsync(client);
 
-        var response = await client.GetAsync($"/api/cv-documents/current/export/preview?templateId={templateId}");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
-        Assert.True(response.Headers.TryGetValues("X-Cv-Export-Template-Id", out var templateHeaders));
-        Assert.Equal(templateId.ToString(), Assert.Single(templateHeaders));
+        Assert.False(response.Headers.Contains("X-Cv-Export-Template-Id"));
+        Assert.True(response.Headers.TryGetValues("X-Cv-Export-Compact-Level", out var compactHeaders));
+        Assert.True(int.TryParse(Assert.Single(compactHeaders), out var compactLevel));
+        Assert.InRange(compactLevel, 0, CvPdfRenderOptions.MaxCompactLevel);
 
         var html = await response.Content.ReadAsStringAsync();
         Assert.Contains("<!DOCTYPE html>", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cv-body", html, StringComparison.Ordinal);
+        Assert.Contains("cv-name", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("cv-layout", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", html, StringComparison.Ordinal);
         Assert.Contains("jane@example.com", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Bearer ", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task Preview_legacy_template_id_4_normalizes_to_Modern()
+    public async Task Preview_ignores_legacy_templateId_query_parameter()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
         await UploadCvAsync(client);
 
-        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=4");
+        var response = await client.GetAsync("/api/cv-documents/current/export/preview?templateId=2");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(response.Headers.TryGetValues("X-Cv-Export-Template-Id", out var templateHeaders));
-        Assert.Equal("2", Assert.Single(templateHeaders));
+        Assert.False(response.Headers.Contains("X-Cv-Export-Template-Id"));
 
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains("cv-layout", html, StringComparison.Ordinal);
-        Assert.Contains("cv-name", html, StringComparison.Ordinal);
+        Assert.Contains("cv-body", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("cv-layout", html, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(4)]
-    public async Task Download_exports_pdf_for_template_ids_including_legacy(int templateId)
+    [Fact]
+    public async Task Download_exports_pdf_with_person_name_file_name()
     {
         using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
         await UploadCvAsync(client);
 
-        var response = await client.GetAsync($"/api/cv-documents/current/export/download?templateId={templateId}");
+        var response = await client.GetAsync("/api/cv-documents/current/export/download");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
-        Assert.True(response.Headers.TryGetValues("X-Cv-Export-Template-Id", out var templateHeaders));
+        Assert.False(response.Headers.Contains("X-Cv-Export-Template-Id"));
+        Assert.True(response.Headers.Contains("X-Cv-Export-Page-Count"));
+        Assert.True(response.Headers.Contains("X-Cv-Export-Exceeds-Limit"));
 
-        var expectedResolved = templateId is 2 or 3 ? templateId : 2;
-        Assert.Equal(expectedResolved.ToString(), Assert.Single(templateHeaders));
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName;
+        Assert.NotNull(fileName);
+        Assert.EndsWith("-CV.pdf", fileName.Trim('"'), StringComparison.Ordinal);
 
         var bytes = await response.Content.ReadAsByteArrayAsync();
         Assert.True(bytes.Length > 100);

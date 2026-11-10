@@ -1,4 +1,4 @@
-<main class="cv-builder cv-builder--edit">
+<main class="cv-builder" [class.cv-builder--edit]="hasStructuredCv()">
   <input
     #pdfFileInput
     type="file"
@@ -13,220 +13,195 @@
     (change)="onProfilePhotoFileSelected($event)" />
 
   <div class="cv-builder__desk">
-    <header
-      #topbar
-      class="cv-builder__topbar"
-      [class.cv-builder__topbar--more-open]="topbarMoreOpen()">
-      <div class="cv-builder__topbar-left">
-        <label class="cv-builder__select-wrap">
-          <span class="cv-builder__sr-only">Template</span>
-          <select
-            class="cv-builder__select"
-            (change)="onTemplateSelectChange($event)">
-            @for (template of templates; track template.id) {
-              <option
-                [value]="'' + template.id"
-                [selected]="selectedTemplateId() === template.id">
-                {{ template.label }}
-              </option>
-            }
-          </select>
-        </label>
-        @if (hasStructuredCv()) {
-          <span
-            class="cv-builder__sync"
-            [class.cv-builder__sync--busy]="saveStatus() !== 'Saved'"
-            aria-live="polite">
-            <span class="cv-builder__sync-dot" aria-hidden="true"></span>
-            {{ saveStatus() }}
-          </span>
-        }
-      </div>
-
-      <div class="cv-builder__topbar-right">
-        @if (hasStructuredCv()) {
-          <button
-            type="button"
-            class="cv-builder__ghost-btn cv-builder__topbar-essential"
-            [attr.aria-expanded]="activePanel() === 'structure'"
-            aria-controls="cv-builder-structure-panel"
-            (click)="toggleStructure()">
-            Structure
-          </button>
-          <button
-            type="button"
-            class="cv-builder__ghost-btn cv-builder__topbar-essential"
-            (click)="openAssist()">
-            AI assist
-          </button>
-          <button
-            type="button"
-            class="cv-builder__ghost-btn cv-builder__topbar-essential"
-            [attr.aria-expanded]="activePanel() === 'checkExport'"
-            aria-controls="cv-builder-check-export-dialog"
-            (click)="openCheckExport()">
-            Check export
-          </button>
-          <button
-            type="button"
-            class="cv-builder__cta cv-builder__cta--compact cv-builder__topbar-essential"
-            [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
-            (click)="exportPdf()">
-            {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
-          </button>
-
-          <div class="cv-builder__topbar-overflow" id="cv-builder-topbar-more">
-            <div class="cv-builder__zoom" role="group" aria-label="Zoom">
-              <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">
-                −
-              </button>
-              <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
-              <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">
-                +
-              </button>
-            </div>
-            <div class="cv-builder__projects">
-              <button
-                type="button"
-                class="cv-builder__ghost-btn"
-                [attr.aria-expanded]="activePanel() === 'projects'"
-                aria-controls="cv-builder-projects-panel"
-                (click)="toggleProjects()">
-                Projects
-              </button>
-              <app-cv-builder-projects-panel
-                [open]="activePanel() === 'projects'"
-                [summaries]="cvProjects.savedSummaries()"
-                [loadingSummaries]="cvProjects.loadingSummaries()"
-                [summariesError]="cvProjects.summariesError()"
-                [saveError]="cvStructured.saveError()"
-                [importingBusy]="importingProjectsBusy()"
-                [selectedImportableCount]="selectedImportableProjectSummaries().length"
-                [canImportSelected]="canImportSelectedProjectSummaries()"
-                [canToggleSelection]="canToggleProjectSummarySelection()"
-                [selectedSummaryIds]="selectedProjectSummaryIds()"
-                [importedSummaryIds]="importedProjectSummaryIds()"
-                (closePanel)="closeProjects()"
-                (refresh)="cvProjects.loadSummaries()"
-                (importSelected)="importSelectedProjectSummaries()"
-                (toggleSelection)="toggleProjectSummarySelection($event)" />
-            </div>
-            <button
-              type="button"
-              class="cv-builder__ghost-btn"
-              [disabled]="
-                cvDocument.uploadingProfilePhoto() ||
-                cvDocument.deletingProfilePhoto() ||
-                cvDocument.loadingProfilePhoto()
-              "
-              (click)="openProfilePhotoFilePicker()">
-              {{
-                cvDocument.uploadingProfilePhoto()
-                  ? 'Uploading photo…'
-                  : cvDocument.document()?.hasProfilePhoto
-                    ? 'Replace photo'
-                    : 'Upload photo'
-              }}
-            </button>
-            @if (cvDocument.document()?.hasProfilePhoto) {
-              <button
-                type="button"
-                class="cv-builder__ghost-btn"
-                [disabled]="
-                  cvDocument.uploadingProfilePhoto() ||
-                  cvDocument.deletingProfilePhoto() ||
-                  cvDocument.loadingProfilePhoto()
-                "
-                (click)="cvDocument.deleteProfilePhoto()">
-                {{ cvDocument.deletingProfilePhoto() ? 'Removing…' : 'Remove photo' }}
-              </button>
-            }
-            <button
-              type="button"
-              class="cv-builder__ghost-btn"
-              [disabled]="cvDocument.uploading()"
-              (click)="openPdfPicker()">
-              {{ cvDocument.uploading() ? 'Uploading…' : 'Upload PDF' }}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            class="cv-builder__topbar-more-toggle"
-            [attr.aria-expanded]="topbarMoreOpen()"
-            aria-controls="cv-builder-topbar-more"
-            (click)="toggleTopbarMore(); $event.stopPropagation()">
-            More
-          </button>
-        }
-        @if (cvDocument.profilePhotoError(); as error) {
-          <p class="cv-builder__error" role="alert">{{ error }}</p>
-        }
-        @if (cvDocument.uploadError(); as error) {
-          <p class="cv-builder__error" role="alert">{{ error }}</p>
-        }
-        @if (cvDocument.downloadFormattedError(); as error) {
-          <p class="cv-builder__error" role="alert">{{ error }}</p>
-        }
-      </div>
-    </header>
-
-    <div class="cv-builder__desk-scroll">
-      @if (cvDocument.loading() || cvStructured.loading()) {
-        <p class="cv-builder__desk-hint" aria-busy="true">Loading your CV…</p>
-      } @else if (!hasStructuredCv()) {
-        <app-cv-builder-empty-start
-          [startingBlank]="cvDocument.startingBlank()"
-          [uploading]="cvDocument.uploading()"
-          [startBlankError]="cvDocument.startBlankError()"
-          [uploadError]="cvDocument.uploadError()"
-          (startBlank)="startBlank()"
-          (uploadPdf)="openPdfPicker()" />
-      } @else {
-        <p class="cv-builder__desk-hint">
-          Edit on the canvas · Structure for sections · Projects to import · Check export / Download PDF for
-          print fidelity · autosaves
-        </p>
-        <p class="cv-builder__desk-hint cv-builder__desk-hint--pan" aria-hidden="true">
-          Scroll to pan · Zoom in More for size
-        </p>
-        <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()">
-          <div class="cv-builder__paper cv-builder__paper--editor">
-            <app-cv-export-template-preview
-              [templateId]="selectedTemplateId()"
-              [sections]="sections()"
-              [editable]="true"
-              [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
-              (inlineEdit)="onInlineEdit($event)" />
-          </div>
-        </div>
-      }
-    </div>
-
     @if (hasStructuredCv()) {
-      <button
-        type="button"
-        class="cv-builder__fab"
-        [class.cv-builder__fab--hidden]="
-          activePanel() === 'assist' || activePanel() === 'structure' || activePanel() === 'checkExport'
-        "
-        (click)="openAssist()"
-        aria-label="Open AI assist">
-        AI
-      </button>
+      <div class="cv-builder__chrome">
+        <header class="cv-builder__topbar">
+          <div class="cv-builder__topbar-left">
+            <span
+              class="cv-builder__sync"
+              [class.cv-builder__sync--busy]="saveStatus() !== 'Saved'"
+              aria-live="polite">
+              <span class="cv-builder__sync-dot" aria-hidden="true"></span>
+              {{ saveStatus() }}
+            </span>
+          </div>
+
+          <div class="cv-builder__topbar-right">
+            <app-cv-builder-document-menu
+              [hasProfilePhoto]="!!cvDocument.document()?.hasProfilePhoto"
+              [photoBusy]="photoBusy()"
+              [uploadingPdf]="cvDocument.uploading()"
+              [deleting]="cvDocument.deleting()"
+              (uploadPdf)="openPdfPicker()"
+              (uploadPhoto)="openProfilePhotoFilePicker()"
+              (removePhoto)="cvDocument.deleteProfilePhoto()"
+              (deleteCv)="openDeleteConfirm()" />
+            <button
+              type="button"
+              class="cv-builder__ghost-btn"
+              [attr.aria-expanded]="activePanel() === 'checkExport'"
+              aria-controls="cv-builder-check-export-dialog"
+              (click)="openCheckExport()">
+              Check export
+            </button>
+            <button
+              type="button"
+              class="cv-builder__cta cv-builder__cta--compact"
+              [disabled]="cvDocument.downloadingFormatted() || !hasSections()"
+              (click)="exportPdf()">
+              {{ cvDocument.downloadingFormatted() ? 'Exporting…' : 'Download PDF' }}
+            </button>
+          </div>
+        </header>
+
+        @if (pageErrors().length > 0) {
+          <div class="cv-builder__alerts" role="alert">
+            @for (error of pageErrors(); track error) {
+              <p class="cv-builder__error">{{ error }}</p>
+            }
+          </div>
+        }
+      </div>
     }
 
-    <app-cv-builder-structure-panel
-      [open]="activePanel() === 'structure'"
-      [sections]="sections()"
-      [structureSectionTypes]="structureSectionTypes()"
-      [pendingAddSectionType]="pendingAddSectionType()"
-      [canMutate]="canMutateStructured()"
-      (closePanel)="closeStructure()"
-      (pendingAddSectionTypeChange)="onPendingAddSectionTypeChange($event)"
-      (addSection)="addSectionFromStructure()"
-      (moveSection)="onStructureMoveSection($event)"
-      (removeSection)="removeSection($event)" />
+    @if (cvDocument.loading() || cvStructured.loading()) {
+      <p class="cv-builder__desk-status" aria-busy="true">Loading your CV…</p>
+    } @else if (!hasStructuredCv()) {
+      <app-cv-builder-empty-start
+        [startingBlank]="cvDocument.startingBlank()"
+        [uploading]="cvDocument.uploading()"
+        [startBlankError]="cvDocument.startBlankError()"
+        [uploadError]="cvDocument.uploadError()"
+        (startBlank)="startBlank()"
+        (uploadPdf)="openPdfPicker()" />
+    } @else {
+      <div class="cv-builder__workspace">
+        <app-cv-builder-section-rail
+          class="cv-builder__rail"
+          [items]="railItems()"
+          [activeId]="activeSectionId()"
+          (jumpToSection)="jumpToSection($event)"
+          (sectionVisibility)="setSectionVisibility($event)" />
+
+        <div class="cv-builder__canvas" #canvasFrame>
+          <div class="cv-builder__zoom" role="group" aria-label="Zoom">
+            <button type="button" class="cv-builder__icon-btn" (click)="zoomOut()" aria-label="Zoom out">
+              −
+            </button>
+            <span class="cv-builder__zoom-label">{{ zoomPercent() }}%</span>
+            <button type="button" class="cv-builder__icon-btn" (click)="zoomIn()" aria-label="Zoom in">
+              +
+            </button>
+          </div>
+          <div class="cv-builder__desk-scroll" #deskScroll>
+            <div class="cv-builder__paper-stage">
+              <div
+                class="cv-builder__paper-scale"
+                [style.width.px]="scaledPaperWidth()"
+                [style.height.px]="scaledPaperHeight()">
+                <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()" [style.width.px]="a4WidthPx">
+                  <div
+                    class="cv-builder__paper cv-builder__paper--editor"
+                    #cvPaper
+                    [style.--cv-page-h.px]="a4HeightPx"
+                    [style.--cv-page-gap.px]="pageGapPx">
+                    @for (sheet of pageSheets(); track sheet.page) {
+                      <div
+                        class="cv-builder__page-sheet"
+                        [style.top.px]="sheet.top"
+                        [style.height.px]="a4HeightPx"
+                        aria-hidden="true"></div>
+                      @if (sheet.page < pageSheets().length) {
+                        <div class="cv-builder__page-break-label" [style.top.px]="sheet.top + a4HeightPx">
+                          Page {{ sheet.page + 1 }}
+                        </div>
+                      }
+                    }
+                    <div class="cv-builder__paper-pages">
+                      <app-cv-export-template-preview
+                        [sections]="sections()"
+                        [editable]="true"
+                        [profilePhotoUrl]="cvDocument.profilePhotoUrl()"
+                        (inlineEdit)="onInlineEdit($event)"
+                        (photoClick)="openProfilePhotoFilePicker()" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <app-cv-builder-tools-dock
+          class="cv-builder__dock"
+          [activeTool]="dockTool()"
+          [unplacedCount]="cvDocument.unplacedCount()"
+          (selectTool)="selectDockTool($event)">
+          <app-cv-builder-assist-panel
+            [open]="activePanel() === 'assist'"
+            [docked]="true"
+            [sections]="sections()"
+            [aiUpdateSectionIds]="aiUpdateSectionIds()"
+            [aiUpdateInstructions]="aiUpdateInstructions()"
+            [summaryProposeInstructions]="summaryProposeInstructions()"
+            [selectedSuggestionIds]="selectedSuggestionIds()"
+            [suggestions]="cvStructured.suggestions()"
+            [evaluation]="cvStructured.evaluation()"
+            [summaryProposal]="cvStructured.summaryProposal()"
+            [updateProposal]="cvStructured.updateProposal()"
+            [disabled]="assistDisabled()"
+            [proposingUpdate]="cvStructured.proposingUpdate()"
+            [generatingSuggestions]="cvStructured.generatingSuggestions()"
+            [evaluating]="cvStructured.evaluating()"
+            [proposing]="cvStructured.proposing()"
+            [aiUpdateError]="cvStructured.aiUpdateError()"
+            [suggestionError]="cvStructured.suggestionError()"
+            [evaluationError]="cvStructured.evaluationError()"
+            [summaryProposalError]="cvStructured.summaryProposalError()"
+            (closePanel)="closeAssist()"
+            (aiInstructionsChange)="updateAiInstructions($event)"
+            (summaryProposeInstructionsChange)="updateSummaryProposeInstructions($event)"
+            (toggleAiSection)="toggleAiUpdateSection($event)"
+            (proposeUpdate)="updateStructuredWithAi()"
+            (approveUpdateProposal)="approveUpdateProposal()"
+            (discardUpdateProposal)="discardUpdateProposal()"
+            (generateSuggestions)="generateSuggestions()"
+            (toggleSuggestion)="toggleSuggestion($event)"
+            (applySuggestions)="applySelectedSuggestions()"
+            (evaluateQuality)="evaluateQuality()"
+            (useFindingInAssist)="useFindingInAssist($event)"
+            (proposeSummary)="proposeSummary()"
+            (approveSummaryProposal)="approveSummaryProposal()"
+            (discardSummaryProposal)="discardSummaryProposal()" />
+          <app-cv-unplaced-drawer
+            [open]="activePanel() === 'unplaced'"
+            [docked]="true"
+            [items]="cvDocument.unplacedContent()"
+            [busy]="cvDocument.unplacedBusy()"
+            [error]="cvDocument.unplacedError()"
+            (closePanel)="closeUnplaced()"
+            (dismissItem)="cvDocument.dismissUnplaced($event)"
+            (dismissAll)="cvDocument.dismissAllUnplaced()" />
+          <app-cv-builder-projects-panel
+            [open]="activePanel() === 'projects'"
+            [docked]="true"
+            [summaries]="cvProjects.savedSummaries()"
+            [loadingSummaries]="cvProjects.loadingSummaries()"
+            [summariesError]="cvProjects.summariesError()"
+            [saveError]="cvStructured.saveError()"
+            [importingBusy]="importingProjectsBusy()"
+            [selectedImportableCount]="selectedImportableProjectSummaries().length"
+            [canImportSelected]="canImportSelectedProjectSummaries()"
+            [canToggleSelection]="canToggleProjectSummarySelection()"
+            [selectedSummaryIds]="selectedProjectSummaryIds()"
+            [importedSummaryIds]="importedProjectSummaryIds()"
+            (closePanel)="closeProjects()"
+            (refresh)="cvProjects.loadSummaries()"
+            (importSelected)="importSelectedProjectSummaries()"
+            (toggleSelection)="toggleProjectSummarySelection($event)" />
+        </app-cv-builder-tools-dock>
+      </div>
+    }
   </div>
 
   <app-cv-builder-check-export
@@ -253,39 +228,21 @@
     </div>
   }
 
-  <app-cv-builder-assist-panel
-    [open]="activePanel() === 'assist'"
-    [sections]="sections()"
-    [aiUpdateSectionIds]="aiUpdateSectionIds()"
-    [aiUpdateInstructions]="aiUpdateInstructions()"
-    [summaryProposeInstructions]="summaryProposeInstructions()"
-    [selectedSuggestionIds]="selectedSuggestionIds()"
-    [suggestions]="cvStructured.suggestions()"
-    [evaluation]="cvStructured.evaluation()"
-    [summaryProposal]="cvStructured.summaryProposal()"
-    [updateProposal]="cvStructured.updateProposal()"
-    [disabled]="assistDisabled()"
-    [proposingUpdate]="cvStructured.proposingUpdate()"
-    [generatingSuggestions]="cvStructured.generatingSuggestions()"
-    [evaluating]="cvStructured.evaluating()"
-    [proposing]="cvStructured.proposing()"
-    [aiUpdateError]="cvStructured.aiUpdateError()"
-    [suggestionError]="cvStructured.suggestionError()"
-    [evaluationError]="cvStructured.evaluationError()"
-    [summaryProposalError]="cvStructured.summaryProposalError()"
-    (closePanel)="closeAssist()"
-    (aiInstructionsChange)="updateAiInstructions($event)"
-    (summaryProposeInstructionsChange)="updateSummaryProposeInstructions($event)"
-    (toggleAiSection)="toggleAiUpdateSection($event)"
-    (proposeUpdate)="updateStructuredWithAi()"
-    (approveUpdateProposal)="approveUpdateProposal()"
-    (discardUpdateProposal)="discardUpdateProposal()"
-    (generateSuggestions)="generateSuggestions()"
-    (toggleSuggestion)="toggleSuggestion($event)"
-    (applySuggestions)="applySelectedSuggestions()"
-    (evaluateQuality)="evaluateQuality()"
-    (useFindingInAssist)="useFindingInAssist($event)"
-    (proposeSummary)="proposeSummary()"
-    (approveSummaryProposal)="approveSummaryProposal()"
-    (discardSummaryProposal)="discardSummaryProposal()" />
+  @if (deleteConfirmOpen()) {
+    <div class="cv-builder__modal-backdrop" role="presentation" (click)="cancelDeleteConfirm()"></div>
+    <div class="cv-builder__modal" role="alertdialog" aria-labelledby="cv-builder-delete-title">
+      <h2 id="cv-builder-delete-title">Delete current CV?</h2>
+      <p>This removes your CV, photo, and leftover import text. You can start blank or upload again.</p>
+      <div class="cv-builder__modal-actions">
+        <button type="button" class="cv-builder__ghost-btn" (click)="cancelDeleteConfirm()">Cancel</button>
+        <button
+          type="button"
+          class="cv-builder__cta cv-builder__cta--compact"
+          [disabled]="cvDocument.deleting()"
+          (click)="confirmDeleteCurrent()">
+          {{ cvDocument.deleting() ? 'Deleting…' : 'Delete CV' }}
+        </button>
+      </div>
+    </div>
+  }
 </main>

@@ -1,5 +1,6 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Services;
 
@@ -13,7 +14,8 @@ public interface ICvStructuredUpdateService
 
 public sealed class CvStructuredUpdateService(
     ICvStructuredDocumentService structuredDocumentService,
-    ICvStructuredUpdateAiClient updateAiClient) : ICvStructuredUpdateService
+    ICvStructuredUpdateAiClient updateAiClient,
+    ICvSectionCatalog sectionCatalog) : ICvStructuredUpdateService
 {
     public async Task<CvStructuredDocumentDto> UpdateWithAiAsync(
         AppUserEntity user,
@@ -53,7 +55,8 @@ public sealed class CvStructuredUpdateService(
         var merged = CvStructuredUpdateNormalizer.MergeAssistUpdate(
             current,
             updated,
-            focusSectionIds);
+            focusSectionIds,
+            sectionCatalog);
 
         return await structuredDocumentService.SaveStructuredAsync(
             user,

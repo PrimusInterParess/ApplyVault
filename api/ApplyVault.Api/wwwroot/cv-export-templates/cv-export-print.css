@@ -1,9 +1,8 @@
 /* Shared print/PDF rules for Chromium (Puppeteer) multi-page CV export.
-   Page inset is owned by each template shell (.cv-body / .cv-page-pad).
-   @page margin stays 0 so iframe preview and PDF share the same breathing room,
-   and Modern sidebar backgrounds can still bleed to the paper edge.
-   box-decoration-break: clone re-applies shell padding on every page fragment
-   so page 2+ keeps the same top/edge inset as page 1 (default export stays 1 page). */
+   Single template (cv-template.html); page inset is owned by the .cv-body shell.
+   @page margin stays 0 on page 1 so the iframe preview and the first page share the same inset.
+   Later pages add a top margin for the running name. box-decoration-break: clone
+   re-applies shell padding on every fragment (one page recommended, two max). */
 
 :root {
   --cv-page-pad-y: 14mm;
@@ -20,9 +19,42 @@
   margin: 0;
 }
 
+/* Chrome applies :left and :right separately; a grouped page selector does not.
+   Page 1 stays margin 0 so the preview and the first page share the same inset.
+   Later pages keep a running name in the top margin, aligned with the left inset. */
+@page :left {
+  margin-top: 8mm;
+  @top-left {
+    content: var(--cv-running-name);
+    margin-left: var(--cv-page-pad-x);
+    font-family: "Source Sans 3", sans-serif;
+    font-size: 9pt;
+    font-weight: 400;
+    color: var(--cv-muted, #5c5c5c);
+  }
+}
+
+@page :right {
+  margin-top: 8mm;
+  @top-left {
+    content: var(--cv-running-name);
+    margin-left: var(--cv-page-pad-x);
+    font-family: "Source Sans 3", sans-serif;
+    font-size: 9pt;
+    font-weight: 400;
+    color: var(--cv-muted, #5c5c5c);
+  }
+}
+
+@page :first {
+  margin: 0;
+  @top-left {
+    content: none;
+  }
+}
+
 /* Clone padding/borders onto each printed page fragment (not only page 1). */
-.cv-body,
-.cv-page-pad {
+.cv-body {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -41,22 +73,10 @@ a {
   text-decoration: none;
 }
 
-.cv-layout {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  page-break-inside: auto;
-}
-
-.cv-layout > tbody > tr > td {
-  vertical-align: top;
-  page-break-inside: auto;
-}
-
 .section {
   break-inside: auto;
   page-break-inside: auto;
-  /* Section vertical rhythm is owned by each template shell. */
+  /* A Section continues between Entries. Each Entry stays whole. */
 }
 
 .section-title {
@@ -72,6 +92,8 @@ a {
 .entry-header {
   flex-wrap: wrap;
   gap: 4px 8px;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .entry-title,
@@ -82,6 +104,12 @@ a {
   word-break: break-word;
 }
 
+.entry-subtitle,
+.entry-summary {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .entry-date {
   white-space: normal;
   flex-shrink: 1;
@@ -89,11 +117,13 @@ a {
 }
 
 .entry-bullets {
-  break-inside: avoid;
-  page-break-inside: avoid;
+  break-inside: auto;
+  page-break-inside: auto;
 }
 
 .entry-bullets li {
+  break-inside: avoid;
+  page-break-inside: avoid;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

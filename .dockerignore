@@ -17,3 +17,5 @@ publish/
 deploy/.env
 .env
 .env.*
+**/.cursor/debug-*.log
+api/ApplyVault.Api/Services/Jobnet/AgentDebugLog.cs

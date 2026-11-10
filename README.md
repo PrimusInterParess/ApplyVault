@@ -23,7 +23,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Persist generated CV project summaries per user (title, summary, bullets, tech stack) with regenerate and delete; summaries are removed when GitHub is disconnected.
 - Upload one PDF CV per user from the dashboard, store the file on local disk or Azure Blob Storage, and auto-extract structured sections on upload (Google AI with heuristic fallback) plus optional profile-photo extraction.
 - Edit structured CV sections (Experience, Projects, Education, Skills, Summary, Custom) with inline editing, drag-and-drop reorder, re-import from the stored PDF, Google AI section updates, and reviewable improvement suggestions.
-- Export a formatted PDF from structured CV content using selectable HTML templates (Modern, Minimal).
+- Export a formatted PDF from structured CV content using a single one-column HTML template (one page recommended, two pages max).
 - Practice interviews on **Interview prep** (`/interview-prep`): durable sessions grounded in the Structured CV and an optional saved job, with modes/personas, Full loop, language/market options, and AI-backed turns (fake provider available for local Dev).
 - Generate a durable **Interview Prep brief** (study pack) from the Structured CV and optional saved job—prioritized topics with gap tags, sample questions, and CV talking points—independent of practice sessions; regenerate in place; outdated when the CV changes or the bound job is gone.
 - Open Study brief from Interview prep (`?surface=study`) or from a saved job (`?jobId=<guid>&surface=study`).
@@ -139,7 +139,8 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/cv-documents/current/structured/reimport`
 - `POST /api/cv-documents/current/structured/ai-update`
 - `POST /api/cv-documents/current/structured/ai-suggestions`
-- `GET /api/cv-documents/current/export/download?templateId=2&maxPages=2` — export formatted PDF from structured content; optional `maxPages` compacts layout to fit when possible and returns `X-Cv-Export-*` page-count/warning headers
+- `GET /api/cv-documents/current/export/download` — export formatted PDF from structured content; layout is compacted to fit one page when possible (two pages max) and `X-Cv-Export-*` page-count/notice headers are returned
+- `GET /api/cv-documents/current/export/preview` — same layout as HTML for the Check export panel
 - `GET /api/mail-connections`
 - `POST /api/mail-connections/gmail/start`
 - `GET /api/mail-connections/gmail/callback`
@@ -227,7 +228,7 @@ Option sections (validated at startup when enabled):
 - `CvDocumentStorage`
   Stores each user’s uploaded CV PDF. `Provider` is `Local` (default; files under `App_Data/cv-documents`, gitignored) or `AzureBlob` (set `AzureBlob:ConnectionString` and `ContainerName` for production). `MaxFileSizeBytes` defaults to 5 MB. Only one CV per user; a new upload replaces the previous file and storage object and triggers structured re-import.
 - `CvHtmlExport`
-  Controls HTML-template PDF export (`EnableHtmlTemplates`, `TemplatesSubfolder`, `MaxConcurrentExports`). Templates are numbered 2–3 (Modern, Minimal); unknown ids (including retired Classic `1`) normalize to Modern.
+  Controls HTML PDF export (`EnableHtmlTemplates`, `TemplatesSubfolder`, `MaxConcurrentExports`). There is a single template, `cv-template.html` (ADR-0028).
 - `ConnectionStrings:Redis`
   Optional shared Redis for EURES/Jobnet ranked-result caches and Gmail sync locking when running more than one API replica. Omit for single-replica local dev (in-memory cache and in-process lock fallback).
 - `Cors`

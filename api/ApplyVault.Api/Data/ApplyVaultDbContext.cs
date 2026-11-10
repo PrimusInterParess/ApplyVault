@@ -163,6 +163,11 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.HasKey((section) => section.Id);
             entity.Property((section) => section.Heading).IsRequired().HasMaxLength(256);
             entity.Property((section) => section.SectionType).IsRequired().HasMaxLength(32);
+            // Sentinel is true so an explicit false (omitted) is stored. The CLR default
+            // false must not be treated as "unset" and replaced by the database default.
+            entity.Property((section) => section.IncludedOnTemplate)
+                .HasDefaultValue(true)
+                .HasSentinel(true);
             entity.HasIndex((section) => new { section.UserCvDocumentId, section.SortOrder });
             entity.HasOne((section) => section.Document)
                 .WithMany((document) => document.Sections)

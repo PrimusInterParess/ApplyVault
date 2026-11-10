@@ -1,13 +1,10 @@
 @if (job(); as selectedJob) {
   <section class="job-detail">
-    <div class="job-detail__header">
+    <div class="job-detail__header" [class.job-detail__header--divided]="!hasFacts()">
       <div class="job-detail__header-content">
         <p class="job-detail__eyebrow">{{ sourceLabel() }}</p>
         <h2>{{ selectedJob.title || 'Untitled listing' }}</h2>
         <p class="job-detail__company">{{ selectedJob.employer || 'Unknown employer' }}</p>
-        @if (selectedJob.location) {
-          <p class="job-detail__location">{{ selectedJob.location }}</p>
-        }
       </div>
 
       <div class="job-detail__actions job-detail__actions--primary">
@@ -48,28 +45,54 @@
       </div>
     </div>
 
-    <div class="job-detail__chips">
-      @if (postedAt(); as date) {
-        <span>Posted {{ date | date: 'MMM d, y':'UTC' }}</span>
-      }
-      @if (selectedJob.remote) {
-        <span>Remote</span>
-      }
-      @if (selectedJob.contractType) {
-        <span>{{ selectedJob.contractType }}</span>
-      }
-      @if (selectedJob.workHours) {
-        <span>{{ selectedJob.workHours }}</span>
-      }
-      @if (selectedJob.tags?.length) {
-        @for (tag of selectedJob.tags; track tag) {
-          <span>{{ tag }}</span>
+    @if (hasFacts()) {
+      <dl class="job-detail__facts">
+        @if (selectedJob.location) {
+          <div>
+            <dt>Location</dt>
+            <dd>{{ selectedJob.location }}</dd>
+          </div>
         }
-      }
-      @if (savedJobId()) {
-        <span class="job-detail__chip job-detail__chip--reviewed">In ApplyVault</span>
-      }
-    </div>
+        @if (postedAt(); as date) {
+          <div>
+            <dt>Posted</dt>
+            <dd>{{ date | date: 'MMM d, y':'UTC' }}</dd>
+          </div>
+        }
+        @if (selectedJob.remote) {
+          <div>
+            <dt>Workplace</dt>
+            <dd>Remote</dd>
+          </div>
+        }
+        @if (selectedJob.contractType) {
+          <div>
+            <dt>Contract</dt>
+            <dd>{{ selectedJob.contractType }}</dd>
+          </div>
+        }
+        @if (selectedJob.workHours) {
+          <div>
+            <dt>Hours</dt>
+            <dd>{{ selectedJob.workHours }}</dd>
+          </div>
+        }
+        @if (selectedJob.tags; as tags) {
+          @if (tags.length) {
+            <div>
+              <dt>Tags</dt>
+              <dd>{{ tags.join(', ') }}</dd>
+            </div>
+          }
+        }
+        @if (savedJobId()) {
+          <div>
+            <dt>Status</dt>
+            <dd>In ApplyVault</dd>
+          </div>
+        }
+      </dl>
+    }
 
     @if (saveError(); as saveErrorMessage) {
       <article class="job-detail__panel job-detail__panel--attention">

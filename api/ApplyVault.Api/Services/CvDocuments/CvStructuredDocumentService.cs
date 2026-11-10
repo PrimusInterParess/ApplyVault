@@ -22,9 +22,15 @@ public sealed class CvStructuredDocumentService(
     ApplyVaultDbContext dbContext,
     ICvSectionCatalog sectionCatalog) : ICvStructuredDocumentService
 {
-    public async Task<CvStructuredDocumentDto?> GetStructuredAsync(
+    public Task<CvStructuredDocumentDto?> GetStructuredAsync(
         AppUserEntity user,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GetStructuredAsync(user, allowHeal: true, cancellationToken);
+
+    private async Task<CvStructuredDocumentDto?> GetStructuredAsync(
+        AppUserEntity user,
+        bool allowHeal,
+        CancellationToken cancellationToken)
     {
         var document = await dbContext.UserCvDocuments
             .AsNoTracking()
@@ -32,7 +38,26 @@ public sealed class CvStructuredDocumentService(
             .ThenInclude((section) => section.Entries.OrderBy((entry) => entry.SortOrder))
             .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
 
-        return document is null ? null : MapDocument(document);
+        if (document is null)
+        {
+            return null;
+        }
+
+        var mapped = MapDocument(document);
+
+        if (allowHeal
+            && mapped.Sections.Count > 0
+            && !FixedSectionLayout.IsCanonical(mapped.Sections, sectionCatalog))
+        {
+            var write = mapped.Sections.Select(FixedSectionLayout.ToWriteDto).ToArray();
+            return await SaveStructuredAsync(
+                user,
+                new SaveCvStructuredDocumentRequest(write),
+                markImported: false,
+                cancellationToken);
+        }
+
+        return mapped;
     }
 
     public async Task<CvStructuredDocumentDto> SaveStructuredAsync(
@@ -63,8 +88,9 @@ public sealed class CvStructuredDocumentService(
         }
 
         var utcNow = DateTimeOffset.UtcNow;
+        var sections = FixedSectionLayout.Normalize(request.Sections, sectionCatalog);
 
-        foreach (var sectionWrite in request.Sections.OrderBy((section) => section.SortOrder))
+        foreach (var sectionWrite in sections)
         {
             var sectionType = sectionCatalog.Normalize(sectionWrite.SectionType);
             var sectionEntity = new UserCvSectionEntity
@@ -74,7 +100,8 @@ public sealed class CvStructuredDocumentService(
                 UserCvDocumentId = document.Id,
                 Heading = sectionWrite.Heading.Trim(),
                 SectionType = sectionType,
-                SortOrder = sectionWrite.SortOrder
+                SortOrder = sectionWrite.SortOrder,
+                IncludedOnTemplate = sectionWrite.IncludedOnTemplate != false
             };
 
             dbContext.UserCvSections.Add(sectionEntity);
@@ -111,7 +138,7 @@ public sealed class CvStructuredDocumentService(
             }
         }
 
-        document.StructuredImportedAt = request.Sections.Count > 0
+        document.StructuredImportedAt = sections.Count > 0
             ? markImported ? utcNow : document.StructuredImportedAt ?? utcNow
             : null;
 
@@ -122,7 +149,7 @@ public sealed class CvStructuredDocumentService(
             await transaction.CommitAsync(cancellationToken);
         }
 
-        return (await GetStructuredAsync(user, cancellationToken))!;
+        return (await GetStructuredAsync(user, allowHeal: false, cancellationToken))!;
     }
 
     internal CvStructuredDocumentDto MapDocument(UserCvDocumentEntity document) =>
@@ -143,7 +170,8 @@ public sealed class CvStructuredDocumentService(
             section.Entries
                 .OrderBy((entry) => entry.SortOrder)
                 .Select((entry) => MapEntry(section.SectionType, entry))
-                .ToArray());
+                .ToArray(),
+            section.IncludedOnTemplate);
 
     private CvStructuredEntryDto MapEntry(string sectionType, UserCvEntryEntity entry)
     {

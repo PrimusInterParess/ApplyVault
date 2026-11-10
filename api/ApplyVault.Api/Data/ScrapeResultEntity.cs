@@ -221,7 +221,7 @@ public sealed class UserCvDocumentEntity
 
     public string? ProfilePhotoContentType { get; set; }
 
-    public int TemplateId { get; set; } = 2;
+    public string? UnplacedContentJson { get; set; }
 
     public AppUserEntity? User { get; set; }
 
@@ -241,6 +241,12 @@ public sealed class UserCvSectionEntity
     public required string SectionType { get; set; }
 
     public int SortOrder { get; set; }
+
+    /// <summary>
+    /// Template visibility. Existing rows stay included via the column default.
+    /// Contact is forced included when the structured document is normalized.
+    /// </summary>
+    public bool IncludedOnTemplate { get; set; } = true;
 
     public UserCvDocumentEntity? Document { get; set; }
 

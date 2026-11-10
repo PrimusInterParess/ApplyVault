@@ -1,4 +1,3 @@
-import { createBuilderStarterSections } from './cv-builder-starter-sections.util';
 import {
   contactEntryValue,
   contactFieldHasValue,
@@ -62,32 +61,6 @@ describe('cv-starter-entry.util', () => {
     expect(next.entries[0].bullets).toEqual(['']);
   });
 
-  it('builds Blank CV starter Sections Contact, Summary, Experience, Education, Skills', () => {
-    const sections = createBuilderStarterSections();
-
-    expect(sections.map((section) => section.sectionType)).toEqual([
-      'Contact',
-      'Summary',
-      'Experience',
-      'Education',
-      'Skills'
-    ]);
-
-    const contact = sections[0];
-    expect(contact.entries.map((entry) => entry.title)).toEqual([
-      'Name',
-      'Email',
-      'Phone',
-      'LinkedIn'
-    ]);
-
-    expect(sections.find((section) => section.sectionType === 'Experience')?.entries[0].bullets).toEqual([
-      ''
-    ]);
-    expect(sections.find((section) => section.sectionType === 'Skills')?.entries[0].bullets).toEqual([]);
-    expect(sections.find((section) => section.sectionType === 'Skills')?.entries[0].techStack).toBe('');
-    expect(sections.find((section) => section.sectionType === 'Summary')?.entries.length).toBe(1);
-  });
 });
 
 describe('Contact display filter', () => {

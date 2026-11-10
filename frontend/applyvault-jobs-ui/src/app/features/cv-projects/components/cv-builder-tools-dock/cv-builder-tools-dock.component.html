@@ -1,0 +1,31 @@
+<aside
+  class="cv-builder-dock"
+  [class.cv-builder-dock--open]="activeTool() !== null"
+  aria-label="CV tools">
+  <div class="cv-builder-dock__tabs" role="tablist" aria-label="CV tools">
+    @for (tool of tools; track tool.id) {
+      <button
+        type="button"
+        role="tab"
+        class="cv-builder-dock__tab"
+        [class.cv-builder-dock__tab--active]="activeTool() === tool.id"
+        [attr.aria-selected]="activeTool() === tool.id"
+        [attr.aria-controls]="'cv-builder-dock-panel-' + tool.id"
+        (click)="selectTool.emit(tool.id)">
+        {{ tabLabel(tool) }}
+      </button>
+    }
+  </div>
+  <div
+    class="cv-builder-dock__body"
+    [attr.id]="activeTool() ? 'cv-builder-dock-panel-' + activeTool() : null"
+    role="tabpanel">
+    @if (!activeTool()) {
+      <p class="cv-builder-dock__empty">
+        AI assist, leftover import text, and project import stay here so you can keep editing the
+        canvas.
+      </p>
+    }
+    <ng-content />
+  </div>
+</aside>

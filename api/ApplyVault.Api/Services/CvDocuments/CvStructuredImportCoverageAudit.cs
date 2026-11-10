@@ -12,28 +12,34 @@ internal static class CvStructuredImportCoverageAudit
 
     public static int CountMissingSourceLines(
         IReadOnlyList<CvPdfRawSection> rawSections,
+        IReadOnlyList<CvStructuredSectionWriteDto> sections) =>
+        CollectMissingSourceLines(rawSections.SelectMany((section) =>
+                section.Text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)),
+            sections).Count;
+
+    public static IReadOnlyList<string> CollectMissingSourceLines(
+        IEnumerable<string> sourceLines,
         IReadOnlyList<CvStructuredSectionWriteDto> sections)
     {
         var structuredText = CollectStructuredText(sections);
-        var missingCount = 0;
+        var missing = new List<string>();
 
-        foreach (var rawSection in rawSections)
+        foreach (var line in sourceLines)
         {
-            foreach (var line in rawSection.Text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (ShouldSkipSourceLine(line, rawSection.Heading))
-                {
-                    continue;
-                }
+            var trimmed = line.Trim();
 
-                if (!IsLineRepresented(line, structuredText))
-                {
-                    missingCount++;
-                }
+            if (trimmed.Length == 0 || ShouldSkipSourceLine(trimmed, string.Empty))
+            {
+                continue;
+            }
+
+            if (!IsLineRepresented(trimmed, structuredText))
+            {
+                missing.Add(trimmed);
             }
         }
 
-        return missingCount;
+        return missing;
     }
 
     private static bool ShouldSkipSourceLine(string line, string heading)

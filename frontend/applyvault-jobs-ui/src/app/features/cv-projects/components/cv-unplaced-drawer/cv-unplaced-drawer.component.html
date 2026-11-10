@@ -1,0 +1,72 @@
+@if (open()) {
+  @if (!docked()) {
+    <div
+      class="cv-builder__drawer-backdrop"
+      role="presentation"
+      (click)="closePanel.emit()"></div>
+  }
+  <aside
+    id="cv-builder-unplaced-drawer"
+    class="cv-builder__drawer cv-builder__drawer--unplaced"
+    [class.cv-builder__drawer--docked]="docked()"
+    [attr.role]="docked() ? 'region' : 'dialog'"
+    [attr.aria-modal]="docked() ? null : 'true'"
+    aria-label="Unplaced CV content">
+    <header class="cv-builder__drawer-header">
+      <div class="cv-builder__drawer-heading">
+        <p class="cv-builder__drawer-eyebrow">Import leftovers</p>
+        <h2 class="cv-builder__drawer-title">Unplaced ({{ items().length }})</h2>
+      </div>
+      <button
+        type="button"
+        class="cv-builder__drawer-close"
+        (click)="closePanel.emit()"
+        aria-label="Close unplaced content">
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <div class="cv-builder__drawer-body">
+      <p class="cv-builder__unplaced-hint">
+        Text the importer could not place in a section. Copy what you need onto the canvas, then dismiss.
+        Unplaced text is not exported.
+      </p>
+      @if (error(); as unplacedError) {
+        <p class="cv-builder__error" role="alert">{{ unplacedError }}</p>
+      }
+      @if (items().length === 0) {
+        <p class="cv-builder__unplaced-empty">No leftover import text.</p>
+      } @else {
+        <ul class="cv-builder__unplaced-list">
+          @for (item of items(); track $index) {
+            <li class="cv-builder__unplaced-item">
+              <p class="cv-builder__unplaced-text">{{ item }}</p>
+              <span class="cv-builder__unplaced-actions">
+                <button
+                  type="button"
+                  class="cv-builder__unplaced-copy"
+                  [disabled]="busy()"
+                  (click)="copyItem($index, item)">
+                  {{ copiedIndex() === $index ? 'Copied' : 'Copy' }}
+                </button>
+                <button
+                  type="button"
+                  class="cv-builder__unplaced-dismiss"
+                  [disabled]="busy()"
+                  (click)="dismissItem.emit($index)">
+                  Dismiss
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+        <button
+          type="button"
+          class="cv-builder__unplaced-dismiss-all"
+          [disabled]="busy()"
+          (click)="dismissAll.emit()">
+          {{ busy() ? 'Updating…' : 'Dismiss all' }}
+        </button>
+      }
+    </div>
+  </aside>
+}

@@ -7,7 +7,6 @@ public interface ICvExportHtmlDocumentBuilder
 {
     Task<string> BuildAsync(
         CvExportRenderRequest request,
-        int templateId,
         CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default);
 }
@@ -16,26 +15,24 @@ public sealed class CvExportHtmlDocumentBuilder(
     IWebHostEnvironment environment,
     IOptions<CvHtmlExportOptions> options) : ICvExportHtmlDocumentBuilder
 {
+    /// <summary>The single CV export template (one-column header + main layout).</summary>
+    private const string TemplateFileName = "cv-template.html";
+
     public async Task<string> BuildAsync(
         CvExportRenderRequest request,
-        int templateId,
         CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
-        var templateFileName = CvExportHtmlTemplateCatalog.GetHtmlTemplateFileName(resolvedTemplateId)
-            ?? throw new InvalidOperationException($"HTML template {resolvedTemplateId} is not configured.");
-
-        var templatePath = ResolveTemplatePath(templateFileName);
+        var templatePath = ResolveTemplatePath(TemplateFileName);
 
         if (!File.Exists(templatePath))
         {
-            throw new FileNotFoundException($"CV HTML template was not found: {templateFileName}", templatePath);
+            throw new FileNotFoundException($"CV HTML template was not found: {TemplateFileName}", templatePath);
         }
 
         var templateHtml = await File.ReadAllTextAsync(templatePath, cancellationToken).ConfigureAwait(false);
         return InjectPrintStyles(
-            CvExportHtmlMapper.ApplyTemplate(templateHtml, request, resolvedTemplateId),
+            CvExportHtmlMapper.ApplyTemplate(templateHtml, request),
             options);
     }
 
@@ -61,7 +58,7 @@ public sealed class CvExportHtmlDocumentBuilder(
 
         if (!File.Exists(printCssPath))
         {
-            return html;
+            return CvExportFontFaceInliner.Inline(html, ResolveTemplatesDirectory());
         }
 
         var printCss = File.ReadAllText(printCssPath);
@@ -74,9 +71,11 @@ public sealed class CvExportHtmlDocumentBuilder(
             return html;
         }
 
-        return html.Replace(
+        var withPrintStyles = html.Replace(
             headClose,
             $"<style>{printCss}{compactCss}</style>{headClose}",
             StringComparison.OrdinalIgnoreCase);
+
+        return CvExportFontFaceInliner.Inline(withPrintStyles, ResolveTemplatesDirectory());
     }
 }

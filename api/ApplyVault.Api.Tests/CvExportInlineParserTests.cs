@@ -49,4 +49,43 @@ public sealed class CvExportInlineParserTests
     {
         Assert.Equal(expected, CvExportInlineParser.SanitizeLinkUrl(url));
     }
+
+    [Fact]
+    public void Render_leaves_a_bare_url_as_text()
+    {
+        var html = CvExportInlineHtmlRenderer.Render("https://github.com/jane");
+
+        Assert.DoesNotContain("<a ", html, StringComparison.Ordinal);
+        Assert.Contains("https://github.com/jane", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("https://github.com/jane", "https://github.com/jane")]
+    [InlineData("http://github.com/jane", "http://github.com/jane")]
+    [InlineData("github.com/jane", "https://github.com/jane")]
+    [InlineData("www.github.com/jane", "https://www.github.com/jane")]
+    [InlineData("linkedin.com/in/jane", "https://linkedin.com/in/jane")]
+    [InlineData("www.linkedin.com/in/jane", "https://www.linkedin.com/in/jane")]
+    [InlineData("https://example.com/portfolio", "https://example.com/portfolio")]
+    public void RenderContactLine_links_bare_http_and_profile_hosts(string line, string href)
+    {
+        var html = CvExportInlineHtmlRenderer.RenderContactLine(line);
+
+        Assert.Contains(
+            $"<a href=\"{href}\" target=\"_blank\" rel=\"noopener noreferrer\">{line}</a>",
+            html,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("jane@example.com")]
+    [InlineData("+45 12 34 56 78")]
+    [InlineData("example.com/portfolio")]
+    [InlineData("See https://github.com/jane")]
+    public void RenderContactLine_leaves_other_lines_unlinked(string line)
+    {
+        var html = CvExportInlineHtmlRenderer.RenderContactLine(line);
+
+        Assert.DoesNotContain("<a ", html, StringComparison.Ordinal);
+    }
 }

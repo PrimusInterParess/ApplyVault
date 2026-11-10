@@ -1,0 +1,33 @@
+<nav class="cv-builder-rail" aria-label="CV sections">
+  <p class="cv-builder-rail__title">Sections</p>
+  <ol class="cv-builder-rail__list">
+    @for (item of items(); track item.id) {
+      <li class="cv-builder-rail__row" [class.cv-builder-rail__row--off]="item.canToggle && !item.included">
+        <button
+          type="button"
+          class="cv-builder-rail__item"
+          [class.cv-builder-rail__item--complete]="item.complete"
+          [class.cv-builder-rail__item--active]="item.id === activeId() && item.included"
+          [attr.aria-current]="item.id === activeId() && item.included ? 'location' : null"
+          [attr.aria-label]="itemLabel(item)"
+          (click)="jumpToSection.emit(item.id)">
+          <span
+            class="cv-builder-rail__tick"
+            [class.cv-builder-rail__tick--done]="item.complete"
+            aria-hidden="true"></span>
+          <span class="cv-builder-rail__label" [attr.title]="item.heading">{{ item.heading }}</span>
+        </button>
+        @if (item.canToggle) {
+          <button
+            type="button"
+            class="cv-builder-rail__visibility"
+            [attr.aria-pressed]="item.included ? 'true' : 'false'"
+            [attr.aria-label]="visibilityLabel(item)"
+            (click)="toggleVisibility(item)">
+            {{ item.included ? 'On' : 'Off' }}
+          </button>
+        }
+      </li>
+    }
+  </ol>
+</nav>

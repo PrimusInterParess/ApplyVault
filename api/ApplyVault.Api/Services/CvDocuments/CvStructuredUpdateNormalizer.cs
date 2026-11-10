@@ -1,4 +1,5 @@
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Services;
 
@@ -50,11 +51,12 @@ internal static class CvStructuredUpdateNormalizer
     public static SaveCvStructuredDocumentRequest MergeAssistUpdate(
         CvStructuredDocumentDto current,
         SaveCvStructuredDocumentRequest aiResult,
-        IReadOnlyList<Guid>? focusSectionIds)
+        IReadOnlyList<Guid>? focusSectionIds,
+        ICvSectionCatalog catalog)
     {
         if (current.Sections.Count == 0)
         {
-            return Reindex(aiResult.Sections);
+            return new SaveCvStructuredDocumentRequest(FixedSectionLayout.Normalize(aiResult.Sections, catalog));
         }
 
         var aiById = aiResult.Sections
@@ -79,7 +81,7 @@ internal static class CvStructuredUpdateNormalizer
                     }
 
                     return aiById.TryGetValue(section.Id, out var fromAi)
-                        ? fromAi
+                        ? StampIncludedOnTemplate(fromAi, section)
                         : ToWriteDto(section);
                 })
                 .ToList();
@@ -91,7 +93,7 @@ internal static class CvStructuredUpdateNormalizer
             mergedSections = current.Sections
                 .Select((section) =>
                     aiById.TryGetValue(section.Id, out var fromAi)
-                        ? fromAi
+                        ? StampIncludedOnTemplate(fromAi, section)
                         : ToWriteDto(section))
                 .ToList();
 
@@ -104,21 +106,8 @@ internal static class CvStructuredUpdateNormalizer
             }
         }
 
-        return Reindex(mergedSections);
+        return new SaveCvStructuredDocumentRequest(FixedSectionLayout.Normalize(mergedSections, catalog));
     }
-
-    private static SaveCvStructuredDocumentRequest Reindex(
-        IReadOnlyList<CvStructuredSectionWriteDto> sections) =>
-        new(
-            sections
-                .Select((section, sectionIndex) => section with
-                {
-                    SortOrder = sectionIndex,
-                    Entries = section.Entries
-                        .Select((entry, entryIndex) => entry with { SortOrder = entryIndex })
-                        .ToArray()
-                })
-                .ToArray());
 
     private static CvStructuredSectionWriteDto ToWriteDto(CvStructuredSectionDto section) =>
         new(
@@ -139,7 +128,16 @@ internal static class CvStructuredUpdateNormalizer
                     entry.Source,
                     entry.SourceSummaryId,
                     entryIndex))
-                .ToArray());
+                .ToArray(),
+            section.IncludedOnTemplate);
+
+    /// <summary>
+    /// Visibility is seeker state. Copy it from the section being replaced; do not take it from the model.
+    /// </summary>
+    private static CvStructuredSectionWriteDto StampIncludedOnTemplate(
+        CvStructuredSectionWriteDto fromAi,
+        CvStructuredSectionDto current) =>
+        fromAi with { IncludedOnTemplate = current.IncludedOnTemplate };
 
     private static string ResolveHeading(
         CvStructuredUpdateAiSection section,

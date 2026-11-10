@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
@@ -7,7 +7,7 @@ import {
   CvDocument,
   CvDocumentUploadResult,
   CvStructuredReimportResult,
-  UpdateCvExportPrefsRequest
+  ReplaceCvUnplacedContentRequest
 } from '../models/cv-document.model';
 import {
   CvImprovementSuggestions,
@@ -21,10 +21,6 @@ import {
   SaveCvStructuredDocumentRequest,
   UpdateCvStructuredWithAiRequest
 } from '../models/cv-structured.model';
-
-export interface CvFormattedPdfRequest {
-  readonly templateId: number;
-}
 
 export interface CvFormattedPdfResult {
   readonly blob: Blob;
@@ -88,11 +84,10 @@ export class CvDocumentApiService {
     );
   }
 
-  downloadFormattedPdf(request: CvFormattedPdfRequest): Observable<CvFormattedPdfResult> {
+  downloadFormattedPdf(): Observable<CvFormattedPdfResult> {
     return this.httpClient.get(`${this.apiConfig.baseUrl}/cv-documents/current/export/download`, {
       responseType: 'blob',
-      observe: 'response',
-      params: this.buildExportParams(request)
+      observe: 'response'
     }).pipe(
       map((response) => ({
         blob: response.body ?? new Blob([], { type: 'application/pdf' }),
@@ -105,15 +100,14 @@ export class CvDocumentApiService {
 
   /**
    * M1: authenticated HTML identical to Puppeteer input (text/html).
-   * GET /api/cv-documents/current/export/preview?templateId
+   * GET /api/cv-documents/current/export/preview
    * Reads additive X-Cv-Export-Compact-Level / X-Cv-Export-Notice when exposed.
    */
-  getExportPreviewHtml(request: CvFormattedPdfRequest): Observable<CvExportPreviewHtmlResult> {
+  getExportPreviewHtml(): Observable<CvExportPreviewHtmlResult> {
     return this.httpClient
       .get(`${this.apiConfig.baseUrl}/cv-documents/current/export/preview`, {
         responseType: 'text',
-        observe: 'response',
-        params: this.buildExportParams(request)
+        observe: 'response'
       })
       .pipe(
         map((response) => ({
@@ -124,10 +118,6 @@ export class CvDocumentApiService {
       );
   }
 
-  private buildExportParams(request: CvFormattedPdfRequest): HttpParams {
-    return new HttpParams().set('templateId', String(request.templateId));
-  }
-
   delete(): Observable<void> {
     return this.httpClient.delete<void>(`${this.apiConfig.baseUrl}/cv-documents/current`);
   }
@@ -136,13 +126,9 @@ export class CvDocumentApiService {
     return this.httpClient.post<CvDocument>(`${this.apiConfig.baseUrl}/cv-documents/current/start-blank`, {});
   }
 
-  /**
-   * M2: persist export Template on the current CV document.
-   * PUT /api/cv-documents/current/export-preferences
-   */
-  updateExportPrefs(request: UpdateCvExportPrefsRequest): Observable<CvDocument> {
+  replaceUnplacedContent(request: ReplaceCvUnplacedContentRequest): Observable<CvDocument> {
     return this.httpClient.put<CvDocument>(
-      `${this.apiConfig.baseUrl}/cv-documents/current/export-preferences`,
+      `${this.apiConfig.baseUrl}/cv-documents/current/unplaced-content`,
       request
     );
   }

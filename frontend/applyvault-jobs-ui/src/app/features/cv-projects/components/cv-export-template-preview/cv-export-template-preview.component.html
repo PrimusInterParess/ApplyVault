@@ -1,65 +1,44 @@
 <div
   class="cv-export-preview"
-  [ngClass]="templateClass()"
   [class.cv-export-preview--compact]="compact()"
   [class.cv-export-preview--editable]="editable()"
   [attr.role]="editable() ? 'document' : 'img'"
   [attr.aria-label]="editable() ? 'Editable CV' : 'CV template preview'">
   <div class="cv-export-preview__page">
-    @if (resolvedTemplateId() === 3) {
-      <div class="cv-export-preview__main cv-export-preview__main--single">
-        <header class="cv-export-preview__minimal-header">
-          <div class="cv-export-preview__minimal-header-copy">
-            @if (editable() && contactNameEntry(); as nameEntry) {
-              <h1
-                class="cv-export-preview__name cv-export-preview__editable"
-                [appInlineEditableText]="contactNameText(nameEntry)"
-                [enabled]="true"
-                data-placeholder="Your name"
-                (textChange)="emitContactName(nameEntry, $event)"></h1>
-            } @else {
-              <h1 class="cv-export-preview__name">{{ displayName() }}</h1>
-            }
-            <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().header }" />
-          </div>
-          @if (profilePhotoUrl()) {
-            <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
+    <div class="cv-export-preview__main cv-export-preview__main--single">
+      <header class="cv-export-preview__minimal-header" [attr.id]="contactAnchorId()">
+        <div class="cv-export-preview__minimal-header-copy">
+          @if (editable() && contactNameEntry(); as nameEntry) {
+            <h1
+              class="cv-export-preview__name cv-export-preview__editable"
+              [appInlineEditableText]="contactNameText(nameEntry)"
+              [enabled]="true"
+              data-placeholder="Your name"
+              (textChange)="emitContactName(nameEntry, $event)"></h1>
+          } @else {
+            <h1 class="cv-export-preview__name">{{ displayName() }}</h1>
           }
-        </header>
-        <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
-      </div>
-    } @else {
-      <div class="cv-export-preview__columns">
-        <aside class="cv-export-preview__sidebar">
-          @if (profilePhotoUrl()) {
-            <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
-          }
-          <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().sidebar }" />
-        </aside>
-        <div class="cv-export-preview__main">
-          <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
+          <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().header }" />
         </div>
-      </div>
-    }
-
-    @if (editable() && addableTypes().length > 0) {
-      <div class="cv-export-preview__add-section">
-        <label class="cv-export-preview__add-section-label">
-          <span class="cv-export-preview__sr-only">Section type</span>
-          <select #addSectionType class="cv-export-preview__add-section-select">
-            @for (sectionType of addableTypes(); track sectionType) {
-              <option [value]="sectionType">{{ sectionType }}</option>
+        @if (editable()) {
+          <button
+            type="button"
+            class="cv-export-preview__photo-btn"
+            [attr.aria-label]="profilePhotoUrl() ? 'Replace photo' : 'Upload photo'"
+            (click)="photoClick.emit()">
+            @if (profilePhotoUrl()) {
+              <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
+              <span class="cv-export-preview__photo-change">Change</span>
+            } @else {
+              <span class="cv-export-preview__photo cv-export-preview__photo--placeholder">Add photo</span>
             }
-          </select>
-        </label>
-        <button
-          type="button"
-          class="cv-export-preview__add-section-btn"
-          (click)="emitAddSection(addSectionType.value)">
-          + Add section
-        </button>
-      </div>
-    }
+          </button>
+        } @else if (profilePhotoUrl()) {
+          <img class="cv-export-preview__photo" [src]="profilePhotoUrl()" alt="" />
+        }
+      </header>
+      <ng-container *ngTemplateOutlet="sectionList; context: { $implicit: layout().main }" />
+    </div>
   </div>
 </div>
 
@@ -68,63 +47,14 @@
     @if (showContactSection(section)) {
     <section
       class="cv-export-preview__section"
-      [class.cv-export-preview__section--flat-contact]="isContactSection(section) && !showSectionTitle(section)">
-      @if (showSectionTitle(section)) {
-        @if (editable()) {
-          <div class="cv-export-preview__section-head">
-            <h2
-              class="cv-export-preview__section-title cv-export-preview__editable"
-              [appInlineEditableText]="section.heading"
-              [enabled]="true"
-              data-placeholder="Section title"
-              (textChange)="emitSectionHeading(section.id, $event)"></h2>
-            <div class="cv-export-preview__section-actions">
-              <button
-                type="button"
-                class="cv-export-preview__section-action"
-                [disabled]="!canMoveSectionUp(section.id)"
-                aria-label="Move section up"
-                (click)="emitMoveSection(section.id, -1)">
-                ↑
-              </button>
-              <button
-                type="button"
-                class="cv-export-preview__section-action"
-                [disabled]="!canMoveSectionDown(section.id)"
-                aria-label="Move section down"
-                (click)="emitMoveSection(section.id, 1)">
-                ↓
-              </button>
-              <button
-                type="button"
-                class="cv-export-preview__section-action cv-export-preview__section-action--danger"
-                aria-label="Remove section"
-                (click)="emitRemoveSection(section.id)">
-                ×
-              </button>
-            </div>
-          </div>
-        } @else {
-          <h2 class="cv-export-preview__section-title">{{ section.heading }}</h2>
-        }
+      [attr.id]="isContactSection(section) ? null : sectionAnchorId(section.id)"
+      [class.cv-export-preview__section--flat-contact]="isContactSection(section) && !showSectionTitle(section)"
+      [class.cv-export-preview__section--empty]="editable() && sectionIsEmpty(section)">
+          @if (showSectionTitle(section)) {
+        <h2 class="cv-export-preview__section-title">{{ section.heading }}</h2>
       }
 
       @if (isContactSection(section)) {
-        @if (visibleContactName(section); as nameEntry) {
-          @if (editable()) {
-            <p
-              class="cv-export-preview__name cv-export-preview__name--in-section cv-export-preview__editable"
-              [appInlineEditableText]="contactNameText(nameEntry)"
-              [enabled]="true"
-              data-placeholder="Your name"
-              (textChange)="emitContactName(nameEntry, $event)"></p>
-          } @else if (contactNameText(nameEntry)) {
-            <p class="cv-export-preview__name cv-export-preview__name--in-section">
-              {{ contactNameText(nameEntry) }}
-            </p>
-          }
-        }
-
         @if (showContactBlock(section)) {
           <div class="cv-export-preview__contact">
             @for (entry of visibleContactChannels(section); track entry.id) {
@@ -163,7 +93,7 @@
         }
       } @else {
         <div class="cv-export-preview__entries">
-          @for (entry of visibleContactEntries(section); track entry.id) {
+          @for (entry of sortedEntries(section); track entry.id) {
             <article
               class="cv-export-preview__entry"
               [class.cv-export-preview__entry--summary]="isSummarySection(section.sectionType)"
@@ -282,7 +212,7 @@
         </div>
       }
 
-      @if (editable() && !isContactSection(section) && allowsMultipleEntries(section)) {
+      @if (showAddEntry(section)) {
         <button
           type="button"
           class="cv-export-preview__add-entry"

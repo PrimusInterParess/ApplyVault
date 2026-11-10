@@ -44,4 +44,22 @@ export class ExternalJobDetailComponent {
   protected readonly descriptionDisplayMode = computed(() =>
     resolveJobDescriptionDisplayMode(this.job())
   );
+
+  protected readonly hasFacts = computed(() => {
+    const job = this.job();
+
+    if (!job) {
+      return false;
+    }
+
+    return Boolean(
+      job.location ||
+        this.postedAt() ||
+        job.remote ||
+        job.contractType ||
+        job.workHours ||
+        job.tags?.length ||
+        this.savedJobId()
+    );
+  });
 }

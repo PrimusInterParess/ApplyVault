@@ -21,6 +21,22 @@
   box-shadow: 0 16px 40px rgb(28 35 48 / 14%);
   display: grid;
   gap: 0.55rem;
+  align-content: start;
+}
+
+.cv-builder__projects-panel--docked {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: 1rem 1.15rem 1.5rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: auto;
 }
 
 .cv-builder__structure-head {

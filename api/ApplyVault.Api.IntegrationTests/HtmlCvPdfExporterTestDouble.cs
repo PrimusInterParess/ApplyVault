@@ -15,12 +15,11 @@ public sealed class HtmlCvPdfExporterTestDouble(ICvExportHtmlDocumentBuilder htm
 {
     public async Task<byte[]> ExportAsync(
         CvExportRenderRequest request,
-        int templateId,
         CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         var html = await htmlDocumentBuilder
-            .BuildAsync(request, templateId, options, cancellationToken)
+            .BuildAsync(request, options, cancellationToken)
             .ConfigureAwait(false);
         var plainText = StripHtml(html);
 

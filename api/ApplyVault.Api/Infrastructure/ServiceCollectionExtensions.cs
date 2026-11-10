@@ -135,10 +135,6 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(CvSummaryProposeAiOptions.SectionName));
 
         services
-            .AddOptions<CvExportAiOptions>()
-            .Bind(configuration.GetSection(CvExportAiOptions.SectionName));
-
-        services
             .AddOptions<CvHtmlExportOptions>()
             .Bind(configuration.GetSection(CvHtmlExportOptions.SectionName));
 
@@ -284,7 +280,6 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ICvStructuredSuggestionsAiClient, GoogleAiCvStructuredSuggestionsClient>();
         services.AddHttpClient<ICvStructuredEvaluationAiClient, GoogleAiCvStructuredEvaluationClient>();
         services.AddHttpClient<ICvStructuredSummaryProposeAiClient, GoogleAiCvStructuredSummaryProposeClient>();
-        services.AddHttpClient<ICvExportAiClient, GoogleAiCvExportClient>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddExceptionHandler<JobnetJobClientExceptionHandler>();
@@ -336,7 +331,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICvStructuredEvaluationService, CvStructuredEvaluationService>();
         services.AddScoped<ICvStructuredSummaryProposeService, CvStructuredSummaryProposeService>();
         services.AddScoped<ICvPdfPageCounter, CvPdfPageCounter>();
-        services.AddScoped<ICvPdfExportRenderer, CvPdfExportRenderer>();
         services.AddCvHtmlExport(configuration);
         services.AddScoped<ICvDocumentExportService, CvDocumentExportService>();
         services.AddScoped<LocalFilesystemCvDocumentStorage>();

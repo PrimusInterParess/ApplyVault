@@ -64,7 +64,7 @@ export const routes: Routes = [
         path: 'cv-builder',
         title: 'CV Builder',
         data: {
-          shellSubtitle: 'Choose a template, edit your structured CV on the page, and export a PDF.'
+          shellSubtitle: 'Edit your structured CV on the page and export a PDF.'
         },
         loadComponent: () =>
           import('./features/cv-projects/pages/cv-builder-page/cv-builder-page.component').then(

@@ -4,6 +4,8 @@
 
 Accepted (2026-08-01 — operate `cv-pdf-section-match-2026-08-01`, operator choice 2)
 
+Decisions 2 (heuristic fallback) and 4-P1 ("Additional information" catch-all) are superseded by [ADR-0029](0029-fixed-cv-section-layout-and-unplaced-content.md) and [ADR-0030](0030-cv-import-ai-parser-contact-only-fallback.md). Empty-extract hard fail when Gemini is off is superseded by [ADR-0032](0032-cv-import-gemini-reads-empty-text-pdf.md) when `GoogleAi:Enabled`. No local OCR and link integrity still stand.
+
 ## Context
 
 Earlier PDF import designs used **heuristic-first** structuring (catalog Sectionize → heuristic place → confidence-gated Gemini). SoftHeading, the confidence gate, and `ForceAi` often skipped AI when headings “looked fine” while typed sections were wrong or empty. Older design notes still describe that shape and conflict with the shipped pipeline.

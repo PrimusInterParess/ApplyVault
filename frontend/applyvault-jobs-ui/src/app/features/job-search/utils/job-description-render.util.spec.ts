@@ -46,6 +46,55 @@ describe('renderJobDescription', () => {
     expect(rendered).toContain('Ship features');
   });
 
+  it('promotes a short bold paragraph into a section heading', () => {
+    const rendered = renderJobDescription('<p><strong>Requirements</strong></p><p>Build APIs.</p>');
+
+    expect(rendered).toContain('<h3>Requirements</h3>');
+    expect(rendered).toContain('<p>Build APIs.</p>');
+  });
+
+  it('keeps a bold sentence as a paragraph', () => {
+    const rendered = renderJobDescription('<p><strong>We build reliable APIs for banks.</strong></p>');
+
+    expect(rendered).toContain('<p><strong>We build reliable APIs for banks.</strong></p>');
+    expect(rendered).not.toContain('<h3>');
+  });
+
+  it('promotes a short label in front of a list', () => {
+    const rendered = renderJobDescription('Role summary\n\n- Build APIs\n- Ship features');
+
+    expect(rendered).toContain('<h3>Role summary</h3>');
+    expect(rendered).toContain('<ul>');
+  });
+
+  it('repairs broken markdown headings from a Work in Denmark listing', () => {
+    const html = [
+      '<p>_Copenhagen, Denmark</p>',
+      '<p>_**About The Job</p>',
+      '<p>**Do you want to work with data engineering at Saxo?</p>',
+      '<p>**Responsibilities</p>',
+      '<p>**</p>',
+      '<ul><li>Build data products.</li></ul>',
+      '<p>**Your profile</p>',
+      '<p>**</p>',
+      '<ul><li>5+ years of experience.</li></ul>',
+      '<p>**How To Apply</p>',
+      '<p>**Click here to create an account and upload your resume.</p>'
+    ].join('\n');
+
+    const rendered = renderJobDescription(html);
+
+    expect(rendered).toContain('<p>Copenhagen, Denmark</p>');
+    expect(rendered).toContain('<h3>About The Job</h3>');
+    expect(rendered).toContain('<h3>Responsibilities</h3>');
+    expect(rendered).toContain('<h3>Your profile</h3>');
+    expect(rendered).toContain('<h3>How To Apply</h3>');
+    expect(rendered).toContain('<p>Do you want to work with data engineering at Saxo?</p>');
+    expect(rendered).toContain('<p>Click here to create an account and upload your resume.</p>');
+    expect(rendered).not.toContain('**');
+    expect(rendered).not.toContain('_Copenhagen');
+  });
+
   it('formats scraped plain text that only contains line breaks', () => {
     const rendered = renderJobDescription('Developer role\n\n\nPrinciples\n\n\nServices');
 

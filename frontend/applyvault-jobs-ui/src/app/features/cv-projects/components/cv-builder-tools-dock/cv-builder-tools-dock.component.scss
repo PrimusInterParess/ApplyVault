@@ -1,0 +1,116 @@
+@use 'app-breakpoints' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.cv-builder-dock {
+  --cv-ink: #1c2330;
+  --cv-muted: #5b6575;
+  --cv-cta: #1f6f5b;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #fff;
+}
+
+.cv-builder-dock__tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem 0;
+  border-bottom: 1px solid rgb(28 35 48 / 8%);
+  overflow-x: auto;
+}
+
+.cv-builder-dock__tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 2.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--cv-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 0.45rem 0.4rem 0.55rem;
+}
+
+.cv-builder-dock__tab:hover {
+  color: var(--cv-ink);
+}
+
+.cv-builder-dock__tab:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: -2px;
+}
+
+.cv-builder-dock__tab--active {
+  color: #185a4a;
+  border-bottom-color: var(--cv-cta);
+}
+
+.cv-builder-dock__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-builder-dock__empty {
+  margin: 0;
+  padding: 1.15rem 1.1rem;
+  font-size: 0.85rem;
+  color: var(--cv-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: $app-bp-phone) {
+  :host {
+    display: contents;
+  }
+
+  .cv-builder-dock {
+    position: relative;
+    height: auto;
+  }
+
+  .cv-builder-dock__tabs {
+    background: #fff;
+    border-top: 1px solid rgb(28 35 48 / 8%);
+    border-bottom: 0;
+    padding: 0.35rem max(0.55rem, env(safe-area-inset-right, 0px))
+      calc(0.35rem + env(safe-area-inset-bottom, 0px)) max(0.55rem, env(safe-area-inset-left, 0px));
+    box-shadow: 0 -8px 24px rgb(28 35 48 / 6%);
+  }
+
+  .cv-builder-dock__body {
+    display: none;
+  }
+
+  .cv-builder-dock--open .cv-builder-dock__body {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
+    top: var(--app-header-offset, var(--app-header-height, 5.5rem));
+    z-index: 28;
+    background: #fff;
+    border-top: 1px solid rgb(28 35 48 / 8%);
+    box-shadow: 0 -16px 40px rgb(15 23 42 / 16%);
+  }
+
+  .cv-builder-dock--open .cv-builder-dock__empty {
+    display: none;
+  }
+}

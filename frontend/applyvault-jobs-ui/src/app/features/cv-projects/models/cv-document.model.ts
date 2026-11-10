@@ -12,13 +12,7 @@ export interface CvDocument {
   readonly structuredImportedAt: string | null;
   readonly hasProfilePhoto: boolean;
   readonly hasOriginalUpload: boolean;
-  /** M2: persisted export Template id (normalized 2|3). Server wins over sessionStorage on load. */
-  readonly templateId: number;
-}
-
-/** PUT /api/cv-documents/current/export-preferences */
-export interface UpdateCvExportPrefsRequest {
-  readonly templateId: number;
+  readonly unplacedContent: readonly string[];
 }
 
 export interface CvStructuredImportSummary {
@@ -27,6 +21,11 @@ export interface CvStructuredImportSummary {
   readonly usedAi: boolean;
   readonly profilePhotoExtracted: boolean;
   readonly notice: string | null;
+  readonly unplacedCount: number;
+}
+
+export interface ReplaceCvUnplacedContentRequest {
+  readonly items: readonly string[];
 }
 
 export interface CvDocumentUploadResult {

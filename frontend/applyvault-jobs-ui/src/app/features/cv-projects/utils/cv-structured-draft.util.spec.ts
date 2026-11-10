@@ -1,8 +1,10 @@
 import { CvStructuredEntry, CvStructuredSection } from '../models/cv-structured.model';
+import { normalizeToFixedSections } from '../models/cv-fixed-sections.model';
 import {
   createEmptyEntry,
   createEmptySection,
-  sectionsAreEqual
+  sectionsAreEqual,
+  toSaveRequest
 } from './cv-structured-draft.util';
 
 describe('cv-structured-draft.util sectionsAreEqual', () => {
@@ -89,5 +91,29 @@ describe('cv-structured-draft.util sectionsAreEqual', () => {
     ];
 
     expect(sectionsAreEqual(left, right)).toBeTrue();
+  });
+
+  it('keeps includedOnTemplate false on the save payload and in equality', () => {
+    const omitted = normalizeToFixedSections([
+      {
+        ...createEmptySection(1),
+        id: 'summary-1',
+        sectionType: 'Summary',
+        heading: 'Summary',
+        includedOnTemplate: false
+      }
+    ]);
+    const summary = toSaveRequest(omitted).sections.find((section) => section.sectionType === 'Summary');
+    const contact = toSaveRequest(omitted).sections.find((section) => section.sectionType === 'Contact');
+
+    expect(summary?.includedOnTemplate).toBeFalse();
+    expect(contact?.includedOnTemplate).toBeTrue();
+
+    const included = omitted.map((section) =>
+      section.sectionType === 'Summary' ? { ...section, includedOnTemplate: true } : section
+    );
+
+    expect(sectionsAreEqual(omitted, included)).toBeFalse();
+    expect(sectionsAreEqual(omitted, omitted.map((section) => ({ ...section })))).toBeTrue();
   });
 });

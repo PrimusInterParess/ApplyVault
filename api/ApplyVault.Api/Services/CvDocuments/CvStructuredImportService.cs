@@ -1,6 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
+using ApplyVault.Api.Services.CvSectionCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,7 @@ public sealed class CvStructuredImportService(
     ICvPdfProfilePhotoExtractor profilePhotoExtractor,
     ICvStructuredImportAiClient importAiClient,
     ICvStructuredDocumentService structuredDocumentService,
+    ICvSectionCatalog sectionCatalog,
     IOptions<GoogleAiOptions> googleAiOptions) : ICvStructuredImportService
 {
     public async Task<CvStructuredImportPreviewDto> PreviewImportAsync(
@@ -54,7 +56,8 @@ public sealed class CvStructuredImportService(
                     0,
                     preview.UsedAi,
                     false,
-                    "No structured sections could be generated from the uploaded CV PDF.");
+                    "No structured sections could be generated from the uploaded CV PDF.",
+                    0);
             }
 
             var profilePhotoExtracted = await PersistProfilePhotoAsync(user, pdfBytes, cancellationToken);
@@ -65,12 +68,15 @@ public sealed class CvStructuredImportService(
                 markImported: true,
                 cancellationToken);
 
+            await PersistUnplacedAsync(user, preview.UnplacedContent, cancellationToken);
+
             return new CvStructuredImportSummaryDto(
                 true,
                 preview.Sections.Count,
                 preview.UsedAi,
                 profilePhotoExtracted,
-                preview.Notice);
+                preview.Notice,
+                preview.UnplacedContent.Count);
         }
         catch (Exception exception)
         {
@@ -79,7 +85,8 @@ public sealed class CvStructuredImportService(
                 0,
                 false,
                 false,
-                exception.Message);
+                exception.Message,
+                0);
         }
     }
 
@@ -100,7 +107,8 @@ public sealed class CvStructuredImportService(
                         0,
                         preview.UsedAi,
                         false,
-                        "No structured sections could be generated from the uploaded CV PDF."));
+                        "No structured sections could be generated from the uploaded CV PDF.",
+                        0));
             }
 
             await structuredDocumentService.SaveStructuredAsync(
@@ -108,6 +116,8 @@ public sealed class CvStructuredImportService(
                 new SaveCvStructuredDocumentRequest(preview.Sections),
                 markImported: true,
                 cancellationToken);
+
+            await PersistUnplacedAsync(user, preview.UnplacedContent, cancellationToken);
 
             var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken)
                 ?? throw new InvalidOperationException("Structured CV content could not be loaded after re-import.");
@@ -119,7 +129,8 @@ public sealed class CvStructuredImportService(
                     preview.Sections.Count,
                     preview.UsedAi,
                     false,
-                    preview.Notice));
+                    preview.Notice,
+                    preview.UnplacedContent.Count));
         }
         catch (Exception exception)
         {
@@ -130,8 +141,20 @@ public sealed class CvStructuredImportService(
                     0,
                     false,
                     false,
-                    exception.Message));
+                    exception.Message,
+                    0));
         }
+    }
+
+    private async Task<int> CountPersistedUnplacedAsync(AppUserEntity user, CancellationToken cancellationToken)
+    {
+        var json = await dbContext.UserCvDocuments
+            .AsNoTracking()
+            .Where((entry) => entry.UserId == user.Id)
+            .Select((entry) => entry.UnplacedContentJson)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return CvStructuredJson.DeserializeBullets(json).Count;
     }
 
     private async Task<byte[]> ReadCurrentPdfBytesAsync(AppUserEntity user, CancellationToken cancellationToken)
@@ -150,6 +173,33 @@ public sealed class CvStructuredImportService(
         return memoryStream.ToArray();
     }
 
+    private async Task PersistUnplacedAsync(
+        AppUserEntity user,
+        IReadOnlyList<string> unplaced,
+        CancellationToken cancellationToken)
+    {
+        var document = await dbContext.UserCvDocuments
+            .SingleOrDefaultAsync((entry) => entry.UserId == user.Id, cancellationToken);
+
+        if (document is null)
+        {
+            return;
+        }
+
+        var cleaned = unplaced
+            .Select((item) => item.Trim())
+            .Where((item) => item.Length > 0)
+            .Select((item) => item.Length > 4000 ? item[..4000] : item)
+            .Take(200)
+            .ToArray();
+
+        document.UnplacedContentJson = cleaned.Length == 0
+            ? null
+            : CvStructuredJson.SerializeBullets(cleaned);
+        document.UpdatedAt = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private Task<CvStructuredImportPreviewDto> BuildPreviewAsync(
         byte[] pdfBytes,
         CancellationToken cancellationToken) =>
@@ -157,6 +207,7 @@ public sealed class CvStructuredImportService(
             pdfBytes,
             fullTextExtractor,
             importAiClient,
+            sectionCatalog,
             googleAiOptions.Value.Enabled,
             cancellationToken);
 

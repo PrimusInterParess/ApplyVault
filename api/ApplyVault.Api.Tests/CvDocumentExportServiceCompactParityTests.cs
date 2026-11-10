@@ -7,12 +7,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ApplyVault.Api.Tests;
 
+/// <summary>
+/// Page policy: one page recommended, two pages maximum. HTML preview and PDF download must
+/// resolve the same compact level for the same page-count profile.
+/// </summary>
 public sealed class CvDocumentExportServiceCompactParityTests
 {
     [Fact]
-    public async Task ExportHtmlAsync_and_ExportPdfAsync_use_same_compact_level_for_one_page_target()
+    public async Task ExportHtmlAsync_and_ExportPdfAsync_use_same_compact_level_when_one_page_reachable()
     {
-        // Level 0 → 3 pages, level 1 → 2 pages, level 2 → 1 page (fits one-page target).
+        // Level 0 → 3 pages, level 1 → 2 pages, level 2 → 1 page (hits the recommended target).
         var pageCounts = new Dictionary<int, int>
         {
             [0] = 3,
@@ -23,43 +27,16 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
-        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+        var pdfResult = await service.ExportPdfAsync(CreateUser());
 
         Assert.Equal(2, htmlResult.CompactLevel);
         Assert.Equal(2, htmlBuilder.LastOptions?.CompactLevel);
         Assert.Equal("html-level-2", htmlResult.Html);
-        Assert.Contains("compacted", htmlResult.Notice, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Layout was compacted to fit on one page.", htmlResult.Notice);
         Assert.Equal(1, pdfResult.PageCount);
         Assert.False(pdfResult.ExceedsMaxPages);
-        Assert.Contains("compacted", pdfResult.Notice, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task ExportHtmlAsync_and_ExportPdfAsync_share_best_effort_level_when_one_page_unreachable()
-    {
-        // Never fits one page; best effort is lowest page count (level 3 → 2 pages).
-        var pageCounts = new Dictionary<int, int>
-        {
-            [0] = 5,
-            [1] = 4,
-            [2] = 3,
-            [3] = 2,
-            [4] = 2,
-        };
-        var htmlBuilder = new RecordingHtmlDocumentBuilder();
-        var dispatcher = new ScriptedRenderDispatcher();
-        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
-
-        var htmlResult = await service.ExportHtmlAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
-        var pdfResult = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
-
-        Assert.Equal(3, htmlResult.CompactLevel);
-        Assert.Equal(3, htmlBuilder.LastOptions?.CompactLevel);
-        Assert.Equal(2, pdfResult.PageCount);
-        Assert.True(pdfResult.ExceedsMaxPages);
-        Assert.Contains("2 pages after compacting", htmlResult.Notice, StringComparison.Ordinal);
-        Assert.Contains("2 pages after compacting", pdfResult.Notice, StringComparison.Ordinal);
+        Assert.Equal("Layout was compacted to fit on one page.", pdfResult.Notice);
     }
 
     [Fact]
@@ -70,7 +47,7 @@ public sealed class CvDocumentExportServiceCompactParityTests
         var dispatcher = new ScriptedRenderDispatcher();
         var service = CreateService(htmlBuilder, dispatcher, pageCounts);
 
-        var result = await service.ExportPdfAsync(CreateUser(), new CvPdfExportOptions(TemplateId: 2));
+        var result = await service.ExportPdfAsync(CreateUser());
 
         Assert.Equal(1, dispatcher.CallCount);
         Assert.Equal(0, dispatcher.LastCompactLevel);
@@ -78,6 +55,144 @@ public sealed class CvDocumentExportServiceCompactParityTests
         Assert.False(result.ExceedsMaxPages);
         Assert.Null(result.Notice);
         Assert.Equal(0, htmlBuilder.CallCount);
+    }
+
+    [Fact]
+    public async Task Export_steps_one_tighter_when_level_0_and_1_both_fit_two_pages()
+    {
+        // Two pages at every level. One page is still preferred, then exactly one step past the
+        // loosest two-page fit (level 1) — not the densest level, and not a further scan.
+        var pageCounts = new Dictionary<int, int>
+        {
+            [0] = 2,
+            [1] = 2,
+            [2] = 2,
+            [3] = 2,
+            [4] = 2,
+        };
+        var htmlBuilder = new RecordingHtmlDocumentBuilder();
+        var dispatcher = new ScriptedRenderDispatcher();
+        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
+
+        var pdfResult = await service.ExportPdfAsync(CreateUser());
+
+        Assert.Equal(2, dispatcher.CallCount);
+        Assert.Equal(2, pdfResult.PageCount);
+        Assert.False(pdfResult.ExceedsMaxPages);
+        Assert.Contains("one page is recommended", pdfResult.Notice, StringComparison.Ordinal);
+
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+
+        Assert.Equal(1, htmlResult.CompactLevel);
+        Assert.Equal("html-level-1", htmlResult.Html);
+        Assert.Equal(1, htmlBuilder.LastOptions?.CompactLevel);
+        Assert.Contains("one page is recommended", htmlResult.Notice, StringComparison.Ordinal);
+        Assert.Equal(4, dispatcher.CallCount);
+    }
+
+    [Fact]
+    public async Task Export_keeps_loosest_two_page_level_when_the_next_level_exceeds_two_pages()
+    {
+        var pageCounts = new Dictionary<int, int>
+        {
+            [0] = 3,
+            [1] = 2,
+            [2] = 3,
+        };
+        var htmlBuilder = new RecordingHtmlDocumentBuilder();
+        var dispatcher = new ScriptedRenderDispatcher();
+        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
+
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+
+        Assert.Equal(3, dispatcher.CallCount);
+        Assert.Equal(1, htmlResult.CompactLevel);
+        Assert.Equal(1, htmlBuilder.LastOptions?.CompactLevel);
+        Assert.Equal(
+            "Your CV is 2 pages; one page is recommended — consider trimming content.",
+            htmlResult.Notice);
+    }
+
+    [Fact]
+    public async Task Export_returns_level_4_when_it_is_the_only_two_page_fit()
+    {
+        var pageCounts = new Dictionary<int, int>
+        {
+            [0] = 3,
+            [1] = 3,
+            [2] = 4,
+            [3] = 3,
+            [4] = 2,
+        };
+        var htmlBuilder = new RecordingHtmlDocumentBuilder();
+        var dispatcher = new ScriptedRenderDispatcher();
+        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
+
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+
+        Assert.Equal(5, dispatcher.CallCount);
+        Assert.Equal(4, htmlResult.CompactLevel);
+        Assert.Equal(4, htmlBuilder.LastOptions?.CompactLevel);
+        Assert.Contains("one page is recommended", htmlResult.Notice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Export_steps_one_tighter_when_the_next_two_page_level_also_fits()
+    {
+        // Levels 0-2 → 3 pages (over max), level 3 → 2 pages (loosest within max), level 4 → 2 pages.
+        var pageCounts = new Dictionary<int, int>
+        {
+            [0] = 3,
+            [1] = 3,
+            [2] = 3,
+            [3] = 2,
+            [4] = 2,
+        };
+        var htmlBuilder = new RecordingHtmlDocumentBuilder();
+        var dispatcher = new ScriptedRenderDispatcher();
+        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
+
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+        var pdfResult = await service.ExportPdfAsync(CreateUser());
+
+        Assert.Equal(4, htmlResult.CompactLevel);
+        Assert.Equal(4, htmlBuilder.LastOptions?.CompactLevel);
+        Assert.Equal("html-level-4", htmlResult.Html);
+        Assert.Equal(2, pdfResult.PageCount);
+        Assert.False(pdfResult.ExceedsMaxPages);
+        Assert.Equal(
+            "Your CV is 2 pages; one page is recommended — consider trimming content.",
+            pdfResult.Notice);
+        Assert.Equal(pdfResult.Notice, htmlResult.Notice);
+    }
+
+    [Fact]
+    public async Task Export_falls_back_to_fewest_pages_and_flags_exceeds_max_when_two_pages_unreachable()
+    {
+        // Never fits two pages; best effort is the first level with the fewest pages (level 2 → 3 pages).
+        var pageCounts = new Dictionary<int, int>
+        {
+            [0] = 5,
+            [1] = 4,
+            [2] = 3,
+            [3] = 3,
+            [4] = 3,
+        };
+        var htmlBuilder = new RecordingHtmlDocumentBuilder();
+        var dispatcher = new ScriptedRenderDispatcher();
+        var service = CreateService(htmlBuilder, dispatcher, pageCounts);
+
+        var htmlResult = await service.ExportHtmlAsync(CreateUser());
+        var pdfResult = await service.ExportPdfAsync(CreateUser());
+
+        Assert.Equal(2, htmlResult.CompactLevel);
+        Assert.Equal(2, htmlBuilder.LastOptions?.CompactLevel);
+        Assert.Equal(3, pdfResult.PageCount);
+        Assert.True(pdfResult.ExceedsMaxPages);
+        Assert.Equal(
+            "This export is 3 pages after compacting; the maximum is two pages.",
+            pdfResult.Notice);
+        Assert.Contains("maximum is two pages", htmlResult.Notice, StringComparison.Ordinal);
     }
 
     private static CvDocumentExportService CreateService(
@@ -188,9 +303,9 @@ public sealed class CvDocumentExportServiceCompactParityTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public Task<CvDocumentDto?> UpdateExportPreferencesAsync(
+        public Task<CvDocumentDto?> ReplaceUnplacedContentAsync(
             AppUserEntity user,
-            CvExportPreferencesDto preferences,
+            IReadOnlyList<string> items,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
@@ -202,7 +317,6 @@ public sealed class CvDocumentExportServiceCompactParityTests
 
         public Task<string> BuildAsync(
             CvExportRenderRequest request,
-            int templateId,
             CvPdfRenderOptions? options = null,
             CancellationToken cancellationToken = default)
         {
@@ -213,14 +327,13 @@ public sealed class CvDocumentExportServiceCompactParityTests
         }
     }
 
-    private sealed class ScriptedRenderDispatcher : ICvExportRenderDispatcher
+    private sealed class ScriptedRenderDispatcher : ICvHtmlCvPdfExporter
     {
         public int CallCount { get; private set; }
         public int LastCompactLevel { get; private set; }
 
-        public Task<byte[]> RenderAsync(
+        public Task<byte[]> ExportAsync(
             CvExportRenderRequest request,
-            int templateId,
             CvPdfRenderOptions? options = null,
             CancellationToken cancellationToken = default)
         {

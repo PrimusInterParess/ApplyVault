@@ -4,45 +4,50 @@ import {
   computed,
   effect,
   ElementRef,
-  HostListener,
   inject,
+  NgZone,
   OnDestroy,
   signal,
   viewChild
 } from '@angular/core';
 
-import { APP_BP_PHONE_MAX_MQ } from '../../../../core/config/app-breakpoints';
-import { readInputValue } from '../../../../core/dom/input-value.util';
 import { CvBuilderAssistPanelComponent } from '../../components/cv-builder-assist-panel/cv-builder-assist-panel.component';
 import { CvBuilderCheckExportComponent } from '../../components/cv-builder-check-export/cv-builder-check-export.component';
+import { CvBuilderDocumentMenuComponent } from '../../components/cv-builder-document-menu/cv-builder-document-menu.component';
 import { CvBuilderEmptyStartComponent } from '../../components/cv-builder-empty-start/cv-builder-empty-start.component';
 import { CvBuilderProjectsPanelComponent } from '../../components/cv-builder-projects-panel/cv-builder-projects-panel.component';
-import { CvBuilderStructurePanelComponent } from '../../components/cv-builder-structure-panel/cv-builder-structure-panel.component';
+import { CvBuilderSectionRailComponent } from '../../components/cv-builder-section-rail/cv-builder-section-rail.component';
+import {
+  CvBuilderDockTool,
+  CvBuilderToolsDockComponent
+} from '../../components/cv-builder-tools-dock/cv-builder-tools-dock.component';
+import { CvUnplacedDrawerComponent } from '../../components/cv-unplaced-drawer/cv-unplaced-drawer.component';
 import { CvExportTemplatePreviewComponent } from '../../components/cv-export-template-preview/cv-export-template-preview.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvEditSession } from '../../data-access/cv-edit-session';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
-import {
-  CV_EXPORT_TEMPLATES,
-  normalizeCvExportTemplateId
-} from '../../models/cv-export-template.model';
+import { CV_FIXED_SECTIONS, sectionIncludedOnTemplate } from '../../models/cv-fixed-sections.model';
 import {
   CvImprovementSuggestion,
-  CvQualityEvaluationFinding,
-  CvSectionType
+  CvQualityEvaluationFinding
 } from '../../models/cv-structured.model';
-import {
-  addableSectionTypes,
-  CvTemplateInlineEdit
-} from '../../utils/cv-template-inline-edit.util';
+import { sectionHasRenderableContent } from '../../utils/cv-export-template-layout.util';
+import { CvTemplateInlineEdit } from '../../utils/cv-template-inline-edit.util';
 import {
   appendProjectSummariesToSections,
   collectImportedProjectSummaryIds
 } from '../../utils/cv-project-summary-import.util';
-import { cloneSectionsForDraft, sectionHasContent } from '../../utils/cv-structured-draft.util';
+import { cloneSectionsForDraft } from '../../utils/cv-structured-draft.util';
+import {
+  CV_A4_HEIGHT_PX,
+  CV_A4_WIDTH_PX,
+  CV_PAGE_GAP_PX,
+  cvCanvasPageSheets,
+  cvCanvasStackHeight
+} from '../../utils/cv-canvas-pages.util';
 
-type CvBuilderPanel = 'assist' | 'structure' | 'projects' | 'checkExport';
+type CvBuilderPanel = 'assist' | 'unplaced' | 'projects' | 'checkExport';
 
 @Component({
   selector: 'app-cv-builder-page',
@@ -52,9 +57,12 @@ type CvBuilderPanel = 'assist' | 'structure' | 'projects' | 'checkExport';
     CvExportTemplatePreviewComponent,
     CvBuilderAssistPanelComponent,
     CvBuilderEmptyStartComponent,
-    CvBuilderStructurePanelComponent,
+    CvUnplacedDrawerComponent,
     CvBuilderProjectsPanelComponent,
-    CvBuilderCheckExportComponent
+    CvBuilderCheckExportComponent,
+    CvBuilderSectionRailComponent,
+    CvBuilderDocumentMenuComponent,
+    CvBuilderToolsDockComponent
   ],
   templateUrl: './cv-builder-page.component.html',
   styleUrl: './cv-builder-page.component.scss'
@@ -64,24 +72,28 @@ export class CvBuilderPageComponent implements OnDestroy {
   protected readonly cvStructured = inject(CvStructuredFacade);
   protected readonly cvProjects = inject(CvProjectsFacade);
   protected readonly editSession = inject(CvEditSession);
+  private readonly zone = inject(NgZone);
 
   protected readonly pdfFileInput = viewChild<ElementRef<HTMLInputElement>>('pdfFileInput');
   protected readonly profilePhotoFileInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoFileInput');
-  private readonly topbar = viewChild<ElementRef<HTMLElement>>('topbar');
+  private readonly canvasFrame = viewChild<ElementRef<HTMLElement>>('canvasFrame');
+  private readonly deskScroll = viewChild<ElementRef<HTMLElement>>('deskScroll');
+  private readonly paperRoot = viewChild<ElementRef<HTMLElement>>('cvPaper');
 
-  protected readonly templates = CV_EXPORT_TEMPLATES;
-
-  /** Facade is the single source of truth for Modern/Minimal (ids 2–3). */
-  protected readonly selectedTemplateId = this.cvDocument.selectedExportTemplateId;
   protected readonly replaceConfirmOpen = signal(false);
+  protected readonly deleteConfirmOpen = signal(false);
   protected readonly pendingPdfFile = signal<File | null>(null);
-  /** Exclusive panel mutex — at most one of assist / structure / projects / checkExport. */
+  /** Exclusive panel mutex — at most one of assist / unplaced / projects / checkExport. */
   protected readonly activePanel = signal<CvBuilderPanel | null>(null);
-  protected readonly pendingAddSectionType = signal<CvSectionType>('Experience');
-  /** Phone More disclosure (Projects / zoom / photo / Upload PDF). */
-  protected readonly topbarMoreOpen = signal(false);
-  /** Desktop default 1; phone init once at 0.85 so A4 fits ~390 better. */
-  protected readonly zoom = signal(CvBuilderPageComponent.initialZoom());
+  /** Fit scales the A4 sheet to the center column until the user zooms. */
+  protected readonly zoomMode = signal<'fit' | 'manual'>('fit');
+  protected readonly zoom = signal(1);
+  protected readonly paperHeight = signal(CV_A4_HEIGHT_PX);
+  private readonly sheetHeight = signal(CV_A4_HEIGHT_PX);
+  protected readonly activeSectionId = signal<string | null>(null);
+  protected readonly a4WidthPx = CV_A4_WIDTH_PX;
+  protected readonly a4HeightPx = CV_A4_HEIGHT_PX;
+  protected readonly pageGapPx = CV_PAGE_GAP_PX;
 
   protected readonly selectedProjectSummaryIds = signal<string[]>([]);
   protected readonly importingProjectsBusy = signal(false);
@@ -98,8 +110,6 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly hasSections = computed(() => this.sections().length > 0);
 
-  protected readonly structureSectionTypes = computed(() => addableSectionTypes(this.sections()));
-
   protected readonly importedProjectSummaryIds = computed(() =>
     collectImportedProjectSummaryIds(this.sections())
   );
@@ -114,7 +124,7 @@ export class CvBuilderPageComponent implements OnDestroy {
   });
 
   /**
-   * Single busy gate for Structured mutations (Projects / Assist / Structure).
+   * Single busy gate for Structured mutations (Projects / Assist).
    * Covers document/structured load, save, and AI update in flight.
    */
   protected readonly editBusy = computed(
@@ -157,23 +167,56 @@ export class CvBuilderPageComponent implements OnDestroy {
 
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
 
-  private static readonly PHONE_DEFAULT_ZOOM = 0.85;
+  protected readonly scaledPaperWidth = computed(() => CV_A4_WIDTH_PX * this.zoom());
+
+  protected readonly scaledPaperHeight = computed(() => this.sheetHeight() * this.zoom());
+
+  protected readonly pageSheets = computed(() => cvCanvasPageSheets(this.paperHeight()));
+
+  protected readonly dockTool = computed((): CvBuilderDockTool | null => {
+    const panel = this.activePanel();
+    return panel === 'assist' || panel === 'unplaced' || panel === 'projects' ? panel : null;
+  });
+
+  protected readonly photoBusy = computed(
+    () =>
+      this.cvDocument.uploadingProfilePhoto() ||
+      this.cvDocument.deletingProfilePhoto() ||
+      this.cvDocument.loadingProfilePhoto()
+  );
+
+  protected readonly pageErrors = computed(() =>
+    [
+      this.cvDocument.profilePhotoError(),
+      this.cvDocument.uploadError(),
+      this.cvDocument.downloadFormattedError(),
+      this.cvDocument.deleteError()
+    ].filter((error): error is string => !!error)
+  );
+
+  protected readonly railItems = computed(() =>
+    CV_FIXED_SECTIONS.map((slot) => {
+      const section = this.sections().find((item) => item.sectionType === slot.sectionType);
+      return {
+        id: section?.id ?? slot.sectionType,
+        heading: slot.heading,
+        complete: section ? sectionHasRenderableContent(section) : false,
+        canToggle: slot.sectionType !== 'Contact',
+        included: section ? sectionIncludedOnTemplate(section) : true
+      };
+    })
+  );
+
+  private static readonly MIN_ZOOM = 0.35;
+  private static readonly MAX_ZOOM = 1.35;
 
   private wasSavingSection = false;
   private importingProjectSectionId: string | null = null;
-  /** Document id for which structured content was loaded — ignores prefs document.set echoes. */
+  /** Document id for which structured content was loaded — ignores metadata document.set echoes. */
   private structuredLoadDocumentId: string | null = null;
 
-  private static initialZoom(): number {
-    if (typeof matchMedia === 'undefined') {
-      return 1;
-    }
-
-    return matchMedia(APP_BP_PHONE_MAX_MQ).matches ? CvBuilderPageComponent.PHONE_DEFAULT_ZOOM : 1;
-  }
-
   constructor() {
-    // Load structured only when document identity appears/changes — not on export-prefs metadata echo.
+    // Load structured only when document identity appears/changes — not on metadata-only echoes.
     effect(() => {
       if (this.cvDocument.loading()) {
         return;
@@ -214,6 +257,40 @@ export class CvBuilderPageComponent implements OnDestroy {
 
       this.wasSavingSection = saving;
     });
+
+    effect((onCleanup) => {
+      const frame = this.canvasFrame()?.nativeElement;
+      const scroll = this.deskScroll()?.nativeElement;
+      const paper = this.paperRoot()?.nativeElement;
+      const sectionKey = this.sections().map((section) => section.id).join('|');
+
+      if (!frame || !scroll || !paper || sectionKey.length === 0) {
+        return;
+      }
+
+      const sync = (): void => this.syncCanvasMetrics();
+      const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
+      observer?.observe(frame);
+      observer?.observe(paper);
+
+      let disposed = false;
+      let spy = this.watchSections(scroll);
+      const raf = requestAnimationFrame(() => {
+        if (disposed) {
+          return;
+        }
+
+        spy?.disconnect();
+        spy = this.watchSections(scroll);
+      });
+
+      onCleanup(() => {
+        disposed = true;
+        cancelAnimationFrame(raf);
+        observer?.disconnect();
+        spy?.disconnect();
+      });
+    });
   }
 
   ngOnDestroy(): void {
@@ -224,11 +301,7 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.cvStructured.discardUpdateProposal();
   }
 
-  protected selectTemplate(templateId: number): void {
-    this.cvDocument.setExportTemplateId(normalizeCvExportTemplateId(templateId));
-  }
-
-  /** First-visit only: create Blank CV with starter sections. */
+  /** First-visit only: create Blank CV (server seeds the seven fixed sections). */
   protected startBlank(): void {
     if (this.hasStructuredCv()) {
       return;
@@ -292,12 +365,34 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
   }
 
+  protected openDeleteConfirm(): void {
+    this.deleteConfirmOpen.set(true);
+  }
+
+  protected cancelDeleteConfirm(): void {
+    this.deleteConfirmOpen.set(false);
+  }
+
+  protected confirmDeleteCurrent(): void {
+    this.deleteConfirmOpen.set(false);
+    this.setActivePanel(null);
+    this.editSession.cancelPendingSave();
+    this.editSession.clearDraft();
+    this.cvDocument.deleteCurrent();
+  }
+
   protected zoomIn(): void {
-    this.zoom.update((value) => Math.min(1.35, Math.round((value + 0.1) * 10) / 10));
+    this.zoomMode.set('manual');
+    this.zoom.update((value) =>
+      Math.min(CvBuilderPageComponent.MAX_ZOOM, Math.round((value + 0.1) * 10) / 10)
+    );
   }
 
   protected zoomOut(): void {
-    this.zoom.update((value) => Math.max(0.7, Math.round((value - 0.1) * 10) / 10));
+    this.zoomMode.set('manual');
+    this.zoom.update((value) =>
+      Math.max(CvBuilderPageComponent.MIN_ZOOM, Math.round((value - 0.1) * 10) / 10)
+    );
   }
 
   protected setActivePanel(panel: CvBuilderPanel | null): void {
@@ -308,47 +403,39 @@ export class CvBuilderPageComponent implements OnDestroy {
       this.cvStructured.discardSummaryProposal();
       this.cvStructured.discardUpdateProposal();
     }
-
-    // Keep More open while Projects dropdown is active (panel lives inside overflow).
-    if (panel !== 'projects' && panel !== null) {
-      this.topbarMoreOpen.set(false);
-    }
   }
 
-  protected toggleTopbarMore(): void {
-    this.topbarMoreOpen.update((open) => !open);
-  }
-
-  protected closeTopbarMore(): void {
-    if (!this.topbarMoreOpen()) {
-      return;
-    }
-
-    this.topbarMoreOpen.set(false);
-
-    if (this.activePanel() === 'projects') {
+  protected selectDockTool(tool: CvBuilderDockTool): void {
+    if (this.activePanel() === tool) {
       this.setActivePanel(null);
-    }
-  }
-
-  @HostListener('document:keydown', ['$event'])
-  protected onDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      this.closeTopbarMore();
-    }
-  }
-
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    if (!this.topbarMoreOpen()) {
       return;
     }
 
-    const topbarEl = this.topbar()?.nativeElement;
-    const target = event.target;
-    if (topbarEl && target instanceof Node && !topbarEl.contains(target)) {
-      this.closeTopbarMore();
+    this.setActivePanel(tool);
+
+    if (tool === 'projects') {
+      this.cvProjects.loadSummaries();
     }
+  }
+
+  protected jumpToSection(sectionId: string): void {
+    this.activeSectionId.set(sectionId);
+    document.getElementById(`cv-section-${sectionId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  protected setSectionVisibility(change: { id: string; included: boolean }): void {
+    if (!this.canMutateStructured()) {
+      return;
+    }
+
+    this.editSession.apply({
+      kind: 'sectionVisibility',
+      sectionId: change.id,
+      includedOnTemplate: change.included
+    });
   }
 
   protected openAssist(): void {
@@ -361,23 +448,17 @@ export class CvBuilderPageComponent implements OnDestroy {
     }
   }
 
-  protected toggleStructure(): void {
-    if (this.activePanel() === 'structure') {
+  protected toggleUnplaced(): void {
+    if (this.activePanel() === 'unplaced') {
       this.setActivePanel(null);
       return;
     }
 
-    this.setActivePanel('structure');
-    const available = this.structureSectionTypes();
-    const pending = this.pendingAddSectionType();
-
-    if (available.length > 0 && !available.includes(pending)) {
-      this.pendingAddSectionType.set(available[0]);
-    }
+    this.setActivePanel('unplaced');
   }
 
-  protected closeStructure(): void {
-    if (this.activePanel() === 'structure') {
+  protected closeUnplaced(): void {
+    if (this.activePanel() === 'unplaced') {
       this.setActivePanel(null);
     }
   }
@@ -403,7 +484,6 @@ export class CvBuilderPageComponent implements OnDestroy {
       return;
     }
 
-    this.topbarMoreOpen.set(true);
     this.setActivePanel('projects');
     this.cvProjects.loadSummaries();
   }
@@ -447,112 +527,17 @@ export class CvBuilderPageComponent implements OnDestroy {
     this.editSession.setDraftAndPersistNow(nextSections);
   }
 
-  protected onPendingAddSectionTypeChange(sectionType: CvSectionType): void {
-    if (this.structureSectionTypes().includes(sectionType)) {
-      this.pendingAddSectionType.set(sectionType);
-    }
-  }
-
-  protected addSectionFromStructure(): void {
-    if (!this.canMutateStructured()) {
-      return;
-    }
-
-    const sectionType = this.pendingAddSectionType();
-
-    if (!this.structureSectionTypes().includes(sectionType)) {
-      return;
-    }
-
-    this.applyStructureEdit({ kind: 'addSection', sectionType });
-  }
-
-  protected moveSection(sectionId: string, direction: -1 | 1): void {
-    if (!this.canMutateStructured()) {
-      return;
-    }
-
-    const items = this.sections();
-    const fromIndex = items.findIndex((section) => section.id === sectionId);
-
-    if (fromIndex < 0) {
-      return;
-    }
-
-    const toIndex = fromIndex + direction;
-
-    if (toIndex < 0 || toIndex >= items.length) {
-      return;
-    }
-
-    this.applyStructureEdit({ kind: 'reorderSections', fromIndex, toIndex });
-  }
-
-  protected onStructureMoveSection(event: { sectionId: string; direction: -1 | 1 }): void {
-    this.moveSection(event.sectionId, event.direction);
-  }
-
-  protected removeSection(sectionId: string): void {
-    if (!this.canMutateStructured()) {
-      return;
-    }
-
-    const section = this.sections().find((item) => item.id === sectionId);
-
-    if (!section) {
-      return;
-    }
-
-    if (
-      sectionHasContent(section) &&
-      !window.confirm(`Remove “${section.heading.trim() || section.sectionType}” and its content?`)
-    ) {
-      return;
-    }
-
-    this.applyStructureEdit({ kind: 'removeSection', sectionId });
-  }
-
   protected onInlineEdit(edit: CvTemplateInlineEdit): void {
     if (!this.canMutateStructured()) {
-      return;
-    }
-
-    if (edit.kind === 'removeSection') {
-      this.removeSection(edit.sectionId);
-      return;
-    }
-
-    if (edit.kind === 'addSection' || edit.kind === 'reorderSections') {
-      this.applyStructureEdit(edit);
       return;
     }
 
     this.editSession.apply(edit);
   }
 
-  private applyStructureEdit(
-    edit: Extract<CvTemplateInlineEdit, { kind: 'addSection' | 'removeSection' | 'reorderSections' }>
-  ): void {
-    const next = this.editSession.apply(edit);
-    const available = addableSectionTypes(next);
-
-    if (available.length > 0 && !available.includes(this.pendingAddSectionType())) {
-      this.pendingAddSectionType.set(available[0]);
-    }
-  }
-
   protected exportPdf(): void {
     this.editSession.flushSave();
     this.cvDocument.downloadFormattedFile();
-  }
-
-  protected onTemplateSelectChange(event: Event): void {
-    const templateId = Number.parseInt(readInputValue(event), 10);
-
-    if (Number.isInteger(templateId) && (templateId === 2 || templateId === 3)) {
-      this.selectTemplate(templateId);
-    }
   }
 
   protected toggleAiUpdateSection(sectionId: string): void {
@@ -694,14 +679,107 @@ export class CvBuilderPageComponent implements OnDestroy {
     );
   }
 
+  private syncCanvasMetrics(): void {
+    this.zone.run(() => {
+      this.updateFitZoom();
+
+      const paper = this.paperRoot()?.nativeElement;
+      const page = paper?.querySelector('.cv-export-preview__page');
+
+      if (page instanceof HTMLElement && page.offsetHeight > 0) {
+        const contentHeight = Math.max(page.offsetHeight, page.scrollHeight);
+        this.paperHeight.set(contentHeight);
+        this.sheetHeight.set(cvCanvasStackHeight(contentHeight));
+      }
+    });
+  }
+
+  private updateFitZoom(): void {
+    if (this.zoomMode() !== 'fit') {
+      return;
+    }
+
+    const frame = this.canvasFrame()?.nativeElement;
+    const scroll = this.deskScroll()?.nativeElement;
+
+    if (!frame || !scroll) {
+      return;
+    }
+
+    const style = getComputedStyle(scroll);
+    const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    const available = frame.clientWidth - padX;
+
+    if (available < 80) {
+      return;
+    }
+
+    const next = this.clampZoom(available / CV_A4_WIDTH_PX);
+
+    if (Math.abs(next - this.zoom()) > 0.004) {
+      this.zoom.set(next);
+    }
+  }
+
+  private clampZoom(value: number): number {
+    const clamped = Math.min(
+      CvBuilderPageComponent.MAX_ZOOM,
+      Math.max(CvBuilderPageComponent.MIN_ZOOM, value)
+    );
+
+    return Math.round(clamped * 100) / 100;
+  }
+
+  private watchSections(root: HTMLElement): IntersectionObserver | null {
+    if (typeof IntersectionObserver === 'undefined') {
+      return null;
+    }
+
+    const anchors = root.querySelectorAll<HTMLElement>('[id^="cv-section-"]');
+
+    if (anchors.length === 0) {
+      return null;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top);
+        const current = visible[0]?.target.id;
+
+        if (!current?.startsWith('cv-section-')) {
+          return;
+        }
+
+        const sectionId = current.slice('cv-section-'.length);
+        this.zone.run(() => this.activeSectionId.set(sectionId));
+      },
+      {
+        root,
+        rootMargin: '-8% 0px -55% 0px',
+        threshold: [0, 0.15, 0.4, 0.75, 1]
+      }
+    );
+
+    anchors.forEach((anchor) => observer.observe(anchor));
+    return observer;
+  }
+
   private runCreateCv(): void {
-    this.cvDocument.setExportTemplateId(this.selectedTemplateId());
-    this.cvDocument.startBlankWithStarterSections();
+    this.cvDocument.startBlank();
   }
 
   private runUpload(file: File): void {
-    this.cvDocument.setExportTemplateId(this.selectedTemplateId());
-    this.cvDocument.upload(file);
+    this.cvDocument.upload(file, () => this.openUnplacedAfterImport());
+  }
+
+  protected openUnplacedAfterImport(): void {
+    const count = this.cvDocument.importSummary()?.unplacedCount ?? 0;
+
+    if (count > 0) {
+      this.setActivePanel('unplaced');
+    }
   }
 
   private validSectionIds(sectionIds: readonly string[]): string[] {

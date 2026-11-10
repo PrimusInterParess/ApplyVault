@@ -12,32 +12,29 @@ public sealed class HtmlCvPdfExporter(
 {
     public async Task<byte[]> ExportAsync(
         CvExportRenderRequest request,
-        int templateId,
         CvPdfRenderOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
         var finalHtml = await htmlDocumentBuilder
-            .BuildAsync(request, resolvedTemplateId, options, cancellationToken)
+            .BuildAsync(request, options, cancellationToken)
             .ConfigureAwait(false);
 
         using var exportSlot = await browserHostedService.AcquireExportSlotAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            return await ExportWithBrowserRecoveryAsync(finalHtml, resolvedTemplateId, options, cancellationToken)
+            return await ExportWithBrowserRecoveryAsync(finalHtml, options, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogError(exception, "HTML CV PDF export failed for template {TemplateId}.", resolvedTemplateId);
+            logger.LogError(exception, "HTML CV PDF export failed.");
             throw;
         }
     }
 
     private async Task<byte[]> ExportWithBrowserRecoveryAsync(
         string finalHtml,
-        int templateId,
         CvPdfRenderOptions? options,
         CancellationToken cancellationToken)
     {
@@ -49,8 +46,7 @@ public sealed class HtmlCvPdfExporter(
         {
             logger.LogWarning(
                 exception,
-                "Chromium target closed during HTML CV PDF export for template {TemplateId}; relaunching browser and retrying once.",
-                templateId);
+                "Chromium target closed during HTML CV PDF export; relaunching browser and retrying once.");
 
             await browserHostedService.ResetBrowserAsync(cancellationToken).ConfigureAwait(false);
             return await RenderPdfAsync(finalHtml, options, cancellationToken).ConfigureAwait(false);
@@ -65,10 +61,16 @@ public sealed class HtmlCvPdfExporter(
         var browser = await browserHostedService.GetBrowserAsync(cancellationToken).ConfigureAwait(false);
         await using var page = await browser.NewPageAsync().ConfigureAwait(false);
 
-        await page.SetContentAsync(finalHtml).ConfigureAwait(false);
+        await page.SetContentAsync(
+            finalHtml,
+            new NavigationOptions
+            {
+                WaitUntil = [WaitUntilNavigation.Load]
+            }).ConfigureAwait(false);
+        await page.EvaluateFunctionAsync("() => document.fonts.ready").ConfigureAwait(false);
 
-        // Document templates own page inset via CSS padding (.cv-body / .cv-page-pad);
-        // @page + Puppeteer margins stay 0 so PDF matches preview and sidebar can full-bleed.
+        // The template owns page inset via CSS padding (.cv-body);
+        // @page + Puppeteer margins stay 0 so PDF matches preview.
         // Print CSS clones that padding onto each page fragment (multi-page overflow).
         // CompactLevel spacing is applied in HTML CSS (CvExportCompactCssBuilder), not browser margins.
         _ = options;

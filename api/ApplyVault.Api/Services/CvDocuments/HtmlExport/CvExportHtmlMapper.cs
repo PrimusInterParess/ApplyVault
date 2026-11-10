@@ -3,25 +3,28 @@ using System.Text;
 
 namespace ApplyVault.Api.Services.HtmlExport;
 
+/// <summary>
+/// Fills the single CV export template: Contact goes to <c>{{HeaderHtml}}</c>,
+/// Summary and every other section to <c>{{MainHtml}}</c>, photo to <c>{{ProfilePhotoHtml}}</c>.
+/// </summary>
 internal static class CvExportHtmlMapper
 {
     public static string ApplyTemplate(
         string templateHtml,
-        CvExportRenderRequest request,
-        int templateId)
+        CvExportRenderRequest request)
     {
         var orderedSections = request.Sections
             .OrderBy((section) => section.SortOrder)
             .ToArray();
 
         var profilePhotoHtml = BuildProfilePhotoHtml(request.ProfilePhotoBytes, request.ProfilePhotoContentType);
-        var (headerHtml, sidebarHtml, mainHtml) = BuildColumnContent(orderedSections, templateId);
+        var (headerHtml, mainHtml, runningName) = BuildContent(orderedSections);
 
         return templateHtml
             .Replace("{{ProfilePhotoHtml}}", profilePhotoHtml, StringComparison.Ordinal)
             .Replace("{{HeaderHtml}}", headerHtml, StringComparison.Ordinal)
-            .Replace("{{SidebarHtml}}", sidebarHtml, StringComparison.Ordinal)
-            .Replace("{{MainHtml}}", mainHtml, StringComparison.Ordinal);
+            .Replace("{{MainHtml}}", mainHtml, StringComparison.Ordinal)
+            .Replace("{{RunningNameCss}}", ToRunningNameCss(runningName), StringComparison.Ordinal);
     }
 
     private static string BuildProfilePhotoHtml(byte[]? photoBytes, string? contentType)
@@ -37,71 +40,29 @@ internal static class CvExportHtmlMapper
         return $"""<img class="cv-photo" src="data:{Encode(mime)};base64,{base64}" alt="Profile photo" />""";
     }
 
-    private static (string HeaderHtml, string SidebarHtml, string MainHtml) BuildColumnContent(
-        IReadOnlyList<CvExportSection> sections,
-        int templateId)
+    private static (string HeaderHtml, string MainHtml, string? RunningName) BuildContent(
+        IReadOnlyList<CvExportSection> sections)
     {
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(templateId);
-
-        if (resolvedTemplateId == 3)
-        {
-            var header = new StringBuilder();
-            var main = new StringBuilder();
-            // Contact + Profile (both SectionType=Contact) must share name/channel dedupe.
-            var contactHeaderState = new ContactHeaderEmitState();
-
-            foreach (var section in sections.Where(SectionHasContent))
-            {
-                if (IsClassicHeaderSection(section))
-                {
-                    if (IsContactSection(section))
-                    {
-                        AccumulateClassicContactHeader(section, contactHeaderState);
-                    }
-                    else
-                    {
-                        // Flush contact block before Summary so name/channels stay above it.
-                        FlushClassicContactHeader(header, contactHeaderState);
-                        AppendSection(header, section, compact: true);
-                    }
-                }
-                else
-                {
-                    AppendSection(main, section, compact: false);
-                }
-            }
-
-            FlushClassicContactHeader(header, contactHeaderState);
-            return (header.ToString(), string.Empty, main.ToString());
-        }
-
-        var sidebar = new StringBuilder();
-        var mainColumn = new StringBuilder();
-        var sidebarContactState = new ContactHeaderEmitState();
+        var header = new StringBuilder();
+        var main = new StringBuilder();
+        // Contact + Profile (both SectionType=Contact) must share name/channel dedupe.
+        var contactHeaderState = new ContactHeaderEmitState();
 
         foreach (var section in sections.Where(SectionHasContent))
         {
-            if (IsSidebarSection(section))
+            if (IsContactSection(section))
             {
-                // Match Minimal contact emission: name + value lines (no Email/Phone labels).
-                if (IsContactSection(section))
-                {
-                    AccumulateClassicContactHeader(section, sidebarContactState);
-                }
-                else
-                {
-                    FlushClassicContactHeader(sidebar, sidebarContactState);
-                    AppendSection(sidebar, section, compact: true);
-                }
+                AccumulateContactHeader(section, contactHeaderState);
             }
             else
             {
-                AppendSection(mainColumn, section, compact: false);
+                AppendSection(main, section, compact: false);
             }
         }
 
-        FlushClassicContactHeader(sidebar, sidebarContactState);
-        return (string.Empty, sidebar.ToString(), mainColumn.ToString());
+        var runningName = contactHeaderState.DisplayName;
+        FlushContactHeader(header, contactHeaderState);
+        return (header.ToString(), main.ToString(), runningName);
     }
 
     private sealed class ContactHeaderEmitState
@@ -113,15 +74,7 @@ internal static class CvExportHtmlMapper
         public bool HasPending { get; set; }
     }
 
-    private static void AppendSections(StringBuilder builder, IEnumerable<CvExportSection> sections, bool compact)
-    {
-        foreach (var section in sections.Where(SectionHasContent))
-        {
-            AppendSection(builder, section, compact);
-        }
-    }
-
-    private static void AccumulateClassicContactHeader(
+    private static void AccumulateContactHeader(
         CvExportSection section,
         ContactHeaderEmitState state)
     {
@@ -164,12 +117,12 @@ internal static class CvExportHtmlMapper
                 continue;
             }
 
-            state.ContactLines.Append($"""<p class="cv-contact-line">{RenderInline(value)}</p>""");
+            state.ContactLines.Append($"""<p class="cv-contact-line">{RenderContactLine(value)}</p>""");
             state.HasPending = true;
         }
     }
 
-    private static void FlushClassicContactHeader(StringBuilder builder, ContactHeaderEmitState state)
+    private static void FlushContactHeader(StringBuilder builder, ContactHeaderEmitState state)
     {
         if (!state.HasPending)
         {
@@ -193,7 +146,7 @@ internal static class CvExportHtmlMapper
 
         state.DisplayName = null;
         state.ContactLines.Clear();
-        // Keep SeenContactValues + NameEmitted across flushes within the same column.
+        // Keep SeenContactValues + NameEmitted across flushes within the header.
     }
 
     private static string StripContactChannelLabelPrefix(string value)
@@ -222,14 +175,14 @@ internal static class CvExportHtmlMapper
     }
 
     /// <summary>
-    /// Resolves the person name for Minimal headers (FE <c>resolveContactDisplayName</c>
+    /// Resolves the person name for the CV header (FE <c>resolveContactDisplayName</c>
     /// + legacy title fill-the-gap parity). Prefer Name.subtitle; then legacy person-name Title.
     /// </summary>
     private static string? ResolveContactDisplayName(
         CvExportSection section,
         IReadOnlyList<CvExportEntry> normalizedEntries)
     {
-        // Prefer modern Name.subtitle only — do not also fall through to legacy when present.
+        // Prefer structured Name.subtitle only — do not also fall through to legacy when present.
         foreach (var entry in normalizedEntries)
         {
             if (IsContactNameEntry(entry) && !string.IsNullOrWhiteSpace(entry.Subtitle))
@@ -246,12 +199,12 @@ internal static class CvExportHtmlMapper
             }
         }
 
-        var hasModernNameEntry = normalizedEntries.Any(IsContactNameEntry)
+        var hasStructuredNameEntry = normalizedEntries.Any(IsContactNameEntry)
             || section.Entries.Any(IsContactNameEntry);
 
-        if (hasModernNameEntry)
+        if (hasStructuredNameEntry)
         {
-            // Modern Contact shape is present but subtitle empty — do not invent a second
+            // Structured Contact shape is present but subtitle empty — do not invent a second
             // name from a channel title / leftover legacy title.
             return null;
         }
@@ -277,7 +230,7 @@ internal static class CvExportHtmlMapper
 
     /// <summary>
     /// Expands import-legacy / multi-bullet Contact shapes into Name + one channel entry
-    /// per distinct valued bullet for Minimal header emission.
+    /// per distinct valued bullet for header emission.
     /// </summary>
     private static IReadOnlyList<CvExportEntry> NormalizeContactEntriesForExport(CvExportSection section)
     {
@@ -564,22 +517,13 @@ internal static class CvExportHtmlMapper
         section.Heading.Equals("Contact", StringComparison.OrdinalIgnoreCase)
         || section.SectionType == CvSectionTypes.Contact;
 
-    private static bool IsClassicHeaderSection(CvExportSection section) =>
-        section.SectionType == CvSectionTypes.Summary || IsContactSection(section);
-
     private static bool IsContactNameEntry(CvExportEntry entry) =>
         entry.Title.Equals("Name", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsSidebarSection(CvExportSection section) =>
-        section.SectionType == CvSectionTypes.Skills
-        || section.SectionType == CvSectionTypes.Summary
-        || IsContactSection(section);
-
     private static bool SectionHasContent(CvExportSection section) =>
         IsContactSection(section)
-            ? section.Entries.Any((entry) => ContactEntryHasContent(entry))
-            : section.Entries.Any((entry) => EntryHasContent(section, entry))
-                || !string.IsNullOrWhiteSpace(section.Heading);
+            ? section.Entries.Any(ContactEntryHasContent)
+            : section.Entries.Any((entry) => EntryHasContent(section, entry));
 
     private static bool EntryHasContent(CvExportSection section, CvExportEntry entry) =>
         IsContactSection(section)
@@ -616,6 +560,45 @@ internal static class CvExportHtmlMapper
 
     private static string RenderInline(string? value) =>
         CvExportInlineHtmlRenderer.Render(value);
+
+    private static string RenderContactLine(string? value) =>
+        CvExportInlineHtmlRenderer.RenderContactLine(value);
+
+    internal static string ToRunningNameCss(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "none";
+        }
+
+        var builder = new StringBuilder(value.Length + 2);
+        builder.Append('"');
+
+        foreach (var character in value.Trim())
+        {
+            switch (character)
+            {
+                case '\\':
+                case '"':
+                    builder.Append('\\').Append(character);
+                    break;
+                case '<':
+                    // Keep a name from closing the surrounding style element.
+                    builder.Append("\\3C ");
+                    break;
+                case '\n':
+                case '\r':
+                case '\f':
+                    break;
+                default:
+                    builder.Append(character);
+                    break;
+            }
+        }
+
+        builder.Append('"');
+        return builder.ToString();
+    }
 
     private static string Encode(string? value) =>
         WebUtility.HtmlEncode(value ?? string.Empty);

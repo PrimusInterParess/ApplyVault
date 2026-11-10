@@ -15,6 +15,7 @@ internal static class CvExportMapping
             CvExportLayoutDefaults.Document(hasPhoto),
             document.Sections
                 .OrderBy((section) => section.SortOrder)
+                .Where(SectionIncludedOnTemplate)
                 .Select(FromStructuredSection)
                 .ToArray(),
             profilePhotoBytes,
@@ -28,7 +29,7 @@ internal static class CvExportMapping
         string? profilePhotoContentType)
     {
         var hasPhoto = profilePhotoBytes is { Length: > 0 };
-        var documentLayout = CvExportLayoutResolver.ResolveDocument(null, hasPhoto);
+        var documentLayout = CvExportLayoutDefaults.Document(hasPhoto);
 
         var sourceSections = sourceDocument.Sections.ToDictionary(
             (section) => section.Heading,
@@ -59,6 +60,17 @@ internal static class CvExportMapping
 
         return new CvExportRenderRequest(documentLayout, sections, profilePhotoBytes, profilePhotoContentType);
     }
+
+    /// <summary>
+    /// Omitted non-Contact sections stay off the template. Empty sections are dropped later
+    /// by <c>CvExportHtmlMapper.SectionHasContent</c>.
+    /// </summary>
+    private static bool SectionIncludedOnTemplate(CvStructuredSectionDto section) =>
+        IsContactSection(section) || section.IncludedOnTemplate;
+
+    private static bool IsContactSection(CvStructuredSectionDto section) =>
+        section.Heading.Trim().Equals("Contact", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(section.SectionType, CvSectionTypes.Contact, StringComparison.OrdinalIgnoreCase);
 
     private static CvExportSection FromStructuredSection(CvStructuredSectionDto section) =>
         new(

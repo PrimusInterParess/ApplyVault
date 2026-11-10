@@ -7,7 +7,6 @@ namespace ApplyVault.Api.Services;
 
 public sealed record CvHtmlExportResult(
     string Html,
-    int ResolvedTemplateId,
     int CompactLevel = 0,
     string? Notice = null);
 
@@ -15,73 +14,68 @@ public interface ICvDocumentExportService
 {
     Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
-        CvPdfExportOptions options,
         CancellationToken cancellationToken = default);
 
     Task<CvHtmlExportResult> ExportHtmlAsync(
         AppUserEntity user,
-        CvPdfExportOptions options,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Exports the saved structured CV as HTML/PDF. No AI rewrite — FE canvas and BE export
-/// share the same structured payload (fill-the-gaps / layout only).
-/// Always targets a single page via the compact CSS ramp (no user-facing page option).
+/// Exports the saved structured CV as HTML/PDF using the single CV template. No AI rewrite —
+/// FE canvas and BE export share the same structured payload (fill-the-gaps / layout only).
+/// Page policy: one page recommended, two pages maximum. The compact CSS ramp first tries to
+/// reach one page; failing that it takes one step tighter than the loosest level that still
+/// fits two pages; failing that it returns the fewest-pages render and flags
+/// <see cref="CvPdfExportResult.ExceedsMaxPages"/>.
 /// </summary>
 public sealed class CvDocumentExportService(
     ICvStructuredDocumentService structuredDocumentService,
     ICvDocumentService cvDocumentService,
-    ICvExportRenderDispatcher exportRenderDispatcher,
+    ICvHtmlCvPdfExporter htmlCvPdfExporter,
     ICvExportHtmlDocumentBuilder htmlDocumentBuilder,
     ICvPdfPageCounter pdfPageCounter,
     ILogger<CvDocumentExportService> logger) : ICvDocumentExportService
 {
-    /// <summary>Fixed export page target — compact ramp tries to fit this many pages.</summary>
-    private const int TargetPageLimit = 1;
+    /// <summary>Recommended page count — the compact ramp stops as soon as this is reached.</summary>
+    private const int RecommendedPageCount = 1;
+
+    /// <summary>Hard maximum — exports above this are flagged as exceeding the limit.</summary>
+    private const int MaxPageCount = 2;
 
     public async Task<CvPdfExportResult> ExportPdfAsync(
         AppUserEntity user,
-        CvPdfExportOptions options,
         CancellationToken cancellationToken = default)
     {
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
         var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
         var (compactLevel, pageCount, pdfBytes) = await ResolveCompactLevelAsync(
             renderRequest,
-            resolvedTemplateId,
             cancellationToken).ConfigureAwait(false);
-
-        var notice = AppendCompactNotices(null, compactLevel, pageCount);
 
         return new CvPdfExportResult(
             pdfBytes,
             pageCount,
-            ExceedsPageTarget(pageCount),
+            pageCount > MaxPageCount,
             UsedAi: false,
-            notice);
+            BuildNotice(compactLevel, pageCount));
     }
 
     public async Task<CvHtmlExportResult> ExportHtmlAsync(
         AppUserEntity user,
-        CvPdfExportOptions options,
         CancellationToken cancellationToken = default)
     {
-        var resolvedTemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(options.TemplateId);
         var renderRequest = await BuildRenderRequestAsync(user, cancellationToken).ConfigureAwait(false);
 
         var (compactLevel, pageCount, _) = await ResolveCompactLevelAsync(
             renderRequest,
-            resolvedTemplateId,
             cancellationToken).ConfigureAwait(false);
-        var notice = AppendCompactNotices(null, compactLevel, pageCount);
 
         var html = await htmlDocumentBuilder
-            .BuildAsync(renderRequest, resolvedTemplateId, ToRenderOptions(compactLevel), cancellationToken)
+            .BuildAsync(renderRequest, ToRenderOptions(compactLevel), cancellationToken)
             .ConfigureAwait(false);
 
-        return new CvHtmlExportResult(html, resolvedTemplateId, compactLevel, notice);
+        return new CvHtmlExportResult(html, compactLevel, BuildNotice(compactLevel, pageCount));
     }
 
     private async Task<CvExportRenderRequest> BuildRenderRequestAsync(
@@ -122,39 +116,56 @@ public sealed class CvDocumentExportService(
 
     /// <summary>
     /// Shared compact search used by PDF export and HTML preview.
-    /// Ramps CompactLevel until the PDF fits <see cref="TargetPageLimit"/> pages, else best effort.
+    /// Returns the first level that fits <see cref="RecommendedPageCount"/>.
+    /// Otherwise returns one step tighter than the loosest level that fits <see cref="MaxPageCount"/>,
+    /// or that loosest level when the next step exceeds two pages or is already the last level.
+    /// When nothing fits two pages, returns the level with the fewest pages.
     /// </summary>
     private async Task<(int CompactLevel, int PageCount, byte[] PdfBytes)> ResolveCompactLevelAsync(
         CvExportRenderRequest renderRequest,
-        int templateId,
         CancellationToken cancellationToken)
     {
-        byte[]? bestPdfBytes = null;
-        var bestPageCount = int.MaxValue;
-        var bestCompactLevel = 0;
+        (int CompactLevel, int PageCount, byte[] PdfBytes)? loosestTwoPage = null;
+        (int CompactLevel, int PageCount, byte[] PdfBytes)? fewestPages = null;
 
         for (var compactLevel = 0; compactLevel <= CvPdfRenderOptions.MaxCompactLevel; compactLevel++)
         {
             var renderOptions = ToRenderOptions(compactLevel);
-            var pdfBytes = await exportRenderDispatcher
-                .RenderAsync(renderRequest, templateId, renderOptions, cancellationToken)
+            var pdfBytes = await htmlCvPdfExporter
+                .ExportAsync(renderRequest, renderOptions, cancellationToken)
                 .ConfigureAwait(false);
             var pageCount = pdfPageCounter.CountPages(pdfBytes);
+            var candidate = (compactLevel, pageCount, pdfBytes);
 
-            if (pageCount < bestPageCount)
+            if (pageCount <= RecommendedPageCount)
             {
-                bestPdfBytes = pdfBytes;
-                bestPageCount = pageCount;
-                bestCompactLevel = compactLevel;
+                return candidate;
             }
 
-            if (pageCount <= TargetPageLimit)
+            if (fewestPages is null || pageCount < fewestPages.Value.PageCount)
             {
-                return (compactLevel, pageCount, pdfBytes);
+                fewestPages = candidate;
+            }
+
+            if (loosestTwoPage is null)
+            {
+                if (pageCount <= MaxPageCount)
+                {
+                    loosestTwoPage = candidate;
+                }
+
+                continue;
+            }
+
+            if (compactLevel == loosestTwoPage.Value.CompactLevel + 1)
+            {
+                return pageCount <= MaxPageCount
+                    ? candidate
+                    : loosestTwoPage.Value;
             }
         }
 
-        return (bestCompactLevel, bestPageCount, bestPdfBytes!);
+        return loosestTwoPage ?? fewestPages!.Value;
     }
 
     private static CvPdfRenderOptions ToRenderOptions(int compactLevel) =>
@@ -162,27 +173,23 @@ public sealed class CvDocumentExportService(
             ? CvPdfRenderOptions.Normal
             : new CvPdfRenderOptions(compactLevel);
 
-    private static bool ExceedsPageTarget(int pageCount) => pageCount > TargetPageLimit;
-
-    private static string? AppendCompactNotices(string? notice, int compactLevel, int pageCount)
+    private static string? BuildNotice(int compactLevel, int pageCount)
     {
-        if (ExceedsPageTarget(pageCount))
+        if (pageCount > MaxPageCount)
         {
-            return AppendNotice(
-                notice,
-                $"This export is {pageCount} pages after compacting; it could not fit on one page.");
+            return $"This export is {pageCount} pages after compacting; the maximum is two pages.";
+        }
+
+        if (pageCount == MaxPageCount)
+        {
+            return "Your CV is 2 pages; one page is recommended — consider trimming content.";
         }
 
         if (compactLevel > 0)
         {
-            return AppendNotice(notice, "Layout was compacted to fit on one page.");
+            return "Layout was compacted to fit on one page.";
         }
 
-        return notice;
+        return null;
     }
-
-    private static string AppendNotice(string? existingNotice, string notice) =>
-        string.IsNullOrWhiteSpace(existingNotice)
-            ? notice
-            : $"{existingNotice} {notice}";
 }

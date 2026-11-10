@@ -1,5 +1,14 @@
 {
-  "version": 1,
+  "version": 2,
+  "fixedLayout": [
+    { "sectionType": "Contact", "heading": "Contact" },
+    { "sectionType": "Summary", "heading": "Summary" },
+    { "sectionType": "Skills", "heading": "Skills" },
+    { "sectionType": "Experience", "heading": "Experience" },
+    { "sectionType": "Projects", "heading": "Projects" },
+    { "sectionType": "Education", "heading": "Education" },
+    { "sectionType": "Custom", "heading": "Certifications & Languages" }
+  ],
   "sectionTypes": [
     {
       "id": "Experience",

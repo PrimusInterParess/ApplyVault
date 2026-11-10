@@ -12,6 +12,7 @@ import { CvProjectSummary } from '../../models/cv-project.model';
 })
 export class CvBuilderProjectsPanelComponent {
   readonly open = input(false);
+  readonly docked = input(false);
   readonly summaries = input<readonly CvProjectSummary[]>([]);
   readonly loadingSummaries = input(false);
   readonly summariesError = input<string | null>(null);

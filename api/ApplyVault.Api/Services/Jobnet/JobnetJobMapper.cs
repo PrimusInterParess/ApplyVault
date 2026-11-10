@@ -36,7 +36,9 @@ internal static class JobnetJobMapper
         string id,
         JobnetDetailResponsePayload detail)
     {
-        var workInDenmark = HasWorkInDenmarkClassification(detail.Job?.Classifications);
+        var classifications = detail.Job?.Classifications;
+        var workInDenmark = classifications is not { Count: > 0 }
+            || HasWorkInDenmarkClassification(classifications);
         var employer = NormalizeSingleLine(detail.Employer?.Name ?? detail.Job?.HiringOrgName);
         var location = FormatLocation(
             detail.Job?.WorkPlaceAddress,
@@ -77,7 +79,7 @@ internal static class JobnetJobMapper
             ResolveApplicationUrlFromSearch(job),
             job.Occupation,
             FormatWorkHours(job.WorkHourPartTime),
-            WorkInDenmark: JobnetJobIdentifiers.IsEuresImported(id));
+            WorkInDenmark: true);
     }
 
     public static string ResolveSourceUrl(string id, string? jobAdUrl)
@@ -111,7 +113,7 @@ internal static class JobnetJobMapper
 
     private static string BuildJobnetDetailUrl(string id)
     {
-        return $"https://jobnet.dk/find-job?jobAdId={Uri.EscapeDataString(id.Trim())}";
+        return $"https://workindenmark.jobnet.dk/find-job?jobAdId={Uri.EscapeDataString(id.Trim())}";
     }
 
     private static string? FormatLocation(

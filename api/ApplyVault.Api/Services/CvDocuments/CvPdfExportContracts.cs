@@ -1,7 +1,5 @@
 namespace ApplyVault.Api.Services;
 
-public sealed record CvPdfExportOptions(int TemplateId = 2);
-
 public sealed record CvPdfRenderOptions(int CompactLevel = 0)
 {
     public const int MaxCompactLevel = 4;
@@ -15,11 +13,6 @@ public sealed record CvPdfExportResult(
     bool ExceedsMaxPages,
     bool UsedAi,
     string? Notice);
-
-public interface ICvPdfExportRenderer
-{
-    byte[] Render(CvExportRenderRequest request, CvPdfRenderOptions? options = null);
-}
 
 public interface ICvPdfPageCounter
 {

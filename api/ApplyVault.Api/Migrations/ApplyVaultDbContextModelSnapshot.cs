@@ -930,8 +930,8 @@ namespace ApplyVault.Api.Migrations
                     b.Property<DateTimeOffset?>("StructuredImportedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int>("TemplateId")
-                        .HasColumnType("int");
+                    b.Property<string>("UnplacedContentJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -1082,6 +1082,12 @@ namespace ApplyVault.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IncludedOnTemplate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasSentinel(true);
 
                     b.Property<string>("SectionType")
                         .IsRequired()

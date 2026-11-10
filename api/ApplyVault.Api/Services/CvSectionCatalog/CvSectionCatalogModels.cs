@@ -9,7 +9,26 @@ public sealed class CvSectionCatalogDocument
 
     [JsonPropertyName("sectionTypes")]
     public List<CvSectionTypeDefinition> SectionTypes { get; init; } = [];
+
+    /// <summary>
+    /// Ordered fixed slots of the Structured CV (ADR-0001 SSOT). Exactly one slot per
+    /// rendered section; users cannot add, remove, reorder, or rename them.
+    /// </summary>
+    [JsonPropertyName("fixedLayout")]
+    public List<CvFixedSectionSlotDefinition> FixedLayout { get; init; } = [];
 }
+
+public sealed class CvFixedSectionSlotDefinition
+{
+    [JsonPropertyName("sectionType")]
+    public required string SectionType { get; init; }
+
+    [JsonPropertyName("heading")]
+    public required string Heading { get; init; }
+}
+
+/// <summary>One fixed, ordered section slot of the Structured CV.</summary>
+public sealed record CvFixedSectionSlot(string SectionType, string Heading);
 
 public sealed class CvSectionTypeDefinition
 {
@@ -46,7 +65,8 @@ public sealed class CvSectionFieldDefinition
 
 public sealed record CvSectionCatalogDto(
     int Version,
-    IReadOnlyList<CvSectionTypeCatalogDto> SectionTypes);
+    IReadOnlyList<CvSectionTypeCatalogDto> SectionTypes,
+    IReadOnlyList<CvFixedSectionSlot> FixedLayout);
 
 public sealed record CvSectionTypeCatalogDto(
     string Id,

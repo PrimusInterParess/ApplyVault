@@ -5,32 +5,24 @@ namespace ApplyVault.Api.Services.HtmlExport;
 
 /// <summary>
 /// Builds Content-Disposition download names for formatted CV PDF exports:
-/// <c>{PersonName}-{TemplateLabel}.pdf</c>, falling back to <c>CV-{TemplateLabel}.pdf</c>.
+/// <c>{PersonName}-CV.pdf</c>, falling back to <c>CV.pdf</c>.
 /// </summary>
 public static class CvExportDownloadFileName
 {
-    public static string Build(string? personName, string templateLabel)
-    {
-        var templateSegment = SanitizeSegment(templateLabel);
-        if (string.IsNullOrWhiteSpace(templateSegment))
-        {
-            templateSegment = "Modern";
-        }
+    private const string Suffix = "CV";
 
+    public static string Build(string? personName)
+    {
         var personSegment = SanitizeSegment(personName);
         var baseName = string.IsNullOrWhiteSpace(personSegment)
-            ? $"CV-{templateSegment}"
-            : $"{personSegment}-{templateSegment}";
+            ? Suffix
+            : $"{personSegment}-{Suffix}";
 
         return $"{baseName}.pdf";
     }
 
-    public static string BuildForExport(CvStructuredDocumentDto? structured, int templateId)
-    {
-        var personName = ResolvePersonName(structured);
-        var templateLabel = CvExportHtmlTemplateCatalog.GetDisplayName(templateId);
-        return Build(personName, templateLabel);
-    }
+    public static string BuildForExport(CvStructuredDocumentDto? structured) =>
+        Build(ResolvePersonName(structured));
 
     public static string? ResolvePersonName(CvStructuredDocumentDto? structured)
     {

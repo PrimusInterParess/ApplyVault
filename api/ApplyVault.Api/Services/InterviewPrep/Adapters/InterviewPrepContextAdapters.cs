@@ -61,12 +61,21 @@ public sealed class InterviewPrepCandidateContextAdapter(
         // CapturedAt stays on the record only — do not embed in SnapshotJson.
         // Study-brief fingerprints hash SnapshotJson; a clock field would make every
         // post-regenerate outdated check look like the Structured CV changed.
+        // includedOnTemplate is template visibility, not entry content. Omit it so a
+        // visibility-only save does not change the fingerprint. Entries stay either way.
         var payload = new
         {
             structured.DocumentId,
             structured.StructuredImportedAt,
             CatalogVersion = sectionCatalog.Version.ToString(),
-            structured.Sections
+            Sections = structured.Sections.Select((section) => new
+            {
+                section.Id,
+                section.Heading,
+                section.SectionType,
+                section.SortOrder,
+                section.Entries
+            })
         };
 
         return new InterviewPrepCandidateSnapshot(

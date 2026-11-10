@@ -346,5 +346,10 @@ public sealed class InterviewPrepPlanningTests
             GenerateInterviewPrepStudyBriefRequest request,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(Fail<GenerateInterviewPrepStudyBriefResponse>());
+
+        public Task<InterviewPrepAiExecutionResult<GenerateAnswerReviewResponse>> GenerateAnswerReviewAsync(
+            GenerateAnswerReviewRequest request,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Fail<GenerateAnswerReviewResponse>());
     }
 }

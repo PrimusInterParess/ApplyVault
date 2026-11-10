@@ -6,7 +6,7 @@ public sealed class JobnetIntegrationOptions
 
     public const string DefaultUserAgent = "ApplyVault/1.0 (+https://github.com/yborisov/jobapplications)";
 
-    public string BaseUrl { get; set; } = "https://jobnet.dk/bff";
+    public string BaseUrl { get; set; } = "https://workindenmark.jobnet.dk/bff";
 
     public string SearchPath { get; set; } = "/FindJob/Search";
 
@@ -24,7 +24,7 @@ public sealed class JobnetIntegrationOptions
 
     public int MaxUpstreamScanPages { get; set; } = 10;
 
-    public int ScanResultsPerPage { get; set; } = 10;
+    public int ScanResultsPerPage { get; set; } = 50;
 
     public int MaxCachedRankedResults { get; set; } = 500;
 

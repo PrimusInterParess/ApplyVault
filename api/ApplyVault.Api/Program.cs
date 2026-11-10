@@ -4,9 +4,6 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Infrastructure;
 using ApplyVault.Api.Services;
 using PdfSharp.Fonts;
-using QuestPDF.Infrastructure;
-
-QuestPDF.Settings.License = LicenseType.Community;
 
 if (GlobalFontSettings.FontResolver is null)
 {

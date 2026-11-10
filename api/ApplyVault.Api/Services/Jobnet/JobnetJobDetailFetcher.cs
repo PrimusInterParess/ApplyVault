@@ -17,17 +17,14 @@ internal sealed class JobnetJobDetailFetcher(
         {
             var detail = await apiClient.GetJobByIdAsync(normalizedId, cancellationToken);
 
-            if (detail is null)
+            if (detail is not null)
             {
-                return null;
+                return new JobnetRawDetail(
+                    JobnetDescriptionSource.NativeDetail,
+                    JobnetJobMapper.MapDetail(normalizedId, detail));
             }
-
-            return new JobnetRawDetail(
-                JobnetDescriptionSource.NativeDetail,
-                JobnetJobMapper.MapDetail(normalizedId, detail));
         }
-
-        if (!JobnetJobIdentifiers.IsEuresImported(normalizedId))
+        else if (!JobnetJobIdentifiers.IsEuresImported(normalizedId))
         {
             return null;
         }

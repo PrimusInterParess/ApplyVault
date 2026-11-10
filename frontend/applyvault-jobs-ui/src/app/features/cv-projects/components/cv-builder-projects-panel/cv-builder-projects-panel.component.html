@@ -2,7 +2,8 @@
   <div
     id="cv-builder-projects-panel"
     class="cv-builder__projects-panel"
-    role="dialog"
+    [class.cv-builder__projects-panel--docked]="docked()"
+    [attr.role]="docked() ? 'region' : 'dialog'"
     aria-label="Add project summaries">
     <div class="cv-builder__structure-head">
       <p class="cv-builder__structure-title">Add projects</p>

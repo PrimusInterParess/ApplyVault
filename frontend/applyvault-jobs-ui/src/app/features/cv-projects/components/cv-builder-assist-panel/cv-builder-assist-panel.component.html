@@ -1,13 +1,16 @@
 @if (open()) {
-  <div
-    class="cv-builder-assist-backdrop"
-    role="presentation"
-    (click)="closePanel.emit()"></div>
+  @if (!docked()) {
+    <div
+      class="cv-builder-assist-backdrop"
+      role="presentation"
+      (click)="closePanel.emit()"></div>
+  }
 
   <aside
     class="cv-builder-assist"
-    role="dialog"
-    aria-modal="true"
+    [class.cv-builder-assist--docked]="docked()"
+    [attr.role]="docked() ? 'region' : 'dialog'"
+    [attr.aria-modal]="docked() ? null : 'true'"
     aria-label="AI assist">
     <header class="cv-builder-assist__header">
       <div class="cv-builder-assist__heading">

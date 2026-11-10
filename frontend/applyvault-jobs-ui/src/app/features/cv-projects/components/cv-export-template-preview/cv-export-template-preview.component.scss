@@ -9,13 +9,12 @@
   width: 100%;
 }
 
+/* Single export layout — mirrors BE template-minimal.html */
 .cv-export-preview {
-  --cv-preview-accent: #1b4f72;
-  --cv-preview-sidebar-bg: #2c3e50;
-  --cv-preview-sidebar-fg: #fff;
+  --cv-preview-accent: #2f5d50;
   --cv-preview-main-bg: #fff;
-  --cv-preview-main-fg: #222;
-  --cv-preview-font: 'Segoe UI', system-ui, sans-serif;
+  --cv-preview-main-fg: #1a1a1a;
+  --cv-preview-font: "Source Sans 3", sans-serif;
   --cv-preview-title-font: inherit;
 }
 
@@ -38,13 +37,26 @@
   overflow: hidden;
 }
 
-/* Editable = real document feel (Resume.io-style) */
+/* Editable sheet is one A4 page tall (297mm at 96dpi) and grows with content. */
 .cv-export-preview--editable .cv-export-preview__page {
+  --cv-sheet-pad-top: 0.85rem;
+  position: relative;
   aspect-ratio: auto;
-  min-height: 70rem;
+  height: auto;
+  min-height: 1123px;
+  max-height: none;
   overflow: visible;
-  font-size: 0.95rem;
-  line-height: 1.45;
+  background: transparent;
+  font-size: 10.5pt;
+  line-height: 1.16;
+}
+
+.cv-export-preview--editable .cv-export-preview__main {
+  background: transparent;
+}
+
+.cv-export-preview__page-break {
+  display: flow-root;
 }
 
 .cv-export-preview--editable .cv-export-preview__name {
@@ -52,14 +64,70 @@
   margin-bottom: 0.35rem;
 }
 
+/* Match PDF section rhythm (~28pt between sections). */
+.cv-export-preview--editable .cv-export-preview__section,
+.cv-export-preview--editable .cv-export-preview__minimal-header {
+  scroll-margin-top: 1.25rem;
+}
+
 .cv-export-preview--editable .cv-export-preview__section {
-  margin-bottom: 1.05rem;
+  margin-bottom: 0.2rem;
+  margin-left: -0.4rem;
+  margin-right: -0.4rem;
+  padding: 0.12rem 0.4rem 0.12rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: border-color 0.12s ease;
+}
+
+.cv-export-preview--editable .cv-export-preview__section:hover,
+.cv-export-preview--editable .cv-export-preview__section:focus-within {
+  border-color: rgb(47 93 80 / 40%);
 }
 
 .cv-export-preview--editable .cv-export-preview__section-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  width: fit-content;
+  max-width: 100%;
   font-size: 0.78rem;
   margin-bottom: 0.25rem;
   padding-bottom: 0.2rem;
+}
+
+.cv-export-preview--editable .cv-export-preview__section-title--omitted {
+  color: #8b93a1;
+  border-bottom-color: #e2e5ea;
+}
+
+.cv-export-preview__section-visibility {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.18rem 0.6rem;
+  border: 1px solid #2f5d50;
+  border-radius: 999px;
+  background: #fff;
+  color: #2f5d50;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.cv-export-preview__section-visibility[aria-pressed='false'] {
+  color: #6b7280;
+  border-color: #c8cdd6;
+  background: #f3f4f6;
+}
+
+.cv-export-preview__section-visibility:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: 2px;
 }
 
 .cv-export-preview__sr-only {
@@ -74,109 +142,6 @@
   border: 0;
 }
 
-.cv-export-preview__section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.35rem 0.5rem;
-  margin: 0 0 0.45rem;
-}
-
-.cv-export-preview__section-head .cv-export-preview__section-title {
-  flex: 1 1 8rem;
-  min-width: 0;
-  margin: 0;
-}
-
-.cv-export-preview__section-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-  flex: 0 0 auto;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-
-.cv-export-preview__section:hover .cv-export-preview__section-actions,
-.cv-export-preview__section:focus-within .cv-export-preview__section-actions {
-  opacity: 1;
-}
-
-.cv-export-preview__section-action {
-  border: none;
-  background: transparent;
-  color: #8a93a3;
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.15rem 0.3rem;
-  border-radius: 999px;
-}
-
-.cv-export-preview__section-action:hover:not(:disabled) {
-  background: rgb(28 35 48 / 8%);
-  color: #1c2330;
-}
-
-.cv-export-preview__section-action:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.cv-export-preview__section-action--danger:hover:not(:disabled) {
-  color: #b42318;
-  background: rgb(180 35 24 / 8%);
-}
-
-.cv-export-preview__sidebar .cv-export-preview__section-action {
-  color: rgb(31 42 38 / 55%);
-}
-
-.cv-export-preview__sidebar .cv-export-preview__section-action:hover:not(:disabled) {
-  color: #1f2a26;
-  background: rgb(31 42 38 / 8%);
-}
-
-.cv-export-preview__add-section {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px dashed rgb(28 35 48 / 18%);
-}
-
-.cv-export-preview__add-section-select {
-  border: 1px solid rgb(28 35 48 / 18%);
-  border-radius: 0.45rem;
-  background: #fff;
-  font: inherit;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.55rem;
-  color: #1c2330;
-}
-
-.cv-export-preview__add-section-btn {
-  border: 1px dashed rgb(28 35 48 / 22%);
-  background: rgb(255 255 255 / 55%);
-  color: #1f6f5b;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0.4rem 0.75rem;
-  border-radius: 0.55rem;
-}
-
-.cv-export-preview__add-section-btn:hover {
-  background: rgb(31 111 91 / 8%);
-  border-color: #1f6f5b;
-}
-
 /* Entry rhythm via list gap so newly added entries match existing ones. */
 .cv-export-preview__entries {
   display: flex;
@@ -185,8 +150,7 @@
 }
 
 .cv-export-preview--editable .cv-export-preview__entries {
-  /* ~12pt export .entry margin-bottom */
-  gap: 0.75rem;
+  gap: 0.15rem;
 }
 
 .cv-export-preview--editable .cv-export-preview__entry {
@@ -207,22 +171,17 @@
   font-size: 0.9rem;
 }
 
-.cv-export-preview--editable .cv-export-preview__main,
-.cv-export-preview--editable .cv-export-preview__sidebar,
-.cv-export-preview--editable .cv-export-preview__main--single,
 .cv-export-preview--editable .cv-export-preview__pro-header {
   padding: 1.35rem 1.5rem;
 }
 
-/* Editable photo sizes mirror export baselines: Modern 136 / Minimal 168. */
-.cv-export-preview--editable.cv-export-preview--template-2 .cv-export-preview__photo {
-  width: 8.5rem;
-  height: 8.5rem;
-  border-radius: 0.5rem;
-  margin-bottom: 0.9rem;
+/* Equal side inset. Top inset repeats on each sheet, including a continuation page. */
+.cv-export-preview--editable .cv-export-preview__main--single {
+  padding: var(--cv-sheet-pad-top) 1.35rem 0.7rem;
 }
 
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__photo {
+/* Editable photo size mirrors export baseline (168). */
+.cv-export-preview--editable .cv-export-preview__photo {
   width: 10.5rem;
   height: 10.5rem;
   border-radius: 0.25rem;
@@ -231,29 +190,51 @@
 
 .cv-export-preview--editable .cv-export-preview__minimal-header {
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Blank placeholders stay out of the page count until the section is edited. */
+.cv-export-preview--editable .cv-export-preview__section .cv-export-preview__editable:empty,
+.cv-export-preview--editable .cv-export-preview__section .cv-export-preview__entry-bullets:not(:has(li:not(:empty))) {
+  display: none;
+}
+
+.cv-export-preview--editable .cv-export-preview__section:hover .cv-export-preview__editable:empty,
+.cv-export-preview--editable .cv-export-preview__section:focus-within .cv-export-preview__editable:empty,
+.cv-export-preview--editable .cv-export-preview__section:hover .cv-export-preview__entry-bullets,
+.cv-export-preview--editable .cv-export-preview__section:focus-within .cv-export-preview__entry-bullets {
+  display: revert;
+}
+
+/* A bullet margin stays inside the list while the section is being edited. */
+.cv-export-preview--editable .cv-export-preview__section .cv-export-preview__entry-bullets {
+  display: flow-root;
+}
+
+.cv-export-preview--editable .cv-export-preview__entry-bullets > li.cv-export-preview__page-break {
+  display: list-item;
 }
 
 .cv-export-preview--editable .cv-export-preview__editable {
   cursor: text;
-  border-radius: 0.2rem;
-  transition: background 0.12s ease, box-shadow 0.12s ease;
+  border-radius: 1px;
   min-height: 1.15em;
 }
 
 .cv-export-preview--editable .cv-export-preview__editable:hover {
-  background: rgb(47 111 237 / 6%);
+  background: transparent;
 }
 
 .cv-export-preview--editable .cv-export-preview__editable:focus {
-  outline: none;
-  background: rgb(47 111 237 / 8%);
-  box-shadow: inset 0 0 0 1.5px rgb(47 111 237 / 55%);
+  outline: 1px solid #2f6fed;
+  outline-offset: 1px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .cv-export-preview--editable .cv-export-preview__editable:empty::before {
   content: attr(data-placeholder);
-  color: rgb(120 130 145);
+  color: #9aa3b2;
   pointer-events: none;
   font-style: italic;
   font-weight: 400;
@@ -269,24 +250,7 @@
   min-height: 1.2em;
 }
 
-.cv-export-preview__columns {
-  display: grid;
-  grid-template-columns: 32% 1fr;
-  height: 100%;
-  min-height: inherit;
-}
-
-.cv-export-preview__sidebar {
-  background: var(--cv-preview-sidebar-bg);
-  color: var(--cv-preview-sidebar-fg);
-  /* Outer-edge inset mirrors export template cell padding (spec §5.1 / §7.2). */
-  padding: 0.85rem 0.65rem 0.85rem 0.9rem;
-  min-height: 100%;
-  box-sizing: border-box;
-}
-
 .cv-export-preview__main {
-  padding: 0.85rem 0.9rem 0.85rem 0.75rem;
   background: var(--cv-preview-main-bg);
   color: var(--cv-preview-main-fg);
   min-height: 100%;
@@ -296,14 +260,6 @@
 .cv-export-preview__main--single {
   padding: 0.95rem 1.05rem;
   box-sizing: border-box;
-}
-
-.cv-export-preview--compact .cv-export-preview__sidebar {
-  padding: 0.55rem 0.45rem;
-}
-
-.cv-export-preview--compact .cv-export-preview__main {
-  padding: 0.55rem 0.6rem;
 }
 
 .cv-export-preview--compact .cv-export-preview__main--single {
@@ -316,30 +272,69 @@
   object-fit: cover;
   object-position: center;
   display: block;
-  margin-bottom: 0.35rem;
-  border-radius: 0.15rem;
+  margin-bottom: 0;
+  border-radius: 0.2rem;
   flex: 0 0 auto;
   flex-shrink: 0;
   max-width: 100%;
   box-sizing: border-box;
 }
 
-.cv-export-preview--template-2 .cv-export-preview__photo {
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 0.35rem;
-}
-
-.cv-export-preview--template-3 .cv-export-preview__photo {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 0.2rem;
-  margin-bottom: 0;
-}
-
 .cv-export-preview__photo--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgb(31 42 38 / 8%);
-  border: 1px solid rgb(31 42 38 / 18%);
+  border: 1px dashed rgb(31 42 38 / 28%);
+  color: #5b6575;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.35rem;
+}
+
+.cv-export-preview__photo-btn {
+  position: relative;
+  flex: 0 0 auto;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  line-height: 0;
+}
+
+.cv-export-preview__photo-change {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.45rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(to top, rgb(28 35 48 / 55%), rgb(28 35 48 / 0%) 58%);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.cv-export-preview__photo-btn:hover .cv-export-preview__photo-change,
+.cv-export-preview__photo-btn:focus-visible .cv-export-preview__photo-change {
+  opacity: 1;
+}
+
+.cv-export-preview__photo-btn:hover .cv-export-preview__photo--placeholder {
+  background: rgb(31 42 38 / 12%);
+}
+
+.cv-export-preview__photo-btn:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: 2px;
 }
 
 .cv-export-preview__name {
@@ -347,7 +342,8 @@
   font-family: var(--cv-preview-title-font);
   font-size: 0.95rem;
   line-height: 1.15;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .cv-export-preview__section {
@@ -363,23 +359,18 @@
 }
 
 .cv-export-preview__section-title {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   margin: 0 0 0.25rem;
   font-size: 0.48rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
-  border-bottom: 1px solid currentcolor;
+  color: var(--cv-preview-accent);
+  border-bottom: 1px solid #d0d0d0;
   padding-bottom: 0.1rem;
   opacity: 0.95;
-}
-
-.cv-export-preview__sidebar .cv-export-preview__section-title {
-  border-bottom-color: rgb(47 93 80 / 35%);
-}
-
-.cv-export-preview__main .cv-export-preview__section-title {
-  color: var(--cv-preview-accent);
-  border-bottom-color: var(--cv-preview-accent);
 }
 
 .cv-export-preview__entry {
@@ -388,12 +379,8 @@
 
 .cv-export-preview--editable .cv-export-preview__entry--editable {
   position: relative;
-  padding: 0.2rem 0.2rem 0.25rem;
-  border-radius: 0.35rem;
-}
-
-.cv-export-preview--editable .cv-export-preview__entry--editable:hover {
-  background: rgb(28 35 48 / 2.5%);
+  padding: 0.2rem 1.6rem 0.25rem 0.2rem;
+  border-radius: 2px;
 }
 
 .cv-export-preview__entry-meta {
@@ -407,20 +394,28 @@
 }
 
 .cv-export-preview__entry-remove {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  background: transparent;
-  color: #8a93a3;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(28 35 48 / 12%);
+  color: #6b7280;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  border-radius: 999px;
+  padding: 0;
   opacity: 0;
   transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
-  white-space: nowrap;
 }
 
 .cv-export-preview__entry--editable:hover .cv-export-preview__entry-remove,
@@ -455,19 +450,36 @@
   border-color: #1f6f5b;
 }
 
-.cv-export-preview__sidebar .cv-export-preview__add-entry {
-  color: #1f6f5b;
-  border-color: rgb(31 111 91 / 35%);
-  background: rgb(255 255 255 / 55%);
+.cv-export-preview--editable .cv-export-preview__add-entry,
+.cv-export-preview--editable .cv-export-preview__contact-add-btn {
+  opacity: 0;
 }
 
-.cv-export-preview__sidebar .cv-export-preview__add-entry:hover {
-  background: rgb(31 111 91 / 8%);
-  border-color: #1f6f5b;
+.cv-export-preview--editable .cv-export-preview__add-entry {
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.cv-export-preview__sidebar .cv-export-preview__entry-remove {
-  color: #8a93a3;
+.cv-export-preview--editable .cv-export-preview__section:hover .cv-export-preview__add-entry,
+.cv-export-preview--editable .cv-export-preview__section:focus-within .cv-export-preview__add-entry,
+.cv-export-preview--editable .cv-export-preview__section--empty .cv-export-preview__add-entry {
+  opacity: 1;
+  max-height: 3rem;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-width: 1px;
+  pointer-events: auto;
+}
+
+.cv-export-preview--editable .cv-export-preview__section:hover .cv-export-preview__contact-add-btn,
+.cv-export-preview--editable .cv-export-preview__section:focus-within .cv-export-preview__contact-add-btn,
+.cv-export-preview--editable .cv-export-preview__section--empty .cv-export-preview__contact-add-btn {
+  opacity: 1;
 }
 
 .cv-export-preview__entry-header {
@@ -481,7 +493,7 @@
 .cv-export-preview__entry-title {
   margin: 0;
   font-size: 0.58rem;
-  font-weight: 700;
+  font-weight: 600;
   flex: 1 1 6rem;
   min-width: 0;
 }
@@ -567,7 +579,7 @@
   min-width: 0;
 }
 
-/* BE .cv-contact — stack valued lines vertically (minimal/modern PDF parity) */
+/* BE .cv-contact — stack valued lines vertically (PDF parity) */
 .cv-export-preview__contact {
   display: flex;
   flex-direction: column;
@@ -594,20 +606,18 @@
 }
 
 .cv-export-preview__contact-field {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 0.35rem;
   min-width: 0;
+  padding-right: 1.6rem;
 }
 
 .cv-export-preview--editable .cv-export-preview__contact {
   display: grid;
   gap: 0.3rem;
   width: 100%;
-}
-
-.cv-export-preview__name--in-section {
-  margin: 0 0 0.35rem;
 }
 
 .cv-export-preview__contact-field .cv-export-preview__editable {
@@ -647,12 +657,6 @@
 .cv-export-preview__contact-add-btn:hover {
   background: rgb(31 111 91 / 8%);
   border-color: #1f6f5b;
-}
-
-.cv-export-preview__sidebar .cv-export-preview__contact-add-btn {
-  color: #1f6f5b;
-  border-color: rgb(31 111 91 / 35%);
-  background: rgb(255 255 255 / 55%);
 }
 
 .cv-export-preview__contact-channels {
@@ -705,88 +709,27 @@
   border-color: #1f6f5b;
 }
 
-.cv-export-preview__sidebar .cv-export-preview__contact-chip {
-  color: #1f6f5b;
-  border-color: rgb(31 111 91 / 35%);
-  background: rgb(255 255 255 / 55%);
-}
-
-.cv-export-preview__sidebar .cv-export-preview__contact-label {
-  opacity: 0.85;
-}
-
-/* Template 2 — template-modern.html */
-.cv-export-preview--template-2 {
-  --cv-preview-sidebar-bg: #eef2f0;
-  --cv-preview-sidebar-fg: #1f2a26;
-  --cv-preview-accent: #2f5d50;
-  --cv-preview-font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* Template 3 — template-minimal.html */
-.cv-export-preview--template-3 {
-  --cv-preview-font: 'Gill Sans', 'Trebuchet MS', 'Segoe UI', sans-serif;
-  --cv-preview-main-fg: #1a1a1a;
-  --cv-preview-accent: #2f5d50;
-}
-
-/* Match Minimal PDF section rhythm (~28pt between sections). */
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__section {
-  margin-bottom: 1.75rem;
-}
-
-/* Match Minimal PDF entry rhythm (~12pt between entries). */
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__entries {
-  gap: 0.75rem;
-}
-
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__add-entry {
-  margin-top: 0.75rem;
-}
-
-/* Extra right inset so the Minimal photo sits a bit further left (matches PDF feel). */
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__main--single {
-  padding: 1.35rem 1.85rem 1.35rem 1.5rem;
-}
-
-.cv-export-preview--editable.cv-export-preview--template-3 .cv-export-preview__minimal-header {
-  margin-bottom: 1.15rem;
-}
-
-.cv-export-preview--template-3 .cv-export-preview__section-title {
-  display: inline-block;
-  width: fit-content;
-  max-width: 100%;
-  color: var(--cv-preview-accent);
-  border-bottom-color: #d0d0d0;
-}
-
-/* Keep title underline text-width even inside the editable section-head flex row. */
-.cv-export-preview--template-3 .cv-export-preview__section-head .cv-export-preview__section-title {
-  flex: 0 1 auto;
-}
-
-.cv-export-preview--template-3 .cv-export-preview__name {
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.cv-export-preview--template-3 .cv-export-preview__name::after {
-  content: none;
-}
-
 /* Compact gallery: keep page clip for thumbs, but photo stays inside content box (no float). */
-.cv-export-preview--compact .cv-export-preview__minimal-header .cv-export-preview__photo,
-.cv-export-preview--compact .cv-export-preview__sidebar .cv-export-preview__photo {
+.cv-export-preview--compact .cv-export-preview__minimal-header .cv-export-preview__photo {
   max-width: 100%;
 }
 
 /* Touch: edit chrome must stay visible without hover. */
 @media (hover: none) {
-  .cv-export-preview__section-actions,
   .cv-export-preview__entry--editable .cv-export-preview__entry-remove,
-  .cv-export-preview__contact-field .cv-export-preview__entry-remove {
+  .cv-export-preview__contact-field .cv-export-preview__entry-remove,
+  .cv-export-preview__contact-add-btn,
+  .cv-export-preview__photo-change {
     opacity: 1;
+  }
+
+  .cv-export-preview__add-entry {
+    opacity: 1;
+    max-height: 3rem;
+    margin-top: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border-width: 1px;
+    pointer-events: auto;
   }
 }
 
@@ -816,38 +759,30 @@
     text-overflow: unset;
   }
 
+  .cv-export-preview--editable .cv-export-preview__entry--editable {
+    padding-right: 3rem;
+  }
+
   .cv-export-preview__entry-remove {
+    top: 0.15rem;
+    right: 0.15rem;
+    width: 2.75rem;
+    height: 2.75rem;
     min-width: 2.75rem;
     min-height: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
     font-size: 1.1rem;
     opacity: 1;
   }
 
-  .cv-export-preview__section-actions {
-    opacity: 1;
-  }
-
-  .cv-export-preview__section-action {
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    font-size: 0.95rem;
+  .cv-export-preview__contact-field {
+    padding-right: 3rem;
   }
 
   .cv-export-preview__contact-field .cv-export-preview__entry-remove {
     opacity: 1;
+    width: 2.75rem;
+    height: 2.75rem;
     min-width: 2.75rem;
     min-height: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
   }
 }

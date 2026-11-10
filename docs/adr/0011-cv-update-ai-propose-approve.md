@@ -4,6 +4,8 @@
 
 Accepted (2026-08-01 — `cv-update-propose-approve-2026-08-01`)
 
+Decisions 1 and 5 (separate `ai-update-propose`, suggestions apply path, legacy `ai-update`) are superseded by [ADR-0031](0031-cv-ai-assist-improve-and-evaluate.md). Propose-then-approve with local merge + structured PUT remains the rule.
+
 ## Context
 
 Assist **Update with instructions** and **Apply selected** suggestions called

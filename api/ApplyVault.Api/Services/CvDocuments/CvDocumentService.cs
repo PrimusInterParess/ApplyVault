@@ -33,9 +33,9 @@ public interface ICvDocumentService
 
     Task<CvDocumentDto> StartBlankAsync(AppUserEntity user, CancellationToken cancellationToken = default);
 
-    Task<CvDocumentDto?> UpdateExportPreferencesAsync(
+    Task<CvDocumentDto?> ReplaceUnplacedContentAsync(
         AppUserEntity user,
-        CvExportPreferencesDto preferences,
+        IReadOnlyList<string> items,
         CancellationToken cancellationToken = default);
 }
 
@@ -119,6 +119,7 @@ public sealed class CvDocumentService(
 
             dbContext.UserCvSections.RemoveRange(existingSections);
             existingDocument.StructuredImportedAt = null;
+            existingDocument.UnplacedContentJson = null;
             existingDocument.ProfilePhotoStorageKey = null;
             existingDocument.ProfilePhotoContentType = null;
 
@@ -332,8 +333,7 @@ public sealed class CvDocumentService(
             FileSizeBytes = pdfBytes.Length,
             OriginalFileSizeBytes = pdfBytes.Length,
             UploadedAt = now,
-            UpdatedAt = now,
-            TemplateId = CvExportHtmlTemplateCatalog.DefaultTemplateId
+            UpdatedAt = now
         };
 
         dbContext.UserCvDocuments.Add(document);
@@ -342,9 +342,9 @@ public sealed class CvDocumentService(
         return MapDocument(document);
     }
 
-    public async Task<CvDocumentDto?> UpdateExportPreferencesAsync(
+    public async Task<CvDocumentDto?> ReplaceUnplacedContentAsync(
         AppUserEntity user,
-        CvExportPreferencesDto preferences,
+        IReadOnlyList<string> items,
         CancellationToken cancellationToken = default)
     {
         var document = await dbContext.UserCvDocuments
@@ -355,7 +355,19 @@ public sealed class CvDocumentService(
             return null;
         }
 
-        document.TemplateId = CvExportHtmlTemplateCatalog.NormalizeTemplateId(preferences.TemplateId);
+        const int maxItemChars = 4000;
+        const int maxItems = 200;
+
+        var normalized = (items ?? [])
+            .Select((item) => (item ?? string.Empty).Trim())
+            .Where((item) => item.Length > 0)
+            .Select((item) => item.Length <= maxItemChars ? item : item[..maxItemChars])
+            .Take(maxItems)
+            .ToArray();
+
+        document.UnplacedContentJson = normalized.Length == 0
+            ? null
+            : CvStructuredJson.SerializeBullets(normalized);
         document.UpdatedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -521,6 +533,6 @@ public sealed class CvDocumentService(
             document.StructuredImportedAt,
             !string.IsNullOrWhiteSpace(document.ProfilePhotoStorageKey),
             hasOriginalUpload,
-            CvExportHtmlTemplateCatalog.NormalizeTemplateId(document.TemplateId));
+            CvStructuredJson.DeserializeBullets(document.UnplacedContentJson));
     }
 }

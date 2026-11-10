@@ -4,15 +4,25 @@ import { By } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 
 import { CvBuilderCheckExportComponent } from '../../components/cv-builder-check-export/cv-builder-check-export.component';
+import { CvBuilderDocumentMenuComponent } from '../../components/cv-builder-document-menu/cv-builder-document-menu.component';
 import { CvBuilderEmptyStartComponent } from '../../components/cv-builder-empty-start/cv-builder-empty-start.component';
 import { CvBuilderProjectsPanelComponent } from '../../components/cv-builder-projects-panel/cv-builder-projects-panel.component';
-import { CvBuilderStructurePanelComponent } from '../../components/cv-builder-structure-panel/cv-builder-structure-panel.component';
+import { CvBuilderSectionRailComponent } from '../../components/cv-builder-section-rail/cv-builder-section-rail.component';
+import { CvBuilderToolsDockComponent } from '../../components/cv-builder-tools-dock/cv-builder-tools-dock.component';
+import { CvUnplacedDrawerComponent } from '../../components/cv-unplaced-drawer/cv-unplaced-drawer.component';
 import { CvDocumentFacade } from '../../data-access/cv-document.facade';
 import { CvEditSession } from '../../data-access/cv-edit-session';
 import { CvProjectsFacade } from '../../data-access/cv-projects.facade';
 import { CvStructuredFacade } from '../../data-access/cv-structured.facade';
 import { CvStructuredSection } from '../../models/cv-structured.model';
 import { CvBuilderPageComponent } from './cv-builder-page.component';
+import {
+  CV_A4_HEIGHT_PX,
+  CV_PAGE_GAP_PX,
+  cvCanvasPageSheets,
+  cvCanvasStackHeight,
+  cvPageBreakMargin
+} from '../../utils/cv-canvas-pages.util';
 
 @Component({
   selector: 'app-cv-export-template-preview',
@@ -20,12 +30,12 @@ import { CvBuilderPageComponent } from './cv-builder-page.component';
   template: '<div class="stub-template-preview"></div>'
 })
 class StubCvExportTemplatePreviewComponent {
-  readonly templateId = input(2);
   readonly sections = input<CvStructuredSection[]>([]);
   readonly editable = input(false);
   readonly compact = input(false);
   readonly profilePhotoUrl = input<string | null>(null);
   readonly inlineEdit = output<unknown>();
+  readonly photoClick = output<void>();
 }
 
 @Component({
@@ -48,6 +58,7 @@ class StubCvExportHtmlPreviewComponent {
 })
 class StubCvBuilderAssistPanelComponent {
   readonly open = input(false);
+  readonly docked = input(false);
   readonly sections = input<CvStructuredSection[]>([]);
   readonly aiUpdateSectionIds = input<string[]>([]);
   readonly aiUpdateInstructions = input('');
@@ -87,8 +98,6 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
   let fixture: ComponentFixture<CvBuilderPageComponent>;
   let component: CvBuilderPageComponent;
   let refreshExportHtmlPreview: jasmine.Spy;
-  let selectedExportTemplateId: ReturnType<typeof signal<number>>;
-  let setExportTemplateId: jasmine.Spy;
   let documentSignal: ReturnType<
     typeof signal<{ id: string; hasStructuredContent: boolean; hasProfilePhoto: boolean } | null>
   >;
@@ -96,6 +105,7 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
   let isSaving: ReturnType<typeof signal<boolean>>;
   let clearAiUpdateError: jasmine.Spy;
   let updateWithAi: jasmine.Spy;
+  let deleteCurrent: jasmine.Spy;
 
   const sections: CvStructuredSection[] = [
     {
@@ -123,10 +133,6 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
 
   beforeEach(async () => {
     refreshExportHtmlPreview = jasmine.createSpy('refreshExportHtmlPreview');
-    selectedExportTemplateId = signal(2);
-    setExportTemplateId = jasmine
-      .createSpy('setExportTemplateId')
-      .and.callFake((templateId: number) => selectedExportTemplateId.set(templateId));
     documentSignal = signal({
       id: 'doc-1',
       hasStructuredContent: true,
@@ -136,6 +142,7 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     isSaving = signal(false);
     clearAiUpdateError = jasmine.createSpy('clearAiUpdateError');
     updateWithAi = jasmine.createSpy('updateWithAi');
+    deleteCurrent = jasmine.createSpy('deleteCurrent');
 
     await TestBed.configureTestingModule({
       imports: [CvBuilderPageComponent],
@@ -147,7 +154,6 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             loading: signal(false).asReadonly(),
             document: documentSignal.asReadonly(),
             hasDocument: signal(true).asReadonly(),
-            selectedExportTemplateId,
             uploading: signal(false).asReadonly(),
             startingBlank: signal(false).asReadonly(),
             downloadingFormatted: signal(false).asReadonly(),
@@ -163,13 +169,22 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             exportHtmlPreviewLoading: signal(false).asReadonly(),
             exportHtmlPreviewError: signal<string | null>(null).asReadonly(),
             exportHtmlPreviewNotice: signal<string | null>('Compact notice').asReadonly(),
-            setExportTemplateId,
             refreshExportHtmlPreview,
             downloadFormattedFile: jasmine.createSpy('downloadFormattedFile'),
             uploadProfilePhoto: jasmine.createSpy('uploadProfilePhoto'),
             deleteProfilePhoto: jasmine.createSpy('deleteProfilePhoto'),
             upload: jasmine.createSpy('upload'),
-            startBlankWithStarterSections: jasmine.createSpy('startBlankWithStarterSections')
+            startBlank: jasmine.createSpy('startBlank'),
+            deleting: signal(false).asReadonly(),
+            deleteError: signal<string | null>(null).asReadonly(),
+            deleteCurrent,
+            unplacedContent: signal<string[]>([]).asReadonly(),
+            unplacedCount: signal(0).asReadonly(),
+            unplacedBusy: signal(false).asReadonly(),
+            unplacedError: signal<string | null>(null).asReadonly(),
+            dismissUnplaced: jasmine.createSpy('dismissUnplaced'),
+            dismissAllUnplaced: jasmine.createSpy('dismissAllUnplaced'),
+            importSummary: signal<{ unplacedCount: number } | null>(null).asReadonly()
           }
         },
         {
@@ -228,9 +243,12 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
             StubCvExportTemplatePreviewComponent,
             StubCvBuilderAssistPanelComponent,
             CvBuilderEmptyStartComponent,
-            CvBuilderStructurePanelComponent,
+            CvUnplacedDrawerComponent,
             CvBuilderProjectsPanelComponent,
-            CvBuilderCheckExportComponent
+            CvBuilderCheckExportComponent,
+            CvBuilderSectionRailComponent,
+            CvBuilderDocumentMenuComponent,
+            CvBuilderToolsDockComponent
           ]
         }
       })
@@ -264,12 +282,33 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(buttons.indexOf('Check export')).toBeLessThan(buttons.indexOf('Download PDF'));
   });
 
-  it('uses ADR-0003 desk hint and sync chip without Updating preview…', () => {
-    const hint = (fixture.nativeElement as HTMLElement).querySelector('.cv-builder__desk-hint');
-    expect(hint?.textContent).toContain('Edit on the canvas');
-    expect(hint?.textContent).toContain('Check export / Download PDF');
-    expect((component as unknown as { saveStatus: () => string }).saveStatus()).toBe('Saved');
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Updating preview…');
+  it('keeps the save chip and drops desk hints, More, and the AI FAB', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.cv-builder__sync')?.textContent).toContain('Saved');
+    expect(root.querySelector('.cv-builder__desk-hint')).toBeNull();
+    expect(root.querySelector('.cv-builder__fab')).toBeNull();
+    expect(root.textContent).not.toContain('Updating preview…');
+    const buttons = Array.from(root.querySelectorAll('.cv-builder__topbar button')).map((btn) =>
+      (btn.textContent ?? '').trim()
+    );
+    expect(buttons).toContain('Document');
+    expect(buttons).not.toContain('More');
+    expect(buttons).not.toContain('AI assist');
+  });
+
+  it('renders a section rail for the seven fixed sections', () => {
+    const rail = (fixture.nativeElement as HTMLElement).querySelector('.cv-builder-rail');
+    expect(rail).not.toBeNull();
+    expect(rail?.textContent).toContain('Contact');
+    expect(rail?.textContent).toContain('Certifications & Languages');
+  });
+
+  it('keeps AI assist, Unplaced, and Projects in the tools dock', () => {
+    const dock = (fixture.nativeElement as HTMLElement).querySelector('.cv-builder-dock');
+    expect(dock).not.toBeNull();
+    expect(dock?.textContent).toContain('AI assist');
+    expect(dock?.textContent).toContain('Unplaced');
+    expect(dock?.textContent).toContain('Projects');
   });
 
   it('opens Check export modal and fetches export HTML on demand', () => {
@@ -307,11 +346,11 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(refreshExportHtmlPreview).toHaveBeenCalledTimes(1);
   });
 
-  it('uses exclusive activePanel mutex for Structure / Projects / Assist / Check export', () => {
+  it('uses exclusive activePanel mutex for Unplaced / Projects / Assist / Check export', () => {
     const page = component as unknown as {
       activePanel: () => string | null;
       openAssist: () => void;
-      toggleStructure: () => void;
+      toggleUnplaced: () => void;
       toggleProjects: () => void;
       openCheckExport: () => void;
       closeCheckExport: () => void;
@@ -320,8 +359,8 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     page.openAssist();
     expect(page.activePanel()).toBe('assist');
 
-    page.toggleStructure();
-    expect(page.activePanel()).toBe('structure');
+    page.toggleUnplaced();
+    expect(page.activePanel()).toBe('unplaced');
 
     page.toggleProjects();
     expect(page.activePanel()).toBe('projects');
@@ -333,40 +372,18 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(page.activePanel()).toBeNull();
   });
 
-  it('updates edit canvas templateId when topbar Template select changes (2 → 3)', () => {
-    const select = (fixture.nativeElement as HTMLElement).querySelector(
-      '.cv-builder__topbar select.cv-builder__select'
-    ) as HTMLSelectElement;
-    expect(select).withContext('topbar template select').not.toBeNull();
-
-    const previewDe = fixture.debugElement.query(By.css('.cv-builder__paper--editor app-cv-export-template-preview'));
-    expect(previewDe).not.toBeNull();
-    const preview = previewDe.componentInstance as StubCvExportTemplatePreviewComponent;
-
-    expect(preview.templateId()).toBe(2);
-
-    for (const templateId of [3, 2] as const) {
-      select.value = String(templateId);
-      select.dispatchEvent(new Event('change'));
-      fixture.detectChanges();
-
-      expect(setExportTemplateId).toHaveBeenCalledWith(templateId);
-      expect(selectedExportTemplateId()).toBe(templateId);
-      expect(preview.templateId())
-        .withContext(`canvas templateId after selecting ${templateId}`)
-        .toBe(templateId);
-      expect(select.value).toBe(String(templateId));
-      const selectedOption = Array.from(select.options).find((option) => option.selected);
-      expect(selectedOption?.value)
-        .withContext(`selected option after choosing ${templateId}`)
-        .toBe(String(templateId));
-    }
+  it('renders no template picker in the topbar (single export layout)', () => {
+    const topbar = (fixture.nativeElement as HTMLElement).querySelector('.cv-builder__topbar');
+    expect(topbar).not.toBeNull();
+    expect(topbar?.querySelector('select')).withContext('topbar template select').toBeNull();
+    expect(topbar?.textContent).not.toContain('Modern');
+    expect(topbar?.textContent).not.toContain('Minimal');
   });
 
-  it('loads structured only when document id changes (prefs echo reload gate)', () => {
+  it('loads structured only when document id changes (metadata echo reload gate)', () => {
     expect(structuredLoadSpy).toHaveBeenCalledTimes(1);
 
-    // Same document id with metadata echo (export prefs) must not reload structured.
+    // Same document id with a metadata-only echo (e.g. photo) must not reload structured.
     documentSignal.set({
       id: 'doc-1',
       hasStructuredContent: true,
@@ -453,5 +470,64 @@ describe('CvBuilderPageComponent edit-only canvas (ADR-0003)', () => {
     expect(page.aiUpdateInstructions()).toContain('Add skills coverage');
     expect(page.aiUpdateSectionIds()).toEqual(['sec-1']);
     expect(updateWithAi).not.toHaveBeenCalled();
+  });
+
+  it('confirms Delete CV from the Document menu and calls the document facade', () => {
+    const page = component as unknown as {
+      openDeleteConfirm: () => void;
+      confirmDeleteCurrent: () => void;
+      cancelDeleteConfirm: () => void;
+      deleteConfirmOpen: () => boolean;
+    };
+
+    const documentBtn = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button')
+    ).find((btn) => (btn.textContent ?? '').trim() === 'Document') as HTMLButtonElement;
+    documentBtn.click();
+    fixture.detectChanges();
+
+    const menuText = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(menuText).toContain('Upload PDF');
+    expect(menuText).toContain('Upload photo');
+    expect(menuText).toContain('Delete CV');
+
+    page.openDeleteConfirm();
+    fixture.detectChanges();
+
+    expect(page.deleteConfirmOpen()).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Delete current CV?');
+
+    page.confirmDeleteCurrent();
+    fixture.detectChanges();
+
+    expect(page.deleteConfirmOpen()).toBeFalse();
+    expect(deleteCurrent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('cv canvas pages', () => {
+  it('stacks a new sheet once content spills past one page', () => {
+    expect(cvCanvasPageSheets(CV_A4_HEIGHT_PX)).toEqual([{ page: 1, top: 0 }]);
+    expect(cvCanvasPageSheets(CV_A4_HEIGHT_PX + 40)).toEqual([
+      { page: 1, top: 0 },
+      { page: 2, top: CV_A4_HEIGHT_PX + CV_PAGE_GAP_PX }
+    ]);
+    expect(cvCanvasStackHeight(CV_A4_HEIGHT_PX + 40)).toBe(CV_A4_HEIGHT_PX * 2 + CV_PAGE_GAP_PX);
+  });
+
+  it('moves a one-page block that does not fit in the room left', () => {
+    expect(cvPageBreakMargin(0, 200)).toBe(0);
+    expect(cvPageBreakMargin(1060, 200)).toBe(CV_A4_HEIGHT_PX + CV_PAGE_GAP_PX - 1060);
+    expect(cvPageBreakMargin(0, CV_A4_HEIGHT_PX + 80)).toBe(0);
+    // 1000px fits on one sheet and does not fit in the room left at offset 200.
+    expect(cvPageBreakMargin(200, 1000)).toBe(CV_A4_HEIGHT_PX + CV_PAGE_GAP_PX - 200);
+  });
+
+  it('starts a continued block at the same top inset as page 1', () => {
+    const pad = 48;
+    expect(cvPageBreakMargin(1060, 200, CV_A4_HEIGHT_PX, CV_PAGE_GAP_PX, pad)).toBe(
+      CV_A4_HEIGHT_PX + CV_PAGE_GAP_PX + pad - 1060
+    );
+    expect(cvPageBreakMargin(0, 200, CV_A4_HEIGHT_PX, CV_PAGE_GAP_PX, pad)).toBe(0);
   });
 });

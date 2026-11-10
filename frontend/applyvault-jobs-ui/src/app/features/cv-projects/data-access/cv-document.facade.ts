@@ -1,26 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { Subscription } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { of, Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { isRequestAborted } from '../../../core/http/is-request-aborted';
 import { CvDocument, CvStructuredImportSummary } from '../models/cv-document.model';
-import {
-  CV_EXPORT_TEMPLATE_STORAGE_KEY,
-  DEFAULT_CV_EXPORT_TEMPLATE_ID,
-  normalizeCvExportTemplateId
-} from '../models/cv-export-template.model';
 import { CvDocumentApiService } from './cv-document-api.service';
 import { CvStructuredFacade } from './cv-structured.facade';
-import { createBuilderStarterSections } from '../utils/cv-builder-starter-sections.util';
 import {
   buildCvExportDownloadFileName,
-  resolveCvExportPersonName,
-  resolveCvExportTemplateLabel
+  resolveCvExportPersonName
 } from '../utils/cv-export-download-file-name.util';
-import { toSaveRequest } from '../utils/cv-structured-draft.util';
 
 @Injectable({ providedIn: 'root' })
 export class CvDocumentFacade {
@@ -34,12 +26,11 @@ export class CvDocumentFacade {
   private downloadFormattedFileSubscription: Subscription | null = null;
   private exportHtmlPreviewSubscription: Subscription | null = null;
   private exportHtmlPreviewGeneration = 0;
-  private exportPrefsSubscription: Subscription | null = null;
-  /** Monotonic token so stale export-prefs HTTP responses cannot overwrite a newer selection. */
-  private exportPrefsGeneration = 0;
   private profilePhotoSubscription: Subscription | null = null;
   private profilePhotoUploadSubscription: Subscription | null = null;
   private profilePhotoDeleteSubscription: Subscription | null = null;
+  private unplacedSubscription: Subscription | null = null;
+  private deleteSubscription: Subscription | null = null;
   private loadedUserId: string | null = null;
   private profilePhotoObjectUrl: string | null = null;
 
@@ -59,8 +50,11 @@ export class CvDocumentFacade {
   readonly downloadFormattedError = signal<string | null>(null);
   readonly exportHtmlPreviewError = signal<string | null>(null);
   readonly profilePhotoError = signal<string | null>(null);
+  readonly unplacedBusy = signal(false);
+  readonly unplacedError = signal<string | null>(null);
+  readonly deleting = signal(false);
+  readonly deleteError = signal<string | null>(null);
   readonly profilePhotoUrl = signal<string | null>(null);
-  readonly selectedExportTemplateId = signal(this.readStoredExportTemplateId());
   /** Sandboxed iframe srcdoc for Check-export fidelity preview. */
   readonly exportHtmlPreviewSrcdoc = signal<SafeHtml | null>(null);
   /** Additive preview notice from X-Cv-Export-Notice (canvas). */
@@ -69,6 +63,8 @@ export class CvDocumentFacade {
   readonly exportHtmlPreviewCompactLevel = signal<number | null>(null);
 
   readonly hasDocument = computed(() => this.document() !== null);
+  readonly unplacedContent = computed(() => this.document()?.unplacedContent ?? []);
+  readonly unplacedCount = computed(() => this.unplacedContent().length);
 
   constructor() {
     effect(() => {
@@ -101,7 +97,7 @@ export class CvDocumentFacade {
     this.loadSubscription = this.apiService.getCurrent().subscribe({
       next: (document) => {
         this.loading.set(false);
-        this.setDocument(document);
+        this.document.set(withDocumentDefaults(document));
         this.loadProfilePhoto(document);
       },
       error: (error) => {
@@ -133,21 +129,28 @@ export class CvDocumentFacade {
       .upload(file)
       .pipe(
         switchMap((result) => {
-          // Keep optimistic gallery/edit Template selection; upload DTO may echo a stale id.
-          this.setDocument(result.document, { applyExportPrefs: false });
-          this.importSummary.set(result.import);
+          this.document.set(withDocumentDefaults(result.document));
+          this.importSummary.set(withImportDefaults(result.import));
           this.loadProfilePhoto(result.document);
-          return this.apiService.getStructured().pipe(
-            map((structured) => ({ result, structured }))
-          );
+
+          if (!result.import.succeeded) {
+            this.uploadError.set(
+              result.import.notice ?? 'Could not extract text from this PDF.'
+            );
+            this.cvStructured.clearStructured();
+            return of(null);
+          }
+
+          return this.apiService.getStructured();
         })
       )
       .subscribe({
-        next: ({ structured }) => {
+        next: (structured) => {
           this.uploading.set(false);
-          // Raw DTO — setStructured / hydrateForContentEditing is the sole hydrate+normalize ingress.
-          this.cvStructured.setStructured(structured);
-          this.persistExportPrefs();
+          if (structured) {
+            // Raw DTO — setStructured / hydrateForContentEditing is the sole hydrate+normalize ingress.
+            this.cvStructured.setStructured(structured);
+          }
           onComplete?.();
         },
         error: (error) => {
@@ -162,66 +165,104 @@ export class CvDocumentFacade {
       });
   }
 
-  startBlankWithStarterSections(onComplete?: () => void): void {
+  /** Blank CV is seeded server-side; the builder reloads structured after document identity changes. */
+  startBlank(onComplete?: () => void): void {
     this.cancelStartBlank();
     this.startingBlank.set(true);
     this.startBlankError.set(null);
     this.importSummary.set(null);
     this.clearProfilePhoto();
 
-    this.startBlankSubscription = this.apiService
-      .startBlank()
-      .pipe(
-        switchMap((document) => {
-          // Keep optimistic gallery/edit Template selection; blank docs default to Modern.
-          this.setDocument(document, { applyExportPrefs: false });
-          return this.apiService.saveStructured(toSaveRequest(createBuilderStarterSections()));
-        })
-      )
-      .subscribe({
-        next: (structured) => {
-          this.startingBlank.set(false);
-          // Raw DTO — setStructured / hydrateForContentEditing is the sole hydrate+normalize ingress.
-          this.cvStructured.setStructured(structured);
-          const current = this.document();
+    this.startBlankSubscription = this.apiService.startBlank().subscribe({
+      next: (document) => {
+        this.startingBlank.set(false);
+        this.document.set(withDocumentDefaults(document));
+        onComplete?.();
+      },
+      error: (error) => {
+        this.startingBlank.set(false);
 
-          if (current) {
-            this.document.set({
-              ...current,
-              hasStructuredContent: structured.sections.length > 0,
-              structuredImportedAt: structured.structuredImportedAt,
-              templateId: this.selectedExportTemplateId()
-            });
-          }
-
-          this.persistExportPrefs();
-          // Do not load() here — getCurrent would re-apply server TemplateId (often Modern)
-          // and snap the edit/gallery selection before persistExportPrefs completes.
-          onComplete?.();
-        },
-        error: (error) => {
-          this.startingBlank.set(false);
-
-          if (isRequestAborted(error)) {
-            return;
-          }
-
-          this.startBlankError.set(this.readErrorMessage(error, 'Could not start a new CV.'));
+        if (isRequestAborted(error)) {
+          return;
         }
-      });
+
+        this.startBlankError.set(this.readErrorMessage(error, 'Could not start a new CV.'));
+      }
+    });
   }
 
-  setExportTemplateId(templateId: number): void {
-    const normalized = normalizeCvExportTemplateId(templateId);
-    this.selectedExportTemplateId.set(normalized);
-    // Keep last HTML srcdoc until refreshExportHtmlPreview replaces it.
-    this.writeTemplateCache(normalized);
-    this.persistExportPrefs();
+  dismissUnplaced(index: number): void {
+    if (index < 0 || index >= this.unplacedContent().length) {
+      return;
+    }
+
+    this.replaceUnplacedContent(this.unplacedContent().filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  dismissAllUnplaced(): void {
+    if (this.unplacedContent().length === 0) {
+      return;
+    }
+
+    this.replaceUnplacedContent([]);
+  }
+
+  deleteCurrent(): void {
+    if (this.deleting() || !this.document()) {
+      return;
+    }
+
+    this.cancelDelete();
+    this.deleting.set(true);
+    this.deleteError.set(null);
+
+    this.deleteSubscription = this.apiService.delete().subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.cvStructured.clearStructured();
+        this.resetState();
+      },
+      error: (error) => {
+        this.deleting.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.deleteError.set(this.readErrorMessage(error, 'Could not delete your CV.'));
+      }
+    });
+  }
+
+  replaceUnplacedContent(items: readonly string[]): void {
+    if (!this.document()) {
+      return;
+    }
+
+    this.cancelUnplaced();
+    this.unplacedBusy.set(true);
+    this.unplacedError.set(null);
+
+    this.unplacedSubscription = this.apiService.replaceUnplacedContent({ items: [...items] }).subscribe({
+      next: (document) => {
+        this.unplacedBusy.set(false);
+        this.document.set(withDocumentDefaults(document));
+      },
+      error: (error) => {
+        this.unplacedBusy.set(false);
+
+        if (isRequestAborted(error)) {
+          return;
+        }
+
+        this.unplacedError.set(this.readErrorMessage(error, 'Could not update unplaced content.'));
+      }
+    });
   }
 
   /**
    * Load server HTML for the sandboxed fidelity iframe.
-   * Same templateId as PDF download so BE compact CSS matches export.
+   * Same export pipeline as PDF download so BE compact CSS matches export.
    */
   refreshExportHtmlPreview(): void {
     if (!this.canExportFormatted()) {
@@ -234,8 +275,6 @@ export class CvDocumentFacade {
       return;
     }
 
-    const templateId = this.selectedExportTemplateId();
-
     const previewGeneration = ++this.exportHtmlPreviewGeneration;
     this.cancelExportHtmlPreview();
     this.exportHtmlPreviewLoading.set(true);
@@ -243,7 +282,7 @@ export class CvDocumentFacade {
     // Keep last srcdoc/notice/compact until the next successful response (no blank canvas).
 
     this.exportHtmlPreviewSubscription = this.apiService
-      .getExportPreviewHtml({ templateId })
+      .getExportPreviewHtml()
       .subscribe({
         next: (preview) => {
           if (previewGeneration !== this.exportHtmlPreviewGeneration) {
@@ -294,15 +333,14 @@ export class CvDocumentFacade {
       return;
     }
 
-    const templateId = this.selectedExportTemplateId();
-    const fileName = this.buildFormattedExportFileName(templateId);
+    const fileName = this.buildFormattedExportFileName();
 
     this.cancelDownloadFormattedFile();
     this.downloadingFormatted.set(true);
     this.downloadFormattedError.set(null);
 
     this.downloadFormattedFileSubscription = this.apiService
-      .downloadFormattedPdf({ templateId })
+      .downloadFormattedPdf()
       .subscribe({
         next: (result) => {
           this.downloadingFormatted.set(false);
@@ -335,8 +373,7 @@ export class CvDocumentFacade {
     this.profilePhotoUploadSubscription = this.apiService.uploadProfilePhoto(file).subscribe({
       next: (document) => {
         this.uploadingProfilePhoto.set(false);
-        // Photo DTO must not clobber in-flight / optimistic export template selection.
-        this.setDocument(document, { applyExportPrefs: false });
+        this.document.set(withDocumentDefaults(document));
         this.loadProfilePhoto(document);
       },
       error: (error) => {
@@ -364,8 +401,7 @@ export class CvDocumentFacade {
     this.profilePhotoDeleteSubscription = this.apiService.deleteProfilePhoto().subscribe({
       next: (document) => {
         this.deletingProfilePhoto.set(false);
-        // Photo DTO must not clobber in-flight / optimistic export template selection.
-        this.setDocument(document, { applyExportPrefs: false });
+        this.document.set(withDocumentDefaults(document));
         this.clearProfilePhoto();
       },
       error: (error) => {
@@ -459,9 +495,10 @@ export class CvDocumentFacade {
     this.cancelStartBlank();
     this.cancelDownloadFormattedFile();
     this.cancelExportHtmlPreview();
-    this.cancelExportPrefs();
     this.cancelProfilePhotoUpload();
     this.cancelProfilePhotoDelete();
+    this.cancelUnplaced();
+    this.cancelDelete();
     this.clearExportHtmlPreview();
     this.clearProfilePhoto();
     this.loading.set(false);
@@ -471,6 +508,10 @@ export class CvDocumentFacade {
     this.exportHtmlPreviewLoading.set(false);
     this.uploadingProfilePhoto.set(false);
     this.deletingProfilePhoto.set(false);
+    this.unplacedBusy.set(false);
+    this.unplacedError.set(null);
+    this.deleting.set(false);
+    this.deleteError.set(null);
     this.document.set(null);
     this.importSummary.set(null);
     this.error.set(null);
@@ -505,11 +546,6 @@ export class CvDocumentFacade {
     this.exportHtmlPreviewSubscription = null;
   }
 
-  private cancelExportPrefs(): void {
-    this.exportPrefsSubscription?.unsubscribe();
-    this.exportPrefsSubscription = null;
-  }
-
   private cancelProfilePhoto(): void {
     this.profilePhotoSubscription?.unsubscribe();
     this.profilePhotoSubscription = null;
@@ -525,6 +561,16 @@ export class CvDocumentFacade {
     this.profilePhotoDeleteSubscription = null;
   }
 
+  private cancelUnplaced(): void {
+    this.unplacedSubscription?.unsubscribe();
+    this.unplacedSubscription = null;
+  }
+
+  private cancelDelete(): void {
+    this.deleteSubscription?.unsubscribe();
+    this.deleteSubscription = null;
+  }
+
   private triggerDownload(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -534,124 +580,9 @@ export class CvDocumentFacade {
     URL.revokeObjectURL(url);
   }
 
-  private buildFormattedExportFileName(templateId: number): string {
+  private buildFormattedExportFileName(): string {
     const personName = resolveCvExportPersonName(this.cvStructured.structured()?.sections);
-    const templateLabel = resolveCvExportTemplateLabel(templateId);
-    return buildCvExportDownloadFileName(personName, templateLabel);
-  }
-
-  /**
-   * Apply document metadata. Optionally sync export prefs from the DTO (load/upload/start-blank).
-   * Photo and export-prefs echoes must not clobber an optimistic gallery selection.
-   */
-  private setDocument(
-    document: CvDocument,
-    options?: { readonly applyExportPrefs?: boolean }
-  ): void {
-    this.document.set(document);
-
-    if (options?.applyExportPrefs === false) {
-      return;
-    }
-
-    this.applyExportPrefsFromDocument(document);
-  }
-
-  private applyExportPrefsFromDocument(document: CvDocument): void {
-    // In-flight persistExportPrefs owns Template selection — do not snap back from a
-    // stale getCurrent / start-blank / upload echo (server default is a common culprit).
-    const prefsWriteInFlight =
-      this.exportPrefsSubscription !== null && !this.exportPrefsSubscription.closed;
-
-    if (
-      !prefsWriteInFlight &&
-      typeof document.templateId === 'number' &&
-      Number.isInteger(document.templateId)
-    ) {
-      const normalized = normalizeCvExportTemplateId(document.templateId);
-      this.selectedExportTemplateId.set(normalized);
-      this.writeTemplateCache(normalized);
-    }
-  }
-
-  /** Persist current selection to API when a document exists; sessionStorage remains cache. */
-  private persistExportPrefs(): void {
-    if (!this.document()) {
-      return;
-    }
-
-    const templateId = this.selectedExportTemplateId();
-    const generation = ++this.exportPrefsGeneration;
-
-    this.cancelExportPrefs();
-    this.exportPrefsSubscription = this.apiService
-      .updateExportPrefs({ templateId })
-      .subscribe({
-        next: (document) => {
-          // Ignore superseded responses (rapid template switching / cancelled request races).
-          if (generation !== this.exportPrefsGeneration) {
-            return;
-          }
-
-          // Refresh document metadata but keep optimistic export prefs as source of truth.
-          // Re-applying response templateId previously snapped the edit canvas back when the
-          // echo lagged or differed from the latest local selection.
-          this.document.set({
-            ...document,
-            templateId: this.selectedExportTemplateId()
-          });
-        },
-        error: (error) => {
-          if (isRequestAborted(error)) {
-            return;
-          }
-
-          // Soft-fail non-success; local + sessionStorage cache still drive export/preview.
-          if (
-            error instanceof HttpErrorResponse &&
-            (error.status === 404 || error.status === 405 || error.status === 501)
-          ) {
-            return;
-          }
-
-          // Soft-fail other errors; export/preview still use in-memory selection.
-        }
-      });
-  }
-
-  private writeTemplateCache(templateId: number): void {
-    try {
-      sessionStorage.setItem(CV_EXPORT_TEMPLATE_STORAGE_KEY, String(templateId));
-    } catch {
-      // Ignore storage failures (private mode, quota, etc.).
-    }
-  }
-
-  private readStoredExportTemplateId(): number {
-    try {
-      const stored = sessionStorage.getItem(CV_EXPORT_TEMPLATE_STORAGE_KEY);
-
-      if (!stored) {
-        return DEFAULT_CV_EXPORT_TEMPLATE_ID;
-      }
-
-      const parsed = Number.parseInt(stored, 10);
-
-      if (!Number.isInteger(parsed)) {
-        return DEFAULT_CV_EXPORT_TEMPLATE_ID;
-      }
-
-      const normalized = normalizeCvExportTemplateId(parsed);
-
-      // Persist remap so legacy Classic/4/5 (and unknowns) become Modern in sessionStorage.
-      if (normalized !== parsed) {
-        this.writeTemplateCache(normalized);
-      }
-
-      return normalized;
-    } catch {
-      return DEFAULT_CV_EXPORT_TEMPLATE_ID;
-    }
+    return buildCvExportDownloadFileName(personName);
   }
 
   private readErrorMessage(error: unknown, fallback: string): string {
@@ -674,4 +605,18 @@ export class CvDocumentFacade {
 
     return fallback;
   }
+}
+
+function withDocumentDefaults(document: CvDocument): CvDocument {
+  return {
+    ...document,
+    unplacedContent: document.unplacedContent ?? []
+  };
+}
+
+function withImportDefaults(summary: CvStructuredImportSummary): CvStructuredImportSummary {
+  return {
+    ...summary,
+    unplacedCount: summary.unplacedCount ?? 0
+  };
 }

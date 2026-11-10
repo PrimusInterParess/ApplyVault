@@ -1,0 +1,32 @@
+task_id: cv-section-visibility-placement
+integration_status: REQUEST COMPLETE WITH DOCUMENTED LIMITATIONS
+closed_at: "2026-10-19T06:50:00Z"
+summary: >
+  Section visibility and Section placement are implemented. A non-Contact
+  Section can be omitted from the Template while its Entries stay on the
+  Structured CV. A two-page export tightens spacing by one compact step and
+  keeps a fitting Section and Entry whole.
+pr_links: []
+issue_links: []
+adrs:
+  - docs/adr/0033-cv-section-visibility.md
+  - docs/adr/0034-cv-section-placement.md
+  - docs/adr/0035-cv-section-visibility-persistence-and-compact-step.md
+agents:
+  - architecture-engineer: READY
+  - backend-engineer: READY
+  - frontend-engineer: READY
+  - qa-engineer: BLOCKED on unrelated spec-project compile; backend re-run passed
+limitations:
+  - Migration 20261019120000_AddUserCvSectionIncludedOnTemplate was not applied to SQL Server in this session.
+  - The heading switch was not clicked. localhost:4200 is the previous Docker UI. A local serve on port 4202 redirected to login.
+  - Targeted Angular specs passed 24 of 24 in the frontend run. QA could not re-run them because the full spec project fails to compile on pre-existing interview-prep and job-search errors. tsconfig.spec.json was left including src/**/*.spec.ts.
+  - Summary stays inside the export header. Chromium may still split that header fragment.
+residual_risks:
+  - A structured save that also changes Entries still marks an Interview Prep brief outdated. A visibility-only save does not.
+  - The assist prompt sees includedOnTemplate because the section DTO is serialized. Merge stamps the previous flag.
+  - break-inside avoid is a Chromium hint. A bullet taller than a page can still split.
+next_action: >
+  Apply the migration, rebuild the UI image or serve the local app while signed
+  in, and click Omit on a non-Contact heading. Confirm the Section stays on the
+  canvas and leaves the PDF.

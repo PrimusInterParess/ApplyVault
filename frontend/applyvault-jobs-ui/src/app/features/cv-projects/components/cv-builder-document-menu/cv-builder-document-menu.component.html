@@ -1,0 +1,48 @@
+<div class="cv-builder-doc" [class.cv-builder-doc--open]="open()">
+  <button
+    type="button"
+    class="cv-builder__ghost-btn"
+    [attr.aria-expanded]="open()"
+    aria-controls="cv-builder-document-menu"
+    (click)="toggle(); $event.stopPropagation()">
+    Document
+  </button>
+  @if (open()) {
+    <div id="cv-builder-document-menu" class="cv-builder-doc__menu" role="menu" aria-label="Document">
+      <button
+        type="button"
+        role="menuitem"
+        class="cv-builder-doc__item"
+        [disabled]="uploadingPdf()"
+        (click)="onUploadPdf()">
+        {{ uploadingPdf() ? 'Uploading…' : 'Upload PDF' }}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="cv-builder-doc__item"
+        [disabled]="photoBusy()"
+        (click)="onUploadPhoto()">
+        {{ photoBusy() ? 'Updating photo…' : hasProfilePhoto() ? 'Replace photo' : 'Upload photo' }}
+      </button>
+      @if (hasProfilePhoto()) {
+        <button
+          type="button"
+          role="menuitem"
+          class="cv-builder-doc__item"
+          [disabled]="photoBusy()"
+          (click)="onRemovePhoto()">
+          {{ photoBusy() ? 'Removing…' : 'Remove photo' }}
+        </button>
+      }
+      <button
+        type="button"
+        role="menuitem"
+        class="cv-builder-doc__item cv-builder-doc__item--danger"
+        [disabled]="deleting()"
+        (click)="onDeleteCv()">
+        {{ deleting() ? 'Deleting…' : 'Delete CV' }}
+      </button>
+    </div>
+  }
+</div>

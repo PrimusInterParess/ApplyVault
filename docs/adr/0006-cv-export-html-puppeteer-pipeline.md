@@ -4,6 +4,8 @@
 
 Accepted (2026-07-31 — implementation-plan D2; operate `cv-builder-v1-m1-2026-07-31`)
 
+Decisions 1 and 4 (multiple Template ids; Classic fallback) are superseded by [ADR-0028](0028-single-cv-template-page-policy.md): there is now a single Template. Decisions 2–3 (shared HTML → PuppeteerSharp) still stand.
+
 ## Context
 
 v1 briefly mixed Template renderers: Classic historically used QuestPDF while preview fidelity needed a shared document. Dual pipelines made preview-vs-PDF drift hard to reason about and blocked a single “what you download” HTML source.

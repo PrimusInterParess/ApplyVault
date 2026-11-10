@@ -38,9 +38,15 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.woff2",
+                "input": "../../api/ApplyVault.Api/wwwroot/cv-export-templates/fonts",
+                "output": "cv-fonts"
               }
             ],
             "styles": [
+              "src/styles/cv-export-font.scss",
               "src/styles.scss"
             ],
             "scripts": []
@@ -122,9 +128,15 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.woff2",
+                "input": "../../api/ApplyVault.Api/wwwroot/cv-export-templates/fonts",
+                "output": "cv-fonts"
               }
             ],
             "styles": [
+              "src/styles/cv-export-font.scss",
               "src/styles.scss"
             ],
             "scripts": []

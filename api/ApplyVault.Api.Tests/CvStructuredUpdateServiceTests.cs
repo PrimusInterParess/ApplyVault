@@ -1,6 +1,7 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
+using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Tests;
 
@@ -9,7 +10,7 @@ public sealed class CvStructuredUpdateServiceTests
     [Fact]
     public async Task UpdateWithAiAsync_RejectsBlankInstructions()
     {
-        var service = new CvStructuredUpdateService(
+        var service = CreateService(
             new ThrowingStructuredDocumentService(),
             new ThrowingUpdateAiClient());
 
@@ -24,7 +25,7 @@ public sealed class CvStructuredUpdateServiceTests
     [Fact]
     public async Task UpdateWithAiAsync_RejectsMissingStructuredContent()
     {
-        var service = new CvStructuredUpdateService(
+        var service = CreateService(
             new EmptyStructuredDocumentService(),
             new ThrowingUpdateAiClient());
 
@@ -38,7 +39,7 @@ public sealed class CvStructuredUpdateServiceTests
     public async Task UpdateWithAiAsync_RejectsUnknownSectionIds()
     {
         var sectionId = Guid.NewGuid();
-        var service = new CvStructuredUpdateService(
+        var service = CreateService(
             new StubStructuredDocumentService(
                 new CvStructuredDocumentDto(
                     Guid.NewGuid(),
@@ -68,7 +69,7 @@ public sealed class CvStructuredUpdateServiceTests
     {
         var sectionId = Guid.NewGuid();
         var aiClient = new CapturingUpdateAiClient();
-        var service = new CvStructuredUpdateService(
+        var service = CreateService(
             new StubStructuredDocumentService(
                 new CvStructuredDocumentDto(
                     Guid.NewGuid(),
@@ -115,16 +116,14 @@ public sealed class CvStructuredUpdateServiceTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 1, "New AI summary")
         ]));
 
-        var service = new CvStructuredUpdateService(structured, aiClient);
+        var service = CreateService(structured, aiClient);
 
         await service.UpdateWithAiAsync(
             new AppUserEntity { SupabaseUserId = "user" },
             new UpdateCvStructuredWithAiRequest("Rewrite summary.", [summaryId]));
 
         Assert.NotNull(structured.LastSaved);
-        Assert.Equal(
-            [contactId, summaryId, experienceId],
-            structured.LastSaved!.Sections.Select((section) => section.Id!.Value).ToArray());
+        Assert.Equal(7, structured.LastSaved!.Sections.Count);
         Assert.Equal("Alice", Marker(structured.LastSaved, contactId));
         Assert.Equal("New AI summary", Marker(structured.LastSaved, summaryId));
         Assert.Equal("Acme", Marker(structured.LastSaved, experienceId));
@@ -149,16 +148,14 @@ public sealed class CvStructuredUpdateServiceTests
             WriteSection(summaryId, "Summary", CvSectionTypes.Summary, 0, "Rewritten")
         ]));
 
-        var service = new CvStructuredUpdateService(structured, aiClient);
+        var service = CreateService(structured, aiClient);
 
         await service.UpdateWithAiAsync(
             new AppUserEntity { SupabaseUserId = "user" },
             new UpdateCvStructuredWithAiRequest("Rewrite summary."));
 
         Assert.NotNull(structured.LastSaved);
-        Assert.Equal(
-            [summaryId, experienceId],
-            structured.LastSaved!.Sections.Select((section) => section.Id!.Value).ToArray());
+        Assert.Equal(7, structured.LastSaved!.Sections.Count);
         Assert.Equal("Rewritten", Marker(structured.LastSaved, summaryId));
         Assert.Equal("Acme", Marker(structured.LastSaved, experienceId));
     }
@@ -167,7 +164,7 @@ public sealed class CvStructuredUpdateServiceTests
     public async Task UpdateWithAiAsync_RejectsEmptyAiSectionsBeforePersist()
     {
         var summaryId = Guid.NewGuid();
-        var service = new CvStructuredUpdateService(
+        var service = CreateService(
             new StubStructuredDocumentService(
                 new CvStructuredDocumentDto(
                     Guid.NewGuid(),
@@ -184,6 +181,13 @@ public sealed class CvStructuredUpdateServiceTests
 
         Assert.Contains("AI did not return any structured CV sections", exception.Message);
     }
+
+    private static readonly ICvSectionCatalog Catalog = CvSectionCatalogProvider.LoadFromDefaultPath();
+
+    private static CvStructuredUpdateService CreateService(
+        ICvStructuredDocumentService structured,
+        ICvStructuredUpdateAiClient aiClient) =>
+        new(structured, aiClient, Catalog);
 
     private static CvStructuredSectionDto EntrySection(
         Guid id,

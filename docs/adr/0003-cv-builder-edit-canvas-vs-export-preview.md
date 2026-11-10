@@ -4,6 +4,8 @@
 
 Accepted (2026-07-31 — Principal + user Option A)
 
+Refined by [ADR-0036](0036-cv-builder-canvas-section-placement.md) (2026-10-19). The CV builder keeps its editing size and shows every page the content needs, without a page warning. Check export remains the fidelity view of the download. This decision is not revoked.
+
 ## Context
 
 M1 and later operate work treated **server export HTML** (`GET .../current/export/preview`, sandboxed iframe) as the **sole fidelity source for gallery, stage, and the edit desk canvas**. The Angular `cv-export-template-preview` (editable) lived in a **Content drawer**, so users edited one surface while the primary paper showed a saved-export preview.

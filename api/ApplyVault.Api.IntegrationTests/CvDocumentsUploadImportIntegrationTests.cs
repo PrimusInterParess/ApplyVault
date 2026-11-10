@@ -70,8 +70,11 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         var structured = await structuredResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
 
         Assert.NotNull(structured);
+        Assert.Equal(7, structured!.Sections.Count);
+        Assert.Equal(0, uploadResult.Import.UnplacedCount);
+        Assert.Empty(uploadResult.Document.UnplacedContent);
 
-        var experienceSection = structured!.Sections.Single((section) =>
+        var experienceSection = structured.Sections.Single((section) =>
             section.SectionType.Equals("Experience", StringComparison.OrdinalIgnoreCase));
         var experienceEntry = Assert.Single(experienceSection.Entries);
 
@@ -199,7 +202,8 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
 
         var updatedExperience = saved.Sections.Single((section) => section.Id == experienceSection.Id);
 
-        Assert.Equal("Work History", updatedExperience.Heading);
+        Assert.Equal("Experience", updatedExperience.Heading);
+        Assert.Equal(7, saved.Sections.Count);
         Assert.Equal(2, updatedExperience.Entries.Count);
 
         var updatedEntry = updatedExperience.Entries.Single((entry) => entry.Id == originalEntryId);
@@ -421,6 +425,95 @@ public sealed class CvDocumentsUploadImportIntegrationTests(ApplyVaultWebApplica
         Assert.Contains(
             contactSection.Entries.SelectMany((entry) => entry.Bullets),
             (bullet) => bullet.Contains("jane@example.com", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Start_blank_seeds_seven_fixed_sections()
+    {
+        using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
+
+        var startResponse = await client.PostAsync("/api/cv-documents/current/start-blank", null);
+
+        Assert.Equal(HttpStatusCode.OK, startResponse.StatusCode);
+
+        var document = await startResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
+
+        Assert.NotNull(document);
+        Assert.True(document!.HasStructuredContent);
+        Assert.Empty(document.UnplacedContent);
+
+        var structuredResponse = await client.GetAsync("/api/cv-documents/current/structured");
+
+        Assert.Equal(HttpStatusCode.OK, structuredResponse.StatusCode);
+
+        var structured = await structuredResponse.Content.ReadFromJsonAsync<CvStructuredDocumentDto>();
+
+        Assert.NotNull(structured);
+        Assert.Equal(7, structured!.Sections.Count);
+        Assert.Equal(
+            ["Contact", "Summary", "Skills", "Experience", "Projects", "Education", "Custom"],
+            structured.Sections.Select((section) => section.SectionType).ToArray());
+        Assert.Equal(
+            [
+                "Contact",
+                "Summary",
+                "Skills",
+                "Experience",
+                "Projects",
+                "Education",
+                "Certifications & Languages"
+            ],
+            structured.Sections.Select((section) => section.Heading).ToArray());
+
+        var contact = structured.Sections.Single((section) => section.SectionType == "Contact");
+        Assert.Equal(
+            ["Name", "Email", "Phone", "Location", "LinkedIn", "GitHub", "Website"],
+            contact.Entries.Select((entry) => entry.Title).ToArray());
+    }
+
+    [Fact]
+    public async Task Put_unplaced_content_replaces_items_and_returns_404_without_document()
+    {
+        using var missingClient = factory.CreateAuthenticatedClient(TestUserTokens.UserB);
+        var missingResponse = await missingClient.PutAsJsonAsync(
+            "/api/cv-documents/current/unplaced-content",
+            new ReplaceCvUnplacedContentRequest([" leftover line "]));
+
+        Assert.Equal(HttpStatusCode.NotFound, missingResponse.StatusCode);
+
+        using var client = factory.CreateAuthenticatedClient(TestUserTokens.UserA);
+        var startResponse = await client.PostAsync("/api/cv-documents/current/start-blank", null);
+
+        Assert.Equal(HttpStatusCode.OK, startResponse.StatusCode);
+
+        var replaceResponse = await client.PutAsJsonAsync(
+            "/api/cv-documents/current/unplaced-content",
+            new ReplaceCvUnplacedContentRequest(["  keep me  ", " ", "also keep", new string('x', 4010)]));
+
+        Assert.Equal(HttpStatusCode.OK, replaceResponse.StatusCode);
+
+        var replaced = await replaceResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
+
+        Assert.NotNull(replaced);
+        Assert.Equal(3, replaced!.UnplacedContent.Count);
+        Assert.Equal("keep me", replaced.UnplacedContent[0]);
+        Assert.Equal("also keep", replaced.UnplacedContent[1]);
+        Assert.Equal(4000, replaced.UnplacedContent[2].Length);
+
+        var current = await client.GetFromJsonAsync<CvDocumentDto>("/api/cv-documents/current");
+
+        Assert.Equal(replaced.UnplacedContent, current!.UnplacedContent);
+
+        var clearResponse = await client.PutAsJsonAsync(
+            "/api/cv-documents/current/unplaced-content",
+            new ReplaceCvUnplacedContentRequest(["  ", ""]));
+
+        Assert.Equal(HttpStatusCode.OK, clearResponse.StatusCode);
+
+        var cleared = await clearResponse.Content.ReadFromJsonAsync<CvDocumentDto>();
+
+        Assert.NotNull(cleared);
+        Assert.Empty(cleared!.UnplacedContent);
     }
 
     internal static byte[] CreateStructuredCvPdf(bool includeHeadshot)

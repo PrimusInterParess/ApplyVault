@@ -12,11 +12,92 @@ export function renderJobDescription(raw: string | null | undefined): string {
     return '';
   }
 
-  if (htmlTagPattern.test(text)) {
-    return normalizeDescriptionHtml(text);
+  const html = htmlTagPattern.test(text)
+    ? normalizeDescriptionHtml(text)
+    : renderMarkdown(plainTextToMarkdown(text));
+
+  return promoteDescriptionHeadings(repairBrokenMarkdownHtml(html));
+}
+
+const strongLabelParagraphPattern =
+  /<p>\s*<(strong|b)>([^<]{1,80})<\/\1>\s*(:)?\s*(?:<br\s*\/?>\s*)?<\/p>/gi;
+const colonLabelParagraphPattern = /<p>([^<]{2,60}:)\s*<\/p>/gi;
+const listLeadInParagraphPattern = /<p>([^<]{2,60})<\/p>(\s*)(?=<(?:ul|ol)\b)/gi;
+
+function promoteDescriptionHeadings(html: string): string {
+  return html
+    .replace(strongLabelParagraphPattern, (match, _tag: string, inner: string, colon?: string) => {
+      const text = `${inner.trim()}${colon ?? ''}`;
+      return isSectionLabel(text) ? `<h3>${text}</h3>` : match;
+    })
+    .replace(colonLabelParagraphPattern, (match, inner: string) => {
+      const text = inner.trim();
+      return isSectionLabel(text) ? `<h3>${text}</h3>` : match;
+    })
+    .replace(listLeadInParagraphPattern, (match, inner: string, space: string) => {
+      const text = inner.trim();
+      return isSectionLabel(text) ? `<h3>${text}</h3>${space}` : match;
+    });
+}
+
+function repairBrokenMarkdownHtml(html: string): string {
+  return html.replace(/<p>([\s\S]*?)<\/p>/gi, (match, inner: string) => {
+    if (/<[a-z]/i.test(inner)) {
+      return match;
+    }
+
+    const raw = decodeHtmlEntities(inner).replace(/\s+/g, ' ').trim();
+    if (!raw || isEmphasisOnly(raw)) {
+      return '';
+    }
+
+    const stripped = stripEdgeMarkers(raw);
+    if (!stripped) {
+      return '';
+    }
+
+    if (startsWithBold(raw) && isSectionLabel(stripped)) {
+      return `<h3>${escapeHtml(stripped)}</h3>`;
+    }
+
+    return `<p>${escapeHtml(stripped)}</p>`;
+  });
+}
+
+function isEmphasisOnly(text: string): boolean {
+  return /^[*_\s]+$/.test(text);
+}
+
+function startsWithBold(text: string): boolean {
+  return /^\s*(?:_\s*)?(?:\*\*|__)/.test(text);
+}
+
+function stripEdgeMarkers(text: string): string {
+  return text.replace(/^(?:[*_]+\s*)+/, '').replace(/(?:\s*[*_])+$/, '').trim();
+}
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function isSectionLabel(text: string): boolean {
+  const words = text.split(/\s+/).filter((word) => word.length > 0);
+
+  if (text.length < 2 || text.length > 60 || words.length > 8) {
+    return false;
   }
 
-  return renderMarkdown(plainTextToMarkdown(text));
+  return !/[.!?]/.test(text.replace(/:$/, ''));
 }
 
 function normalizePlainText(text: string): string {

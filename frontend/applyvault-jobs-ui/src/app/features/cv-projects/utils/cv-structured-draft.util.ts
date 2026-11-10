@@ -1,5 +1,6 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
 
+import { sectionIncludedOnTemplate } from '../models/cv-fixed-sections.model';
 import {
   CvStructuredDocument,
   CvStructuredEntry,
@@ -58,6 +59,7 @@ export function createEmptySection(sortOrder: number): CvStructuredSection {
     heading: 'New section',
     sectionType: 'Custom',
     sortOrder,
+    includedOnTemplate: true,
     entries: []
   };
 }
@@ -209,30 +211,6 @@ export function mergeSection(
   return [...sections.map((section) => cloneSectionForDraft(section)), cloneSectionForDraft(updatedSection)];
 }
 
-export function reorderSections(
-  sections: readonly CvStructuredSection[],
-  fromIndex: number,
-  toIndex: number
-): CvStructuredSection[] {
-  const nextSections = sections.map((section) => cloneSectionForDraft(section));
-
-  moveItemInArray(nextSections, fromIndex, toIndex);
-  normalizeSectionSortOrders(nextSections);
-  return nextSections;
-}
-
-export function removeSectionById(
-  sections: readonly CvStructuredSection[],
-  sectionId: string
-): CvStructuredSection[] {
-  const nextSections = sections
-    .filter((section) => section.id !== sectionId)
-    .map((section) => cloneSectionForDraft(section));
-
-  normalizeSectionSortOrders(nextSections);
-  return nextSections;
-}
-
 export function toSaveRequest(sections: readonly CvStructuredSection[]): SaveCvStructuredDocumentRequest {
   return {
     sections: sections.map((section, sectionIndex) => toSectionWrite(section, sectionIndex))
@@ -245,6 +223,7 @@ function toSectionWrite(section: CvStructuredSection, sortOrder: number): CvStru
     heading: section.heading.trim(),
     sectionType: section.sectionType,
     sortOrder,
+    includedOnTemplate: sectionIncludedOnTemplate(section),
     entries: section.entries.map((entry, entryIndex) => toEntryWrite(entry, entryIndex))
   };
 }
@@ -284,6 +263,7 @@ function toComparableSection(section: CvStructuredSection) {
     heading: section.heading.trim(),
     sectionType: section.sectionType,
     sortOrder: section.sortOrder,
+    includedOnTemplate: sectionIncludedOnTemplate(section),
     entries: [...section.entries]
       .sort((left, right) => left.sortOrder - right.sortOrder)
       .map((entry, index) => toComparableEntry(entry, section.sectionType, isContact, index))

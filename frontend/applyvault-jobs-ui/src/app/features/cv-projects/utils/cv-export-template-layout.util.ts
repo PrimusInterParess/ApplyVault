@@ -1,14 +1,13 @@
-import { CvSectionType, CvStructuredSection } from '../models/cv-structured.model';
+import { CvStructuredSection } from '../models/cv-structured.model';
 import {
   contactEntryValue,
   isContactNameEntry
 } from './cv-contact-channels.util';
 
-export type CvExportPreviewZone = 'header' | 'sidebar' | 'main';
+export type CvExportPreviewZone = 'header' | 'main';
 
 export interface CvExportPreviewLayout {
   readonly header: readonly CvStructuredSection[];
-  readonly sidebar: readonly CvStructuredSection[];
   readonly main: readonly CvStructuredSection[];
 }
 
@@ -16,16 +15,8 @@ function isContactSection(section: CvStructuredSection): boolean {
   return section.heading.trim().toLowerCase() === 'contact' || section.sectionType === 'Contact';
 }
 
-function isSidebarSection(section: CvStructuredSection): boolean {
-  return (
-    section.sectionType === 'Skills' ||
-    section.sectionType === 'Summary' ||
-    isContactSection(section)
-  );
-}
-
 function isHeaderSection(section: CvStructuredSection): boolean {
-  return section.sectionType === 'Summary' || isContactSection(section);
+  return isContactSection(section);
 }
 
 function sortSections(sections: readonly CvStructuredSection[]): CvStructuredSection[] {
@@ -43,7 +34,8 @@ export function contactSectionHasRenderableContent(section: CvStructuredSection)
   });
 }
 
-function sectionHasRenderableContent(section: CvStructuredSection): boolean {
+/** True when a Section has any non-empty Entry field (export + rail completeness). */
+export function sectionHasRenderableContent(section: CvStructuredSection): boolean {
   if (isContactSection(section)) {
     return contactSectionHasRenderableContent(section);
   }
@@ -59,42 +51,35 @@ function sectionHasRenderableContent(section: CvStructuredSection): boolean {
   );
 }
 
-export function partitionSectionsForTemplate(
-  templateId: number,
+/**
+ * Single export layout (match CvExportHtmlMapper): Contact in the header,
+ * Summary and every other section in the single main column.
+ * Non-edit and edit-canvas callers drop a non-Contact Section when
+ * `includedOnTemplate` is false. The edit canvas still shows empty Sections.
+ */
+export function partitionSectionsForExport(
   sections: readonly CvStructuredSection[],
-  options?: { includeEmpty?: boolean }
+  options?: { includeEmpty?: boolean; editCanvas?: boolean }
 ): CvExportPreviewLayout {
   const includeEmpty = options?.includeEmpty ?? false;
-  const ordered = sortSections(sections).filter(
-    (section) => includeEmpty || sectionHasRenderableContent(section) || section.entries.length > 0
-  );
-
-  // Minimal (3): Contact + Summary in header (match CvExportHtmlMapper).
-  if (templateId === 3) {
-    const header: CvStructuredSection[] = [];
-    const main: CvStructuredSection[] = [];
-
-    for (const section of ordered) {
-      if (isHeaderSection(section)) {
-        header.push(section);
-      } else {
-        main.push(section);
-      }
+  const ordered = sortSections(sections).filter((section) => {
+    if (section.includedOnTemplate === false && !isContactSection(section)) {
+      return false;
     }
 
-    return { header, sidebar: [], main };
-  }
+    return includeEmpty || sectionHasRenderableContent(section) || section.entries.length > 0;
+  });
 
-  const sidebar: CvStructuredSection[] = [];
+  const header: CvStructuredSection[] = [];
   const main: CvStructuredSection[] = [];
 
   for (const section of ordered) {
-    if (isSidebarSection(section)) {
-      sidebar.push(section);
+    if (isHeaderSection(section)) {
+      header.push(section);
     } else {
       main.push(section);
     }
   }
 
-  return { header: [], sidebar, main };
+  return { header, main };
 }

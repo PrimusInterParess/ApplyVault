@@ -6,16 +6,15 @@ namespace ApplyVault.Api.Tests;
 public sealed class CvExportDownloadFileNameTests
 {
     [Theory]
-    [InlineData("Jane Doe", "Modern", "Jane-Doe-Modern.pdf")]
-    [InlineData("Jane Doe", "Minimal", "Jane-Doe-Minimal.pdf")]
-    [InlineData(null, "Modern", "CV-Modern.pdf")]
-    [InlineData("   ", "Minimal", "CV-Minimal.pdf")]
-    [InlineData("A/B <C>", "Modern", "AB-C-Modern.pdf")]
-    public void Build_formats_person_and_template(string? personName, string templateLabel, string expected) =>
-        Assert.Equal(expected, CvExportDownloadFileName.Build(personName, templateLabel));
+    [InlineData("Jane Doe", "Jane-Doe-CV.pdf")]
+    [InlineData(null, "CV.pdf")]
+    [InlineData("   ", "CV.pdf")]
+    [InlineData("A/B <C>", "AB-C-CV.pdf")]
+    public void Build_formats_person_name(string? personName, string expected) =>
+        Assert.Equal(expected, CvExportDownloadFileName.Build(personName));
 
     [Fact]
-    public void BuildForExport_uses_contact_name_and_template_display_name()
+    public void BuildForExport_uses_contact_name()
     {
         var structured = new CvStructuredDocumentDto(
             Guid.NewGuid(),
@@ -42,16 +41,12 @@ public sealed class CvExportDownloadFileNameTests
                     ])
             ]);
 
-        Assert.Equal(
-            "Alex-Rivera-Modern.pdf",
-            CvExportDownloadFileName.BuildForExport(structured, templateId: 2));
+        Assert.Equal("Alex-Rivera-CV.pdf", CvExportDownloadFileName.BuildForExport(structured));
     }
 
     [Fact]
     public void BuildForExport_falls_back_when_contact_name_missing()
     {
-        Assert.Equal(
-            "CV-Modern.pdf",
-            CvExportDownloadFileName.BuildForExport(structured: null, templateId: 1));
+        Assert.Equal("CV.pdf", CvExportDownloadFileName.BuildForExport(structured: null));
     }
 }

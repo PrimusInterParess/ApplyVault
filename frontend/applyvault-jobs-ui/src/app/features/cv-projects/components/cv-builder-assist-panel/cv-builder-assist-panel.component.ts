@@ -41,6 +41,7 @@ export class CvBuilderAssistPanelComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
 
   readonly open = input(false);
+  readonly docked = input(false);
   readonly sections = input<readonly CvStructuredSection[]>([]);
   readonly aiUpdateSectionIds = input<readonly string[]>([]);
   readonly aiUpdateInstructions = input('');

@@ -174,7 +174,7 @@
         <p>{{ selectedJob.hiringManagerName }}</p>
 
         @if (selectedJob.hiringManagerContacts.length > 0) {
-          <ul>
+          <ul class="job-detail__contacts">
             @for (contact of selectedJob.hiringManagerContacts; track contact.type + contact.value) {
               <li>
                 <span>{{ contact.label || contact.type }}</span>

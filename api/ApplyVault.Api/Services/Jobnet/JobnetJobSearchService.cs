@@ -18,7 +18,11 @@ internal sealed class JobnetJobSearchService(
         var integrationOptions = options.Value;
         var keywords = request.ResolveKeywords();
         var searchString = string.Join(' ', keywords);
-        var cacheKey = BuildCacheKey(searchString, integrationOptions.WorkInDenmarkOnly, request.RequestLanguage);
+        var cacheKey = BuildCacheKey(
+            searchString,
+            integrationOptions.WorkInDenmarkOnly,
+            request.RequestLanguage,
+            integrationOptions.BaseUrl);
 
         var rankedSnapshot = await rankedResultsCache.GetOrCreateAsync(
             cacheKey,
@@ -83,14 +87,14 @@ internal sealed class JobnetJobSearchService(
                     maxCachedResults,
                     cancellationToken);
 
-                if (detailFetchCount < maxDetailFetches && rankedEntries.Count < maxCachedResults)
+                if (rankedEntries.Count < maxCachedResults)
                 {
                     detailFetchCount += await MergeVerifiedGuidJobsAsync(
                         searchResponse?.JobAds ?? [],
                         keywords,
                         rankedEntries,
                         detailConcurrencyGate,
-                        maxDetailFetches - detailFetchCount,
+                        Math.Max(0, maxDetailFetches - detailFetchCount),
                         trustUpstreamMatches,
                         maxCachedResults,
                         cancellationToken);
@@ -220,7 +224,7 @@ internal sealed class JobnetJobSearchService(
         int maxCachedResults,
         CancellationToken cancellationToken)
     {
-        if (remainingDetailFetches <= 0 || rankedEntries.Count >= maxCachedResults)
+        if (rankedEntries.Count >= maxCachedResults)
         {
             return 0;
         }
@@ -229,7 +233,6 @@ internal sealed class JobnetJobSearchService(
             .Where((job) => !string.IsNullOrWhiteSpace(job.JobAdId))
             .Where((job) => JobnetJobIdentifiers.SupportsNativeDetailEndpoint(job.JobAdId))
             .Where((job) => trustUpstreamMatches || PassesRelevancePreFilter(job, keywords))
-            .Take(remainingDetailFetches)
             .ToArray();
 
         if (candidates.Length == 0)
@@ -237,41 +240,64 @@ internal sealed class JobnetJobSearchService(
             return 0;
         }
 
-        var classificationTasks = candidates.Select(async (job) =>
+        var classificationById = new Dictionary<string, bool?>(StringComparer.OrdinalIgnoreCase);
+        var fetchTargets = new List<JobnetSearchJobPayload>();
+
+        foreach (var job in candidates)
         {
             var cached = await classificationCache.GetWorkInDenmarkAsync(job.JobAdId!, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (cached.HasValue)
+            if (cached == true)
             {
-                return (Job: job, IsWorkInDenmark: cached, FetchedDetail: false);
+                classificationById[job.JobAdId!] = true;
+                continue;
             }
 
-            await detailConcurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-            try
+            if (fetchTargets.Count < remainingDetailFetches)
             {
-                var isWorkInDenmark = await ResolveWorkInDenmarkFromApiAsync(job.JobAdId!, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return (Job: job, IsWorkInDenmark: isWorkInDenmark, FetchedDetail: true);
+                fetchTargets.Add(job);
             }
-            finally
+        }
+
+        var fetched = 0;
+
+        if (fetchTargets.Count > 0)
+        {
+            var classificationTasks = fetchTargets.Select(async (job) =>
             {
-                detailConcurrencyGate.Release();
+                await detailConcurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                try
+                {
+                    var isWorkInDenmark = await ResolveWorkInDenmarkFromApiAsync(job.JobAdId!, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    return (Job: job, IsWorkInDenmark: isWorkInDenmark);
+                }
+                finally
+                {
+                    detailConcurrencyGate.Release();
+                }
+            });
+
+            var classifications = await Task.WhenAll(classificationTasks).ConfigureAwait(false);
+
+            foreach (var (job, isWorkInDenmark) in classifications)
+            {
+                classificationById[job.JobAdId!] = isWorkInDenmark;
+                fetched++;
             }
-        });
+        }
 
-        var classifications = await Task.WhenAll(classificationTasks).ConfigureAwait(false);
-
-        foreach (var (job, isWorkInDenmark, _) in classifications)
+        foreach (var job in candidates)
         {
             if (rankedEntries.Count >= maxCachedResults)
             {
                 break;
             }
 
-            if (isWorkInDenmark != true || string.IsNullOrWhiteSpace(job.JobAdId))
+            if (classificationById.TryGetValue(job.JobAdId!, out var isWorkInDenmark) && isWorkInDenmark == false)
             {
                 continue;
             }
@@ -285,7 +311,7 @@ internal sealed class JobnetJobSearchService(
                 cancellationToken);
         }
 
-        return classifications.Count((entry) => entry.FetchedDetail);
+        return fetched;
     }
 
     private async Task MergeUnfilteredJobsAsync(
@@ -318,11 +344,16 @@ internal sealed class JobnetJobSearchService(
         CancellationToken cancellationToken)
     {
         var detail = await apiClient.GetJobByIdAsync(jobAdId, cancellationToken).ConfigureAwait(false);
-        var isWorkInDenmark = detail is not null
-            && JobnetJobMapper.HasWorkInDenmarkClassification(detail.Job?.Classifications);
+        var classifications = detail?.Job?.Classifications;
+        bool? isWorkInDenmark = classifications is { Count: > 0 }
+            ? JobnetJobMapper.HasWorkInDenmarkClassification(classifications)
+            : null;
 
-        await classificationCache.SetWorkInDenmarkAsync(jobAdId, isWorkInDenmark, cancellationToken)
-            .ConfigureAwait(false);
+        if (isWorkInDenmark.HasValue)
+        {
+            await classificationCache.SetWorkInDenmarkAsync(jobAdId, isWorkInDenmark.Value, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return isWorkInDenmark;
     }
@@ -409,13 +440,15 @@ internal sealed class JobnetJobSearchService(
     private static string BuildCacheKey(
         string searchString,
         bool workInDenmarkOnly,
-        string requestLanguage)
+        string requestLanguage,
+        string baseUrl)
     {
         return string.Join(
             '\u001e',
             searchString.Trim().ToLowerInvariant(),
-            workInDenmarkOnly ? "wid" : "all",
-            requestLanguage.Trim().ToLowerInvariant());
+            workInDenmarkOnly ? "wid-v2" : "all",
+            requestLanguage.Trim().ToLowerInvariant(),
+            baseUrl.Trim().TrimEnd('/').ToLowerInvariant());
     }
 
     private static long ParsePublicationSortKey(string? publicationDate)

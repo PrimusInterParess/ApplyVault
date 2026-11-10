@@ -241,17 +241,20 @@ public sealed record CvDocumentDto(
     DateTimeOffset? StructuredImportedAt,
     bool HasProfilePhoto,
     bool HasOriginalUpload,
-    int TemplateId
+    IReadOnlyList<string> UnplacedContent
 );
-
-public sealed record CvExportPreferencesDto(int TemplateId);
 
 public sealed record CvStructuredImportSummaryDto(
     bool Succeeded,
     int SectionCount,
     bool UsedAi,
     bool ProfilePhotoExtracted,
-    string? Notice
+    string? Notice,
+    int UnplacedCount
+);
+
+public sealed record ReplaceCvUnplacedContentRequest(
+    IReadOnlyList<string> Items
 );
 
 public sealed record CvDocumentUploadResultDto(
@@ -270,7 +273,8 @@ public sealed record CvStructuredSectionDto(
     string Heading,
     string SectionType,
     int SortOrder,
-    IReadOnlyList<CvStructuredEntryDto> Entries
+    IReadOnlyList<CvStructuredEntryDto> Entries,
+    bool IncludedOnTemplate = true
 );
 
 public sealed record CvStructuredEntryDto(
@@ -390,7 +394,8 @@ public sealed record CvStructuredSectionWriteDto(
     string Heading,
     string SectionType,
     int SortOrder,
-    IReadOnlyList<CvStructuredEntryWriteDto> Entries
+    IReadOnlyList<CvStructuredEntryWriteDto> Entries,
+    bool? IncludedOnTemplate = null
 );
 
 public sealed record CvStructuredEntryWriteDto(
@@ -409,7 +414,8 @@ public sealed record CvStructuredEntryWriteDto(
 public sealed record CvStructuredImportPreviewDto(
     IReadOnlyList<CvStructuredSectionWriteDto> Sections,
     bool UsedAi,
-    string? Notice
+    string? Notice,
+    IReadOnlyList<string> UnplacedContent
 );
 
 public sealed record CvStructuredReimportResultDto(

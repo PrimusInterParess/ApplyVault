@@ -153,7 +153,7 @@ A keyword search for one Work in Denmark search, with at least one keyword and a
 _Avoid_: Jobnet request, search string, country filter, place-only search
 
 **Place**:
-An optional Danish city or town the seeker wants jobs near, within the Commute distance. A query has at most one. The seeker chooses it from Copenhagen, Aarhus, Odense, or Aalborg, and each town has one center. With none chosen, the search covers all of Denmark (ADR-0041).
+An optional Danish city or town the seeker wants jobs near, within the Commute distance. A query has at most one. The seeker chooses it from Copenhagen, Aarhus, Odense, Aalborg, or Randers, and each town has one center. With none chosen, the search covers all of Denmark (ADR-0041).
 _Avoid_: Region, country, free-text city, postal code (when meaning what the seeker types), radius (when meaning a distance the seeker sets)
 
 **Commute distance**:

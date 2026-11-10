@@ -9,7 +9,8 @@ internal static class WorkInDenmarkPlaces
         ["copenhagen"] = "1050",
         ["aarhus"] = "8000",
         ["odense"] = "5000",
-        ["aalborg"] = "9000"
+        ["aalborg"] = "9000",
+        ["randers"] = "8900"
     };
 
     public static bool TryResolve(string? place, out string? canonicalPlace, out string? postalCode)

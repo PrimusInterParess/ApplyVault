@@ -28,7 +28,7 @@ public sealed class JobnetJobSearchRequestNormalizer(IOptions<JobnetIntegrationO
         if (!WorkInDenmarkPlaces.TryResolve(request.Place, out var canonicalPlace, out _))
         {
             normalizedRequest = request;
-            validationMessage = "Place must be Copenhagen, Aarhus, Odense, or Aalborg.";
+            validationMessage = "Place must be Copenhagen, Aarhus, Odense, Aalborg, or Randers.";
             validationField = nameof(JobnetJobSearchRequest.Place);
             return false;
         }

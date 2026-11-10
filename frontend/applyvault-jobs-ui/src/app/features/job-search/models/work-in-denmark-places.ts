@@ -2,7 +2,8 @@ export const WORK_IN_DENMARK_PLACES = [
   { id: 'copenhagen', label: 'Copenhagen' },
   { id: 'aarhus', label: 'Aarhus' },
   { id: 'odense', label: 'Odense' },
-  { id: 'aalborg', label: 'Aalborg' }
+  { id: 'aalborg', label: 'Aalborg' },
+  { id: 'randers', label: 'Randers' }
 ] as const;
 
 export type WorkInDenmarkPlaceId = (typeof WORK_IN_DENMARK_PLACES)[number]['id'];

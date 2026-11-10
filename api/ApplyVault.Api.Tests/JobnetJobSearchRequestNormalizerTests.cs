@@ -60,7 +60,7 @@ public sealed class JobnetJobSearchRequestNormalizerTests
             out var validationField);
 
         Assert.False(success);
-        Assert.Equal("Place must be Copenhagen, Aarhus, Odense, or Aalborg.", validationMessage);
+        Assert.Equal("Place must be Copenhagen, Aarhus, Odense, Aalborg, or Randers.", validationMessage);
         Assert.Equal(nameof(JobnetJobSearchRequest.Place), validationField);
     }
 

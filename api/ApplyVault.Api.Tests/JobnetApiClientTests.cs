@@ -48,6 +48,54 @@ public sealed class JobnetApiClientTests
     }
 
     [Fact]
+    public async Task SearchAsync_WithoutPlace_OmitsPostalCodeAndRadius()
+    {
+        Uri? requestUri = null;
+        var handler = new StubHttpMessageHandler((request) =>
+        {
+            requestUri = request.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JobnetTestData.SerializeSearchResponse(new JobnetSearchResponsePayload()),
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        });
+
+        var client = CreateClient(handler, new JobnetIntegrationOptions());
+        await client.SearchAsync("developer", pageNumber: 1, resultsPerPage: 10);
+
+        var query = requestUri?.Query ?? string.Empty;
+        Assert.DoesNotContain("postalCode=", query, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("kmRadius=", query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithPostalCode_SendsCenterAndCommuteDistance()
+    {
+        Uri? requestUri = null;
+        var handler = new StubHttpMessageHandler((request) =>
+        {
+            requestUri = request.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JobnetTestData.SerializeSearchResponse(new JobnetSearchResponsePayload()),
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        });
+
+        var client = CreateClient(handler, new JobnetIntegrationOptions());
+        await client.SearchAsync("developer", pageNumber: 1, resultsPerPage: 10, postalCode: "8000");
+
+        var query = requestUri?.Query ?? string.Empty;
+        Assert.Contains("postalCode=8000", query, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("kmRadius=50", query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SearchAsync_Persistent500_ThrowsAfterConfiguredAttempts()
     {
         var attempts = 0;

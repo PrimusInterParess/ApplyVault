@@ -3,6 +3,7 @@ import { ParamMap } from '@angular/router';
 import { JobSearchUrlQueryParams } from '../models/external-job.model';
 import { JobSearchSource, normalizeJobSearchSource } from '../models/job-source.model';
 import { isKnownEuresLocationCode, normalizeEuresLocationCode } from '../models/eures-location-options';
+import { normalizeWorkInDenmarkPlace } from '../models/work-in-denmark-places';
 import { normalizeEuresKeywords } from './eures-keyword.utils';
 import {
   EURES_DEFAULT_SORT_SEARCH,
@@ -29,7 +30,8 @@ export const JOB_SEARCH_URL_QUERY_KEYS = [
   'sort',
   'pageSize',
   'published',
-  'schedule'
+  'schedule',
+  'place'
 ] as const;
 
 export function buildJobSearchUrlQueryParams(state: {
@@ -41,6 +43,7 @@ export function buildJobSearchUrlQueryParams(state: {
   pageSize?: JobSearchPageSize;
   publicationPeriod?: EuresPublicationPeriod | null;
   scheduleCode?: EuresScheduleCode | null;
+  place?: string | null;
 }): JobSearchUrlQueryParams {
   const isEures = state.source === 'eures';
   const pageSize = state.pageSize ?? JOB_SEARCH_DEFAULT_PAGE_SIZE;
@@ -59,7 +62,8 @@ export function buildJobSearchUrlQueryParams(state: {
       isEures && sortSearch && sortSearch !== EURES_DEFAULT_SORT_SEARCH ? sortSearch : null,
     pageSize: pageSize === JOB_SEARCH_DEFAULT_PAGE_SIZE ? null : String(pageSize),
     published: isEures ? publicationPeriodToUrl(state.publicationPeriod ?? null) : null,
-    schedule: isEures ? scheduleCodeToUrl(state.scheduleCode ?? null) : null
+    schedule: isEures ? scheduleCodeToUrl(state.scheduleCode ?? null) : null,
+    place: isEures ? null : normalizeWorkInDenmarkPlace(state.place)
   };
 }
 
@@ -128,6 +132,10 @@ export function readEuresPublicationPeriodFromQueryParams(
   return parseEuresPublicationPeriod(raw);
 }
 
+export function readWorkInDenmarkPlaceFromQueryParams(params: ParamMap): string | null {
+  return normalizeWorkInDenmarkPlace(params.get('place'));
+}
+
 export function readEuresScheduleCodeFromQueryParams(params: ParamMap): EuresScheduleCode | null {
   const raw = params.get('schedule');
 
@@ -155,7 +163,8 @@ export function buildJobSearchQueryKeyFromParams(params: ParamMap): string {
       pageSize: readJobSearchPageSizeFromQueryParams(params),
       publicationPeriod:
         source === 'eures' ? readEuresPublicationPeriodFromQueryParams(params) : null,
-      scheduleCode: source === 'eures' ? readEuresScheduleCodeFromQueryParams(params) : null
+      scheduleCode: source === 'eures' ? readEuresScheduleCodeFromQueryParams(params) : null,
+      place: source === 'jobnet' ? readWorkInDenmarkPlaceFromQueryParams(params) : null
     })
   );
 }

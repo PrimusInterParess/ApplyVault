@@ -4,6 +4,8 @@
 
 Accepted (2026-10-19 — architecture handoff for `/operate` task `cv-section-visibility-placement`, integrated by the Principal Architect)
 
+Decision 4's stop after one tighter step is superseded by [ADR-0039](0039-compact-search-continues-until-one-page.md): the search keeps going until a level fits on one page. The two-page fallback in decision 4 is unchanged when no level fits on one page.
+
 Binds the implementation seams of [ADR-0033](0033-cv-section-visibility.md) and [ADR-0034](0034-cv-section-placement.md). Does not change those product rules.
 
 ## Context

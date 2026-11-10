@@ -10,7 +10,8 @@ public sealed class JobnetJobSearchRequestNormalizer(IOptions<JobnetIntegrationO
     public bool TryNormalizeSearchRequest(
         JobnetJobSearchRequest request,
         out JobnetJobSearchRequest normalizedRequest,
-        out string validationMessage)
+        out string validationMessage,
+        out string validationField)
     {
         var normalizedKeywords = request.ResolveKeywords()
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -20,6 +21,15 @@ public sealed class JobnetJobSearchRequestNormalizer(IOptions<JobnetIntegrationO
         {
             normalizedRequest = request;
             validationMessage = "At least one keyword is required.";
+            validationField = nameof(JobnetJobSearchRequest.Keywords);
+            return false;
+        }
+
+        if (!WorkInDenmarkPlaces.TryResolve(request.Place, out var canonicalPlace, out _))
+        {
+            normalizedRequest = request;
+            validationMessage = "Place must be Copenhagen, Aarhus, Odense, or Aalborg.";
+            validationField = nameof(JobnetJobSearchRequest.Place);
             return false;
         }
 
@@ -33,12 +43,14 @@ public sealed class JobnetJobSearchRequestNormalizer(IOptions<JobnetIntegrationO
         {
             Keywords = normalizedKeywords.ToList(),
             Keyword = normalizedKeywords.Length == 1 ? normalizedKeywords[0] : null,
+            Place = canonicalPlace,
             Page = Math.Max(1, request.Page),
             ResultsPerPage = cappedResults,
             RequestLanguage = NormalizeRequestLanguage(request.RequestLanguage)
         };
 
         validationMessage = string.Empty;
+        validationField = string.Empty;
         return true;
     }
 

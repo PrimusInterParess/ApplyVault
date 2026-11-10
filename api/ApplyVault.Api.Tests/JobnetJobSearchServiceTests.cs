@@ -320,6 +320,62 @@ public sealed class JobnetJobSearchServiceTests
         Assert.Equal(10, result.Jobs.Count);
     }
 
+    [Fact]
+    public async Task SearchAsync_Place_ChangesUpstreamQueryAndCacheKey()
+    {
+        var searchQueries = new List<string>();
+        var service = CreateService(
+            workInDenmarkOnly: true,
+            (request) =>
+            {
+                var query = request.RequestUri?.Query ?? string.Empty;
+
+                if (request.RequestUri!.AbsolutePath.Contains("/FindJob/Search", StringComparison.OrdinalIgnoreCase))
+                {
+                    searchQueries.Add(query);
+                }
+
+                var id = query.Contains("postalCode=8000", StringComparison.OrdinalIgnoreCase)
+                    ? "E10000001"
+                    : "E10000002";
+                var payload = new JobnetSearchResponsePayload
+                {
+                    JobAds = [JobnetTestData.CreateSearchJob(id, "Developer", "Contoso", "developer")]
+                };
+
+                return JsonResponse(payload);
+            });
+
+        var aarhus = await service.SearchAsync(new JobnetJobSearchRequest
+        {
+            Keyword = "developer",
+            Place = "aarhus",
+            Page = 1,
+            ResultsPerPage = 10
+        });
+        var copenhagen = await service.SearchAsync(new JobnetJobSearchRequest
+        {
+            Keyword = "developer",
+            Place = "copenhagen",
+            Page = 1,
+            ResultsPerPage = 10
+        });
+        var aarhusAgain = await service.SearchAsync(new JobnetJobSearchRequest
+        {
+            Keyword = "developer",
+            Place = "Aarhus",
+            Page = 1,
+            ResultsPerPage = 10
+        });
+
+        Assert.Equal("E10000001", aarhus.Jobs[0].Id);
+        Assert.Equal("E10000002", copenhagen.Jobs[0].Id);
+        Assert.Equal("E10000001", aarhusAgain.Jobs[0].Id);
+        Assert.Contains(searchQueries, (query) => query.Contains("postalCode=8000", StringComparison.Ordinal) && query.Contains("kmRadius=50", StringComparison.Ordinal));
+        Assert.Contains(searchQueries, (query) => query.Contains("postalCode=1050", StringComparison.Ordinal));
+        Assert.Equal(2, searchQueries.Count);
+    }
+
     private static JobnetJobSearchService CreateService(
         bool workInDenmarkOnly,
         Func<HttpRequestMessage, HttpResponseMessage> responder)

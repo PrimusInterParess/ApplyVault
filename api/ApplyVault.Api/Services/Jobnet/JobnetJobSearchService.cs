@@ -18,15 +18,22 @@ internal sealed class JobnetJobSearchService(
         var integrationOptions = options.Value;
         var keywords = request.ResolveKeywords();
         var searchString = string.Join(' ', keywords);
+
+        if (!WorkInDenmarkPlaces.TryResolve(request.Place, out var place, out var postalCode))
+        {
+            throw new InvalidOperationException("Work in Denmark search request was not normalized.");
+        }
+
         var cacheKey = BuildCacheKey(
             searchString,
+            place,
             integrationOptions.WorkInDenmarkOnly,
             request.RequestLanguage,
             integrationOptions.BaseUrl);
 
         var rankedSnapshot = await rankedResultsCache.GetOrCreateAsync(
             cacheKey,
-            (ct) => FetchRankedJobsAsync(searchString, keywords, integrationOptions, ct),
+            (ct) => FetchRankedJobsAsync(searchString, keywords, postalCode, integrationOptions, ct),
             cancellationToken);
 
         return PaginateResults(
@@ -38,6 +45,7 @@ internal sealed class JobnetJobSearchService(
     private async Task<JobnetRankedSearchSnapshot> FetchRankedJobsAsync(
         string searchString,
         IReadOnlyList<string> keywords,
+        string? postalCode,
         JobnetIntegrationOptions integrationOptions,
         CancellationToken cancellationToken)
     {
@@ -66,7 +74,8 @@ internal sealed class JobnetJobSearchService(
                     searchString,
                     pageNumber,
                     fetchSize,
-                    cancellationToken);
+                    cancellationToken,
+                    postalCode);
             }
             catch (JobnetJobClientException) when (rankedEntries.Count > 0)
             {
@@ -439,6 +448,7 @@ internal sealed class JobnetJobSearchService(
 
     private static string BuildCacheKey(
         string searchString,
+        string? place,
         bool workInDenmarkOnly,
         string requestLanguage,
         string baseUrl)
@@ -446,6 +456,7 @@ internal sealed class JobnetJobSearchService(
         return string.Join(
             '\u001e',
             searchString.Trim().ToLowerInvariant(),
+            string.IsNullOrWhiteSpace(place) ? "all" : place.Trim().ToLowerInvariant(),
             workInDenmarkOnly ? "wid-v2" : "all",
             requestLanguage.Trim().ToLowerInvariant(),
             baseUrl.Trim().TrimEnd('/').ToLowerInvariant());

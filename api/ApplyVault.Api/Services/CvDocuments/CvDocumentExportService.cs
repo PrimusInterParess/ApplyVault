@@ -24,9 +24,9 @@ public interface ICvDocumentExportService
 /// <summary>
 /// Exports the saved structured CV as HTML/PDF using the single CV template. No AI rewrite —
 /// FE canvas and BE export share the same structured payload (fill-the-gaps / layout only).
-/// Page policy: one page recommended, two pages maximum. The compact CSS ramp first tries to
-/// reach one page; failing that it takes one step tighter than the loosest level that still
-/// fits two pages; failing that it returns the fewest-pages render and flags
+/// Page policy: one page recommended, two pages maximum. The compact CSS ramp keeps going
+/// until a level fits on one page. Failing that it takes one step tighter than the loosest
+/// level that still fits two pages; failing that it returns the fewest-pages render and flags
 /// <see cref="CvPdfExportResult.ExceedsMaxPages"/>.
 /// </summary>
 public sealed class CvDocumentExportService(
@@ -116,9 +116,11 @@ public sealed class CvDocumentExportService(
 
     /// <summary>
     /// Shared compact search used by PDF export and HTML preview.
-    /// Returns the first level that fits <see cref="RecommendedPageCount"/>.
-    /// Otherwise returns one step tighter than the loosest level that fits <see cref="MaxPageCount"/>,
-    /// or that loosest level when the next step exceeds two pages or is already the last level.
+    /// Returns the first level that fits <see cref="RecommendedPageCount"/>, including a later
+    /// level after an earlier level already fit on two pages.
+    /// When no level fits one page, returns one step tighter than the loosest level that fits
+    /// <see cref="MaxPageCount"/>, or that loosest level when the next step exceeds two pages
+    /// or is already the last level.
     /// When nothing fits two pages, returns the level with the fewest pages.
     /// </summary>
     private async Task<(int CompactLevel, int PageCount, byte[] PdfBytes)> ResolveCompactLevelAsync(
@@ -126,6 +128,7 @@ public sealed class CvDocumentExportService(
         CancellationToken cancellationToken)
     {
         (int CompactLevel, int PageCount, byte[] PdfBytes)? loosestTwoPage = null;
+        (int CompactLevel, int PageCount, byte[] PdfBytes)? oneStepTighter = null;
         (int CompactLevel, int PageCount, byte[] PdfBytes)? fewestPages = null;
 
         for (var compactLevel = 0; compactLevel <= CvPdfRenderOptions.MaxCompactLevel; compactLevel++)
@@ -147,25 +150,23 @@ public sealed class CvDocumentExportService(
                 fewestPages = candidate;
             }
 
-            if (loosestTwoPage is null)
+            if (pageCount > MaxPageCount)
             {
-                if (pageCount <= MaxPageCount)
-                {
-                    loosestTwoPage = candidate;
-                }
-
                 continue;
             }
 
-            if (compactLevel == loosestTwoPage.Value.CompactLevel + 1)
+            if (loosestTwoPage is null)
             {
-                return pageCount <= MaxPageCount
-                    ? candidate
-                    : loosestTwoPage.Value;
+                loosestTwoPage = candidate;
+            }
+            else if (oneStepTighter is null
+                     && compactLevel == loosestTwoPage.Value.CompactLevel + 1)
+            {
+                oneStepTighter = candidate;
             }
         }
 
-        return loosestTwoPage ?? fewestPages!.Value;
+        return oneStepTighter ?? loosestTwoPage ?? fewestPages!.Value;
     }
 
     private static CvPdfRenderOptions ToRenderOptions(int compactLevel) =>

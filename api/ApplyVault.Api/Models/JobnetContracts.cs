@@ -10,6 +10,9 @@ public sealed class JobnetJobSearchRequest
     [JsonPropertyName("keyword")]
     public string? Keyword { get; set; }
 
+    [JsonPropertyName("place")]
+    public string? Place { get; set; }
+
     [JsonPropertyName("page")]
     public int Page { get; set; } = 1;
 

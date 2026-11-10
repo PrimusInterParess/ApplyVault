@@ -145,3 +145,17 @@ _Avoid_: Suggested answer, sample answer (when meaning this), ideal answer, STAR
 **Coaching tip**:
 On Answer review, delivery or technique advice only (structure, STAR, language, length)—not a restatement of content Gaps.
 _Avoid_: Tip (when meaning a Gap), practice recommendation (when meaning this)
+
+## Job search
+
+**Work in Denmark search query**:
+A keyword search for one Work in Denmark search, with at least one keyword and at most one optional Place. A Place narrows that search (ADR-0041).
+_Avoid_: Jobnet request, search string, country filter, place-only search
+
+**Place**:
+An optional Danish city or town the seeker wants jobs near, within the Commute distance. A query has at most one. The seeker chooses it from Copenhagen, Aarhus, Odense, or Aalborg, and each town has one center. With none chosen, the search covers all of Denmark (ADR-0041).
+_Avoid_: Region, country, free-text city, postal code (when meaning what the seeker types), radius (when meaning a distance the seeker sets)
+
+**Commute distance**:
+The fixed distance around a Place that still counts as near that town. It is 50 km for every Place, and the seeker does not choose it (ADR-0041).
+_Avoid_: Radius, search area, region

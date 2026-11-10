@@ -241,6 +241,19 @@ describe('CvExportTemplatePreviewComponent sheet placement', () => {
     return { page, main };
   }
 
+  it('tightens the type scale so content that can fit stays on one sheet', async () => {
+    await setup([section('experience', [entry('role', 'Engineer', [], 'Shipped the desk')])]);
+    const { page, main } = pinToSheetStart();
+    const role = main.querySelector('.cv-export-preview__entry') as HTMLElement;
+
+    role.style.minHeight = 'calc(1250px * var(--cv-canvas-scale, 1))';
+    repaginate(fixture);
+
+    expect(page.style.getPropertyValue('--cv-canvas-scale')).toBe('0.86');
+    expect(role.style.marginTop).toBe('');
+    expect(page.scrollHeight).toBeLessThanOrEqual(CV_A4_HEIGHT_PX + 1);
+  });
+
   it('moves one Entry with its heading when that Entry does not fit', async () => {
     await setup([section('experience', [entry('role', 'Engineer', [], 'Shipped the desk')])]);
     const { main } = pinToSheetStart();

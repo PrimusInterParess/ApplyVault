@@ -111,7 +111,7 @@ html body {
         compactLevel switch
         {
             1 => new(
-                FontScale: 0.92m,
+                FontScale: 0.96m,
                 LineHeight: 1.25m,
                 SectionMarginPx: 8,
                 SectionTitleMarginPx: 4,
@@ -127,7 +127,7 @@ html body {
                 NameFontPt: 18,
                 PhotoPx: 148),
             2 => new(
-                FontScale: 0.86m,
+                FontScale: 0.92m,
                 LineHeight: 1.18m,
                 SectionMarginPx: 6,
                 SectionTitleMarginPx: 3,
@@ -143,7 +143,7 @@ html body {
                 NameFontPt: 17,
                 PhotoPx: 132),
             3 => new(
-                FontScale: 0.80m,
+                FontScale: 0.86m,
                 LineHeight: 1.12m,
                 SectionMarginPx: 5,
                 SectionTitleMarginPx: 3,
@@ -159,7 +159,7 @@ html body {
                 NameFontPt: 16,
                 PhotoPx: 116),
             4 => new(
-                FontScale: 0.74m,
+                FontScale: 0.80m,
                 LineHeight: 1.05m,
                 SectionMarginPx: 4,
                 SectionTitleMarginPx: 2,

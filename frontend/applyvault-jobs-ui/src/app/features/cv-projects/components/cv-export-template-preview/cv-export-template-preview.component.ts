@@ -25,6 +25,7 @@ import {
 } from '../../utils/cv-template-inline-edit.util';
 import {
   CV_A4_HEIGHT_PX,
+  CV_CANVAS_FIT_SCALES,
   CV_PAGE_GAP_PX,
   cvPageBreakMargin
 } from '../../utils/cv-canvas-pages.util';
@@ -341,6 +342,13 @@ export class CvExportTemplatePreviewComponent {
       return;
     }
 
+    this.clearPageBreaks(page);
+    const fitted = this.applyFitScale(page);
+
+    if (fitted) {
+      return;
+    }
+
     const padTop = this.sheetPadTopPx(page);
     const header = page.querySelector('.cv-export-preview__minimal-header');
 
@@ -508,6 +516,40 @@ export class CvExportTemplatePreviewComponent {
     }
 
     return top;
+  }
+
+  /** Drop a previous sheet move so the fit scale is measured on the natural flow. */
+  private clearPageBreaks(page: HTMLElement): void {
+    page.querySelectorAll<HTMLElement>('.cv-export-preview__page-break').forEach((element) => {
+      this.clearSheetMargin(element);
+    });
+  }
+
+  /**
+   * Loosest scale whose content fits on one A4 sheet.
+   * Probes from the tight end and restores the last fit before returning, so an
+   * overflowing scale is never left on the page for the browser to paint as a second sheet.
+   */
+  private applyFitScale(page: HTMLElement): boolean {
+    const scales = [...CV_CANVAS_FIT_SCALES].reverse();
+    let fitted: number | null = null;
+
+    for (const scale of scales) {
+      page.style.setProperty('--cv-canvas-scale', String(scale));
+
+      if (page.scrollHeight > CV_A4_HEIGHT_PX + 0.5) {
+        if (fitted === null) {
+          return false;
+        }
+
+        page.style.setProperty('--cv-canvas-scale', String(fitted));
+        return true;
+      }
+
+      fitted = scale;
+    }
+
+    return true;
   }
 
   /** Page-1 top inset, repeated when a block starts on a later sheet. */

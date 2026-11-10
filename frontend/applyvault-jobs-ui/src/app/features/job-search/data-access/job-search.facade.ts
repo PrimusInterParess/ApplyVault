@@ -9,6 +9,7 @@ import {
   normalizeJobSearchSource
 } from '../models/job-source.model';
 import { EURES_LOCATION_OPTIONS } from '../models/eures-location-options';
+import { workInDenmarkPlaceLabel } from '../models/work-in-denmark-places';
 import {
   JOB_SEARCH_DEFAULT_PAGE_SIZE,
   JobSearchPageSize,
@@ -66,6 +67,11 @@ export class JobSearchFacade {
   );
   readonly locationCode = computed(() =>
     this.source() === 'eures' ? this.euresFacade.locationCode() : null
+  );
+  readonly place = computed(() => (this.source() === 'jobnet' ? this.jobnetFacade.place() : null));
+  readonly placeLabel = computed(() => workInDenmarkPlaceLabel(this.place()));
+  readonly placeInitWarning = computed(() =>
+    this.source() === 'jobnet' ? this.jobnetFacade.placeInitWarning() : null
   );
   readonly resultsPerPage = computed(() => this.activeFacade().resultsPerPage());
   readonly sortSearch = computed(() => this.euresFacade.effectiveSortSearch());
@@ -197,7 +203,8 @@ export class JobSearchFacade {
       sortSearch: source === 'eures' ? this.euresFacade.effectiveSortSearch() : undefined,
       pageSize: pageSize || JOB_SEARCH_DEFAULT_PAGE_SIZE,
       publicationPeriod: source === 'eures' ? this.euresFacade.publicationPeriod() : null,
-      scheduleCode: source === 'eures' ? this.euresFacade.scheduleCode() : null
+      scheduleCode: source === 'eures' ? this.euresFacade.scheduleCode() : null,
+      place: source === 'jobnet' ? this.jobnetFacade.place() : null
     });
   }
 
@@ -256,6 +263,10 @@ export class JobSearchFacade {
 
   updateLocationCode(value: string): void {
     this.euresFacade.updateLocationCode(value);
+  }
+
+  updatePlace(value: string): void {
+    this.jobnetFacade.updatePlace(value);
   }
 
   updateSortSearch(value: string): void {

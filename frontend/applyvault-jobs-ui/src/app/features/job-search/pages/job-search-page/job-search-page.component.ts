@@ -27,6 +27,7 @@ import { JobnetJobsFacade } from '../../data-access/jobnet-jobs.facade';
 import { JobSearchFacade } from '../../data-access/job-search.facade';
 import { EURES_KEYWORD_SUGGESTION_GROUPS } from '../../models/eures-keyword-suggestions';
 import { EURES_LOCATION_OPTIONS } from '../../models/eures-location-options';
+import { WORK_IN_DENMARK_PLACES } from '../../models/work-in-denmark-places';
 import { filterKeywordSuggestionGroupsForSource } from '../../models/job-search-filters.model';
 import {
   hasMultipleJobSearchProviders,
@@ -61,6 +62,7 @@ export class JobSearchPageComponent implements OnInit {
   private readonly jobResultsFacade = inject(JobResultsFacade);
   readonly keywordSuggestionGroups = EURES_KEYWORD_SUGGESTION_GROUPS;
   readonly locationOptions = EURES_LOCATION_OPTIONS;
+  readonly placeOptions = WORK_IN_DENMARK_PLACES;
   readonly pageSizeOptions = JOB_SEARCH_PAGE_SIZE_OPTIONS;
   readonly loadMoreSkeletonIndexes = [0, 1];
   readonly readInputValue = readInputValue;
@@ -255,6 +257,11 @@ export class JobSearchPageComponent implements OnInit {
 
   protected updateLocationCode(event: Event): void {
     this.facade.updateLocationCode(readInputValue(event));
+    this.syncUrlIfNeeded();
+  }
+
+  protected updatePlace(event: Event): void {
+    this.facade.updatePlace(readInputValue(event));
     this.syncUrlIfNeeded();
   }
 

@@ -63,7 +63,12 @@ describe('JobSearchFacade', () => {
       keywords: 'Angular',
       country: 'dk',
       location: null,
-      selected: null
+      selected: null,
+      sort: null,
+      pageSize: null,
+      published: null,
+      schedule: null,
+      place: null
     });
   });
 
@@ -77,8 +82,23 @@ describe('JobSearchFacade', () => {
       keywords: 'developer',
       country: null,
       location: null,
-      selected: null
+      selected: null,
+      sort: null,
+      pageSize: null,
+      published: null,
+      schedule: null,
+      place: null
     });
+  });
+
+  it('keeps a Work in Denmark place in the URL', () => {
+    const jobnetFacade = TestBed.inject(JobnetJobsFacade);
+    jobnetFacade.keywords.set(['developer']);
+    jobnetFacade.place.set('odense');
+    facade.source.set('jobnet');
+
+    expect(facade.buildQueryParamState().place).toBe('odense');
+    expect(facade.placeLabel()).toBe('Odense');
   });
 
   it('updates idle copy when switching providers', () => {

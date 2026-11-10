@@ -321,6 +321,12 @@
   pointer-events: none;
 }
 
+/* One sheet has no gap, so the repeating mask must not punch a second page while scrolling. */
+.cv-builder__paper--single .cv-builder__paper-pages {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
 /* Hide the desk gap so text cannot paint across the page break. */
 .cv-builder__paper-pages {
   position: relative;

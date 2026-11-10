@@ -17,10 +17,51 @@ public sealed class JobnetJobSearchRequestNormalizerTests
         var success = normalizer.TryNormalizeSearchRequest(
             new JobnetJobSearchRequest(),
             out _,
-            out var validationMessage);
+            out var validationMessage,
+            out var validationField);
 
         Assert.False(success);
         Assert.Equal("At least one keyword is required.", validationMessage);
+        Assert.Equal(nameof(JobnetJobSearchRequest.Keywords), validationField);
+    }
+
+    [Fact]
+    public void TryNormalizeSearchRequest_CanonicalizesPlace()
+    {
+        var normalizer = CreateNormalizer();
+
+        var success = normalizer.TryNormalizeSearchRequest(
+            new JobnetJobSearchRequest
+            {
+                Keyword = "developer",
+                Place = "Aarhus"
+            },
+            out var normalized,
+            out _,
+            out _);
+
+        Assert.True(success);
+        Assert.Equal("aarhus", normalized.Place);
+    }
+
+    [Fact]
+    public void TryNormalizeSearchRequest_RejectsUnknownPlace()
+    {
+        var normalizer = CreateNormalizer();
+
+        var success = normalizer.TryNormalizeSearchRequest(
+            new JobnetJobSearchRequest
+            {
+                Keyword = "developer",
+                Place = "Berlin"
+            },
+            out _,
+            out var validationMessage,
+            out var validationField);
+
+        Assert.False(success);
+        Assert.Equal("Place must be Copenhagen, Aarhus, Odense, or Aalborg.", validationMessage);
+        Assert.Equal(nameof(JobnetJobSearchRequest.Place), validationField);
     }
 
     [Fact]
@@ -36,6 +77,7 @@ public sealed class JobnetJobSearchRequestNormalizerTests
                 Page = 0
             },
             out var normalized,
+            out _,
             out _);
 
         Assert.True(success);

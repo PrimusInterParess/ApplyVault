@@ -55,10 +55,10 @@ public sealed class CvExportCompactCssBuilderTests
     }
 
     [Theory]
-    [InlineData(1, "0.92", 18)]
-    [InlineData(2, "0.86", 17)]
-    [InlineData(3, "0.8", 16)]
-    [InlineData(4, "0.74", 15)]
+    [InlineData(1, "0.96", 18)]
+    [InlineData(2, "0.92", 17)]
+    [InlineData(3, "0.86", 16)]
+    [InlineData(4, "0.8", 15)]
     public void Build_scales_template_type_and_keeps_the_job_title_at_least_as_large_as_the_body(
         int level,
         string scale,

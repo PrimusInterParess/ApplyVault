@@ -25,6 +25,10 @@ import {
   parseJobSearchPageSize
 } from '../utils/job-search-filter.utils';
 import { readJobSearchPageSizeFromQueryParams } from '../utils/job-search-url-state.utils';
+import {
+  normalizeWorkInDenmarkPlace,
+  WorkInDenmarkPlaceId
+} from '../models/work-in-denmark-places';
 import { JobnetJobsApiService } from './jobnet-jobs-api.service';
 
 export const JOBNET_RESULTS_PER_PAGE = JOB_SEARCH_DEFAULT_PAGE_SIZE;
@@ -57,6 +61,8 @@ export class JobnetJobsFacade {
   readonly filterInitWarning = signal<string | null>(null);
 
   readonly keywords = signal<string[]>(['software']);
+  readonly place = signal<WorkInDenmarkPlaceId | null>(null);
+  readonly placeInitWarning = signal<string | null>(null);
   readonly requestLanguage = signal('en');
   readonly page = signal(1);
   readonly loading = signal(false);
@@ -309,6 +315,34 @@ export class JobnetJobsFacade {
       this.filterInitWarning.set('Invalid page size in the URL. Using 10 per page.');
     } else {
       this.filterInitWarning.set(null);
+    }
+
+    const placeRaw = params.get('place');
+    const place = normalizeWorkInDenmarkPlace(placeRaw);
+
+    if (placeRaw?.trim() && !place) {
+      this.place.set(null);
+      this.placeInitWarning.set('Unknown place in the URL. Searching all of Denmark.');
+      return;
+    }
+
+    this.place.set(place);
+    this.placeInitWarning.set(null);
+  }
+
+  updatePlace(value: string): void {
+    const nextPlace = normalizeWorkInDenmarkPlace(value);
+
+    if (this.place() === nextPlace) {
+      return;
+    }
+
+    this.place.set(nextPlace);
+    this.placeInitWarning.set(null);
+
+    if (this.hasSearched() && this.keywords().length > 0) {
+      this.page.set(1);
+      this.fetchPage(1, { resetSelection: true, autoSelectFirst: true });
     }
   }
 
@@ -644,6 +678,7 @@ export class JobnetJobsFacade {
   ): JobnetJobSearchRequest {
     return {
       keywords,
+      place: this.place(),
       page,
       resultsPerPage: this.resultsPerPage(),
       requestLanguage: this.requestLanguage().trim() || 'en'
@@ -723,6 +758,8 @@ export class JobnetJobsFacade {
     this.cancelPendingRequests();
     this.resetSaveState();
     this.keywords.set(['software']);
+    this.place.set(null);
+    this.placeInitWarning.set(null);
     this.resultsPerPage.set(JOBNET_RESULTS_PER_PAGE);
     this.filterInitWarning.set(null);
     this.requestLanguage.set('en');

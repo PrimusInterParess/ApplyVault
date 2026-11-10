@@ -3,6 +3,7 @@ export type JobnetDescriptionQuality = 'full' | 'previewOnly';
 
 export interface JobnetJobSearchRequest {
   keywords: readonly string[];
+  place?: string | null;
   page?: number;
   resultsPerPage?: number;
   requestLanguage?: string;

@@ -87,10 +87,19 @@
           </div>
         </label>
       } @else {
-        <p class="eures-page__board-context" role="status">
-          <span class="eures-page__filter-label">Board</span>
-          <span class="eures-page__board-context-value">Work in Denmark</span>
-        </p>
+        <label class="eures-page__filter">
+          <span class="eures-page__filter-label">Place</span>
+          <div class="eures-page__filter-control">
+            <select (change)="updatePlace($event)">
+              <option value="" [selected]="facade.place() === null">All of Denmark</option>
+              @for (place of placeOptions; track place.id) {
+                <option [value]="place.id" [selected]="facade.place() === place.id">
+                  {{ place.label }}
+                </option>
+              }
+            </select>
+          </div>
+        </label>
       }
 
       <div class="eures-page__filter-actions">
@@ -111,6 +120,10 @@
 
     @if (facade.locationInitWarning(); as locationWarning) {
       <p class="eures-page__inline-error" role="status" aria-live="polite">{{ locationWarning }}</p>
+    }
+
+    @if (facade.placeInitWarning(); as placeWarning) {
+      <p class="eures-page__inline-error" role="status" aria-live="polite">{{ placeWarning }}</p>
     }
 
     @if (facade.filterInitWarning(); as filterWarning) {
@@ -292,9 +305,13 @@
             @if (facade.keywordsLabel()) {
               <strong>{{ facade.keywordsLabel() }}</strong>
             }
-            in Work in Denmark.
+            @if (facade.place()) {
+              near <strong>{{ facade.placeLabel() }}</strong>.
+            } @else {
+              in Work in Denmark.
+            }
           </p>
-          <p>Try fewer keywords or pick broader suggestion chips.</p>
+          <p>Try fewer keywords, pick broader suggestion chips, or change the place.</p>
         } @else {
           <p>
             Nothing matched
@@ -410,7 +427,7 @@
       <ol class="jobs-page__onboarding-steps">
         <li>Add keywords or select suggestion chips</li>
         @if (facade.source() === 'jobnet') {
-          <li>Search Work in Denmark listings</li>
+          <li>Choose a town, or search all of Denmark</li>
         } @else {
           <li>Choose a country and search EURES</li>
         }

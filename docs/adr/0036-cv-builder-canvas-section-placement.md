@@ -8,6 +8,8 @@ Refines [ADR-0034](0034-cv-section-placement.md) so stay-whole Section placement
 
 Refines [ADR-0003](0003-cv-builder-edit-canvas-vs-export-preview.md). Check export remains the fidelity view of the download. ADR-0003 is not revoked.
 
+Decision 3's fixed editing size is superseded by [ADR-0040](0040-cv-builder-canvas-fits-one-page.md): the canvas tightens type until the CV fits on one sheet. A CV that still overflows at the tightest scale still stacks further sheets.
+
 Decision 1's whole-Section move is refined by [ADR-0037](0037-cv-section-continues-between-entries.md): a Section continues between Entries, and the leftover space on a page is spread across the content that stayed.
 
 ## Context

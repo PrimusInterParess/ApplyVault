@@ -21,9 +21,13 @@ public sealed class JobnetJobsController(
     [EnableRateLimiting(RateLimitingOptions.PolicyJobnetSearch)]
     public async Task<ActionResult<JobnetJobSearchResponse>> Search([FromBody] JobnetJobSearchRequest request)
     {
-        if (!requestNormalizer.TryNormalizeSearchRequest(request, out var normalizedRequest, out var validationMessage))
+        if (!requestNormalizer.TryNormalizeSearchRequest(
+                request,
+                out var normalizedRequest,
+                out var validationMessage,
+                out var validationField))
         {
-            ModelState.AddModelError(nameof(request.Keywords), validationMessage);
+            ModelState.AddModelError(validationField, validationMessage);
             return ValidationProblem(ModelState);
         }
 

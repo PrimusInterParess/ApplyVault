@@ -19,14 +19,16 @@ internal sealed class JobnetApiClient(
         string searchString,
         int pageNumber,
         int resultsPerPage,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? postalCode = null)
     {
         var integrationOptions = options.Value;
         var query = BuildSearchQuery(
             searchString,
             pageNumber,
             resultsPerPage,
-            integrationOptions);
+            integrationOptions,
+            postalCode);
         var requestUri = BuildUri($"{integrationOptions.SearchPath}?{query}");
 
         using var response = await SendGetWithRetryAsync(requestUri, cancellationToken);
@@ -100,16 +102,22 @@ internal sealed class JobnetApiClient(
         string searchString,
         int pageNumber,
         int resultsPerPage,
-        JobnetIntegrationOptions integrationOptions)
+        JobnetIntegrationOptions integrationOptions,
+        string? postalCode)
     {
         var queryParams = new Dictionary<string, string?>
         {
             ["searchString"] = searchString.Trim(),
             ["resultsPerPage"] = Math.Max(1, resultsPerPage).ToString(),
             ["pageNumber"] = Math.Max(1, pageNumber).ToString(),
-            ["orderType"] = ResolveOrderType(integrationOptions.DefaultOrderType),
-            ["kmRadius"] = Math.Max(1, integrationOptions.DefaultKmRadius).ToString()
+            ["orderType"] = ResolveOrderType(integrationOptions.DefaultOrderType)
         };
+
+        if (!string.IsNullOrWhiteSpace(postalCode))
+        {
+            queryParams["postalCode"] = postalCode.Trim();
+            queryParams["kmRadius"] = WorkInDenmarkPlaces.CommuteDistanceKm.ToString();
+        }
 
         return QueryHelpers.AddQueryString(string.Empty, queryParams).TrimStart('?');
     }

@@ -33,4 +33,5 @@ export interface JobSearchUrlQueryParams {
   pageSize: string | null;
   published: string | null;
   schedule: string | null;
+  place: string | null;
 }

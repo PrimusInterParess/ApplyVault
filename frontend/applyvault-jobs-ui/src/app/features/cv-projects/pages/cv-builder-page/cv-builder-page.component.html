@@ -102,6 +102,7 @@
                 <div class="cv-builder__paper-wrap" [style.--cv-zoom]="zoom()" [style.width.px]="a4WidthPx">
                   <div
                     class="cv-builder__paper cv-builder__paper--editor"
+                    [class.cv-builder__paper--single]="pageSheets().length === 1"
                     #cvPaper
                     [style.--cv-page-h.px]="a4HeightPx"
                     [style.--cv-page-gap.px]="pageGapPx">

@@ -20,7 +20,12 @@ describe('job-search-url-state.utils', () => {
       keywords: 'Angular',
       country: 'dk',
       location: null,
-      selected: null
+      selected: null,
+      sort: null,
+      pageSize: null,
+      published: null,
+      schedule: null,
+      place: null
     });
   });
 
@@ -37,8 +42,35 @@ describe('job-search-url-state.utils', () => {
       keywords: 'React',
       country: 'de',
       location: null,
-      selected: 'job-1'
+      selected: 'job-1',
+      sort: null,
+      pageSize: null,
+      published: null,
+      schedule: null,
+      place: null
     });
+  });
+
+  it('writes a Work in Denmark place and drops an unknown place', () => {
+    expect(
+      buildJobSearchUrlQueryParams({
+        source: 'jobnet',
+        keywords: ['developer'],
+        country: null,
+        selectedJobId: null,
+        place: 'aarhus'
+      }).place
+    ).toBe('aarhus');
+
+    expect(
+      buildJobSearchUrlQueryParams({
+        source: 'jobnet',
+        keywords: ['developer'],
+        country: null,
+        selectedJobId: null,
+        place: 'berlin'
+      }).place
+    ).toBeNull();
   });
 });
 
@@ -62,7 +94,12 @@ describe('job-search query param readers', () => {
         keywords: 'software,programmør',
         country: null,
         location: null,
-        selected: null
+        selected: null,
+        sort: null,
+        pageSize: null,
+        published: null,
+        schedule: null,
+        place: null
       })
     );
   });

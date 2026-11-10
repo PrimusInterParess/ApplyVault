@@ -37,9 +37,10 @@
   overflow: hidden;
 }
 
-/* Editable sheet is one A4 page tall (297mm at 96dpi) and grows with content. */
+/* Editable sheet is one A4 page tall (297mm at 96dpi). --cv-canvas-scale tightens type until the content fits; the sheet grows only past the tightest scale. */
 .cv-export-preview--editable .cv-export-preview__page {
-  --cv-sheet-pad-top: 0.85rem;
+  --cv-canvas-scale: 0.74;
+  --cv-sheet-pad-top: calc(0.85rem * var(--cv-canvas-scale));
   position: relative;
   aspect-ratio: auto;
   height: auto;
@@ -47,7 +48,7 @@
   max-height: none;
   overflow: visible;
   background: transparent;
-  font-size: 10.5pt;
+  font-size: calc(10.5pt * var(--cv-canvas-scale));
   line-height: 1.16;
 }
 
@@ -60,8 +61,8 @@
 }
 
 .cv-export-preview--editable .cv-export-preview__name {
-  font-size: 1.85rem;
-  margin-bottom: 0.35rem;
+  font-size: calc(1.85rem * var(--cv-canvas-scale));
+  margin-bottom: calc(0.35rem * var(--cv-canvas-scale));
 }
 
 /* Match PDF section rhythm (~28pt between sections). */
@@ -71,10 +72,11 @@
 }
 
 .cv-export-preview--editable .cv-export-preview__section {
-  margin-bottom: 0.2rem;
+  margin-bottom: calc(0.2rem * var(--cv-canvas-scale));
   margin-left: -0.4rem;
   margin-right: -0.4rem;
-  padding: 0.12rem 0.4rem 0.12rem;
+  padding: calc(0.12rem * var(--cv-canvas-scale)) calc(0.4rem * var(--cv-canvas-scale))
+    calc(0.12rem * var(--cv-canvas-scale));
   border: 1px solid transparent;
   border-radius: 2px;
   transition: border-color 0.12s ease;
@@ -92,9 +94,9 @@
   gap: 0.55rem;
   width: fit-content;
   max-width: 100%;
-  font-size: 0.78rem;
-  margin-bottom: 0.25rem;
-  padding-bottom: 0.2rem;
+  font-size: calc(0.78rem * var(--cv-canvas-scale));
+  margin-bottom: calc(0.25rem * var(--cv-canvas-scale));
+  padding-bottom: calc(0.2rem * var(--cv-canvas-scale));
 }
 
 .cv-export-preview--editable .cv-export-preview__section-title--omitted {
@@ -150,7 +152,7 @@
 }
 
 .cv-export-preview--editable .cv-export-preview__entries {
-  gap: 0.15rem;
+  gap: calc(0.15rem * var(--cv-canvas-scale));
 }
 
 .cv-export-preview--editable .cv-export-preview__entry {
@@ -158,7 +160,7 @@
 }
 
 .cv-export-preview--editable .cv-export-preview__entry-title {
-  font-size: 1rem;
+  font-size: calc(1rem * var(--cv-canvas-scale));
 }
 
 .cv-export-preview--editable .cv-export-preview__entry-date,
@@ -168,7 +170,7 @@
 .cv-export-preview--editable .cv-export-preview__entry-bullets,
 .cv-export-preview--editable .cv-export-preview__contact-line,
 .cv-export-preview--editable .cv-export-preview__skill-line {
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--cv-canvas-scale));
 }
 
 .cv-export-preview--editable .cv-export-preview__pro-header {
@@ -177,20 +179,20 @@
 
 /* Equal side inset. Top inset repeats on each sheet, including a continuation page. */
 .cv-export-preview--editable .cv-export-preview__main--single {
-  padding: var(--cv-sheet-pad-top) 1.35rem 0.7rem;
+  padding: var(--cv-sheet-pad-top) calc(1.35rem * var(--cv-canvas-scale)) calc(0.7rem * var(--cv-canvas-scale));
 }
 
-/* Editable photo size mirrors export baseline (168). */
+/* Editable photo size mirrors export baseline (168) and keeps the 96px floor. */
 .cv-export-preview--editable .cv-export-preview__photo {
-  width: 10.5rem;
-  height: 10.5rem;
+  width: max(96px, calc(10.5rem * var(--cv-canvas-scale)));
+  height: max(96px, calc(10.5rem * var(--cv-canvas-scale)));
   border-radius: 0.25rem;
-  margin: 0 0.65rem 0 0;
+  margin: 0 calc(0.65rem * var(--cv-canvas-scale)) 0 0;
 }
 
 .cv-export-preview--editable .cv-export-preview__minimal-header {
-  gap: 0.75rem;
-  margin-bottom: 0.4rem;
+  gap: calc(0.75rem * var(--cv-canvas-scale));
+  margin-bottom: calc(0.4rem * var(--cv-canvas-scale));
 }
 
 /* Blank placeholders stay out of the page count until the section is edited. */

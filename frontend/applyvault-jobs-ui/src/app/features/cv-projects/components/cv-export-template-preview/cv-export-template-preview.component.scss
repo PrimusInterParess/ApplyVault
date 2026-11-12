@@ -223,9 +223,10 @@
   min-height: 1.15em;
 }
 
-.cv-export-preview a,
-.cv-export-preview a:visited,
-.cv-export-preview a:hover {
+:host ::ng-deep .cv-export-preview a,
+:host ::ng-deep .cv-export-preview a:visited,
+:host ::ng-deep .cv-export-preview a:hover,
+:host ::ng-deep .cv-export-preview a:active {
   color: inherit;
   text-decoration: none;
   cursor: text;

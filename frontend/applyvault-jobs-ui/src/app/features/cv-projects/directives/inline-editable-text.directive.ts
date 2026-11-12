@@ -90,19 +90,55 @@ export class InlineEditableTextDirective implements OnChanges {
     }
   }
 
+  private pointerX = 0;
+  private pointerY = 0;
+
+  @HostListener('mousedown', ['$event'])
+  protected onMouseDown(event: MouseEvent): void {
+    this.pointerX = event.clientX;
+    this.pointerY = event.clientY;
+  }
+
   @HostListener('click', ['$event'])
   protected onClick(event: MouseEvent): void {
-    const target = event.target;
+    const anchor = this.anchorFromClick(event);
 
-    if (!(target instanceof Element) || !target.closest('a')) {
+    if (!anchor) {
       return;
     }
 
-    if (event.metaKey || event.ctrlKey) {
+    const href = anchor.getAttribute('href');
+
+    if (!href) {
       return;
     }
 
     event.preventDefault();
+    event.stopPropagation();
+
+    const dragged = Math.hypot(event.clientX - this.pointerX, event.clientY - this.pointerY) > 4;
+
+    if (dragged) {
+      return;
+    }
+
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
+
+  private anchorFromClick(event: MouseEvent): HTMLAnchorElement | null {
+    for (const node of event.composedPath()) {
+      if (node instanceof HTMLAnchorElement && this.element.nativeElement.contains(node)) {
+        return node;
+      }
+    }
+
+    const raw = event.target;
+    const element = raw instanceof Element ? raw : raw instanceof Node ? raw.parentElement : null;
+    const anchor = element?.closest('a');
+
+    return anchor instanceof HTMLAnchorElement && this.element.nativeElement.contains(anchor)
+      ? anchor
+      : null;
   }
 
   @HostListener('keydown.enter', ['$event'])

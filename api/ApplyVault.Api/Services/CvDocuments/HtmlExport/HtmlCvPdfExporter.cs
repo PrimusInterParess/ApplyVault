@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using ApplyVault.Api.Options;
 using Microsoft.Extensions.Options;
 using PuppeteerSharp;
@@ -75,7 +77,7 @@ public sealed class HtmlCvPdfExporter(
         // CompactLevel spacing is applied in HTML CSS (CvExportCompactCssBuilder), not browser margins.
         _ = options;
 
-        return await page.PdfDataAsync(new PdfOptions
+        var pdf = await page.PdfDataAsync(new PdfOptions
         {
             Format = PaperFormat.A4,
             PrintBackground = true,
@@ -88,5 +90,24 @@ public sealed class HtmlCvPdfExporter(
                 Right = "0"
             }
         }).ConfigureAwait(false);
+
+        return CvPdfLinkTargets.OpenInNewWindow(pdf);
     }
+}
+
+/// <summary>
+/// Chromium's print-to-PDF keeps link actions in the same tab. Mark each URI action to open a new window.
+/// </summary>
+internal static partial class CvPdfLinkTargets
+{
+    public static byte[] OpenInNewWindow(byte[] pdf)
+    {
+        var text = Encoding.Latin1.GetString(pdf);
+        var updated = UriActionPattern().Replace(text, "/S /URI /NewWindow true");
+
+        return updated == text ? pdf : Encoding.Latin1.GetBytes(updated);
+    }
+
+    [GeneratedRegex(@"/S\s*/URI(?!\s*/NewWindow)", RegexOptions.CultureInvariant)]
+    private static partial Regex UriActionPattern();
 }

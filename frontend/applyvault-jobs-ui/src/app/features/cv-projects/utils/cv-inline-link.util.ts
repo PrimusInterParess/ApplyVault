@@ -61,8 +61,14 @@ export function renderInlineField(root: HTMLElement, markdown: string): void {
   for (const part of parseInlineParts(markdown)) {
     if (part.href) {
       const anchor = document.createElement('a');
+      anchor.className = 'cv-quiet-link';
       anchor.setAttribute('href', part.href);
+      anchor.setAttribute('target', '_blank');
+      anchor.setAttribute('rel', 'noopener noreferrer');
       anchor.setAttribute('title', part.href);
+      anchor.style.color = 'inherit';
+      anchor.style.textDecoration = 'none';
+      anchor.style.cursor = 'text';
       anchor.textContent = part.text;
       fragment.append(anchor);
       continue;

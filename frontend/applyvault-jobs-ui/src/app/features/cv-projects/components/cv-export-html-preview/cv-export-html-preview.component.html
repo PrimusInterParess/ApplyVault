@@ -17,7 +17,7 @@
       <iframe
         class="cv-html-preview__frame"
         title="CV export preview"
-        sandbox="allow-same-origin"
+        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         [attr.tabindex]="density() === 'stage' ? 0 : null"
         [srcdoc]="srcdoc()"></iframe>
     </div>

@@ -649,6 +649,8 @@ h2 {
   align-content: start;
   max-height: calc(100vh - 11rem);
   overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
   padding-right: 0.35rem;
 }
 
@@ -659,6 +661,10 @@ h2 {
 
 .jobs-page__detail {
   min-width: 0;
+  max-height: calc(100vh - 11rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 .jobs-page__mobile-back {
@@ -805,9 +811,13 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .jobs-page__list,
+  .jobs-page__detail {
+    max-height: none;
+    overflow: visible;
+  }
+
   .jobs-page__list {
-    max-height: min(70vh, calc(100vh - 12rem));
-    overflow: auto;
     padding-right: 0;
   }
 

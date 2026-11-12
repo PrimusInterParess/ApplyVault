@@ -27,7 +27,58 @@
           Practice interview
         </a>
       </div>
+      <button
+        type="button"
+        class="job-detail__primary-action job-detail__cover-letter-launch"
+        [attr.aria-expanded]="coverLetterOpen()"
+        (click)="toggleCoverLetter()">
+        {{ coverLetter() ? 'Cover letter' : 'Write cover letter' }}
+      </button>
     </div>
+
+    @if (coverLetterOpen()) {
+      <article class="job-detail__panel" aria-labelledby="cover-letter-title">
+        <div class="job-detail__section-header">
+          <h3 id="cover-letter-title">Cover letter</h3>
+          <p class="job-detail__muted">
+            Saved on this job. Write again to replace it.
+          </p>
+          @if (coverLetterUpdatedAt(); as updatedAt) {
+            <p class="job-detail__meta">Saved {{ updatedAt | date: 'MMM d, y, h:mm a' }}</p>
+          }
+        </div>
+        <label class="job-detail__field-editor">
+          <span>Note for the model (optional)</span>
+          <textarea
+            rows="3"
+            maxlength="800"
+            [value]="coverLetterNote()"
+            [disabled]="coverLetterLoading()"
+            (input)="updateCoverLetterNote($event)"
+            placeholder="What to emphasize, or what a previous letter missed"></textarea>
+        </label>
+        <div class="job-detail__editor-actions job-detail__cover-letter-actions">
+          <button
+            type="button"
+            class="job-detail__primary-action"
+            [disabled]="coverLetterLoading()"
+            (click)="generateCoverLetter()">
+            {{ coverLetterLoading() ? 'Writing…' : (coverLetter() ? 'Write again' : 'Write cover letter') }}
+          </button>
+          @if (coverLetter()) {
+            <button type="button" class="job-detail__secondary-action" (click)="copyCoverLetter()">
+              {{ coverLetterCopied() ? 'Copied' : 'Copy' }}
+            </button>
+          }
+        </div>
+        @if (coverLetterError(); as errorMessage) {
+          <p class="job-detail__cover-letter-error">{{ errorMessage }}</p>
+        }
+        @if (coverLetter(); as letter) {
+          <p class="job-detail__cover-letter">{{ letter }}</p>
+        }
+      </article>
+    }
 
     <div class="job-detail__status-row">
       @if (selectedJob.isRejected) {

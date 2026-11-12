@@ -118,6 +118,7 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `PUT /api/scrape-results/{id}/interview-event`
 - `DELETE /api/scrape-results/{id}/interview-event`
 - `POST /api/scrape-results/{id}/calendar-events`
+- `POST /api/scrape-results/{id}/cover-letter` — ephemeral cover letter from the saved job and Structured CV (`{ "note": "optional emphasis" }`)
 - `GET /api/github-connections`
 - `POST /api/github-connections/github/start`
 - `GET /api/github-connections/github/callback`
@@ -268,6 +269,7 @@ The saved jobs page (`/jobs`) supports:
 - status-source messaging that explains whether the latest interview or rejection change was synced from Gmail or saved manually
 - optimistic in-place updates after calendar sync and other mutations (no full list reload)
 - **Study brief** / **Practice interview** actions that deep-link to `/interview-prep` with `jobId` (and `surface=study` for the study pack)
+- **Write cover letter** on the job detail panel: optional note, then a grounded letter saved on that job (local Docker uses Ollama `qwen3:32b`; writing again replaces the saved letter)
 
 The Interview prep page (`/interview-prep`) supports:
 

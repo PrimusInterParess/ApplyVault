@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
+using ApplyVault.Api.Services.CoverLetters;
 using ApplyVault.Api.Services.CvSectionCatalog;
 
 namespace ApplyVault.Api.Infrastructure;
@@ -73,6 +74,20 @@ public static class ServiceCollectionExtensions
             .Validate(
                 (options) => !options.Enabled || !string.IsNullOrWhiteSpace(options.Model),
                 "GoogleAi:Model is required when GoogleAi:Enabled is true.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<CoverLetterAiOptions>()
+            .Bind(configuration.GetSection(CoverLetterAiOptions.SectionName))
+            .Validate(
+                (options) => !options.Enabled || !string.IsNullOrWhiteSpace(options.Model),
+                "CoverLetter:Model is required when CoverLetter:Enabled is true.")
+            .Validate(
+                (options) =>
+                    !options.Enabled ||
+                    !string.Equals(options.Provider, CoverLetterAiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase) ||
+                    !string.IsNullOrWhiteSpace(options.BaseUrl),
+                "CoverLetter:BaseUrl is required when the cover letter provider is Ollama.")
             .ValidateOnStart();
 
         services
@@ -280,6 +295,22 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<ICvStructuredSuggestionsAiClient, GoogleAiCvStructuredSuggestionsClient>();
         services.AddHttpClient<ICvStructuredEvaluationAiClient, GoogleAiCvStructuredEvaluationClient>();
         services.AddHttpClient<ICvStructuredSummaryProposeAiClient, GoogleAiCvStructuredSummaryProposeClient>();
+        services.AddHttpClient<GoogleAiCoverLetterClient>((client) =>
+        {
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
+        services.AddHttpClient<OllamaCoverLetterClient>((client) =>
+        {
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
+        services.AddScoped<ICoverLetterAiClient>((serviceProvider) =>
+        {
+            var provider = serviceProvider.GetRequiredService<IOptions<CoverLetterAiOptions>>().Value.Provider;
+            return string.Equals(provider, CoverLetterAiOptions.GoogleProvider, StringComparison.OrdinalIgnoreCase)
+                ? serviceProvider.GetRequiredService<GoogleAiCoverLetterClient>()
+                : serviceProvider.GetRequiredService<OllamaCoverLetterClient>();
+        });
+        services.AddScoped<ICoverLetterService, CoverLetterService>();
         services.AddExceptionHandler<ClientCancellationExceptionHandler>();
         services.AddExceptionHandler<EuresJobClientExceptionHandler>();
         services.AddExceptionHandler<JobnetJobClientExceptionHandler>();

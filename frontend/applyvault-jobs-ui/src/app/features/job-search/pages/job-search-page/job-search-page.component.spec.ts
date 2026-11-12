@@ -130,4 +130,36 @@ describe('JobSearchPageComponent', () => {
 
     expect(fixture.nativeElement.querySelectorAll('.job-card').length).toBe(2);
   });
+
+  it('keeps the result list mounted when another posting is selected', async () => {
+    fixture.detectChanges();
+    flushEuresBootstrap(
+      createEuresSearchResponse({
+        jobs: [
+          createEuresListing({ id: 'eures-1' }),
+          createEuresListing({ id: 'eures-2', title: 'Frontend Developer' })
+        ],
+        totalResults: 2
+      })
+    );
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('.job-card') as NodeListOf<HTMLButtonElement>;
+    expect(cards.length).toBe(2);
+
+    cards[1].click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.job-card').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.jobs-page__skeleton-card')).toBeNull();
+    expect(httpMock.match(`${TEST_API_BASE_URL}/eures/jobs/search`).length).toBe(0);
+
+    httpMock
+      .match(`${TEST_API_BASE_URL}/eures/jobs/eures-2?requestLanguage=en`)
+      .forEach((request) =>
+        request.flush(createEuresJobDetail({ id: 'eures-2', title: 'Frontend Developer' }))
+      );
+  });
 });

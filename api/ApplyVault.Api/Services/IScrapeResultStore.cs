@@ -53,4 +53,10 @@ public interface IScrapeResultStore
         CancellationToken cancellationToken = default);
 
     Task<bool> DeleteAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+
+    Task<DateTimeOffset?> SaveCoverLetterAsync(
+        Guid id,
+        Guid userId,
+        string letter,
+        CancellationToken cancellationToken = default);
 }

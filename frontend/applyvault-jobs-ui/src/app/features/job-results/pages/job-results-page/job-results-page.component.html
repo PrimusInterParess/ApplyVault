@@ -246,7 +246,7 @@
         }
       </aside>
 
-      <section class="jobs-page__detail">
+      <section #detailRegion class="jobs-page__detail">
         @if (showMobileDetail()) {
           <div class="jobs-page__mobile-back">
             <button type="button" class="jobs-page__back-button" (click)="backToList()">← Back to list</button>
@@ -269,7 +269,8 @@
           (saveDescription)="facade.updateDescription($event.id, $event.description)"
           (saveInterviewEvent)="facade.updateInterviewEvent($event.id, $event.request)"
           (clearInterviewEvent)="facade.clearInterviewEvent($event)"
-          (createCalendarEvent)="facade.createCalendarEvent($event.id, $event.connectedAccountId)" />
+          (createCalendarEvent)="facade.createCalendarEvent($event.id, $event.connectedAccountId)"
+          (coverLetterSaved)="facade.rememberCoverLetter($event.id, $event.letter, $event.updatedAt)" />
       </section>
     </section>
   }

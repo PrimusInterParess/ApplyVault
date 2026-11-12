@@ -53,7 +53,9 @@ export function mapSavedJobResultToViewModel(result: SavedJobResult): JobResultV
     hiringManagerContacts: payload.jobDetails.hiringManagerContacts,
     url: payload.url,
     textLength: payload.textLength,
-    searchText
+    searchText,
+    coverLetter: result.coverLetter,
+    coverLetterUpdatedAt: result.coverLetterUpdatedAt
   };
 }
 

@@ -460,6 +460,10 @@ h2 {
   position: sticky;
   top: 1rem;
   align-self: start;
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 .jobs-page__mobile-back {
@@ -621,6 +625,8 @@ h2 {
 
   .jobs-page__detail {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .jobs-page__content--mobile-detail .jobs-page__list {

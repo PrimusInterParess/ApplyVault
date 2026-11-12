@@ -29,6 +29,8 @@ export interface JobResultViewModel {
   readonly url: string;
   readonly textLength: number;
   readonly searchText: string;
+  readonly coverLetter: string | null;
+  readonly coverLetterUpdatedAt: string | null;
 }
 
 export type { JobWorkflowFilter, JobResultsSortOption } from '../utils/job-result-status.util';

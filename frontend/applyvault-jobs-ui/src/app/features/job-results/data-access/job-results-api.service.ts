@@ -11,6 +11,7 @@ import {
   UpdateJobDescriptionRequest,
   UpdateInterviewEventRequest
 } from '../models/job-result.model';
+import { CoverLetter, CreateCoverLetterRequest } from '../models/cover-letter.model';
 
 @Injectable({ providedIn: 'root' })
 export class JobResultsApiService {
@@ -67,6 +68,13 @@ export class JobResultsApiService {
   clearInterviewEvent(id: string): Observable<SavedJobResult> {
     return this.httpClient.delete<SavedJobResult>(
       `${this.apiConfig.baseUrl}/scrape-results/${id}/interview-event`
+    );
+  }
+
+  createCoverLetter(id: string, request: CreateCoverLetterRequest): Observable<CoverLetter> {
+    return this.httpClient.post<CoverLetter>(
+      `${this.apiConfig.baseUrl}/scrape-results/${id}/cover-letter`,
+      request
     );
   }
 

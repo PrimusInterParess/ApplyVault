@@ -765,6 +765,12 @@ namespace ApplyVault.Api.Migrations
                     b.Property<string>("CompanyNameReviewReason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CoverLetter")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("CoverLetterUpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("DetectedPageType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

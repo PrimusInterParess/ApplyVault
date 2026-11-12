@@ -74,6 +74,7 @@ export class JobSearchPageComponent implements OnInit {
   protected readonly mobileDetailEngaged = signal(false);
   protected readonly loadBannerMessage = signal('');
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
+  protected readonly detailRegion = viewChild<ElementRef<HTMLElement>>('detailRegion');
   protected readonly mobileBackButton = viewChild<ElementRef<HTMLButtonElement>>('mobileBackButton');
 
   private readonly route = inject(ActivatedRoute);
@@ -88,6 +89,9 @@ export class JobSearchPageComponent implements OnInit {
   private bannerDismissHandle: ReturnType<typeof setTimeout> | null = null;
   private wasLoading = false;
   private lastSelectedJobIdForFocus: string | null = null;
+  private rememberedWindowScrollY = 0;
+  private rememberedListScrollTop = 0;
+  private preserveScrollOnNextUrlSync = false;
 
   protected readonly skeletonListIndexes = computed(() =>
     Array.from({ length: this.facade.resultsPerPage() }, (_, index) => index)
@@ -357,11 +361,23 @@ export class JobSearchPageComponent implements OnInit {
   }
 
   protected selectJob(id: string): void {
+    if (this.facade.selectedJobId() === id) {
+      this.mobileDetailEngaged.set(true);
+
+      if (this.isMobileViewport()) {
+        this.pinScrollAfterSelection();
+      }
+
+      return;
+    }
+
+    this.rememberScroll();
+    this.preserveScrollOnNextUrlSync = true;
     this.lastSelectedJobIdForFocus = id;
     this.mobileDetailEngaged.set(true);
     this.facade.select(id);
     this.syncUrlIfNeeded();
-    this.focusMobileDetailIfNeeded();
+    this.pinScrollAfterSelection();
   }
 
   protected showMobileDetail(): boolean {
@@ -509,32 +525,57 @@ export class JobSearchPageComponent implements OnInit {
     const jobId = card.dataset['jobId'];
 
     if (jobId) {
-      this.lastSelectedJobIdForFocus = jobId;
-      this.mobileDetailEngaged.set(true);
-      this.facade.select(jobId);
-      this.syncUrlIfNeeded();
+      this.selectJob(jobId);
     }
 
     if (this.isMobileViewport()) {
-      this.focusMobileDetailIfNeeded();
       return;
     }
 
-    card.focus();
+    card.focus({ preventScroll: true });
   }
 
-  private focusMobileDetailIfNeeded(): void {
-    if (!this.isMobileViewport()) {
-      return;
+  private rememberScroll(): void {
+    this.rememberedWindowScrollY = window.scrollY;
+    this.rememberedListScrollTop = this.listRegion()?.nativeElement.scrollTop ?? 0;
+  }
+
+  private restoreRememberedScroll(): void {
+    const list = this.listRegion()?.nativeElement;
+
+    if (list) {
+      list.scrollTop = this.rememberedListScrollTop;
     }
 
+    if (!this.isMobileViewport()) {
+      window.scrollTo(0, this.rememberedWindowScrollY);
+    }
+  }
+
+  private pinScrollAfterSelection(): void {
     runInInjectionContext(this.injector, () => {
       afterNextRender(() => {
-        const backButton = this.mobileBackButton()?.nativeElement;
+        this.restoreRememberedScroll();
 
-        if (backButton) {
-          backButton.focus();
+        const detail = this.detailRegion()?.nativeElement;
+
+        if (detail && !this.isMobileViewport()) {
+          detail.scrollTop = 0;
         }
+
+        if (!this.isMobileViewport()) {
+          return;
+        }
+
+        const backButton = this.mobileBackButton()?.nativeElement;
+        backButton?.focus({ preventScroll: true });
+
+        if (!detail) {
+          return;
+        }
+
+        const top = detail.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo(0, Math.max(0, top - 8));
       });
     });
   }
@@ -554,12 +595,12 @@ export class JobSearchPageComponent implements OnInit {
           );
 
           if (card) {
-            card.focus();
+            card.focus({ preventScroll: true });
             return;
           }
         }
 
-        listElement.focus();
+        listElement.focus({ preventScroll: true });
       });
     });
   }
@@ -614,11 +655,14 @@ export class JobSearchPageComponent implements OnInit {
     const queryKey = this.buildQueryKey();
 
     if (!this.facade.hasSearched()) {
+      this.lastSyncedQueryKey = queryKey;
       this.facade.loadInitialSearch(selected);
       return;
     }
 
-    if (queryKey === this.lastSyncedQueryKey) {
+    if (queryKey === this.lastSyncedQueryKey || this.isSelectionOnlyChange(queryKey)) {
+      this.lastSyncedQueryKey = queryKey;
+
       if (selected) {
         this.facade.selectWhenLoaded(selected);
       }
@@ -639,6 +683,20 @@ export class JobSearchPageComponent implements OnInit {
 
   private buildQueryKey(): string {
     return JSON.stringify(this.facade.buildQueryParamState());
+  }
+
+  private isSelectionOnlyChange(queryKey: string): boolean {
+    if (!this.lastSyncedQueryKey) {
+      return false;
+    }
+
+    return this.withoutSelected(queryKey) === this.withoutSelected(this.lastSyncedQueryKey);
+  }
+
+  private withoutSelected(queryKey: string): string {
+    const parsed = JSON.parse(queryKey) as { selected?: string | null };
+    parsed.selected = null;
+    return JSON.stringify(parsed);
   }
 
   private syncUrlIfNeeded(): void {
@@ -669,6 +727,11 @@ export class JobSearchPageComponent implements OnInit {
         this.lastSyncedQueryKey = queryKey;
         this.suppressUrlSync = false;
         this.applyRouteParams(this.route.snapshot.queryParamMap, { triggerSearch: false });
+
+        if (this.preserveScrollOnNextUrlSync) {
+          this.preserveScrollOnNextUrlSync = false;
+          this.restoreRememberedScroll();
+        }
       });
   }
 }

@@ -146,6 +146,12 @@ _Avoid_: Suggested answer, sample answer (when meaning this), ideal answer, STAR
 On Answer review, delivery or technique advice only (structure, STAR, language, length)—not a restatement of content Gaps.
 _Avoid_: Tip (when meaning a Gap), practice recommendation (when meaning this)
 
+## Cover letter
+
+**Cover letter**:
+A saved application letter for one saved job, written from that job’s description and the seeker’s Structured CV. An optional seeker note steers emphasis and is not a source of new facts. One job keeps one letter; writing again replaces it (ADR-0042, ADR-0044).
+_Avoid_: Motivation letter (when meaning a separate document), application essay
+
 ## Job search
 
 **Work in Denmark search query**:

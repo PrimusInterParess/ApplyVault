@@ -77,6 +77,7 @@ export class JobResultsPageComponent implements OnInit {
   protected readonly calendarConnections = inject(CalendarConnectionsFacade);
   protected readonly readInputValue = readInputValue;
   protected readonly listRegion = viewChild<ElementRef<HTMLElement>>('listRegion');
+  protected readonly detailRegion = viewChild<ElementRef<HTMLElement>>('detailRegion');
 
   protected readonly attentionPanelOpen = signal(false);
   protected readonly toolbarPanelOpen = signal(false);
@@ -92,6 +93,8 @@ export class JobResultsPageComponent implements OnInit {
   private wasLoading = false;
   private bannerDismissHandle: ReturnType<typeof setTimeout> | null = null;
   private skipNextQuerySync = false;
+  private preservedListScrollTop = 0;
+  private preserveListScroll = false;
 
   constructor() {
     effect(() => {
@@ -119,14 +122,30 @@ export class JobResultsPageComponent implements OnInit {
       const currentSelected = this.route.snapshot.queryParamMap.get('selected');
 
       if (selectedId === currentSelected || (!selectedId && !currentSelected)) {
+        this.preserveListScroll = false;
         return;
       }
+
+      const windowScrollY = window.scrollY;
+      const listScrollTop = this.preservedListScrollTop;
 
       void this.router.navigate([], {
         relativeTo: this.route,
         queryParams: selectedId ? { selected: selectedId } : { selected: null },
         queryParamsHandling: 'merge',
         replaceUrl: true
+      }).finally(() => {
+        if (this.preserveListScroll) {
+          const list = this.listRegion()?.nativeElement;
+
+          if (list) {
+            list.scrollTop = listScrollTop;
+          }
+
+          this.preserveListScroll = false;
+        }
+
+        window.scrollTo(0, windowScrollY);
       });
     });
   }
@@ -194,8 +213,27 @@ export class JobResultsPageComponent implements OnInit {
   }
 
   protected selectResult(id: string): void {
+    const windowScrollY = window.scrollY;
+    this.preservedListScrollTop = this.listRegion()?.nativeElement.scrollTop ?? 0;
+    this.preserveListScroll = true;
     this.mobileDetailEngaged.set(true);
     this.facade.select(id);
+
+    requestAnimationFrame(() => {
+      const list = this.listRegion()?.nativeElement;
+
+      if (list) {
+        list.scrollTop = this.preservedListScrollTop;
+      }
+
+      const detail = this.detailRegion()?.nativeElement;
+
+      if (detail) {
+        detail.scrollTop = 0;
+      }
+
+      window.scrollTo(0, windowScrollY);
+    });
   }
 
   protected handleListKeydown(event: KeyboardEvent): void {
@@ -311,6 +349,6 @@ export class JobResultsPageComponent implements OnInit {
       this.facade.select(jobId);
     }
 
-    card.focus();
+    card.focus({ preventScroll: true });
   }
 }

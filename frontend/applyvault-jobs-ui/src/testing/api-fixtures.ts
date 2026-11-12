@@ -12,6 +12,8 @@ export function createSavedJobResult(overrides: Partial<SavedJobResult> = {}): S
     interviewEvent: null,
     calendarEvents: [],
     statusSync: null,
+    coverLetter: null,
+    coverLetterUpdatedAt: null,
     payload: {
       title: 'Software Engineer',
       url: 'https://example.com/jobs/1',

@@ -51,6 +51,11 @@ services:
       GoogleAi__Enabled: ${GOOGLE_AI_ENABLED:-false}
       GoogleAi__ApiKey: ${GOOGLE_AI_API_KEY:-}
       GoogleAi__Model: ${GOOGLE_AI_MODEL:-gemini-2.5-flash}
+      CoverLetter__Enabled: ${COVER_LETTER_ENABLED:-true}
+      CoverLetter__Provider: ${COVER_LETTER_PROVIDER:-Ollama}
+      CoverLetter__BaseUrl: ${COVER_LETTER_BASE_URL:-http://host.docker.internal:11434}
+      CoverLetter__Model: ${COVER_LETTER_MODEL:-qwen3:32b}
+      CoverLetter__TimeoutSeconds: ${COVER_LETTER_TIMEOUT_SECONDS:-180}
       CalendarIntegration__Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID:-}
       CalendarIntegration__Google__ClientSecret: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       MailIntegration__Enabled: ${GMAIL_ENABLED:-false}

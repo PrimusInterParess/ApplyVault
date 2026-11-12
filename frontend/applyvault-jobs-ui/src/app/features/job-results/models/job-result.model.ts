@@ -54,6 +54,8 @@ export interface SavedJobResult {
   readonly payload: ScrapeResultPayload;
   readonly captureQuality?: CaptureQuality;
   readonly statusSync: JobStatusSyncInfo | null;
+  readonly coverLetter: string | null;
+  readonly coverLetterUpdatedAt: string | null;
 }
 
 export interface UpdateJobDescriptionRequest {

@@ -62,7 +62,9 @@ public sealed record SavedScrapeResult(
     IReadOnlyList<CalendarEventLinkDto> CalendarEvents,
     ScrapeResultDto Payload,
     CaptureQualityDto CaptureQuality,
-    JobStatusSyncInfoDto? StatusSync
+    JobStatusSyncInfoDto? StatusSync,
+    string? CoverLetter = null,
+    DateTimeOffset? CoverLetterUpdatedAt = null
 );
 
 public sealed record SaveScrapeResultResponse(

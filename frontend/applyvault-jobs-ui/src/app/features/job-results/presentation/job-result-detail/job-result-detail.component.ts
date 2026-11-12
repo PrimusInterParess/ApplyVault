@@ -1,10 +1,13 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { readInputValue } from '../../../../core/dom/input-value.util';
+import { resolveHttpErrorMessage } from '../../../../core/http/api-error-message';
 import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
+import { JobResultsApiService } from '../../data-access/job-results-api.service';
 import { JobResultViewModel } from '../../models/job-result-view.model';
 import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
@@ -38,6 +41,11 @@ export interface JobCaptureReviewSaveEvent {
   styleUrl: './job-result-detail.component.scss'
 })
 export class JobResultDetailComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly jobResultsApi = inject(JobResultsApiService);
+  private coverLetterGeneration = 0;
+  private coverLetterJobId: string | null = null;
+
   readonly job = input<JobResultViewModel | null>(null);
   readonly updating = input(false);
   readonly connections = input<readonly ConnectedCalendarAccount[]>([]);
@@ -51,6 +59,7 @@ export class JobResultDetailComponent {
   readonly saveInterviewEvent = output<JobInterviewEventSaveEvent>();
   readonly clearInterviewEvent = output<string>();
   readonly createCalendarEvent = output<{ id: string; connectedAccountId: string }>();
+  readonly coverLetterSaved = output<{ id: string; letter: string; updatedAt: string }>();
   readonly editingCaptureReview = signal(false);
   readonly jobTitleDraft = signal('');
   readonly companyNameDraft = signal('');
@@ -112,6 +121,13 @@ export class JobResultDetailComponent {
   });
   readonly formatInterviewEventWindow = formatInterviewEventWindow;
   readonly calendarExpanded = signal(false);
+  readonly coverLetterOpen = signal(false);
+  readonly coverLetterNote = signal('');
+  readonly coverLetter = signal<string | null>(null);
+  readonly coverLetterUpdatedAt = signal<string | null>(null);
+  readonly coverLetterError = signal<string | null>(null);
+  readonly coverLetterLoading = signal(false);
+  readonly coverLetterCopied = signal(false);
   readonly describeCaptureQualitySummary = describeCaptureQualitySummary;
 
   constructor() {
@@ -126,7 +142,95 @@ export class JobResultDetailComponent {
       this.descriptionDraft.set(description);
       this.editingDescription.set(false);
       this.calendarExpanded.set(false);
+
+      const jobId = job?.id ?? null;
+      if (jobId !== this.coverLetterJobId) {
+        this.coverLetterJobId = jobId;
+        this.resetCoverLetter(job?.coverLetter ?? null, job?.coverLetterUpdatedAt ?? null);
+      }
     });
+  }
+
+  private resetCoverLetter(savedLetter: string | null, updatedAt: string | null): void {
+    this.coverLetterGeneration += 1;
+    this.coverLetterOpen.set(Boolean(savedLetter));
+    this.coverLetterNote.set('');
+    this.coverLetter.set(savedLetter);
+    this.coverLetterUpdatedAt.set(updatedAt);
+    this.coverLetterError.set(null);
+    this.coverLetterLoading.set(false);
+    this.coverLetterCopied.set(false);
+  }
+
+  protected toggleCoverLetter(): void {
+    this.coverLetterOpen.update((open) => !open);
+  }
+
+  protected updateCoverLetterNote(event: Event): void {
+    this.coverLetterNote.set(readInputValue(event));
+    this.coverLetterCopied.set(false);
+  }
+
+  protected generateCoverLetter(): void {
+    const job = this.job();
+
+    if (!job || this.coverLetterLoading()) {
+      return;
+    }
+
+    const generation = ++this.coverLetterGeneration;
+    const jobId = job.id;
+    const note = this.coverLetterNote().trim();
+    this.coverLetterLoading.set(true);
+    this.coverLetterError.set(null);
+    this.coverLetterCopied.set(false);
+
+    this.jobResultsApi
+      .createCoverLetter(jobId, { note: note.length > 0 ? note : null })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          if (generation !== this.coverLetterGeneration || this.job()?.id !== jobId) {
+            return;
+          }
+
+          this.coverLetter.set(result.letter);
+          this.coverLetterUpdatedAt.set(result.updatedAt);
+          this.coverLetterLoading.set(false);
+          this.coverLetterSaved.emit({
+            id: jobId,
+            letter: result.letter,
+            updatedAt: result.updatedAt
+          });
+        },
+        error: (error: unknown) => {
+          if (generation !== this.coverLetterGeneration || this.job()?.id !== jobId) {
+            return;
+          }
+
+          this.coverLetterError.set(
+            resolveHttpErrorMessage(error, {
+              fallback: 'Could not write a cover letter.'
+            })
+          );
+          this.coverLetterLoading.set(false);
+        }
+      });
+  }
+
+  protected async copyCoverLetter(): Promise<void> {
+    const letter = this.coverLetter();
+
+    if (!letter) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(letter);
+      this.coverLetterCopied.set(true);
+    } catch {
+      this.coverLetterError.set('Could not copy the cover letter.');
+    }
   }
 
   protected calendarSummary(): string {

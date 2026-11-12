@@ -4,6 +4,8 @@ using ApplyVault.Api.Options;
 
 using ApplyVault.Api.Services;
 
+using ApplyVault.Api.Services.CoverLetters;
+
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Mvc;
@@ -31,6 +33,8 @@ public sealed class ScrapeResultsController(
     IScrapeResultSaveService saveService,
 
     ICalendarEventService calendarEventService,
+
+    ICoverLetterService coverLetterService,
 
     IHostApplicationLifetime applicationLifetime) : ControllerBase
 
@@ -317,6 +321,52 @@ public sealed class ScrapeResultsController(
 
 
         return Ok(updatedResult);
+
+    }
+
+
+
+    [HttpPost("{id:guid}/cover-letter")]
+
+    [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
+
+    public async Task<ActionResult<CoverLetterDto>> CreateCoverLetter(
+
+        Guid id,
+
+        [FromBody] CreateCoverLetterRequest? request,
+
+        CancellationToken cancellationToken)
+
+    {
+
+        try
+
+        {
+
+            var user = await appUserService.GetRequiredUserAsync();
+
+            var letter = await coverLetterService.CreateAsync(
+
+                user,
+
+                id,
+
+                request ?? new CreateCoverLetterRequest(null),
+
+                cancellationToken);
+
+            return Ok(letter);
+
+        }
+
+        catch (CoverLetterValidationException ex)
+
+        {
+
+            return BadRequest(new { message = ex.Message });
+
+        }
 
     }
 

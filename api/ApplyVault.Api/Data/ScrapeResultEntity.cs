@@ -72,6 +72,10 @@ public sealed class ScrapeResultEntity
 
     public string? JobDescriptionReviewReason { get; set; }
 
+    public string? CoverLetter { get; set; }
+
+    public DateTimeOffset? CoverLetterUpdatedAt { get; set; }
+
     public string? PositionSummary { get; set; }
 
     public string? HiringManagerName { get; set; }

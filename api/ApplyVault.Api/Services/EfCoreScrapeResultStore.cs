@@ -211,6 +211,28 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         return MapToSavedResult(entity);
     }
 
+    public async Task<DateTimeOffset?> SaveCoverLetterAsync(
+        Guid id,
+        Guid userId,
+        string letter,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await dbContext.ScrapeResults.SingleOrDefaultAsync(
+            (result) => result.Id == id && !result.IsDeleted && result.UserId == userId,
+            cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var updatedAt = DateTimeOffset.UtcNow;
+        entity.CoverLetter = letter;
+        entity.CoverLetterUpdatedAt = updatedAt;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return updatedAt;
+    }
+
     public async Task<SavedScrapeResult?> UpsertInterviewEventAsync(
         Guid id,
         Guid userId,
@@ -370,7 +392,9 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
             calendarEvents,
             payload,
             captureQuality,
-            statusSync);
+            statusSync,
+            entity.CoverLetter,
+            entity.CoverLetterUpdatedAt);
     }
 
     private static JobStatusSyncInfoDto? BuildStatusSync(ScrapeResultEntity entity)

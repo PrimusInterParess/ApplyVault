@@ -349,6 +349,16 @@ export class JobResultsFacade {
     });
   }
 
+  rememberCoverLetter(id: string, letter: string, updatedAt: string): void {
+    this.results.update((results) =>
+      results.map((result) =>
+        result.id === id
+          ? { ...result, coverLetter: letter, coverLetterUpdatedAt: updatedAt }
+          : result
+      )
+    );
+  }
+
   updateDescription(id: string, description: string): void {
     const currentResult = this.results().find((result) => result.id === id);
     const normalizedDescription = description.trim();

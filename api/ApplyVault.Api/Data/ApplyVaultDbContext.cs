@@ -54,6 +54,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((result) => result.CompanyNameConfidence).HasDefaultValue(0d);
             entity.Property((result) => result.LocationConfidence).HasDefaultValue(0d);
             entity.Property((result) => result.JobDescriptionConfidence).HasDefaultValue(0d);
+            entity.Property((result) => result.CoverLetter).HasColumnType("nvarchar(max)");
             entity.Property((result) => result.CaptureOverallConfidence).HasDefaultValue(0d);
             entity.Property((result) => result.CaptureReviewStatus)
                 .IsRequired()

@@ -78,6 +78,10 @@
   align-items: flex-start;
 }
 
+.job-detail__cover-letter-launch {
+  flex: 1 0 100%;
+}
+
 .job-detail__company {
   margin-top: 0.25rem;
   color: var(--app-text-muted);
@@ -211,9 +215,14 @@ h3 {
   color: var(--app-text-muted);
 }
 
-.job-detail__status-row,
-.job-detail__meta-row,
 .job-detail__editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.job-detail__status-row,
+.job-detail__meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -431,10 +440,44 @@ h3 {
 }
 
 .job-detail__editor textarea:focus-visible,
-.job-detail__field-editor input:focus-visible {
+.job-detail__field-editor input:focus-visible,
+.job-detail__field-editor textarea:focus-visible {
   border-color: var(--app-accent);
   outline: 2px solid color-mix(in srgb, var(--app-accent) 25%, transparent);
   outline-offset: 0;
+}
+
+.job-detail__field-editor textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  margin-top: 0.35rem;
+  padding: 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.job-detail__cover-letter-actions {
+  margin-top: 0.75rem;
+}
+
+p.job-detail__cover-letter {
+  margin-top: 1rem;
+  max-width: 72ch;
+  white-space: pre-wrap;
+  color: var(--app-text);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+p.job-detail__cover-letter-error {
+  margin-top: 0.75rem;
+  color: var(--app-danger);
 }
 
 .job-detail__field-editor {

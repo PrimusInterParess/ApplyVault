@@ -7,7 +7,7 @@ public static class CoverLetterPrompt
 {
     public const string Name = "cover-letter";
 
-    public const string Version = "6";
+    public const string Version = "9";
 
     public const string SystemInstruction =
         """
@@ -26,10 +26,10 @@ public static class CoverLetterPrompt
         The domain must be stated in the job. If the job does not say what the company works on, tie that sentence to the role itself and do not invent a product or mission. Use "your engineering team" only when the role is an engineering role; otherwise "your team".
 
         Paragraph 2 is two sentences about the closest employer.
-        First: At {employer}, I {what was shipped}, including that it remains in production when the CV says so.
-        Second: how that work was designed or what it improved, using only tools and outcomes in the CV.
+        First: At {employer}, I {the work, at the credit level the CV uses}, including that it remains in production when the CV says so.
+        Second: how that work was designed or what it improved, using only tools and outcomes in the CV, still at that same credit level.
 
-        Paragraph 3 is one earlier employer, as work, not a skills list. Open with "Prior to that, at {employer},". Merge overlapping facts into the same sentences. A second sentence may add another contribution from that same employer, including a companion or side project the CV places there. Do not repeat the same achievement twice. If the CV supports only one fact, stop at one sentence.
+        Paragraph 3 is one other employer, as work, not a skills list. Compare its date range with the employer in paragraph 2. If both are current, or the ranges overlap, the roles are parallel: open with "Alongside that, at {employer}," and use present tense for work that is still current. Do not write "Prior to that", "before that", "previously", or "earlier" for parallel roles. A seeker note that the roles run in parallel confirms this. Use "Prior to that, at {employer}," only when that role ended before the paragraph 2 role began. Fold repeated facts into the same sentences. A second sentence may add another contribution from that same employer, including a companion or side project the CV places there. Do not repeat the same achievement twice. If the CV supports only one fact, stop at one sentence.
 
         Paragraph 4 is two sentences.
         First: I would welcome the opportunity to walk through the architectures I have built and discuss how my background in {skills named in the CV that this role asks for} can support {company}'s upcoming projects.
@@ -40,6 +40,10 @@ public static class CoverLetterPrompt
         {the name in the Structured CV Contact section}
         "Best regards," and the name are consecutive lines, with no blank line between them. If Contact has no name, stop after "Best regards," and do not invent one.
 
+        Keep the credit level written in the CV. Do not give the seeker personal credit the CV does not give them.
+        "Played a core role", "participated", "contributed", "helped", and "was involved" stay at that level. Write "I played a core role in implementing the pipelines", not "I implemented the pipelines".
+        A role line such as "role dedicated to architecting X" describes the role. Do not turn it into "I architected X".
+        When the CV states the seeker's own action, state that action. Do not add "by myself", "alone", or "single-handedly".
         Tell the work plainly. Never write "aligns", "requirement", "posting", "showcasing", "demonstrating", "I am applying", "confident", "eager", "passionate", or "leverage".
         "Strong match" is for paragraph 1 only. "I am particularly drawn to" and "I would love to bring" are for paragraph 1 only. "Thank you" is for the last sentence of paragraph 4 only.
         No bullets and no subject line.
@@ -51,7 +55,7 @@ public static class CoverLetterPrompt
 
         At Harbor Pay, I reworked the checkout API that remains in production today. I designed that service to sit behind the storefront, which made releases easier to keep stable.
 
-        Prior to that, at Lumen Labs, I built the billing jobs that post invoices from the warehouse system. I also shipped a small internal tool that let finance rerun a failed job.
+        Alongside that, at Lumen Labs, I build the billing jobs that post invoices from the warehouse system. I also ship a small internal tool that lets finance rerun a failed job.
 
         I would welcome the opportunity to walk through the architectures I have built and discuss how my background in Java and cloud services can support Northwind's upcoming projects. Thank you for your time and consideration.
 
@@ -70,12 +74,13 @@ public static class CoverLetterPrompt
 
         Greeting: Dear {company} Hiring Team,
         Paragraph 1, two sentences: the {job title} role at {company} is a strong match for work already shipped in production. Then what the job says the company works on, and that the seeker would love to bring that experience to the team.
-        Paragraph 2, two sentences: At {closest employer}, what was shipped, including that it remains in production when the CV says so. Then how it was designed or what it improved.
-        Paragraph 3: Prior to that, at {one earlier employer}, the work. A second sentence only for another contribution the CV places at that employer.
+        Paragraph 2, two sentences: At {closest employer}, the work at the credit level the CV uses, including that it remains in production when the CV says so. Then how it was designed or what it improved, at that same credit level.
+        Paragraph 3: one other employer. If both roles are current or the date ranges overlap, open with "Alongside that, at {employer}," in present tense. Open with "Prior to that" only when that role ended before the paragraph 2 role began. A second sentence only for another contribution the CV places at that employer.
         Paragraph 4, two sentences: welcome the opportunity to walk through the architectures and discuss the background that this role asks for. Then "Thank you for your time and consideration."
         Sign-off: Best regards, then the Contact name on the next line. No blank line between those two lines.
 
         Do not say "aligns" or "requirement". Do not invent facts.
+        Keep the CV's credit level. "Played a core role", "participated", "contributed", "helped", and "was involved" stay. Do not upgrade those to "I built", "I implemented", or "I architected". A role description is not personal ownership of that work.
 
         Structured CV JSON:
         {{cvJson}}

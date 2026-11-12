@@ -10,6 +10,7 @@ import { SafeHtmlPipe } from '../../../../core/html/safe-html.pipe';
 import { JobResultsApiService } from '../../data-access/job-results-api.service';
 import { JobResultViewModel } from '../../models/job-result-view.model';
 import { CaptureQualityField, UpdateInterviewEventRequest } from '../../models/job-result.model';
+import { buildCoverLetterPdfFileName, downloadCoverLetterPdf } from '../../utils/cover-letter-pdf.util';
 import { formatInterviewEventWindow } from '../../utils/interview-event';
 import { describeCaptureQualitySummary } from '../../utils/job-result-status.util';
 import { JobResultInterviewEventEditorComponent } from '../job-result-interview-event-editor/job-result-interview-event-editor.component';
@@ -231,6 +232,16 @@ export class JobResultDetailComponent {
     } catch {
       this.coverLetterError.set('Could not copy the cover letter.');
     }
+  }
+
+  protected downloadCoverLetter(): void {
+    const letter = this.coverLetter();
+
+    if (!letter) {
+      return;
+    }
+
+    downloadCoverLetterPdf(letter, buildCoverLetterPdfFileName(this.job()?.company));
   }
 
   protected calendarSummary(): string {

@@ -2,9 +2,9 @@
 
 ## Status
 
-Accepted (2026-11-10)
+Superseded by [ADR-0045](0045-cover-letter-google-gemini.md) (2026-11-12). Decisions 1 and 2 below no longer apply. The Ollama client remains available when `CoverLetter:Provider` is `Ollama`.
 
-Supersedes [ADR-0042](0042-saved-job-cover-letter.md) decision 3. Decisions 1 and 2 of ADR-0042 remain in force.
+Accepted (2026-11-10). Supersedes [ADR-0042](0042-saved-job-cover-letter.md) decision 3. Decisions 1 and 2 of ADR-0042 remain in force.
 
 ## Context
 

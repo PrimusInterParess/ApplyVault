@@ -4,7 +4,7 @@
 
 Accepted (2026-11-10)
 
-Supersedes the “nothing is stored” clause in [ADR-0042](0042-saved-job-cover-letter.md) decision 1. Grounding rules and the local Ollama provider stay as in ADR-0042 and [ADR-0043](0043-cover-letter-local-ollama.md).
+Supersedes the “nothing is stored” clause in [ADR-0042](0042-saved-job-cover-letter.md) decision 1. Grounding rules stay as in ADR-0042. The provider is [ADR-0045](0045-cover-letter-google-gemini.md) (supersedes [ADR-0043](0043-cover-letter-local-ollama.md)).
 
 ## Context
 

@@ -269,7 +269,7 @@ The saved jobs page (`/jobs`) supports:
 - status-source messaging that explains whether the latest interview or rejection change was synced from Gmail or saved manually
 - optimistic in-place updates after calendar sync and other mutations (no full list reload)
 - **Study brief** / **Practice interview** actions that deep-link to `/interview-prep` with `jobId` (and `surface=study` for the study pack)
-- **Write cover letter** on the job detail panel: optional note, then a grounded letter saved on that job (local Docker uses Ollama `qwen3:32b`; writing again replaces the saved letter)
+- **Write cover letter** on the job detail panel: optional note, then a grounded letter saved on that job (local Docker uses Gemini via `GoogleAi`; writing again replaces the saved letter)
 
 The Interview prep page (`/interview-prep`) supports:
 

@@ -15,7 +15,7 @@ public sealed class CoverLetterAiOptions
     public bool Enabled { get; set; }
 
     [Required]
-    public string Provider { get; set; } = OllamaProvider;
+    public string Provider { get; set; } = GoogleProvider;
 
     [Required]
     public string BaseUrl { get; set; } = "http://127.0.0.1:11434";

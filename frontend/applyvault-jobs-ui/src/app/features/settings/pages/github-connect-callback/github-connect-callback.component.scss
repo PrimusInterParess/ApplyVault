@@ -1,5 +1,12 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
 .github-callback {
-  min-height: 100vh;
+  min-height: 100%;
   display: grid;
   place-items: center;
   padding: 2rem;

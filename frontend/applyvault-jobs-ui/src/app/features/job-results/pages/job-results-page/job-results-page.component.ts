@@ -226,9 +226,9 @@ export class JobResultsPageComponent implements OnInit {
         list.scrollTop = this.preservedListScrollTop;
       }
 
-      const detail = this.detailRegion()?.nativeElement;
+      const detail = this.detailRegion()?.nativeElement?.querySelector('.job-detail');
 
-      if (detail) {
+      if (detail instanceof HTMLElement) {
         detail.scrollTop = 0;
       }
 

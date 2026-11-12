@@ -19,9 +19,10 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: calc(
-    100vh - var(--app-header-offset, var(--app-header-height, 4.25rem)) - 4rem
-  );
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .cv-builder__file-input {
@@ -102,11 +103,6 @@
 
 .cv-builder--edit {
   background: #f3f4f6;
-  height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
-  height: calc(100dvh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
-  max-height: calc(100vh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
-  max-height: calc(100dvh - var(--app-header-offset, var(--app-header-height, 5.5rem)));
-  min-height: 0;
   overflow: hidden;
 }
 

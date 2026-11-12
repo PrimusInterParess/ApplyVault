@@ -5,9 +5,15 @@
 }
 
 .cv-projects-page {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   max-width: var(--app-content-max-width);
   margin: 0 auto;
-  padding: 2rem 1.5rem 3rem;
+  padding: 1rem 1.5rem;
   font-size: 0.92rem;
 }
 
@@ -20,6 +26,11 @@
   background: var(--app-surface);
   border-radius: var(--app-radius-lg);
   box-shadow: var(--app-shadow-sm);
+}
+
+.cv-projects-page__banner,
+.cv-projects-page__toolbar {
+  flex: 0 0 auto;
 }
 
 .cv-projects-page__banner {
@@ -215,6 +226,7 @@
 }
 
 .cv-projects-page__alert {
+  flex: 0 0 auto;
   margin-top: 0.85rem;
   padding: 0.85rem 1rem;
   border: 1px solid color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
@@ -226,17 +238,23 @@
 .cv-projects-page__content {
   display: grid;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
   align-items: stretch;
   gap: 0.85rem;
+  min-height: 0;
   margin-top: 0.85rem;
+  overflow: hidden;
 }
 
 .cv-projects-page__list {
   display: grid;
   gap: 0.65rem;
   align-content: start;
-  max-height: calc(100vh - 14rem);
+  min-height: 0;
+  min-width: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 0.35rem;
 }
 
@@ -256,7 +274,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: calc(100vh - 14rem);
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .cv-projects-page__mobile-back {
@@ -692,8 +712,6 @@
   }
 
   .cv-projects-page__list {
-    max-height: min(70vh, calc(100vh - 12rem));
-    overflow: auto;
     padding-right: 0;
   }
 
@@ -709,7 +727,7 @@
     display: grid;
     gap: 0.35rem;
     position: sticky;
-    top: var(--app-header-offset, var(--app-header-height));
+    top: 0;
     z-index: 3;
     margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;

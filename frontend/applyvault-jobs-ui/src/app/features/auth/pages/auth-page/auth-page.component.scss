@@ -2,12 +2,14 @@
 
 :host {
   display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
 }
 
 .auth-page {
   box-sizing: border-box;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100%;
   display: grid;
   place-items: center;
   padding: 2rem 1.5rem;

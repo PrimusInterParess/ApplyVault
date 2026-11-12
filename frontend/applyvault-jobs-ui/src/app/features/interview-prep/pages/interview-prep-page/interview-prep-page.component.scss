@@ -59,7 +59,7 @@
 
   .interview-prep__rail {
     position: sticky;
-    top: calc(var(--app-header-offset, 0px) + 1rem);
+    top: 0.75rem;
   }
 }
 
@@ -91,7 +91,7 @@
 
 .interview-prep__session-meta--sticky {
   position: sticky;
-  top: calc(var(--app-header-offset, 0px) + 0.5rem);
+  top: 0.5rem;
   z-index: 2;
 }
 

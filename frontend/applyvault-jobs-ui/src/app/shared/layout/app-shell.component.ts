@@ -105,8 +105,8 @@ export class AppShellComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Measure sticky chrome only. Shell min-height uses a stable CSS value — do not
-    // feed this measurement back into layout min-height (locks tall chrome after wrap).
+    // Measure header for drawers. Do not feed this back into the header min-height
+    // (ResizeObserver feedback would lock tall chrome after wrap).
     const heightPx = `${Math.round(headerEl.getBoundingClientRect().height)}px`;
     document.documentElement.style.setProperty('--app-header-offset', heightPx);
     // Legacy sticky/drawer consumers still read --app-header-height.

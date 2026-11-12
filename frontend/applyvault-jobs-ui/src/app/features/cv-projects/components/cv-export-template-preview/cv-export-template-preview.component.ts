@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, input, output } from '@angular/core';
 
+import { CvInlineLinkPopoverComponent } from '../cv-inline-link-popover/cv-inline-link-popover.component';
 import { InlineEditableTextDirective } from '../../directives/inline-editable-text.directive';
 import { CvStructuredEntry, CvStructuredSection } from '../../models/cv-structured.model';
 import {
@@ -33,7 +34,7 @@ import {
 @Component({
   selector: 'app-cv-export-template-preview',
   standalone: true,
-  imports: [NgTemplateOutlet, InlineEditableTextDirective],
+  imports: [NgTemplateOutlet, InlineEditableTextDirective, CvInlineLinkPopoverComponent],
   templateUrl: './cv-export-template-preview.component.html',
   styleUrl: './cv-export-template-preview.component.scss',
   host: {

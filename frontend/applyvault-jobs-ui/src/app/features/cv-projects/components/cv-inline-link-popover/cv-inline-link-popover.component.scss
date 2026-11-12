@@ -1,0 +1,63 @@
+:host {
+  display: none;
+}
+
+:host.open {
+  position: fixed;
+  z-index: 140;
+  display: block;
+  padding: 0.3rem;
+  background: #fff;
+  border: 1px solid #d4c4b4;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(42 33 24 / 12%);
+  font-family: Inter, sans-serif;
+  font-size: 0.8125rem;
+  color: #2a2118;
+}
+
+.cv-inline-link-popover__chip,
+.cv-inline-link-popover__save,
+.cv-inline-link-popover__remove {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.cv-inline-link-popover__chip,
+.cv-inline-link-popover__save {
+  padding: 0.28rem 0.55rem;
+  background: #2f5d50;
+  color: #fff;
+}
+
+.cv-inline-link-popover__remove {
+  padding: 0.28rem 0.4rem;
+  color: #8f4e37;
+}
+
+.cv-inline-link-popover__form {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cv-inline-link-popover__field input {
+  width: 16rem;
+  max-width: 60vw;
+  border: 1px solid #d4c4b4;
+  border-radius: 6px;
+  padding: 0.28rem 0.45rem;
+  font: inherit;
+  color: inherit;
+}
+
+.cv-inline-link-popover__error {
+  margin: 0.25rem 0.15rem 0.1rem;
+  color: #8f4e37;
+  font-size: 0.75rem;
+}

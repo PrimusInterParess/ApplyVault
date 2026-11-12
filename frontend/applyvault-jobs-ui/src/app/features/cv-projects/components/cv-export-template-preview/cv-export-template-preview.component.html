@@ -42,6 +42,10 @@
   </div>
 </div>
 
+@if (editable()) {
+  <app-cv-inline-link-popover />
+}
+
 <ng-template #sectionList let-sections>
   @for (section of sections; track section.id) {
     @if (showContactSection(section)) {
@@ -112,6 +116,7 @@
                         <span
                           class="cv-export-preview__entry-date cv-export-preview__editable"
                           [appInlineEditableText]="entry.dateRange ?? ''"
+                          [inlineLinks]="false"
                           [enabled]="true"
                           data-placeholder="Dates"
                           (textChange)="emitEntryField(section.id, entry.id, 'dateRange', $event)"></span>
@@ -148,6 +153,7 @@
                   <div
                     class="cv-export-preview__skill-line cv-export-preview__editable"
                     [appInlineEditableText]="skillsLine(entry)"
+                    [inlineLinks]="false"
                     [enabled]="true"
                     data-placeholder="Skills, comma-separated"
                     (textChange)="emitSkillsLine(section.id, entry.id, $event)"></div>
@@ -171,6 +177,7 @@
                   <p
                     class="cv-export-preview__entry-tech cv-export-preview__editable"
                     [appInlineEditableText]="entry.techStack"
+                    [inlineLinks]="false"
                     [enabled]="true"
                     data-placeholder="Technologies (optional)"
                     (textChange)="emitEntryField(section.id, entry.id, 'techStack', $event)"></p>

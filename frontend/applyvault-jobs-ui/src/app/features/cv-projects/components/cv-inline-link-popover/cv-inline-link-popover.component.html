@@ -1,0 +1,33 @@
+@if (open() && !composing()) {
+  <button
+    type="button"
+    class="cv-inline-link-popover__chip"
+    aria-keyshortcuts="Control+K Meta+K"
+    (mousedown)="beginFromButton($event)">
+    {{ editingExisting() ? 'Edit link' : 'Link' }}
+  </button>
+} @else if (open()) {
+  <form class="cv-inline-link-popover__form" (submit)="apply($event)">
+    <label class="cv-inline-link-popover__field">
+      <span class="visually-hidden">Address</span>
+      <input
+        #urlInput
+        type="text"
+        inputmode="url"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="https://… or name@email.com"
+        [value]="url()"
+        (input)="onUrlInput($event)" />
+    </label>
+    <button type="submit" class="cv-inline-link-popover__save">
+      {{ editingExisting() ? 'Save' : 'Add' }}
+    </button>
+    @if (editingExisting()) {
+      <button type="button" class="cv-inline-link-popover__remove" (click)="remove()">Remove</button>
+    }
+  </form>
+  @if (error()) {
+    <p class="cv-inline-link-popover__error" role="alert">{{ error() }}</p>
+  }
+}

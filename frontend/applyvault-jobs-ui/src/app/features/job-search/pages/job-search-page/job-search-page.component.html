@@ -9,17 +9,20 @@
 
   <section class="eures-page__filters" aria-label="Search filters">
     @if (facade.keywords().length > 0) {
-      <div class="eures-page__selected-keywords" aria-label="Selected keywords">
-        @for (keyword of facade.keywords(); track keyword) {
-          <button
-            type="button"
-            class="eures-page__selected-keyword"
-            (click)="removeKeyword(keyword)"
-            [attr.aria-label]="'Remove keyword ' + keyword">
-            <span>{{ keyword }}</span>
-            <span class="eures-page__selected-keyword-remove" aria-hidden="true">×</span>
-          </button>
-        }
+      <div class="eures-page__selected-keywords" role="group" aria-labelledby="selected-keywords-label">
+        <span class="eures-page__selected-keywords-label" id="selected-keywords-label">Selected</span>
+        <div class="eures-page__selected-keyword-list">
+          @for (keyword of facade.keywords(); track keyword) {
+            <button
+              type="button"
+              class="eures-page__selected-keyword"
+              (click)="removeKeyword(keyword)"
+              [attr.aria-label]="'Remove keyword ' + keyword">
+              <span class="eures-page__selected-keyword-text">{{ keyword }}</span>
+              <span class="eures-page__selected-keyword-remove" aria-hidden="true">×</span>
+            </button>
+          }
+        </div>
         <button type="button" class="eures-page__clear-keywords" (click)="clearKeywords()">
           Clear all
         </button>
@@ -52,7 +55,7 @@
       </label>
 
       @if (facade.source() === 'eures') {
-        <label class="eures-page__filter">
+        <label class="eures-page__filter eures-page__filter--location">
           <span class="eures-page__filter-label">Country</span>
           <div class="eures-page__filter-control">
             <select [value]="facade.locationCode()" (change)="updateLocationCode($event)">
@@ -63,7 +66,7 @@
           </div>
         </label>
 
-        <label class="eures-page__filter">
+        <label class="eures-page__filter eures-page__filter--published">
           <span class="eures-page__filter-label">Published</span>
           <div class="eures-page__filter-control">
             <select
@@ -76,7 +79,7 @@
           </div>
         </label>
 
-        <label class="eures-page__filter">
+        <label class="eures-page__filter eures-page__filter--schedule">
           <span class="eures-page__filter-label">Schedule</span>
           <div class="eures-page__filter-control">
             <select [value]="facade.scheduleSelectValue()" (change)="updateScheduleCode($event)">
@@ -87,7 +90,7 @@
           </div>
         </label>
       } @else {
-        <label class="eures-page__filter">
+        <label class="eures-page__filter eures-page__filter--location">
           <span class="eures-page__filter-label">Place</span>
           <div class="eures-page__filter-control">
             <select (change)="updatePlace($event)">
@@ -246,6 +249,7 @@
       }
     </section>
   } @else if (facade.hasSearched()) {
+    <div class="eures-page__results-bar">
     <section class="eures-page__results-header">
       <h2>{{ facade.providerLabel() }} results</h2>
       <p class="eures-page__results-summary">{{ facade.resultsSummary() }}</p>
@@ -295,6 +299,7 @@
         </p>
       }
     </section>
+    </div>
 
     @if (facade.totalResults() === 0) {
       <section class="jobs-page__state">

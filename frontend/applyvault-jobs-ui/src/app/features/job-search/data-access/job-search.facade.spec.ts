@@ -36,9 +36,10 @@ describe('JobSearchFacade', () => {
   });
 
   it('keeps keywords in sync when toggling chips on the active source', () => {
+    const jobnetFacade = TestBed.inject(JobnetJobsFacade);
     facade.toggleKeyword('Angular');
 
-    expect(euresFacade.keywords()).toContain('Angular');
+    expect(jobnetFacade.keywords()).toContain('Angular');
   });
 
   it('reads EURES country from the URL', () => {
@@ -59,7 +60,7 @@ describe('JobSearchFacade', () => {
     facade.source.set('eures');
 
     expect(facade.buildQueryParamState()).toEqual({
-      source: null,
+      source: 'eures',
       keywords: 'Angular',
       country: 'dk',
       location: null,
@@ -78,7 +79,7 @@ describe('JobSearchFacade', () => {
     facade.source.set('jobnet');
 
     expect(facade.buildQueryParamState()).toEqual({
-      source: 'jobnet',
+      source: null,
       keywords: 'developer',
       country: null,
       location: null,
@@ -102,11 +103,11 @@ describe('JobSearchFacade', () => {
   });
 
   it('updates idle copy when switching providers', () => {
-    expect(facade.resultsSummary()).toContain('EURES');
-
-    facade.setSource('jobnet');
-
     expect(facade.resultsSummary()).toContain('Work in Denmark');
+
+    facade.setSource('eures');
+
+    expect(facade.resultsSummary()).toContain('EURES');
     expect(facade.emptyStateIntro()).toContain('Work in Denmark');
   });
 });

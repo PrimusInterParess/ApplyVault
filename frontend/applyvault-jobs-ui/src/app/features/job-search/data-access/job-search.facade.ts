@@ -30,7 +30,7 @@ export class JobSearchFacade {
     jobnet: this.jobnetFacade
   };
 
-  readonly source = signal<JobSearchSource>('eures');
+  readonly source = signal<JobSearchSource>('jobnet');
 
   readonly keywords = computed(() => this.activeFacade().keywords());
   readonly loading = computed(() => this.activeFacade().loading());

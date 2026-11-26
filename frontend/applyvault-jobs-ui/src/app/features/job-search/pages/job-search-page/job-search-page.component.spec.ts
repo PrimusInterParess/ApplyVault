@@ -5,7 +5,8 @@ import {
   TestRequest
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 
 import { API_CONFIG } from '../../../../core/config/api.config';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -35,6 +36,13 @@ describe('JobSearchPageComponent', () => {
         {
           provide: AuthService,
           useValue: createAuthServiceMock({ authenticated: true })
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap({ source: 'eures' }) },
+            queryParamMap: of(convertToParamMap({ source: 'eures' }))
+          }
         }
       ]
     }).compileComponents();

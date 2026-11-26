@@ -7,7 +7,7 @@ import {
 } from './job-search-url-state.utils';
 
 describe('job-search-url-state.utils', () => {
-  it('writes country for EURES and omits default source', () => {
+  it('writes country for EURES and keeps the source', () => {
     const params = buildJobSearchUrlQueryParams({
       source: 'eures',
       keywords: ['Angular'],
@@ -16,7 +16,7 @@ describe('job-search-url-state.utils', () => {
     });
 
     expect(params).toEqual({
-      source: null,
+      source: 'eures',
       keywords: 'Angular',
       country: 'dk',
       location: null,
@@ -38,7 +38,7 @@ describe('job-search-url-state.utils', () => {
     });
 
     expect(params).toEqual({
-      source: null,
+      source: 'eures',
       keywords: 'React',
       country: 'de',
       location: null,
@@ -90,7 +90,7 @@ describe('job-search query param readers', () => {
 
     expect(key).toBe(
       JSON.stringify({
-        source: 'jobnet',
+        source: null,
         keywords: 'software,programmør',
         country: null,
         location: null,

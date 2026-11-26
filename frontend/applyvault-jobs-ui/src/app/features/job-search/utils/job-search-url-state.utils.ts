@@ -53,7 +53,7 @@ export function buildJobSearchUrlQueryParams(state: {
     : null;
 
   return {
-    source: state.source === 'eures' ? null : state.source,
+    source: state.source === 'jobnet' ? null : state.source,
     keywords: state.keywords.length > 0 ? state.keywords.join(',') : null,
     country: isEures ? state.country : null,
     location: null,

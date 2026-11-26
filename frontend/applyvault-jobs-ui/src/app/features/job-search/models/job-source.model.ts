@@ -15,16 +15,6 @@ export interface JobSearchProviderDefinition {
 
 export const JOB_SEARCH_PROVIDERS: readonly JobSearchProviderDefinition[] = [
   {
-    id: 'eures',
-    label: 'EURES',
-    searchActionLabel: 'Search EURES',
-    monogram: 'EU',
-    detailLabel: 'EURES listing',
-    idleSearchPrompt: 'Run a search to load EURES listings',
-    searchingPrompt: 'Searching EURES listings...',
-    emptyStateIntro: 'Run a search to load EURES listings, or try a popular IT search below.'
-  },
-  {
     id: 'jobnet',
     label: 'Work in Denmark',
     searchActionLabel: 'Search Work in Denmark',
@@ -33,12 +23,22 @@ export const JOB_SEARCH_PROVIDERS: readonly JobSearchProviderDefinition[] = [
     idleSearchPrompt: 'Run a search to load Work in Denmark listings',
     searchingPrompt: 'Searching Work in Denmark listings...',
     emptyStateIntro: 'Run a search to load Work in Denmark listings, or try a popular IT search below.'
+  },
+  {
+    id: 'eures',
+    label: 'EURES',
+    searchActionLabel: 'Search EURES',
+    monogram: 'EU',
+    detailLabel: 'EURES listing',
+    idleSearchPrompt: 'Run a search to load EURES listings',
+    searchingPrompt: 'Searching EURES listings...',
+    emptyStateIntro: 'Run a search to load EURES listings, or try a popular IT search below.'
   }
 ];
 
 export function normalizeJobSearchSource(value: string | null | undefined): JobSearchSource {
   const normalized = value?.trim().toLowerCase();
-  return JOB_SEARCH_SOURCES.find((source) => source === normalized) ?? 'eures';
+  return JOB_SEARCH_SOURCES.find((source) => source === normalized) ?? 'jobnet';
 }
 
 export function getJobSearchProvider(source: JobSearchSource): JobSearchProviderDefinition {

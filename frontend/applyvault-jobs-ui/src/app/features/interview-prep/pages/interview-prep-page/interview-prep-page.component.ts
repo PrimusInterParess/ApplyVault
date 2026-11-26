@@ -1,323 +1,136 @@
 import { CommonModule } from '@angular/common';
-import {
-  afterNextRender,
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  Injector,
-  OnInit,
-  signal,
-  viewChild
-} from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-
+import { PreparationDiscoveryComponent } from '../../components/preparation-discovery/preparation-discovery.component';
+import { renderPreparationMarkdown } from '../../utils/preparation-markdown';
 import { InterviewPrepFacade } from '../../data-access/interview-prep.facade';
-import {
-  INTERVIEW_PREP_BRIEF_TOPIC_GAPS,
-  INTERVIEW_PREP_EXPERIENCE_TYPES,
-  INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH,
-  INTERVIEW_PREP_LANGUAGES,
-  INTERVIEW_PREP_MARKETS,
-  INTERVIEW_PREP_MODES,
-  INTERVIEW_PREP_PERSONAS,
-  InterviewPrepBriefOutdatedReason,
-  InterviewPrepBriefTopicGap,
-  InterviewPrepExperienceType,
-  InterviewPrepLanguage,
-  InterviewPrepMarket,
-  InterviewPrepMode,
-  InterviewPrepPageSurface,
-  InterviewPrepPersona,
-  InterviewPrepSessionStatus,
-  InterviewPrepSessionSummary,
-  InterviewPrepStudyBrief,
-  InterviewPrepTurn
-} from '../../models/interview-prep.model';
+import { MAX_PREPARATION_DAYS, PreparationPack, PreparationReadinessKey } from '../../models/interview-prep.model';
 
 @Component({
   selector: 'app-interview-prep-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PreparationDiscoveryComponent],
+  providers: [InterviewPrepFacade],
   templateUrl: './interview-prep-page.component.html',
-  styleUrl: './interview-prep-page.component.scss'
+  styleUrl: './interview-prep-page.component.scss',
+  encapsulation: ViewEncapsulation.None
 })
 export class InterviewPrepPageComponent implements OnInit {
-  protected readonly facade = inject(InterviewPrepFacade);
+  readonly facade = inject(InterviewPrepFacade);
+  readonly maxPreparationDays = MAX_PREPARATION_DAYS;
   private readonly route = inject(ActivatedRoute);
-  private readonly injector = inject(Injector);
+  readonly inputsOpen = signal(true);
+  readonly exportError = signal<string | null>(null);
+  readonly readiness: readonly { key: PreparationReadinessKey; label: string }[] = [
+    { key: 'readDocumentIds', label: 'Read' },
+    { key: 'explainedDocumentIds', label: 'Explained without notes' },
+    { key: 'demonstratedDocumentIds', label: 'Demonstrated' },
+    { key: 'adaptedDocumentIds', label: 'Adapted to a changed requirement' }
+  ];
+  readonly markdown = computed(() => renderPreparationMarkdown(
+    this.facade.document()?.markdown ?? this.facade.selected()?.content?.overviewMarkdown ?? ''));
 
-  private readonly chatScroll = viewChild<ElementRef<HTMLElement>>('chatScroll');
 
-  protected readonly answerDraft = signal('');
-  protected readonly retryDraft = signal('');
+  ngOnInit(): void { this.reload(); }
 
-  protected readonly modes = INTERVIEW_PREP_MODES;
-  protected readonly personas = INTERVIEW_PREP_PERSONAS;
-  protected readonly languages = INTERVIEW_PREP_LANGUAGES;
-  protected readonly markets = INTERVIEW_PREP_MARKETS;
-  protected readonly experienceTypes = INTERVIEW_PREP_EXPERIENCE_TYPES;
-  protected readonly topicGaps = INTERVIEW_PREP_BRIEF_TOPIC_GAPS;
-  protected readonly focusNoteMaxLength = INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH;
-
-  constructor() {
-    effect(() => {
-      const turnCount = this.facade.chatTurns().length;
-      if (turnCount === 0) {
-        return;
-      }
-      // Scroll inside the fixed chat pane only — never grow the page.
-      afterNextRender(
-        () => {
-          const el = this.chatScroll()?.nativeElement;
-          if (!el) {
-            return;
-          }
-          const reduceMotion =
-            typeof matchMedia === 'function' &&
-            matchMedia('(prefers-reduced-motion: reduce)').matches;
-          el.scrollTo({
-            top: el.scrollHeight,
-            behavior: reduceMotion ? 'auto' : 'smooth'
-          });
-        },
-        { injector: this.injector }
-      );
-    });
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.facade.unsaved() || this.facade.generationInProgress()) event.preventDefault();
   }
 
-  ngOnInit(): void {
-    this.facade.loadCvGate();
-    this.facade.loadJobOptions();
-    this.facade.loadHistory();
+  reload(): void {
+    if (!this.allowDiscard()) return;
+    this.facade.load(this.route.snapshot.queryParamMap.get('jobId'),
+      this.facade.selected()?.id ?? this.route.snapshot.queryParamMap.get('packId'));
+  }
 
-    const surface = this.route.snapshot.queryParamMap.get('surface');
-    this.facade.applySurfaceFromQuery(surface);
+  selectPack(pack: PreparationPack): void {
+    if (!this.facade.busy() && this.allowDiscard()) this.facade.select(pack);
+  }
 
-    const jobId = this.route.snapshot.queryParamMap.get('jobId');
-    this.facade.applyJobIdFromQuery(jobId);
+  onJobChange(event: Event): void {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+    if (!this.facade.busy() && this.allowDiscard()) this.facade.setJob(select.value);
+    else select.value = this.facade.input().scrapeResultId ?? '';
+  }
 
-    if (this.facade.surface() === 'study' && !jobId) {
-      this.facade.loadStudyBriefs();
-    }
+  generate(): void {
+    if (this.facade.selected() && !window.confirm('Replace the saved pack with a new outline and reset its answers and study progress using these inputs?')) return;
+    this.facade.generate();
+  }
 
-    const sessionId = this.route.snapshot.queryParamMap.get('sessionId');
-    if (sessionId && this.facade.surface() === 'practice') {
-      this.facade.loadSession(sessionId);
+  remove(): void {
+    if (window.confirm('Delete this preparation pack and its saved progress?')) this.facade.remove();
+  }
+
+  openDocument(id: string | null): void {
+    if (this.facade.busy()) return;
+    this.facade.documentId.set(id);
+    if (id) {
+      const document = this.facade.document();
+      const questions = this.facade.selected()?.discovery?.documents.find(d => d.id === id)?.questions ?? [];
+      if ((document?.isGenerated === false && !questions.length) || this.facade.questionsNeedRefresh(id))
+        this.facade.prepareDocument(id);
     }
   }
 
-  protected selectSurface(surface: InterviewPrepPageSurface, event: Event): void {
-    event.preventDefault();
-    this.facade.setSurface(surface);
-  }
-
-  protected selectMode(mode: InterviewPrepMode, event: Event): void {
-    event.preventDefault();
-    this.facade.setMode(mode);
-  }
-
-  protected selectPersona(persona: InterviewPrepPersona, event: Event): void {
-    event.preventDefault();
-    this.facade.setPersona(persona);
-  }
-
-  protected isPersonaEnabled(persona: InterviewPrepPersona): boolean {
-    return this.facade.availablePersonas().includes(persona);
-  }
-
-  protected selectLanguage(language: InterviewPrepLanguage, event: Event): void {
-    event.preventDefault();
-    this.facade.setLanguage(language);
-  }
-
-  protected selectMarket(market: InterviewPrepMarket, event: Event): void {
-    event.preventDefault();
-    this.facade.setMarket(market);
-  }
-
-  protected selectExperienceType(type: InterviewPrepExperienceType, event: Event): void {
-    event.preventDefault();
-    this.facade.setExperienceType(type);
-  }
-
-  protected onJobChange(value: string): void {
-    this.facade.setSelectedJob(value || null);
-  }
-
-  protected submitAnswer(): void {
-    const text = this.answerDraft();
-    if (!text.trim()) {
-      return;
-    }
-    this.facade.submitAnswer(text);
-    this.answerDraft.set('');
-  }
-
-  protected openHistorySession(item: InterviewPrepSessionSummary, event?: Event): void {
-    event?.preventDefault();
-    this.facade.loadSession(item.id);
-  }
-
-  protected isHistoryActive(item: InterviewPrepSessionSummary): boolean {
-    return this.facade.sessionId() === item.id;
-  }
-
-  protected openStudyBrief(item: InterviewPrepStudyBrief, event?: Event): void {
-    event?.preventDefault();
-    this.facade.selectStudyBrief(item);
-  }
-
-  protected isStudyBriefActive(item: InterviewPrepStudyBrief): boolean {
-    return this.facade.selectedStudyBrief()?.id === item.id;
-  }
-
-  protected confirmDeleteStudyBrief(item: InterviewPrepStudyBrief, event: Event): void {
-    event.preventDefault();
-    if (window.confirm('Delete this study brief?')) {
-      this.facade.deleteStudyBrief(item.id);
+  followDocumentLink(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const anchor = target.closest('a');
+    const href = anchor?.getAttribute('href');
+    if (!href || !href.endsWith('.md')) return;
+    const id = href.slice(0, -3);
+    if (this.facade.selected()?.content?.documents.some(d => d.id === id)) {
+      event.preventDefault(); this.openDocument(id);
     }
   }
 
-  protected studyBriefJobLabel(item: InterviewPrepStudyBrief): string {
-    if (item.jobTitle && item.companyName) {
-      return `${item.jobTitle} · ${item.companyName}`;
-    }
-    if (item.jobTitle || item.companyName) {
-      return item.jobTitle ?? item.companyName ?? 'Saved job';
-    }
-    return 'CV only';
+  documentTitle(id: string): string {
+    return this.facade.selected()?.content?.documents.find(d => d.id === id)?.title ?? id;
   }
 
-  protected gapLabel(gap: InterviewPrepBriefTopicGap | string): string {
-    return this.topicGaps.find((g) => g.id === gap)?.label ?? gap;
+  download(): void {
+    const pack = this.facade.selected();
+    if (!pack?.content) return;
+    const blob = new Blob([this.packMarkdown(pack)], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement('a');
+    anchor.href = url; anchor.download = 'interview-preparation-pack.md'; anchor.click();
+    URL.revokeObjectURL(url);
   }
 
-  protected outdatedReasonLabel(reason: InterviewPrepBriefOutdatedReason | string): string {
-    if (reason === 'structuredCvChanged') {
-      return 'Structured CV changed since this brief was generated';
-    }
-    if (reason === 'boundJobMissing') {
-      return 'Bound saved job is missing or deleted';
-    }
-    return reason;
+  async copy(): Promise<void> {
+    const pack = this.facade.selected();
+    if (!pack?.content) return;
+    try {
+      await navigator.clipboard.writeText(this.facade.document()?.markdown ?? this.packMarkdown(pack));
+      this.facade.notice.set('Copied to clipboard.'); this.exportError.set(null);
+    } catch { this.exportError.set('Clipboard access failed. Use Download pack instead.'); }
   }
 
-  protected sortedTopics(brief: InterviewPrepStudyBrief) {
-    return [...brief.topics].sort((a, b) => a.priority - b.priority);
+  private packMarkdown(pack: PreparationPack): string {
+    const content = pack.content!;
+    const progress = this.facade.progress();
+    return [
+      `# ${content.title}`, pack.isDemo ? '**Demo content**' : '', content.overviewMarkdown,
+      content.unknowns.length ? `## Unknowns and assumptions\n\n${content.unknowns.map(u => `- ${u}`).join('\n')}` : '',
+      '## Topic map', ...content.topics.map(t => `### ${t.name}\n\n${t.relevance}\n\nEvidence: ${t.evidence}\n\n[Study document](${t.documentId}.md)`),
+      '## Study plan', ...content.studyPlan.map(s => `- [${progress.completedDays.includes(s.day) ? 'x' : ' '}] Day ${s.day} (${s.minutes} minutes): ${s.activity}`),
+      ...content.documents.map(d => `<a id="${d.id}"></a>\n\n# ${d.title}\n\n${d.purpose}\n\n${d.isGenerated === false ? "Not written yet. Complete this document’s clarification step in ApplyVault." : d.markdown}`),
+      '## Readiness', ...content.documents.map(d => `### ${d.title}\n\n${this.readiness.map(r => `- [${progress[r.key].includes(d.id) ? 'x' : ' '}] ${r.label}`).join('\n')}`),
+      '## Review log', progress.reviewLog || 'Record the weakness, correction, evidence, and next practice task.'
+    ].filter(Boolean).join('\n\n').replace(/\]\(([a-z][a-z0-9-]*)\.md\)/g, '](#$1)');
   }
 
-  /** ADR-0027: Google study search URL from topic name (and optional coverage text). */
-  protected googleStudySearchUrl(topicName: string, coverageText?: string): string {
-    const parts = [topicName.trim()];
-    if (coverageText?.trim()) {
-      parts.push(coverageText.trim());
-    }
-    parts.push('interview preparation');
-    return `https://www.google.com/search?q=${encodeURIComponent(parts.join(' '))}`;
+  canLeave(): boolean {
+    if (this.facade.generationInProgress())
+      return window.confirm('Preparation is still being generated. Leaving cancels the request and its unfinished result will not be saved. Leave this page?');
+    return this.allowDiscard();
   }
 
-  protected studyBusyLabel(): string {
-    const busy = this.facade.studyBriefBusy();
-    if (busy === 'generating') {
-      return 'Generating study brief…';
-    }
-    if (busy === 'regenerating') {
-      return 'Regenerating study brief…';
-    }
-    if (busy === 'deleting') {
-      return 'Deleting…';
-    }
-    return '';
-  }
-
-  protected retryCoachingReview(candidateTurnId: string): void {
-    this.facade.openCoachingReview(candidateTurnId);
-  }
-
-  protected confirmDeleteSession(item: InterviewPrepSessionSummary, event: Event): void {
-    event.preventDefault();
-    if (window.confirm('Delete this practice session?')) {
-      this.facade.deleteHistorySession(item.id);
-    }
-  }
-
-  protected turnRoleLabel(turn: InterviewPrepTurn): string {
-    if (turn.role === 'interviewer') {
-      return 'Interviewer';
-    }
-    if (turn.role === 'candidate') {
-      return 'You';
-    }
-    if (turn.role === 'coach') {
-      return 'Coach';
-    }
-    return 'System';
-  }
-
-  protected historyJobLabel(item: InterviewPrepSessionSummary): string | null {
-    if (item.jobTitle && item.companyName) {
-      return `${item.jobTitle} · ${item.companyName}`;
-    }
-    return item.jobTitle ?? item.companyName ?? null;
-  }
-
-  protected needsContinue(): boolean {
-    const status = this.facade.sessionDetail()?.status;
-    return status === 'created' || status === 'ready';
-  }
-
-  protected experienceDescription(): string {
-    return (
-      this.experienceTypes.find((t) => t.id === this.facade.experienceType())?.description ?? ''
-    );
-  }
-
-  protected modeLabel(mode: InterviewPrepMode | string | null | undefined): string {
-    return this.modes.find((m) => m.id === mode)?.label ?? mode ?? '';
-  }
-
-  protected personaLabel(persona: InterviewPrepPersona | string | null | undefined): string {
-    return this.personas.find((p) => p.id === persona)?.label ?? persona ?? '';
-  }
-
-  protected sessionStatusLabel(status: InterviewPrepSessionStatus | string | null | undefined): string {
-    const labels: Record<string, string> = {
-      created: 'Created',
-      preparing: 'Preparing',
-      ready: 'Ready',
-      inProgress: 'In progress',
-      paused: 'Paused',
-      completing: 'Completing',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      failed: 'Failed'
-    };
-    if (!status) {
-      return '';
-    }
-    return labels[status] ?? status;
-  }
-
-  protected languageLabel(language: string | null | undefined): string {
-    return this.languages.find((l) => l.id === language)?.label ?? language ?? '';
-  }
-
-  protected marketLabel(market: string | null | undefined): string {
-    return this.markets.find((m) => m.id === market)?.label ?? market ?? '';
-  }
-
-  protected showTurnLanguage(turn: InterviewPrepTurn): boolean {
-    if (!turn.language) {
-      return false;
-    }
-    const sessionLang = this.facade.sessionDetail()?.language ?? this.facade.language();
-    return turn.language !== sessionLang;
-  }
-
-  protected submitRetry(): void {
-    this.facade.submitCoachingRetry(this.retryDraft());
-    this.retryDraft.set('');
+  private allowDiscard(): boolean {
+    return !this.facade.unsaved() || window.confirm('Leave without saving your clarification answers, study progress, or review log?');
   }
 }

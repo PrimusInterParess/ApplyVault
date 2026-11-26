@@ -54,7 +54,7 @@ public sealed class InterviewPrepCandidateContextAdapter(
         if (structured is null || structured.Sections.Count == 0)
         {
             throw new InterviewPrepValidationException(
-                "Create a Structured CV before preparing an interview prep session.");
+                "Create a Structured CV before generating a preparation pack.");
         }
 
         var capturedAt = DateTimeOffset.UtcNow;

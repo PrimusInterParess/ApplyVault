@@ -84,10 +84,11 @@ export const routes: Routes = [
       },
       {
         path: 'interview-prep',
+        canDeactivate: [(component: { canLeave(): boolean }) => component.canLeave()],
         title: 'Interview Prep',
         data: {
           shellSubtitle:
-            'Study briefs and practice interviews from your Structured CV.'
+            'Personal preparation documents for your next interview.'
         },
         loadComponent: () =>
           import('./features/interview-prep/pages/interview-prep-page/interview-prep-page.component').then(

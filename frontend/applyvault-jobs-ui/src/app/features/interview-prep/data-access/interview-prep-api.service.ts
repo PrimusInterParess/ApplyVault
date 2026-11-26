@@ -1,224 +1,62 @@
-import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
-
+import { Observable } from 'rxjs';
 import { API_CONFIG } from '../../../core/config/api.config';
-import {
-  InterviewPrepAnswerRetryResult,
-  InterviewPrepAnswerReview,
-  InterviewPrepCandidateReport,
-  InterviewPrepCompetencyResults,
-  InterviewPrepCreateSessionRequest,
-  InterviewPrepGenerateStudyBriefRequest,
-  InterviewPrepPanelDebrief,
-  InterviewPrepRegenerateStudyBriefRequest,
-  InterviewPrepSessionDetail,
-  InterviewPrepSessionListResponse,
-  InterviewPrepSessionSummary,
-  InterviewPrepStudyBrief,
-  InterviewPrepStudyBriefListQuery,
-  InterviewPrepStudyBriefListResponse,
-  InterviewPrepSubmitTurnRequest,
-  InterviewPrepTranscript,
-  InterviewPrepTurnSubmitResponse
-} from '../models/interview-prep.model';
-
-const BASE = 'interview-prep';
+import { PreparationAnswerInput, PreparationContext, PreparationHelpResponse, PreparationPack, PreparationPackInput, PreparationProgress } from '../models/interview-prep.model';
 
 @Injectable({ providedIn: 'root' })
 export class InterviewPrepApiService {
-  private readonly httpClient = inject(HttpClient);
-  private readonly apiConfig = inject(API_CONFIG);
+  private readonly http = inject(HttpClient);
+  private readonly base = `${inject(API_CONFIG).baseUrl}/interview-prep`;
 
-  private url(path: string): string {
-    return `${this.apiConfig.baseUrl}/${BASE}${path}`;
+  context(): Observable<PreparationContext> {
+    return this.http.get<PreparationContext>(`${this.base}/context`);
   }
 
-  createSession(request: InterviewPrepCreateSessionRequest): Observable<InterviewPrepSessionSummary> {
-    return this.httpClient.post<InterviewPrepSessionSummary>(this.url('/sessions'), request);
+  list(): Observable<readonly PreparationPack[]> {
+    return this.http.get<readonly PreparationPack[]>(`${this.base}/packs`);
   }
 
-  listSessions(): Observable<InterviewPrepSessionListResponse> {
-    return this.httpClient.get<InterviewPrepSessionListResponse>(this.url('/sessions'));
+  generate(input: PreparationPackInput): Observable<PreparationPack> {
+    return this.http.post<PreparationPack>(`${this.base}/packs`, input);
   }
 
-  getSession(id: string): Observable<{ detail: InterviewPrepSessionDetail; eTag: string }> {
-    return this.httpClient
-      .get<InterviewPrepSessionDetail>(this.url(`/sessions/${id}`), { observe: 'response' })
-      .pipe(
-        map((response) => ({
-          detail: response.body!,
-          eTag: this.readEtag(response)
-        }))
-      );
-  }
-
-  deleteSession(id: string): Observable<void> {
-    return this.httpClient.delete<void>(this.url(`/sessions/${id}`));
-  }
-
-  prepareSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'prepare', ifMatch);
-  }
-
-  startSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'start', ifMatch);
-  }
-
-  pauseSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'pause', ifMatch);
-  }
-
-  resumeSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'resume', ifMatch);
-  }
-
-  cancelSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'cancel', ifMatch);
-  }
-
-  completeSession(id: string, ifMatch?: string | null): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(id, 'complete', ifMatch);
-  }
-
-  submitTurn(
-    sessionId: string,
-    request: InterviewPrepSubmitTurnRequest,
-    ifMatch: string
-  ): Observable<{ result: InterviewPrepTurnSubmitResponse; eTag: string }> {
-    const headers = new HttpHeaders({ 'If-Match': ifMatch });
-    return this.httpClient
-      .post<InterviewPrepTurnSubmitResponse>(
-        this.url(`/sessions/${sessionId}/turns`),
-        request,
-        { headers, observe: 'response' }
-      )
-      .pipe(
-        map((response) => ({
-          result: response.body!,
-          eTag: this.readEtag(response)
-        }))
-      );
-  }
-
-  getTranscript(sessionId: string): Observable<InterviewPrepTranscript> {
-    return this.httpClient.get<InterviewPrepTranscript>(
-      this.url(`/sessions/${sessionId}/transcript`)
-    );
-  }
-
-  getReport(sessionId: string): Observable<InterviewPrepCandidateReport> {
-    return this.httpClient.get<InterviewPrepCandidateReport>(
-      this.url(`/sessions/${sessionId}/report`)
-    );
-  }
-
-  getCompetencies(sessionId: string): Observable<InterviewPrepCompetencyResults> {
-    return this.httpClient.get<InterviewPrepCompetencyResults>(
-      this.url(`/sessions/${sessionId}/competencies`)
-    );
-  }
-
-  requestAnswerReview(sessionId: string, turnId: string): Observable<InterviewPrepAnswerReview> {
-    return this.httpClient.post<InterviewPrepAnswerReview>(
-      this.url(`/sessions/${sessionId}/turns/${turnId}/review`),
-      {}
-    );
-  }
-
-  submitAnswerRetry(
-    sessionId: string,
-    turnId: string,
-    revisedAnswer: string
-  ): Observable<InterviewPrepAnswerRetryResult> {
-    return this.httpClient.post<InterviewPrepAnswerRetryResult>(
-      this.url(`/sessions/${sessionId}/turns/${turnId}/retry`),
-      { revisedAnswer }
-    );
-  }
-
-  getAnswerRetry(sessionId: string, turnId: string): Observable<InterviewPrepAnswerRetryResult> {
-    return this.httpClient.get<InterviewPrepAnswerRetryResult>(
-      this.url(`/sessions/${sessionId}/turns/${turnId}/retry`)
-    );
-  }
-
-  startNextFullLoopStage(
-    sessionId: string,
-    ifMatch?: string | null
-  ): Observable<InterviewPrepSessionDetail> {
-    return this.mutateSession(sessionId, 'full-loop/next-stage', ifMatch);
-  }
-
-  getPanelDebrief(sessionId: string): Observable<InterviewPrepPanelDebrief> {
-    return this.httpClient.get<InterviewPrepPanelDebrief>(
-      this.url(`/sessions/${sessionId}/panel-debrief`)
-    );
-  }
-
-  generateStudyBrief(
-    request: InterviewPrepGenerateStudyBriefRequest
-  ): Observable<InterviewPrepStudyBrief> {
-    return this.httpClient.post<InterviewPrepStudyBrief>(this.url('/briefs'), request);
-  }
-
-  regenerateStudyBrief(
-    id: string,
-    request: InterviewPrepRegenerateStudyBriefRequest
-  ): Observable<InterviewPrepStudyBrief> {
-    return this.httpClient.post<InterviewPrepStudyBrief>(
-      this.url(`/briefs/${id}/regenerate`),
-      request
-    );
-  }
-
-  listStudyBriefs(
-    query?: InterviewPrepStudyBriefListQuery
-  ): Observable<InterviewPrepStudyBriefListResponse> {
-    let params = new HttpParams();
-    if (query?.scrapeResultId) {
-      params = params.set('scrapeResultId', query.scrapeResultId);
-    }
-    if (query?.cvOnly === true) {
-      params = params.set('cvOnly', 'true');
-    }
-    return this.httpClient.get<InterviewPrepStudyBriefListResponse>(this.url('/briefs'), {
-      params
+  regenerate(pack: PreparationPack, input: PreparationPackInput): Observable<PreparationPack> {
+    return this.http.post<PreparationPack>(`${this.base}/packs/${pack.id}/regenerate`, {
+      expectedUpdatedAt: pack.updatedAt, input
     });
   }
 
-  getStudyBrief(id: string): Observable<InterviewPrepStudyBrief> {
-    return this.httpClient.get<InterviewPrepStudyBrief>(this.url(`/briefs/${id}`));
+  saveProgress(pack: PreparationPack, progress: PreparationProgress): Observable<PreparationPack> {
+    return this.http.put<PreparationPack>(`${this.base}/packs/${pack.id}/progress`, {
+      expectedUpdatedAt: pack.updatedAt, progress
+    });
   }
 
-  deleteStudyBrief(id: string): Observable<void> {
-    return this.httpClient.delete<void>(this.url(`/briefs/${id}`));
+  prepareDocument(pack: PreparationPack, documentId: string): Observable<PreparationPack> {
+    return this.http.post<PreparationPack>(`${this.documentUrl(pack, documentId)}/discovery`, { expectedUpdatedAt: pack.updatedAt });
   }
 
-  private mutateSession(
-    id: string,
-    action: string,
-    ifMatch?: string | null
-  ): Observable<InterviewPrepSessionDetail> {
-    const headers = ifMatch ? new HttpHeaders({ 'If-Match': ifMatch }) : undefined;
-    return this.httpClient
-      .post<InterviewPrepSessionDetail>(this.url(`/sessions/${id}/${action}`), {}, { headers })
-      .pipe(map((detail) => this.normalizeSessionEtag(detail)));
+  saveAnswers(pack: PreparationPack, documentId: string, answers: readonly PreparationAnswerInput[]): Observable<PreparationPack> {
+    return this.http.put<PreparationPack>(`${this.documentUrl(pack, documentId)}/answers`, { expectedUpdatedAt: pack.updatedAt, answers });
   }
 
-  private normalizeSessionEtag(detail: InterviewPrepSessionDetail): InterviewPrepSessionDetail {
-    if (detail.eTag) {
-      return detail;
-    }
-    return detail;
+  writeDocument(pack: PreparationPack, documentId: string): Observable<PreparationPack> {
+    return this.http.post<PreparationPack>(`${this.documentUrl(pack, documentId)}/generate`, { expectedUpdatedAt: pack.updatedAt });
   }
 
-  private readEtag(response: HttpResponse<unknown>): string {
-    const header = response.headers.get('ETag');
-    if (header) {
-      return header;
-    }
-    const body = response.body as InterviewPrepSessionDetail | null;
-    return body?.eTag ?? '';
+  help(pack: PreparationPack, documentId: string, questionId: string, request: string,
+    draftAnswer: string, previousGuidance?: string): Observable<PreparationHelpResponse> {
+    return this.http.post<PreparationHelpResponse>(`${this.documentUrl(pack, documentId)}/questions/${encodeURIComponent(questionId)}/help`, {
+      expectedUpdatedAt: pack.updatedAt, request, draftAnswer, previousGuidance
+    });
+  }
+
+  private documentUrl(pack: PreparationPack, documentId: string): string {
+    return `${this.base}/packs/${pack.id}/documents/${encodeURIComponent(documentId)}`;
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/packs/${id}`);
   }
 }

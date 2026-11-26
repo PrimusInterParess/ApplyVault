@@ -1,7 +1,6 @@
-using ApplyVault.Api.Services.InterviewPrep.Domain;
-
 namespace ApplyVault.Api.Data;
 
+/// <summary>Archived simulation data. Retained for schema compatibility; no active session runtime.</summary>
 public sealed class InterviewPrepSessionEntity
 {
     public Guid Id { get; set; }
@@ -263,24 +262,4 @@ public sealed class InterviewPrepQuestionAttemptEntity
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
-}
-
-public static class InterviewPrepStageTypes
-{
-    public const string CoreAssessment = "CoreAssessment";
-}
-
-public static class InterviewPrepPersistence
-{
-    public static string Status(InterviewPrepSessionStatus status) =>
-        InterviewPrepEnumNames.ToWire(status);
-
-    public static string Status(InterviewPrepStageStatus status) =>
-        InterviewPrepEnumNames.ToWire(status);
-
-    public static string Role(InterviewPrepTurnRole role) =>
-        InterviewPrepEnumNames.ToWire(role);
-
-    public static string Config(Enum value) =>
-        InterviewPrepEnumNames.ToWire(value);
 }

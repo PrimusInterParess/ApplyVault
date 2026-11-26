@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (2026-08-06 — grill-with-docs + `/operate` D; glossary in `CONTEXT.md`)
 
 Additive to [ADR-0021](0021-interview-prep-v2-bounded-module.md). Does **not** change Interview Prep session lifecycle, Full loop, Study brief (ADR-0025), or session-level report feedback.

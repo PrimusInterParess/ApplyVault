@@ -1,6 +1,6 @@
 # ApplyVault
 
-ApplyVault helps seekers build a Structured CV and practice interviews grounded in that CV and optional saved jobs.
+ApplyVault helps seekers build a Structured CV and prepare for interviews with documents tailored to their background and target role.
 
 ## CV structuring
 
@@ -37,7 +37,7 @@ One of the seven fixed, ordered blocks of a Structured CV: Contact, Summary, Ski
 _Avoid_: Block, chunk, custom section (when meaning a user-added block)
 
 **Section visibility**:
-Whether a Section appears on the Template, as a content choice separate from Section placement (ADR-0033). An omitted Section leaves the edit canvas and the Template, and still feeds Evaluate CV and Interview Prep; a visibility change alone does not mark an Interview Prep brief outdated. It returns to the canvas and the Template only when included from the section list — adding Entries does not include it. Any Section except Contact may be omitted; Contact is always included when it has content, a Section with no Entry content is already omitted, and a new Structured CV starts with every Section included.
+Whether a Section appears on the Template, as a content choice separate from Section placement (ADR-0033). An omitted Section leaves the edit canvas and the Template, and still feeds Evaluate CV and Interview Prep; a visibility change alone does not mark an Interview preparation pack outdated. It returns to the canvas and the Template only when included from the section list — adding Entries does not include it. Any Section except Contact may be omitted; Contact is always included when it has content, a Section with no Entry content is already omitted, and a new Structured CV starts with every Section included.
 _Avoid_: Remove section, delete section, disable section (when meaning the Entries are gone)
 
 **Section placement**:
@@ -78,73 +78,41 @@ _Avoid_: Merge projects, paste README (when meaning this product action)
 
 ## Interview Preparation
 
-**Interview Prep brief**:
-A durable, profession-agnostic study artifact for a seeker, generated from their Structured CV and optional saved job. Its body is structured parts—not a single prose blob: prioritized topics (skills, tools, domains, methods—not software-only “technologies”) each with a Brief topic gap, at least one nested Coverage item, and optional sample questions and CV talking points under that topic—each of those children may carry a short note. It is not a practice Interview Prep session and not an input to one. At most one brief per saved-job binding (and at most one CV-only brief); regenerating replaces that brief—no version history. The brief body is read-only (view/copy/regenerate only). First generate and regenerate may each take an optional free-text seeker focus note (what to emphasize or what a prior brief missed); the note steers generation and is not editable brief content. Generate uses the same language-mix and optional hiring-market choices as practice Interview Prep sessions. The brief is a snapshot at generate time; it is labeled outdated if the Structured CV's Entries have changed since then, or if its bound saved job is missing/deleted—never auto-regenerated. A Section visibility change alone does not mark it outdated.
-_Avoid_: Conspect, prep section, study notes (when meaning this product record), coach chat, brief history, session seed, technologies (when meaning the topic list as a whole), auto-refresh brief, editable brief, markdown-only brief, brief-level question list (when meaning sample questions or talking points outside a topic)
+**Interview preparation pack**:
+A saved collection of preparation documents tailored to a seeker's target role and supplied context: their Structured CV, optional saved job, selected project summaries, and additional information. The generator works across seekers, professions, and projects; each pack's subject matter, examples, and depth reflect the individual seeker's needs.
+_Avoid_: Generic study pack (when meaning identical content for every seeker), question bank, practice session, Interview Prep brief (retired outline)
 
-**Coverage item**:
-One concrete leaf under a topic in an Interview Prep brief—a syllabus line to study, not a second topic, not a nested tree, and not a progress checklist.
-_Avoid_: Subtopic, extended topic, study point, checklist item (when meaning this brief child)
+**Preparation document**:
+One connected teaching or practice document within an Interview preparation pack, with a clear purpose and any prerequisite documents. It develops explanations, mechanisms, examples, choices, and application appropriate to the seeker's target.
+_Avoid_: Answer script, coverage item (retired syllabus leaf)
 
-**Brief topic gap**:
-The tag on a topic in an Interview Prep brief: already-strong, must-study, nice-to-have, or unclear (not enough CV/job evidence)—not a numeric priority alone.
-_Avoid_: Priority (when meaning this tag), strength score, gap score
+**Preparation inputs**:
+The seeker's target, available study time, language, expected formats, self-reported knowledge, additional information, and selected sources used to personalize a pack. Additional information may supply facts beyond the CV; user-reported facts remain distinct from inferred or hypothetical material.
+_Avoid_: Focus note (retired steering-only input), verified experience (when meaning a user report)
 
-**Interview Prep session**:
-One durable practice interview for a seeker, with turns, Stages, and configuration (mode, persona, language, market).
-_Avoid_: Coach chat (MVP), ephemeral turn thread
+**Document discovery**:
+The short clarification step for one Preparation document, using its purpose, the seeker's sources, and context already saved elsewhere in the pack. It gathers information and learning needs before that document is written or rewritten.
+_Avoid_: Practice interview, assessment, mandatory quiz
 
-**Full loop**:
-A single Interview Prep session that runs multiple Stages in one continuous interview day, advanced by the interviewer—not by the seeker clicking between Stages.
-_Avoid_: Multi-session panel, manual next-stage interview
+**Clarification answer**:
+A seeker's explicitly saved response to a Document discovery question, including an answer, uncertainty, a skip, or an unfinished response. Saved answers are shared context for the pack; reported uncertainty about knowledge and missing evidence about past work have different meanings.
+_Avoid_: Verified achievement, model answer, competency score
 
-**Stage**:
-One interviewer block inside a session (mode × persona plan, coverage, and turns). In Full loop, a Stage ends with a Stage handoff to the next Stage, not with Close—except the final Stage of the loop.
-_Avoid_: Round (when meaning Stage), child session
+**Answer guidance**:
+Explanations, blank starting structures, and clearly hypothetical examples that help a seeker answer a clarification question, including further help on request. Guidance and unconfirmed drafts do not become saved personal facts automatically.
+_Avoid_: Suggested personal achievement, auto-filled experience, answer review
 
-**Stage handoff**:
-The interviewer-led transition from a completed Full-loop Stage to the next: outgoing persona acknowledgment, private factual Stage assessment for later context, then the next Stage opening—without seeker orchestration.
-_Avoid_: Next stage button (happy path), per-stage wrap-up
+**Study plan**:
+A sequence of concrete preparation activities that fits the seeker's chosen number of days and daily study time. Completing an activity is separate from demonstrating readiness.
+_Avoid_: Interview stages, Full loop, equal-time syllabus
 
-**Main question**:
-An interviewer Ask-question turn that advances assessment coverage for a competency.
-_Avoid_: Turn (when meaning only mains), prompt
+**Preparation readiness**:
+The seeker's own record of having read, explained without notes, demonstrated, or adapted a document's material. A CV skill mention or a completed study day does not establish readiness.
+_Avoid_: Competency score, AI-assessed mastery, already-strong (inferred from CV presence)
 
-**Probe**:
-An interviewer clarification or follow-up under the current intent; it does not by itself end a Stage or the Full loop.
-_Avoid_: Follow-up as Stage end, clarification as Close
-
-**Soft question target**:
-The intended band of Main questions per Stage (~8–12) that the interviewer aims for when coverage allows.
-_Avoid_: Hard cap, MaxQuestions (when meaning the soft band)
-
-**Hard question safety**:
-The Main-question ceiling (~15–18) that forces Stage end (handoff or, for standalone, toward Close)—not probes alone.
-_Avoid_: Soft target, default budget (legacy four-question force close)
-
-**Candidate questions**:
-The beat where the seeker may ask the interviewer. In Full loop, once at the end of the whole loop; in standalone modes, at session end before Close.
-_Avoid_: Per-stage Q&A close, wrap-up questions (when meaning Close)
-
-**Close**:
-The terminal interviewer turn that ends the practice interview (or the whole Full loop). The Stage or session completes after the seeker’s reply to Close—not when Close is emitted.
-_Avoid_: Handoff, Candidate questions
-
-**Answer review**:
-The coaching panel for one seeker answer in an Interview Prep session, in this order: question once, Strengths, Gaps, Model answer, Coaching tips, optional retry—no free-text coaching blurb and no restated question.
-_Avoid_: Coach chat, feedback dump, suggested answer panel
-
-**Answer gap**:
-On Answer review, a content or evidence hole in this specific answer (missing outcome, weak structure claim, ignored part of the question)—not a Brief topic gap tag.
-_Avoid_: Brief topic gap (when meaning this), tip, coaching tip
-
-**Model answer**:
-On Answer review, the coach’s full example reply to that question as spoken prose (what the seeker could say out loud)—the primary “what good looks like” artifact, distinct from Gaps and Coaching tips. It uses only Structured CV and optional saved-job facts; it does not invent roles, projects, or metrics. When evidence is thin, it stays short and honest rather than omitting the section.
-_Avoid_: Suggested answer, sample answer (when meaning this), ideal answer, STAR script (when meaning labeled blocks)
-
-**Coaching tip**:
-On Answer review, delivery or technique advice only (structure, STAR, language, length)—not a restatement of content Gaps.
-_Avoid_: Tip (when meaning a Gap), practice recommendation (when meaning this)
+**Review log**:
+The seeker's saved observations about weaknesses, corrections, evidence from attempts, and next practice tasks for a preparation pack.
+_Avoid_: Answer review, coach chat
 
 ## Cover letter
 

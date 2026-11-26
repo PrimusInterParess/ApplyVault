@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (M9 operational delivery, 2026-08-05)
 
 Extends [ADR-0021](0021-interview-prep-v2-bounded-module.md).

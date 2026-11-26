@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (2026-08-05)
 
 Extends [ADR-0023](0023-interview-prep-full-loop-orchestration.md). Supersedes ADR-0023 consequence that clients must drive stage advance via `POST .../full-loop/next-stage` for the happy path.

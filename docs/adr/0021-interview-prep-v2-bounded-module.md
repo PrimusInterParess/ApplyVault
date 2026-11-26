@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (human-approved 2026-08-05 via `/operate`)
 
 Supersedes historical Interview Prep ADRs **0012–0020** (ephemeral coach turns, hiring-market bias, model-answer reveal, durable message sessions, already-asked digest, answer-guide orientation, real-interviewer simulation, stateless context filter, and related follow-ons). Those decisions are retired; do not revive MVP routes or schemas.

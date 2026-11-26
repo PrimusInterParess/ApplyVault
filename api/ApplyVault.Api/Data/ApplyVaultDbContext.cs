@@ -363,6 +363,7 @@ public sealed class ApplyVaultDbContext(DbContextOptions<ApplyVaultDbContext> op
             entity.Property((brief) => brief.Language).IsRequired().HasMaxLength(32);
             entity.Property((brief) => brief.Market).IsRequired().HasMaxLength(32);
             entity.Property((brief) => brief.FocusNoteSnapshot).HasMaxLength(2000);
+            entity.Property((brief) => brief.UpdatedAt).IsConcurrencyToken();
             entity.Property((brief) => brief.BodyJson).IsRequired().HasColumnType("nvarchar(max)");
             entity.Property((brief) => brief.CvFingerprint).IsRequired().HasMaxLength(128);
             entity.Property((brief) => brief.JobTitle).HasMaxLength(512);

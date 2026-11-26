@@ -24,9 +24,9 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - Upload one PDF CV per user from the dashboard, store the file on local disk or Azure Blob Storage, and auto-extract structured sections on upload (Google AI with heuristic fallback) plus optional profile-photo extraction.
 - Edit structured CV sections (Experience, Projects, Education, Skills, Summary, Custom) with inline editing, drag-and-drop reorder, re-import from the stored PDF, Google AI section updates, and reviewable improvement suggestions.
 - Export a formatted PDF from structured CV content using a single one-column HTML template (one page recommended, two pages max).
-- Practice interviews on **Interview prep** (`/interview-prep`): durable sessions grounded in the Structured CV and an optional saved job, with modes/personas, Full loop, language/market options, and AI-backed turns (fake provider available for local Dev).
-- Generate a durable **Interview Prep brief** (study pack) from the Structured CV and optional saved job—prioritized topics with gap tags, sample questions, and CV talking points—independent of practice sessions; regenerate in place; outdated when the CV changes or the bound job is gone.
-- Open Study brief from Interview prep (`?surface=study`) or from a saved job (`?jobId=<guid>&surface=study`).
+- Plan a personalized **Interview preparation pack** (`/interview-prep`) from a Structured CV, optional saved job, selected project summaries, and additional information; clarify and write each document separately.
+- Read connected teaching documents with mechanisms, worked examples, tradeoffs, project connections, and independent exercises, guided by a study plan that fits available time.
+- Track reading separately from demonstrated readiness, keep a review log, and copy or download the pack as Markdown. Refine and rewrite individual documents as your context improves.
 - Preview the original uploaded PDF in the browser with replace and delete flows.
 - Connect a Gmail mailbox from settings and poll for job-related emails with a hosted background sync worker.
 - Auto-apply Gmail-detected rejection and interview updates to matching saved jobs, including interview calendar follow-up when calendar providers are already connected.
@@ -52,7 +52,7 @@ ApplyVault is a job-capture workspace built from three connected parts:
 - `extension/`
   Chrome extension package (`package.json`, manifests, build scripts) and source under `extension/src/` — popup UI, background service worker, content scripts, and shared contracts.
 - `api/ApplyVault.Api/`
-  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export. Interview Prep (practice sessions + study briefs) lives under `Services/InterviewPrep/` and `Controllers/InterviewPrepController.cs` (`/api/interview-prep/*`).
+  ASP.NET Core API that stores and serves captured job results. Startup wiring lives in `Program.cs`; cross-cutting registration is in `Infrastructure/` (`ServiceCollectionExtensions`, `DistributedInfrastructureExtensions`, `WebApplicationExtensions`, Supabase JWT auth) and database setup in `Data/ApplyVaultDatabaseExtensions.cs`. External job search lives in `Services/Eures/` and `Services/Jobnet/`. CV PDF and structured editing are handled in `Services/CvDocuments/` with pluggable local or Azure Blob storage and optional HTML-template PDF export. Interview preparation packs lives under `Services/InterviewPrep/` and `Controllers/InterviewPrepController.cs` (`/api/interview-prep/*`).
 - `api/ApplyVault.Api.Tests/`
   Fast unit tests for mail sync, Gmail client behavior, job-status classification, EURES and Jobnet job search (including description quality heuristics, search payload cache, detail fetcher, and detail composition), CV structured import/export, and related API services.
 - `api/ApplyVault.Api.IntegrationTests/`
@@ -152,16 +152,20 @@ The API listens on `http://localhost:5173/api` and exposes:
 - `POST /api/jobnet/jobs/search`
 - `GET /api/jobnet/jobs/{id}` — includes `descriptionSource`, `descriptionQuality`, and optional `descriptionExcerpt` / `descriptionQualityReason` when heuristics flag scraped or low-quality text
 - `POST /api/jobnet/jobs/{id}/save`
-- `POST /api/interview-prep/sessions` — create a practice Interview Prep session (mode, persona, language, market, optional `scrapeResultId`)
-- `GET /api/interview-prep/sessions` / `GET /api/interview-prep/sessions/{id}` — list and load sessions
-- `POST /api/interview-prep/sessions/{id}/prepare|start|pause|resume|cancel|complete` — session lifecycle
-- `POST /api/interview-prep/sessions/{id}/turns` — candidate turn / advance interview
-- `POST /api/interview-prep/briefs` — generate a durable study Interview Prep brief (Structured CV required; optional job, language, market, focus note)
-- `POST /api/interview-prep/briefs/{id}/regenerate` — replace that brief in place (optional focus note / language / market)
-- `GET /api/interview-prep/briefs` / `GET /api/interview-prep/briefs/{id}` — list and get (includes `outdated` / reasons)
-- `DELETE /api/interview-prep/briefs/{id}`
+- `GET /api/interview-prep/context` — CV availability and owned project summary choices
+- `POST /api/interview-prep/packs` — plan documents and their clarification questions (Structured CV required; optional saved job; role and level required without a job)
+- `GET /api/interview-prep/packs` / `GET /api/interview-prep/packs/{id}` — list/read packs, saved progress, and source-change notices
+- `POST /api/interview-prep/packs/{id}/regenerate` — replace the pack with a new outline, resetting answers and progress; body includes `expectedUpdatedAt` and complete `input`
+- `POST /api/interview-prep/packs/{id}/documents/{documentId}/discovery` — prepare/refine that document's questions using shared context; existing content stays available
+- `PUT /api/interview-prep/packs/{id}/documents/{documentId}/answers` — save explicit answered/unknown/skipped/pending responses with the expected pack revision
+- `POST /api/interview-prep/packs/{id}/documents/{documentId}/questions/{questionId}/help` — read-only follow-up guidance; drafts and examples are never saved as answers automatically
+- `POST /api/interview-prep/packs/{id}/documents/{documentId}/generate` — write only this document after its questions are addressed; reset only its readiness and associated study days
+- `PUT /api/interview-prep/packs/{id}/progress` — save readiness, completed study days, and review log with `expectedUpdatedAt`
+- `DELETE /api/interview-prep/packs/{id}` — delete the owned pack
 
-Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES and Jobnet search/save, CV document upload/preview/structured editing/export, Interview Prep sessions and briefs, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
+One pack is retained per saved job and one for general role preparation. Older study briefs remain visible with a regeneration action; historical simulation data is retained, but session and brief endpoints are retired.
+
+Authenticated endpoints require a Supabase JWT (`Authorization: Bearer <access_token>`), including extension ingest (`POST /api/scrape-results`), saved-job CRUD, EURES and Jobnet search/save, CV document upload/preview/structured editing/export, Interview preparation packs, GitHub repo listing and CV project summary endpoints, and GitHub/mail/calendar connection management. Unauthenticated requests receive **401 Unauthorized**.
 
 `POST /api/scrape-results` requires authentication (production step 1). OAuth provider callbacks (`GET .../github/callback`, `GET .../gmail/callback`, Google/Microsoft calendar callbacks) stay unauthenticated so the provider can complete the redirect.
 
@@ -205,9 +209,9 @@ Configuration is layered: `appsettings.json` (safe defaults) → `appsettings.{E
 Option sections (validated at startup when enabled):
 
 - `GoogleAi`
-  Optional AI repair for low-confidence captures, CV structured import/update/suggestions, CV project summary generation, CV export polish, and Interview Prep (via `InterviewPrep:Ai`). Provide an API key and model when you want live Gemini enabled. CV AI features require `GoogleAi:Enabled` to be `true`. Interview Prep can use a deterministic fake provider locally when `InterviewPrep:Ai:UseFakeProvider` is `true` (typical Dev default).
+  Optional AI repair for low-confidence captures, CV structured import/update/suggestions, CV project summary generation, CV export polish, and Interview Prep (via `InterviewPrep:Ai`). Provide an API key and model when you want live Gemini enabled. CV AI features require `GoogleAi:Enabled` to be `true`. An explicitly enabled demo provider (`InterviewPrep:Ai:UseFakeProvider=true`) previews the document experience without analyzing personal sources. Demo output is clearly labeled.
 - `InterviewPrep` / `InterviewPrep:Ai`
-  Practice-session and study-brief options (loop guard limits, prompts, fake vs live Gemini). Study briefs are independent of practice sessions; see ADR-0025 and `CONTEXT.md` (**Interview Prep brief**).
+  Document-generation options: live AI enablement, explicit demo provider, per-call timeout (180 seconds by default), and bounded retries. Planning reserves a larger output budget; a token-limited retry increases it up to 65,536. Invalid structured output gets rule-specific repair guidance rather than an identical blind retry. Logs record operation, finish status, token counts, and safe failure codes—not source or generated text. Live generation requires both `InterviewPrep:Ai:Enabled=true` and `GoogleAi:Enabled=true` with an API key. Disabled or failed live generation returns 503 without replacing a saved pack. See ADR-0046, ADR-0047, and `CONTEXT.md`.
 - `CvImportAi`, `CvUpdateAi`, `CvSuggestionsAi`, `CvExportAi`
   Prompt templates for CV structured import, AI section updates, improvement suggestions, and export copy polish. Defaults are suitable for most setups; override only when you want different tone or structure.
 - `GitHubProjectAi`
@@ -268,15 +272,17 @@ The saved jobs page (`/jobs`) supports:
 - loading skeletons and post-load status banners for the list and detail panels
 - status-source messaging that explains whether the latest interview or rejection change was synced from Gmail or saved manually
 - optimistic in-place updates after calendar sync and other mutations (no full list reload)
-- **Study brief** / **Practice interview** actions that deep-link to `/interview-prep` with `jobId` (and `surface=study` for the study pack)
+- **Prepare for interview** action that opens `/interview-prep?jobId=<guid>`
 - **Write cover letter** on the job detail panel: optional note, then a grounded letter saved on that job (local Docker uses Gemini via `GoogleAi`; writing again replaces the saved letter)
 
 The Interview prep page (`/interview-prep`) supports:
 
-- **Practice** — create and run durable Interview Prep sessions (modes/personas, optional saved job, language/market, Full loop)
-- **Study brief** — generate/view a durable study pack from Structured CV ± optional job (topics with gap tags, sample questions, CV talking points); optional focus note on generate/regenerate; outdated banner when the CV changed or the bound job is missing
-- Query params: `?jobId=<scrape-result-guid>`, `?surface=study`, or both
-- Local Dev typically uses the Interview Prep fake AI provider (no Gemini key); see `frontend/applyvault-jobs-ui/README.md`
+- Preparation inputs: target role/level, optional saved job, selected project summaries, additional facts, known weaknesses, interview formats, language, hiring market, and study time (1–90 days, 15–240 minutes per day; defaults: 14 days × 60 minutes). Missing or invalid inputs are explained next to the planning action.
+- A document reader with internal links, prerequisite navigation, evidence-aware topic map, study plan, saved readiness and review log, copy, and Markdown export.
+- Query params: `?jobId=<scrape-result-guid>` or `?packId=<pack-guid>`. Old `surface` parameters are harmless; there is one preparation experience.
+- Each document has 1–3 clarification questions, shown one at a time with **Help me answer**, **I don't know**, and **Skip**. Help includes practical guidance, a blank starting structure, a hypothetical example, and follow-up guidance on request.
+- Saved answers carry across documents. Later unanswered questions can be refreshed from earlier context. Rewriting one document preserves the others; creating a new outline resets the pack after confirmation. Source changes never automatically overwrite content.
+- Live output is validated for document structure, links, prerequisites, and time budgets. Generation has no browsing or execution tools: external references and example code are not claimed to be verified. See `frontend/applyvault-jobs-ui/README.md`.
 
 The settings page also supports:
 
@@ -429,7 +435,7 @@ Useful checks:
 8. Open a saved result to inspect capture confidence, review low-confidence fields, clean up the description, or mark it as rejected.
 9. Optionally upload a CV PDF from **My CV** (`/my-cv`); local dev stores files under `App_Data/cv-documents` when `CvDocumentStorage:Provider` is `Local`, and structured sections are extracted automatically on upload.
 10. Edit structured CV sections, run AI updates or suggestions, and download a formatted export when ready.
-11. Optionally open **Interview prep** (`/interview-prep`): generate a Study brief and/or start a practice session (Structured CV required; optional saved job via `jobId`). Local Dev can use the fake Interview Prep AI provider.
+11. Optionally open **Interview prep** (`/interview-prep`): plan a preparation pack, then clarify and write its documents individually (Structured CV required; optional saved job via `jobId`). An explicit demo provider is available for local previews.
 12. Optionally connect GitHub from dashboard settings after enabling `GitHubIntegration` and configuring a GitHub OAuth App, then open **Projects** (`/cv-projects`) to browse repositories and generate AI-written personal-project entries (requires `GoogleAi:Enabled`).
 13. Optionally connect Gmail from dashboard settings after enabling `MailIntegration` and configuring Gmail OAuth credentials.
 14. Let the background mail sync poll for new Gmail messages and auto-update matched jobs when interview or rejection emails arrive.
@@ -476,8 +482,8 @@ Useful checks:
 36. Click **Save to ApplyVault**, confirm success (or graceful duplicate handling), and follow the link to `/jobs?selected=...`.
 37. Delete a saved job and confirm the modal confirmation step is required before removal.
 38. On `/settings`, connect or disconnect a calendar, GitHub, or mail integration and confirm the disconnect confirmation modal appears before removal.
-39. With a Structured CV, open `/interview-prep?surface=study`, generate a Study brief, and confirm topics/gap tags/questions/talking points render; regenerate and confirm the outdated banner clears when the CV is unchanged.
-40. From a saved job detail, open **Study brief** / **Practice interview** and confirm deep-links land on `/interview-prep` with the correct `jobId` / `surface`.
+39. With a Structured CV, open `/interview-prep`, plan a pack, open a document, use help/unknown/skip, save context, and write it. Check document navigation, the topic map, study plan, readiness, review log persistence, and Markdown download. Rewrite one document and confirm other content and progress remain. An unchanged source must not be marked outdated.
+40. From a saved job detail, open **Prepare for interview** and confirm the saved job is selected. Without a job, verify that a target role and level are required.
 41. Visit an unknown path such as `/does-not-exist` and confirm the 404 page links to the correct home route for your auth state.
 42. Sign out from any authenticated page and confirm you return to `/login`.
 

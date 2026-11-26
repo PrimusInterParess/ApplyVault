@@ -1,951 +1,215 @@
-<main class="interview-prep">
-  @if (facade.cvGateStatus() === 'loading' || facade.cvGateStatus() === 'unknown') {
-    <section
-      class="interview-prep__panel interview-prep__panel--quiet"
-      role="status"
-      aria-busy="true">
-      <p class="interview-prep__muted">Checking Structured CV…</p>
-    </section>
-  } @else if (facade.cvGateStatus() === 'missing') {
-    <section class="interview-prep__panel interview-prep__gate">
-      <h2>Structured CV required</h2>
-      <p class="interview-prep__muted">Build or import a CV first — prep reads it; it does not edit it.</p>
-      <a routerLink="/cv-builder" class="interview-prep__cta">Open CV Builder</a>
-    </section>
-  } @else if (facade.cvGateStatus() === 'error') {
-    <section class="interview-prep__panel" role="alert">
-      <p>{{ facade.cvGateError() }}</p>
-      <button type="button" class="interview-prep__secondary" (click)="facade.loadCvGate()">Retry</button>
-    </section>
-  } @else {
-    <nav class="interview-prep__surface" aria-label="Interview Prep surfaces">
-      <button
-        type="button"
-        class="interview-prep__surface-tab"
-        [class.interview-prep__surface-tab--active]="facade.surface() === 'practice'"
-        (click)="selectSurface('practice', $event)">
-        Practice
+<main class="av-prep">
+  <header class="prep-header">
+    <div>
+      <p class="prep-eyebrow">Interview preparation</p>
+      <h1>Understand the role. Prepare with purpose.</h1>
+      <p class="prep-muted">A personal reading and practice pack built from your CV, the role, your projects, and what you want to improve.</p>
+    </div>
+    <button type="button" class="prep-secondary" (click)="reload()" [disabled]="!!facade.busy()">Reload</button>
+  </header>
+
+  @if (facade.error(); as error) { <p class="prep-alert" role="alert">{{ error }}</p> }
+  @if (facade.notice(); as notice) { <p class="prep-notice" role="status">{{ notice }}</p> }
+  @if (exportError(); as error) { <p class="prep-alert" role="alert">{{ error }}</p> }
+  @if (facade.busy(); as busy) {
+    <p class="prep-status" role="status" aria-live="polite">
+      @switch (busy) {
+        @case ('loading') { Loading your preparation… }
+        @case ('generating') { Planning your documents and clarification questions. This can take a few minutes; keep this page open until the outline is saved. }
+        @case ('regenerating') { Preparing a new outline and clarification questions. Keep this page open until the outline is saved. }
+        @case ('saving') { Saving progress… }
+        @case ('deleting') { Deleting preparation pack… }
+        @case ('questions') { Preparing questions for this document… }
+        @case ('answers') { Saving your context… }
+        @case ('writing') { Writing this document from your saved context. This may take a few minutes… }
+        @case ('helping') { Preparing guidance. Your answer stays unchanged… }
+      }
+    </p>
+  }
+  @if (facade.context(); as context) {
+    @if (!context.hasStructuredCv) {
+      <section class="prep-card prep-gate">
+        <h2>Start with your CV</h2>
+        <p>Build or import a Structured CV so your preparation has a factual starting point.</p>
+        <a routerLink="/cv-builder" class="prep-primary">Open CV Builder</a>
+      </section>
+    }
+    <section class="prep-card prep-inputs">
+      <button type="button" class="prep-disclosure" [attr.aria-expanded]="inputsOpen()" aria-controls="prep-inputs" (click)="inputsOpen.set(!inputsOpen())">
+        <span>Preparation inputs</span><span>{{ inputsOpen() ? 'Hide' : 'Edit' }}</span>
       </button>
-      <button
-        type="button"
-        class="interview-prep__surface-tab"
-        [class.interview-prep__surface-tab--active]="facade.surface() === 'study'"
-        (click)="selectSurface('study', $event)">
-        Study brief
-      </button>
-    </nav>
-
-    <section class="interview-prep__layout">
-      @if (facade.surface() === 'practice') {
-      <div
-        class="interview-prep__main"
-        [class.interview-prep__main--setup]="
-          !facade.sessionDetail() && !facade.startingSession() && facade.sessionLoadStatus() !== 'loading'
-        "
-        [class.interview-prep__main--session]="facade.sessionDetail() && !facade.showResults()"
-        [class.interview-prep__main--results]="facade.showResults()">
-        @if (facade.sessionError()) {
-          <section class="interview-prep__alert" role="alert">
-            <p>{{ facade.sessionError() }}</p>
-            <button type="button" class="interview-prep__secondary" (click)="facade.refreshSession()">
-              Refresh session
-            </button>
-          </section>
-        }
-
-        @if (!facade.sessionDetail()) {
-          @if (facade.startingSession()) {
-            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
-              <p class="interview-prep__muted">Preparing your session…</p>
-            </section>
-          } @else if (facade.sessionLoadStatus() === 'loading') {
-            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
-              <p class="interview-prep__muted">Loading session…</p>
-            </section>
-          } @else {
-            <section class="interview-prep__setup" aria-labelledby="setup-heading">
-              <h2 id="setup-heading">Setup</h2>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Mode</span>
-                <div class="interview-prep__chips">
-                  @for (option of modes; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.mode() === option.id"
-                      (click)="selectMode(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Persona</span>
-                <div class="interview-prep__chips">
-                  @for (option of personas; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.persona() === option.id"
-                      [disabled]="!isPersonaEnabled(option.id)"
-                      (click)="selectPersona(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Language</span>
-                <div class="interview-prep__chips">
-                  @for (option of languages; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.language() === option.id"
-                      (click)="selectLanguage(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Market</span>
-                <div class="interview-prep__chips">
-                  @for (option of markets; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.market() === option.id"
-                      (click)="selectMarket(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Experience</span>
-                <div class="interview-prep__chips">
-                  @for (option of experienceTypes; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.experienceType() === option.id"
-                      (click)="selectExperienceType(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-                <p class="interview-prep__hint">{{ experienceDescription() }}</p>
-              </div>
-
-              <div class="interview-prep__field">
-                <label class="interview-prep__label" for="prep-job">Saved job (optional)</label>
-                <select
-                  id="prep-job"
-                  class="interview-prep__select"
-                  [value]="facade.selectedScrapeResultId() ?? ''"
-                  (change)="onJobChange($any($event.target).value)">
-                  <option value="">No job — general practice</option>
-                  @for (job of facade.jobOptions(); track job.id) {
-                    <option [value]="job.id">{{ job.label }}</option>
+      @if (inputsOpen()) {
+        <form id="prep-inputs" (ngSubmit)="generate()">
+          <fieldset [disabled]="!!facade.busy()">
+            <div class="prep-form-grid">
+              <label class="prep-wide">Saved job <span class="prep-muted">optional</span>
+                <select name="job" [value]="facade.input().scrapeResultId ?? ''" (change)="onJobChange($event)">
+                  <option value="">General preparation for a target role</option>
+                  @for (job of facade.jobs(); track job.id) {
+                    <option [value]="job.id">{{ job.payload.jobDetails.jobTitle || job.payload.title }}{{ job.payload.jobDetails.companyName ? ' · ' + job.payload.jobDetails.companyName : '' }}</option>
                   }
                 </select>
-                @if (facade.jobLinkError()) {
-                  <p class="interview-prep__hint">{{ facade.jobLinkError() }}</p>
-                }
-              </div>
-
-              <button type="button" class="interview-prep__cta" (click)="facade.startNewSession()">
-                Start practice session
-              </button>
-            </section>
-          }
-        } @else {
-          @if (facade.sessionLoadStatus() === 'loading') {
-            <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
-              <p class="interview-prep__muted">Loading session…</p>
-            </section>
-          } @else {
-            <section class="interview-prep__session-meta interview-prep__session-meta--sticky">
-              <p>
-                <strong>{{ modeLabel(facade.sessionDetail()?.mode) }}</strong>
-                · {{ personaLabel(facade.sessionDetail()?.persona) }}
-                · <span class="interview-prep__status">{{ sessionStatusLabel(facade.sessionDetail()?.status) }}</span>
-              </p>
-              @if (facade.sessionDetail()?.jobTitle) {
-                <p class="interview-prep__muted">
-                  {{ facade.sessionDetail()?.jobTitle }}
-                  @if (facade.sessionDetail()?.companyName) {
-                    · {{ facade.sessionDetail()?.companyName }}
-                  }
-                </p>
-              }
-              @if (facade.isFullLoop() && facade.activeStageLabel()) {
-                <p class="interview-prep__muted">Stage: {{ facade.activeStageLabel() }}</p>
-              }
-            </section>
-
-            @if (facade.showResults()) {
-              <section class="interview-prep__results interview-prep__results--elevated" aria-label="Session results">
-                <header class="interview-prep__results-header">
-                  <h2>Session complete</h2>
-                  <p class="interview-prep__muted">
-                    {{ sessionStatusLabel(facade.sessionDetail()?.status) }}
-                  </p>
-                </header>
-
-                @if (facade.resultsError()) {
-                  <section class="interview-prep__alert" role="alert">
-                    <p>{{ facade.resultsError() }}</p>
-                    <button type="button" class="interview-prep__secondary" (click)="facade.loadResults()">
-                      Retry
-                    </button>
-                  </section>
-                }
-
-                <div class="interview-prep__tabs">
-                  <button
-                    type="button"
-                    class="interview-prep__tab"
-                    [class.interview-prep__tab--active]="facade.resultsTab() === 'report'"
-                    (click)="facade.setResultsTab('report')">
-                    Report
-                  </button>
-                  <button
-                    type="button"
-                    class="interview-prep__tab"
-                    [class.interview-prep__tab--active]="facade.resultsTab() === 'transcript'"
-                    (click)="facade.setResultsTab('transcript')">
-                    Transcript
-                  </button>
-                  <button
-                    type="button"
-                    class="interview-prep__tab"
-                    [class.interview-prep__tab--active]="facade.resultsTab() === 'competencies'"
-                    (click)="facade.setResultsTab('competencies')">
-                    Competencies
-                  </button>
-                  @if (facade.isFullLoop()) {
-                    <button
-                      type="button"
-                      class="interview-prep__tab"
-                      [class.interview-prep__tab--active]="facade.resultsTab() === 'panel'"
-                      (click)="facade.setResultsTab('panel')">
-                      Panel debrief
-                    </button>
-                  }
-                </div>
-
-                @if (facade.resultsLoading()) {
-                  <p class="interview-prep__muted">Loading results…</p>
-                } @else {
-                  @if (facade.resultsTab() === 'report') {
-                    @if (facade.report(); as report) {
-                      <p class="interview-prep__disclaimer">{{ report.disclaimer }}</p>
-                      <p>{{ report.summary }}</p>
-                      @if (report.strengths.length) {
-                        <h4>Strengths</h4>
-                        <ul>
-                          @for (item of report.strengths; track item) {
-                            <li>{{ item }}</li>
-                          }
-                        </ul>
-                      }
-                      @if (report.developmentAreas.length) {
-                        <h4>Development areas</h4>
-                        <ul>
-                          @for (item of report.developmentAreas; track item) {
-                            <li>{{ item }}</li>
-                          }
-                        </ul>
-                      }
-                      @if (report.missingEvidence.length) {
-                        <h4>Missing evidence</h4>
-                        <ul>
-                          @for (item of report.missingEvidence; track item.signal) {
-                            <li>
-                              {{ item.signal }} — {{ item.reason }}
-                              @if (item.isUnknownNotWeakness) {
-                                <span class="interview-prep__tag">Not a weakness</span>
-                              }
-                            </li>
-                          }
-                        </ul>
-                      }
-                      @if (report.practiceRecommendations.length) {
-                        <h4>Practice recommendations</h4>
-                        <ul>
-                          @for (item of report.practiceRecommendations; track item) {
-                            <li>{{ item }}</li>
-                          }
-                        </ul>
-                      }
-                    }
-                  }
-                  @if (facade.resultsTab() === 'transcript') {
-                    @if (facade.transcript(); as transcript) {
-                      @for (turn of transcript.turns; track turn.id) {
-                        <p><strong>{{ turn.role }}</strong>: {{ turn.text }}</p>
-                      }
-                    }
-                  }
-                  @if (facade.resultsTab() === 'competencies') {
-                    @if (facade.competencies(); as comp) {
-                      <p class="interview-prep__disclaimer">{{ comp.disclaimer }}</p>
-                      @for (item of comp.competencies; track item.competencyId) {
-                        <article class="interview-prep__competency">
-                          <h4>{{ item.displayName }}</h4>
-                          <p>Coverage: {{ item.coverageState }} · Confidence: {{ item.confidence }}</p>
-                          @if (item.observedGaps.length) {
-                            <ul>
-                              @for (gap of item.observedGaps; track gap) {
-                                <li>{{ gap }}</li>
-                              }
-                            </ul>
-                          }
-                        </article>
-                      }
-                    }
-                  }
-                  @if (facade.resultsTab() === 'panel') {
-                    @if (facade.panelDebrief(); as panel) {
-                      <p>{{ panel.overallDebrief }}</p>
-                      @for (perspective of panel.perspectives; track perspective.personaLabel) {
-                        <article>
-                          <h4>{{ perspective.personaLabel }} ({{ perspective.score }})</h4>
-                          <p>{{ perspective.assessment }}</p>
-                        </article>
-                      }
-                    }
-                  }
-                }
-              </section>
-
-              <div class="interview-prep__lifecycle interview-prep__lifecycle--secondary">
-                <button type="button" class="interview-prep__secondary" (click)="facade.resetActiveSession()">
-                  New session
-                </button>
-              </div>
-            }
-
-            @if (!facade.showResults()) {
-              @if (needsContinue()) {
-                <section class="interview-prep__panel interview-prep__continue">
-                  <p>Session is ready to start.</p>
-                  <button
-                    type="button"
-                    class="interview-prep__cta"
-                    [disabled]="facade.lifecycleBusy()"
-                    (click)="facade.continueLoadedSession()">
-                    Start interview
-                  </button>
-                </section>
-              }
-
-              @if (facade.sessionDetail()?.brief; as brief) {
-                <section class="interview-prep__panel interview-prep__brief">
-                  <h3>Brief</h3>
-                  <p>{{ brief.summary }}</p>
-                  @if (brief.talkingPoints.length) {
-                    <ul>
-                      @for (point of brief.talkingPoints; track point) {
-                        <li>{{ point }}</li>
-                      }
-                    </ul>
-                  }
-                </section>
-              }
-
-              <section class="interview-prep__chat" aria-label="Interview conversation">
-                <div #chatScroll class="interview-prep__chat-scroll">
-                  @for (turn of facade.chatTurns(); track turn.id) {
-                    <article
-                      class="interview-prep__message"
-                      [class.interview-prep__message--candidate]="turn.role === 'candidate'"
-                      [class.interview-prep__message--coach]="turn.role === 'coach'"
-                      [class.interview-prep__message--handoff]="turn.actionType === 'stageHandoff'"
-                      [class.interview-prep__message--opening]="turn.actionType === 'opening'">
-                      <header>
-                        <span>{{ turnRoleLabel(turn) }}</span>
-                        @if (turn.actionType === 'opening') {
-                          <span class="interview-prep__tag">Opening</span>
-                        }
-                        @if (turn.actionType === 'stageHandoff') {
-                          <span class="interview-prep__tag">Stage handoff</span>
-                        }
-                        @if (showTurnLanguage(turn)) {
-                          <span class="interview-prep__tag">{{ languageLabel(turn.language) }}</span>
-                        }
-                      </header>
-                      <p>{{ turn.text }}</p>
-                      @if (turn.role === 'candidate' && facade.canCoach()) {
-                        <button
-                          type="button"
-                          class="interview-prep__ghost"
-                          [disabled]="facade.coachingBusy()"
-                          (click)="facade.openCoachingReview(turn.id)">
-                          Review answer
-                        </button>
-                      }
-                    </article>
-                  }
-                </div>
-              </section>
-
-              <div
-                class="interview-prep__composer-wrap"
-                [class.interview-prep__composer-wrap--idle]="
-                  !facade.canAnswer() && !facade.submittingAnswer()
-                ">
-                @if (facade.fullLoopTransitionBanner(); as transitionBanner) {
-                  <p
-                    class="interview-prep__transition-banner"
-                    role="status"
-                    aria-live="polite"
-                    aria-busy="true">
-                    {{ transitionBanner }}
-                  </p>
-                }
-
-                @if (facade.canAnswer() || facade.submittingAnswer()) {
-                  <form class="interview-prep__composer" (submit)="submitAnswer(); $event.preventDefault()">
-                    <label class="interview-prep__label" for="prep-answer">Your answer</label>
-                    <textarea
-                      id="prep-answer"
-                      rows="4"
-                      class="interview-prep__textarea"
-                      [disabled]="facade.submittingAnswer()"
-                      [ngModel]="answerDraft()"
-                      (ngModelChange)="answerDraft.set($event)"
-                      name="answer"></textarea>
-                    <button
-                      type="submit"
-                      class="interview-prep__cta"
-                      [disabled]="facade.submittingAnswer() || !answerDraft().trim()"
-                      [attr.aria-disabled]="facade.submittingAnswer() || !answerDraft().trim()">
-                      {{ facade.submittingAnswer() ? 'Sending…' : 'Send answer' }}
-                    </button>
-                  </form>
-                } @else if (facade.sessionDetail()?.status === 'inProgress') {
-                  <p class="interview-prep__muted interview-prep__composer-idle" role="status">
-                    Waiting for the next question…
-                  </p>
-                }
-              </div>
-
-              <div class="interview-prep__lifecycle">
-                @if (facade.sessionDetail()?.status === 'inProgress') {
-                  <button type="button" class="interview-prep__secondary" (click)="facade.pauseSession()">
-                    Pause
-                  </button>
-                }
-                @if (facade.sessionDetail()?.status === 'paused') {
-                  <button type="button" class="interview-prep__secondary" (click)="facade.resumeSession()">
-                    Resume
-                  </button>
-                }
-                @if (
-                  facade.sessionDetail()?.status === 'inProgress' ||
-                  facade.sessionDetail()?.status === 'paused'
-                ) {
-                  <button type="button" class="interview-prep__secondary" (click)="facade.completeSession()">
-                    Complete
-                  </button>
-                  <button type="button" class="interview-prep__secondary" (click)="facade.cancelSession()">
-                    Cancel
-                  </button>
-                }
-                @if (facade.canAdvanceFullLoop()) {
-                  <button
-                    type="button"
-                    class="interview-prep__secondary"
-                    [disabled]="facade.lifecycleBusy()"
-                    (click)="facade.advanceFullLoopStage()">
-                    Recover next stage
-                  </button>
-                }
-                <button type="button" class="interview-prep__link" (click)="facade.resetActiveSession()">
-                  New session
-                </button>
-              </div>
-            }
-          }
-        }
-      </div>
-      } @else {
-      <div class="interview-prep__main interview-prep__main--study">
-        @if (facade.studyBriefError()) {
-          <section class="interview-prep__alert" role="alert">
-            <p>{{ facade.studyBriefError() }}</p>
-          </section>
-        }
-
-        @if (facade.studyBriefBusy() !== 'idle') {
-          <section class="interview-prep__panel interview-prep__panel--quiet" role="status" aria-busy="true">
-            <p class="interview-prep__muted">{{ studyBusyLabel() }}</p>
-          </section>
-        }
-
-        @if (facade.selectedStudyBrief(); as brief) {
-          <section class="interview-prep__study" aria-labelledby="study-brief-heading">
-            <header class="interview-prep__study-header">
-              <div>
-                <h2 id="study-brief-heading">Study brief</h2>
-                <p class="interview-prep__muted">
-                  {{ studyBriefJobLabel(brief) }}
-                  · {{ languageLabel(brief.language) }}
-                  · {{ marketLabel(brief.market) }}
-                  · Generated {{ brief.generatedAt | date: 'medium' }}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="interview-prep__link"
-                (click)="facade.clearSelectedStudyBrief()">
-                New brief
-              </button>
-            </header>
-
-            @if (brief.outdated) {
-              <section class="interview-prep__outdated" role="status">
-                <p><strong>Outdated</strong> — regenerate to refresh from your current CV{{ brief.scrapeResultId || brief.jobTitle ? ' / job' : '' }}.</p>
-                <ul>
-                  @for (reason of brief.outdatedReasons; track reason) {
-                    <li>{{ outdatedReasonLabel(reason) }}</li>
-                  }
-                </ul>
-              </section>
-            }
-
-            @if (brief.focusNoteSnapshot) {
-              <p class="interview-prep__hint">
-                Last focus note: {{ brief.focusNoteSnapshot }}
-              </p>
-            }
-
-            @if (brief.usedAiFallback) {
-              <p class="interview-prep__hint">Generated with fallback content (AI unavailable or stub).</p>
-            }
-
-            <section class="interview-prep__study-section" aria-labelledby="study-topics-heading">
-              <h3 id="study-topics-heading">Topics</h3>
-              <ul class="interview-prep__topic-list">
-                @for (topic of sortedTopics(brief); track topic.name + topic.priority) {
-                  <li class="interview-prep__topic">
-                    <div class="interview-prep__topic-row">
-                      <a
-                        class="interview-prep__topic-name interview-prep__study-search-link"
-                        [href]="googleStudySearchUrl(topic.name)"
-                        target="_blank"
-                        rel="noopener noreferrer">
-                        {{ topic.name }}
-                      </a>
-                      <span
-                        class="interview-prep__gap"
-                        [attr.data-gap]="topic.gap">
-                        {{ gapLabel(topic.gap) }}
-                      </span>
-                    </div>
-                    @if (topic.note) {
-                      <p class="interview-prep__muted">{{ topic.note }}</p>
-                    }
-
-                    <div class="interview-prep__topic-block">
-                      <h4 class="interview-prep__topic-subheading">Coverage</h4>
-                      <ul class="interview-prep__topic-items">
-                        @for (item of topic.coverageItems; track item.text) {
-                          <li>
-                            <a
-                              class="interview-prep__study-search-link"
-                              [href]="googleStudySearchUrl(topic.name, item.text)"
-                              target="_blank"
-                              rel="noopener noreferrer">
-                              {{ item.text }}
-                            </a>
-                            @if (item.note) {
-                              <p class="interview-prep__muted">{{ item.note }}</p>
-                            }
-                          </li>
-                        }
-                      </ul>
-                    </div>
-
-                    @if (topic.sampleQuestions.length) {
-                      <div class="interview-prep__topic-block">
-                        <h4 class="interview-prep__topic-subheading">Sample questions</h4>
-                        <ul class="interview-prep__topic-items">
-                          @for (item of topic.sampleQuestions; track item.text) {
-                            <li>
-                              <span>{{ item.text }}</span>
-                              @if (item.note) {
-                                <p class="interview-prep__muted">{{ item.note }}</p>
-                              }
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-
-                    @if (topic.talkingPoints.length) {
-                      <div class="interview-prep__topic-block">
-                        <h4 class="interview-prep__topic-subheading">CV talking points</h4>
-                        <ul class="interview-prep__topic-items">
-                          @for (item of topic.talkingPoints; track item.text) {
-                            <li>
-                              <span>{{ item.text }}</span>
-                              @if (item.note) {
-                                <p class="interview-prep__muted">{{ item.note }}</p>
-                              }
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                  </li>
-                }
-              </ul>
-            </section>
-
-            <section class="interview-prep__study-regen" aria-labelledby="study-regen-heading">
-              <h3 id="study-regen-heading">Regenerate</h3>
-              <p class="interview-prep__muted">
-                Replaces this brief in place. Binding stays the same; optional focus note steers this run only.
-              </p>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Language</span>
-                <div class="interview-prep__chips">
-                  @for (option of languages; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.language() === option.id"
-                      (click)="selectLanguage(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <span class="interview-prep__label">Market</span>
-                <div class="interview-prep__chips">
-                  @for (option of markets; track option.id) {
-                    <button
-                      type="button"
-                      class="interview-prep__chip"
-                      [class.interview-prep__chip--active]="facade.market() === option.id"
-                      (click)="selectMarket(option.id, $event)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <div class="interview-prep__field">
-                <label class="interview-prep__label" for="study-regen-focus">Focus note (optional)</label>
-                <textarea
-                  id="study-regen-focus"
-                  rows="3"
-                  class="interview-prep__textarea"
-                  [attr.maxlength]="focusNoteMaxLength"
-                  [ngModel]="facade.studyFocusNote()"
-                  (ngModelChange)="facade.setStudyFocusNote($event)"
-                  name="studyRegenFocus"
-                  [disabled]="facade.studyBriefBusy() !== 'idle'"></textarea>
-              </div>
-
-              <div class="interview-prep__lifecycle">
-                <button
-                  type="button"
-                  class="interview-prep__cta"
-                  [disabled]="facade.studyBriefBusy() !== 'idle'"
-                  (click)="facade.regenerateStudyBrief()">
-                  Regenerate brief
-                </button>
-                <button
-                  type="button"
-                  class="interview-prep__link"
-                  [disabled]="facade.studyBriefBusy() !== 'idle'"
-                  (click)="confirmDeleteStudyBrief(brief, $event)">
-                  Delete brief
-                </button>
-              </div>
-            </section>
-          </section>
-        } @else {
-          <section class="interview-prep__setup interview-prep__study-setup" aria-labelledby="study-setup-heading">
-            <h2 id="study-setup-heading">Generate study brief</h2>
-            <p class="interview-prep__muted">
-              Read-only study pack from your Structured CV and optional saved job. Independent of practice sessions.
-            </p>
-
-            <div class="interview-prep__field">
-              <span class="interview-prep__label">Language</span>
-              <div class="interview-prep__chips">
-                @for (option of languages; track option.id) {
-                  <button
-                    type="button"
-                    class="interview-prep__chip"
-                    [class.interview-prep__chip--active]="facade.language() === option.id"
-                    (click)="selectLanguage(option.id, $event)">
-                    {{ option.label }}
-                  </button>
-                }
-              </div>
+              </label>
+              @if (facade.jobsError(); as error) { <p class="prep-alert prep-wide">{{ error }}</p> }
+              <label>Target role {{ facade.input().scrapeResultId ? '(optional override)' : '' }}
+                <input name="role" maxlength="200" [required]="!facade.input().scrapeResultId" [ngModel]="facade.input().targetRole" (ngModelChange)="facade.patchInput({ targetRole: $event })" placeholder="e.g. Product designer" />
+              </label>
+              <label>Target level {{ facade.input().scrapeResultId ? '(optional override)' : '' }}
+                <input name="level" maxlength="100" [required]="!facade.input().scrapeResultId" [ngModel]="facade.input().targetLevel" (ngModelChange)="facade.patchInput({ targetLevel: $event })" placeholder="e.g. Mid-level" />
+              </label>
+              <label>Preparation days
+                <input name="days" type="number" required min="1" [max]="maxPreparationDays" [ngModel]="facade.input().preparationDays" (ngModelChange)="facade.patchInput({ preparationDays: $event })" />
+                <span class="prep-hint">1–{{ maxPreparationDays }} days</span>
+              </label>
+              <label>Study minutes per day
+                <input name="minutes" type="number" required min="15" max="240" [ngModel]="facade.input().minutesPerDay" (ngModelChange)="facade.patchInput({ minutesPerDay: $event })" />
+              </label>
+              <label>Language
+                <select name="language" [ngModel]="facade.input().language" (ngModelChange)="facade.patchInput({ language: $event })">
+                  <option value="english">English</option><option value="danish">Danish</option><option value="mixedEnglishDanish">English and Danish</option>
+                </select>
+              </label>
+              <label>Hiring market <span class="prep-muted">optional</span>
+                <input name="market" maxlength="120" [ngModel]="facade.input().hiringMarket" (ngModelChange)="facade.patchInput({ hiringMarket: $event })" placeholder="e.g. Denmark" />
+              </label>
+              <label class="prep-wide">Expected interview formats <span class="prep-muted">optional, comma-separated</span>
+                <input name="formats" [ngModel]="facade.input().interviewFormats.join(', ')" (ngModelChange)="facade.patchInput({ interviewFormats: $event.split(',') })" placeholder="e.g. Portfolio review, case study, technical discussion" />
+              </label>
+              <label class="prep-wide">Current knowledge and areas to improve <span class="prep-muted">optional</span>
+                <textarea name="weaknesses" rows="3" maxlength="4000" [ngModel]="facade.input().knownWeaknesses" (ngModelChange)="facade.patchInput({ knownWeaknesses: $event })" placeholder="What can you already explain or demonstrate? What feels uncertain?"></textarea>
+              </label>
+              <label class="prep-wide">Additional information <span class="prep-muted">optional</span>
+                <textarea name="information" rows="5" maxlength="16000" [ngModel]="facade.input().additionalInformation" (ngModelChange)="facade.patchInput({ additionalInformation: $event })" placeholder="Add project context, your actual contribution, recruiter guidance, technology versions, or topics you want covered."></textarea>
+                <span class="prep-hint">These notes can supply facts beyond your CV. Distinguish your contribution from team work, and proposals from completed work.</span>
+              </label>
             </div>
-
-            <div class="interview-prep__field">
-              <span class="interview-prep__label">Market</span>
-              <div class="interview-prep__chips">
-                @for (option of markets; track option.id) {
-                  <button
-                    type="button"
-                    class="interview-prep__chip"
-                    [class.interview-prep__chip--active]="facade.market() === option.id"
-                    (click)="selectMarket(option.id, $event)">
-                    {{ option.label }}
-                  </button>
+            @if (context.projects.length) {
+              <div class="prep-projects">
+                <h3>Include project summaries</h3>
+                <p class="prep-muted">Choose up to 10 saved projects. Your CV's project entries are already included.</p>
+                @for (project of context.projects; track project.id) {
+                  <label class="prep-check"><input type="checkbox" [name]="'project-' + project.id" [checked]="facade.input().projectSummaryIds.includes(project.id)" (change)="facade.toggleProject(project.id, $any($event.target).checked)" />
+                    <span>{{ project.title }} <small>{{ project.repository }}</small></span>
+                  </label>
                 }
               </div>
+            }
+            @if (facade.missingProjectIds().length) {
+              <p class="prep-alert">Some previously selected projects are no longer available.</p>
+              <button type="button" class="prep-secondary" (click)="facade.removeUnavailableProjects()">Remove unavailable projects</button>
+            }
+            @if (facade.generationIssues().length) {
+              <div id="prep-plan-requirements" class="prep-alert" role="status">
+                <p>To plan your documents:</p>
+                <ul>@for (issue of facade.generationIssues(); track issue) { <li>{{ issue }}</li> }</ul>
+              </div>
+            }
+            <div class="prep-actions">
+              <button type="submit" class="prep-primary" [disabled]="!facade.canGenerate()" [attr.aria-describedby]="facade.generationIssues().length ? 'prep-plan-requirements' : null">{{ facade.selected() ? 'Create a new outline' : 'Plan preparation documents' }}</button>
+              <p class="prep-hint">Defaults: 14 days, 60 minutes a day. A new outline replaces the pack and resets answers and progress. Each document is written after its own clarification step.</p>
             </div>
-
-            <div class="interview-prep__field">
-              <label class="interview-prep__label" for="study-job">Saved job (optional)</label>
-              <select
-                id="study-job"
-                class="interview-prep__select"
-                [value]="facade.selectedScrapeResultId() ?? ''"
-                (change)="onJobChange($any($event.target).value)">
-                <option value="">No job — CV only</option>
-                @for (job of facade.jobOptions(); track job.id) {
-                  <option [value]="job.id">{{ job.label }}</option>
-                }
-              </select>
-              @if (facade.jobLinkError()) {
-                <p class="interview-prep__hint">{{ facade.jobLinkError() }}</p>
-              }
-            </div>
-
-            <div class="interview-prep__field">
-              <label class="interview-prep__label" for="study-focus">Focus note (optional)</label>
-              <textarea
-                id="study-focus"
-                rows="3"
-                class="interview-prep__textarea"
-                [attr.maxlength]="focusNoteMaxLength"
-                [ngModel]="facade.studyFocusNote()"
-                (ngModelChange)="facade.setStudyFocusNote($event)"
-                name="studyFocus"
-                [disabled]="facade.studyBriefBusy() !== 'idle'"
-                placeholder="Steer this generate only — e.g. system design depth, stakeholder stories"></textarea>
-            </div>
-
-            <button
-              type="button"
-              class="interview-prep__cta"
-              [disabled]="facade.studyBriefBusy() !== 'idle'"
-              (click)="facade.generateStudyBrief()">
-              Generate study brief
-            </button>
-          </section>
-        }
-      </div>
+          </fieldset>
+        </form>
       }
-
-      <div class="interview-prep__rail">
-        @if (facade.surface() === 'practice') {
-        <aside class="interview-prep__history" aria-labelledby="history-heading">
-          <h2 id="history-heading">History</h2>
-          @if (facade.historyStatus() === 'loading') {
-            <p class="interview-prep__muted" role="status">Loading…</p>
-          } @else if (facade.historyError()) {
-            <section class="interview-prep__alert" role="alert">
-              <p>{{ facade.historyError() }}</p>
-              <button type="button" class="interview-prep__secondary" (click)="facade.loadHistory()">
-                Retry
-              </button>
-            </section>
-          } @else if (!facade.historyItems().length) {
-            <p class="interview-prep__muted">No practice sessions yet. Start one from Setup.</p>
-          } @else {
-            <ul class="interview-prep__history-list">
-              @for (item of facade.historyItems(); track item.id) {
-                <li>
-                  <button
-                    type="button"
-                    class="interview-prep__history-item"
-                    [class.interview-prep__history-item--active]="isHistoryActive(item)"
-                    (click)="openHistorySession(item)">
-                    <span>{{ modeLabel(item.mode) }} · {{ sessionStatusLabel(item.status) }}</span>
-                    @if (historyJobLabel(item); as jobLabel) {
-                      <span class="interview-prep__muted">{{ jobLabel }}</span>
-                    }
-                  </button>
-                  <button
-                    type="button"
-                    class="interview-prep__link"
-                    (click)="confirmDeleteSession(item, $event)">
-                    Delete
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        </aside>
-
-        <div
-          class="interview-prep__coaching-slot"
-          [class.interview-prep__coaching-slot--open]="
-            facade.coachingReview() || facade.coachingBusy() || !!facade.coachingError()
-          ">
-          <div class="interview-prep__coaching-slot-inner">
-            @if (facade.coachingError() && !facade.coachingReview() && !facade.coachingBusy()) {
-              <section class="interview-prep__alert interview-prep__coaching-alert" role="alert">
-                <p>{{ facade.coachingError() }}</p>
-                <button type="button" class="interview-prep__secondary" (click)="facade.clearCoaching()">
-                  Dismiss
-                </button>
-              </section>
-            }
-
-            @if (facade.coachingReview(); as review) {
-              <section class="interview-prep__panel interview-prep__coaching" aria-labelledby="coaching-heading">
-                <h3 id="coaching-heading">Answer review</h3>
-                @if (facade.coachingBusy()) {
-                  <p class="interview-prep__muted" role="status" aria-busy="true">Updating review…</p>
-                }
-                @if (facade.coachingError()) {
-                  <section class="interview-prep__alert" role="alert">
-                    <p>{{ facade.coachingError() }}</p>
-                    <button
-                      type="button"
-                      class="interview-prep__secondary"
-                      (click)="retryCoachingReview(review.candidateTurnId)">
-                      Retry
-                    </button>
-                  </section>
-                }
-                <blockquote class="interview-prep__coaching-question">{{ review.questionText }}</blockquote>
-                @if (review.strengths.length) {
-                  <p><strong>Strengths</strong></p>
-                  <ul>
-                    @for (item of review.strengths; track item) {
-                      <li>{{ item }}</li>
-                    }
-                  </ul>
-                }
-                @if (review.gaps.length) {
-                  <p><strong>Gaps</strong></p>
-                  <ul>
-                    @for (item of review.gaps; track item) {
-                      <li>{{ item }}</li>
-                    }
-                  </ul>
-                }
-                <p><strong>Model answer</strong></p>
-                @if (review.modelAnswer) {
-                  <p class="interview-prep__model-answer">{{ review.modelAnswer }}</p>
-                } @else {
-                  <p class="interview-prep__muted">Model answer unavailable for this older review.</p>
-                }
-                @if (review.coachingTips.length) {
-                  <p><strong>Tips</strong></p>
-                  <ul>
-                    @for (item of review.coachingTips; track item) {
-                      <li>{{ item }}</li>
-                    }
-                  </ul>
-                }
-                <label class="interview-prep__label" for="prep-retry">Try a revised answer</label>
-                <textarea
-                  id="prep-retry"
-                  rows="3"
-                  class="interview-prep__textarea"
-                  [disabled]="facade.coachingBusy()"
-                  [ngModel]="retryDraft()"
-                  (ngModelChange)="retryDraft.set($event)"
-                  name="retry"></textarea>
-                <button
-                  type="button"
-                  class="interview-prep__secondary"
-                  [disabled]="facade.coachingBusy()"
-                  (click)="submitRetry()">
-                  Submit retry
-                </button>
-                <button type="button" class="interview-prep__link" (click)="facade.clearCoaching()">
-                  Close
-                </button>
-                @if (facade.coachingRetry(); as retry) {
-                  @if (retry.comparisonSummary) {
-                    <p>{{ retry.comparisonSummary }}</p>
-                  }
-                  @if (retry.improved !== null) {
-                    <p class="interview-prep__muted">
-                      Improved: {{ retry.improved ? 'Yes' : 'No' }}
-                    </p>
-                  }
-                }
-              </section>
-            } @else if (facade.coachingBusy()) {
-              <section
-                class="interview-prep__panel interview-prep__coaching interview-prep__coaching--loading"
-                role="status"
-                aria-busy="true">
-                <p class="interview-prep__muted">Loading answer review…</p>
-              </section>
-            }
-          </div>
-        </div>
-        } @else {
-        <aside class="interview-prep__history" aria-labelledby="study-list-heading">
-          <h2 id="study-list-heading">Your briefs</h2>
-          @if (facade.studyBriefListStatus() === 'loading') {
-            <p class="interview-prep__muted" role="status">Loading…</p>
-          } @else if (facade.studyBriefListError()) {
-            <section class="interview-prep__alert" role="alert">
-              <p>{{ facade.studyBriefListError() }}</p>
-              <button type="button" class="interview-prep__secondary" (click)="facade.loadStudyBriefs()">
-                Retry
-              </button>
-            </section>
-          } @else if (!facade.studyBriefItems().length) {
-            <p class="interview-prep__muted">No study briefs yet. Generate one from the form.</p>
-          } @else {
-            <ul class="interview-prep__history-list">
-              @for (item of facade.studyBriefItems(); track item.id) {
-                <li>
-                  <button
-                    type="button"
-                    class="interview-prep__history-item"
-                    [class.interview-prep__history-item--active]="isStudyBriefActive(item)"
-                    (click)="openStudyBrief(item)">
-                    <span>{{ studyBriefJobLabel(item) }}</span>
-                    <span class="interview-prep__muted">
-                      {{ languageLabel(item.language) }}
-                      @if (item.outdated) {
-                        · Outdated
-                      }
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    class="interview-prep__link"
-                    (click)="confirmDeleteStudyBrief(item, $event)">
-                    Delete
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        </aside>
-        }
-      </div>
     </section>
+  }
+
+  @if (facade.packs().length) {
+    <nav class="prep-pack-list" aria-label="Saved preparation packs">
+      @for (pack of facade.packs(); track pack.id) {
+        <button type="button" class="prep-pack-tab" [class.active]="facade.selected()?.id === pack.id" [disabled]="!!facade.busy()" (click)="selectPack(pack)">
+          {{ pack.jobTitle || pack.input.targetRole || 'General preparation' }}
+          @if (pack.companyName) { <small>{{ pack.companyName }}</small> }
+          @if (pack.needsRegeneration) { <small>Upgrade available</small> }
+        </button>
+      }
+    </nav>
+  }
+  @if (facade.selected(); as pack) {
+    @if (pack.needsRegeneration) {
+      <section class="prep-card"><h2>Turn your study brief into a preparation pack</h2><p>Review the inputs above and regenerate to receive complete teaching documents, exercises, and a study plan.</p></section>
+    }
+    @if (pack.outdatedReasons.length) {
+      <aside class="prep-alert" aria-label="Preparation source changes">
+        @for (reason of pack.outdatedReasons; track reason) { <p>{{ reason }}</p> }
+        <p>Your saved documents remain available until you choose to regenerate.</p>
+      </aside>
+    }
+    @if (pack.isDemo) { <p class="prep-alert">Demo preview — this content has not analyzed your CV, job, or projects. Personalized generation requires the live AI service.</p> }
+    @if (pack.content; as content) {
+      <div class="prep-workspace">
+        <aside class="prep-sidebar prep-card">
+          <h2>Your documents</h2>
+          <nav aria-label="Preparation documents">
+            <button type="button" [class.active]="!facade.documentId()" [attr.aria-current]="!facade.documentId() ? 'page' : null" (click)="openDocument(null)">Start here</button>
+            @for (document of content.documents; track document.id) {
+              <button type="button" [class.active]="facade.documentId() === document.id" [attr.aria-current]="facade.documentId() === document.id ? 'page' : null" (click)="openDocument(document.id)">{{ document.title }}<small>{{ document.isGenerated === false ? 'Needs context' : facade.documentContextChanged(document) ? 'Context updated' : 'Ready to read' }}</small></button>
+            }
+          </nav>
+          <p class="prep-hint">Generated {{ pack.generatedAt | date:'mediumDate' }}<br />{{ facade.generatedCount() }} of {{ content.documents.length }} documents written · {{ facade.totalMinutes() }} planned minutes</p>
+        </aside>
+        <article class="prep-reader prep-card">
+          <header class="prep-reader-header">
+            <div><p class="prep-eyebrow">{{ facade.document() ? 'Study document' : 'Preparation overview' }}</p><h2>{{ facade.document()?.title || content.title }}</h2></div>
+            <div class="prep-actions"><button type="button" class="prep-secondary" [disabled]="facade.document()?.isGenerated === false" (click)="copy()">Copy</button><button type="button" class="prep-secondary" (click)="download()">Download pack</button></div>
+          </header>
+          @if (facade.document(); as document) {
+            <p class="prep-muted">{{ document.purpose }}</p>
+            @if (document.prerequisiteIds.length) {
+              <div class="prep-prerequisites">Read first:
+                @for (id of document.prerequisiteIds; track id) { <button type="button" class="prep-text-button" (click)="openDocument(id)">{{ documentTitle(id) }}</button> }
+              </div>
+            }
+          }
+          @if (facade.document(); as document) {
+            <app-preparation-discovery [document]="document" />
+            @if (facade.documentContextChanged(document)) {
+              <p class="prep-alert">Saved answers changed after this document was written. Review the new context and rewrite this document if relevant.</p>
+            }
+          } @else if (pack.discovery) {
+            <p class="prep-notice">Your outline is ready. Open a document, answer its clarification questions or choose I don't know or Skip, then write it.</p>
+          }
+          <div class="prep-markdown" [innerHTML]="markdown()" (click)="followDocumentLink($event)"></div>
+          @if (facade.document(); as document) {
+            @if (document.isGenerated !== false) {
+            <fieldset class="prep-readiness" [disabled]="!!facade.busy()">
+              <legend>What can you do with this material?</legend>
+              @for (item of readiness; track item.key) {
+                <label class="prep-check"><input type="checkbox" [checked]="facade.progress()[item.key].includes(document.id)" (change)="facade.toggleReadiness(item.key, document.id, $any($event.target).checked)" />{{ item.label }}</label>
+              }
+              <p class="prep-hint">Record what you have demonstrated. Reading alone does not establish readiness.</p>
+            </fieldset>
+            }
+          } @else {
+            @if (content.unknowns.length) {
+              <section class="prep-section"><h3>Unknowns and assumptions</h3><ul>@for (unknown of content.unknowns; track $index) { <li>{{ unknown }}</li> }</ul></section>
+            }
+            <section class="prep-section"><h3>What to focus on, and why</h3>
+              @for (topic of content.topics; track $index) {
+                <div class="prep-topic"><button type="button" class="prep-text-button" (click)="openDocument(topic.documentId)">{{ topic.name }}</button><p>{{ topic.relevance }}</p><p class="prep-muted">{{ topic.evidence }}</p></div>
+              }
+            </section>
+            <section class="prep-section"><h3>Your study plan</h3>
+              @for (session of content.studyPlan; track session.day) {
+                <div class="prep-session">
+                  <label class="prep-check"><input type="checkbox" [disabled]="!!facade.busy() || !facade.dayReady(session.documentIds)" [checked]="facade.progress().completedDays.includes(session.day)" (change)="facade.toggleDay(session.day, $any($event.target).checked)" /><strong>Day {{ session.day }} · {{ session.minutes }} minutes</strong></label>
+                  <p>{{ session.activity }}</p>
+                  @for (id of session.documentIds; track id) { <button type="button" class="prep-text-button" (click)="openDocument(id)">{{ documentTitle(id) }}</button> }
+                </div>
+              }
+            </section>
+          }
+          <section class="prep-section">
+            <h3>Review log</h3>
+            <label for="prep-review-log" class="prep-muted">Record the weakness you observed, the correction, evidence from your attempt, and the next task.</label>
+            <textarea id="prep-review-log" rows="5" maxlength="16000" [disabled]="!!facade.busy()" [ngModel]="facade.progress().reviewLog" (ngModelChange)="facade.setReviewLog($event)"></textarea>
+            <div class="prep-actions"><button type="button" class="prep-primary" [disabled]="!!facade.busy() || !facade.progressDirty()" (click)="facade.saveProgress()">Save progress and review log</button>@if (facade.progressDirty()) { <span class="prep-hint">Unsaved changes</span> }</div>
+          </section>
+        </article>
+      </div>
+    }
+    <div class="prep-footer"><button type="button" class="prep-danger" [disabled]="!!facade.busy()" (click)="remove()">Delete preparation pack</button></div>
+  } @else if (facade.context()?.hasStructuredCv && !facade.busy()) {
+    <section class="prep-card prep-empty"><h2>Preparation built around your needs</h2><p>Add your target, choose relevant projects, and plan your documents. A few guided questions for each document will shape its explanations, examples, and exercises.</p></section>
   }
 </main>

@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (2026-08-07 — grill-with-docs + `/operate` D)
 
 Additive to [ADR-0025](0025-interview-prep-brief.md). Does **not** change Interview Prep brief body schema, API/DTOs, persistence, or session lifecycle. UI affordance only — no new glossary term in `CONTEXT.md`.

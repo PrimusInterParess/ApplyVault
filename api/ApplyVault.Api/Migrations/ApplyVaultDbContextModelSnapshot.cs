@@ -433,6 +433,7 @@ namespace ApplyVault.Api.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetimeoffset");
 
                     b.Property<bool>("UsedAiFallback")

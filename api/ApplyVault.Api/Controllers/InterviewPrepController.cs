@@ -2,9 +2,7 @@ using ApplyVault.Api.Models.InterviewPrep;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.InterviewPrep;
-using ApplyVault.Api.Services.InterviewPrep.Coaching;
 using ApplyVault.Api.Services.InterviewPrep.Domain;
-using ApplyVault.Api.Services.InterviewPrep.Reporting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,456 +13,97 @@ namespace ApplyVault.Api.Controllers;
 [ApiController]
 [Route("api/interview-prep")]
 [Authorize]
-public sealed class InterviewPrepController(
-    IAppUserService appUserService,
-    IInterviewPrepSessionService sessionService,
-    IInterviewPrepStudyBriefService studyBriefService,
-    IInterviewPrepReportingService reportingService,
-    IInterviewPrepCoachingService coachingService) : ControllerBase
+public sealed class InterviewPrepController(IAppUserService users, InterviewPreparationPackService packs) : ControllerBase
 {
-    [HttpPost("sessions")]
-    public async Task<ActionResult<InterviewPrepSessionSummaryDto>> CreateSession(
-        [FromBody] InterviewPrepCreateSessionRequest request,
-        CancellationToken cancellationToken)
+    [HttpGet("context")]
+    public async Task<ActionResult<PreparationContextDto>> Context(CancellationToken ct) =>
+        Ok(await packs.ContextAsync(await users.GetRequiredUserAsync(), ct));
+
+    [HttpGet("packs")]
+    public async Task<ActionResult<IReadOnlyList<PreparationPackDto>>> List(CancellationToken ct) =>
+        Ok(await packs.ListAsync(await users.GetRequiredUserAsync(), ct));
+
+    [HttpGet("packs/{id:guid}")]
+    public async Task<ActionResult<PreparationPackDto>> Get(Guid id, CancellationToken ct)
     {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            var created = await sessionService.CreateAsync(user, request, cancellationToken);
-            return CreatedAtAction(nameof(GetSession), new { id = created.Id }, created);
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.GetAsync(user, id, ct));
     }
 
-    [HttpGet("sessions")]
-    public async Task<ActionResult<InterviewPrepSessionListResponseDto>> ListSessions(
-        CancellationToken cancellationToken)
-    {
-        var user = await appUserService.GetRequiredUserAsync();
-        return Ok(await sessionService.ListAsync(user, cancellationToken));
-    }
-
-    [HttpGet("sessions/{id:guid}")]
-    public async Task<ActionResult<InterviewPrepSessionDetailDto>> GetSession(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            var detail = await sessionService.GetAsync(user, id, cancellationToken);
-            Response.Headers.ETag = detail.ETag;
-            return Ok(detail);
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpDelete("sessions/{id:guid}")]
-    public async Task<IActionResult> DeleteSession(Guid id, CancellationToken cancellationToken)
-    {
-        var user = await appUserService.GetRequiredUserAsync();
-        var deleted = await sessionService.DeleteAsync(user, id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
-    }
-
-    [HttpPost("sessions/{id:guid}/prepare")]
+    [HttpPost("packs")]
     [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Prepare(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.PrepareAsync, cancellationToken);
+    public async Task<ActionResult<PreparationPackDto>> Generate([FromBody] PreparationPackInput input, CancellationToken ct)
+    {
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(async () => await packs.GenerateAsync(user, input, ct), created: true);
+    }
 
-    [HttpPost("sessions/{id:guid}/start")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Start(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.StartAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/pause")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Pause(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.PauseAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/resume")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Resume(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.ResumeAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/cancel")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Cancel(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.CancelAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/complete")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> Complete(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.CompleteAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/turns")]
+    [HttpPost("packs/{id:guid}/regenerate")]
     [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public async Task<ActionResult<InterviewPrepTurnSubmitResponseDto>> SubmitTurn(
-        Guid id,
-        [FromBody] InterviewPrepSubmitTurnRequest request,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PreparationPackDto>> Regenerate(Guid id, [FromBody] RegeneratePreparationPackRequest request, CancellationToken ct)
     {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            var result = await sessionService.SubmitTurnAsync(
-                user,
-                id,
-                request,
-                Request.Headers.IfMatch.ToString(),
-                cancellationToken);
-            Response.Headers.ETag = result.Session.ETag;
-            return Ok(result);
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new
-            {
-                message = "The session was modified by another request.",
-                code = "interview_prep_concurrency_conflict"
-            });
-        }
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.RegenerateAsync(user, id, request, ct));
     }
 
-    [HttpGet("sessions/{id:guid}/transcript")]
-    public async Task<ActionResult<InterviewPrepTranscriptDto>> GetTranscript(
-        Guid id,
-        CancellationToken cancellationToken)
+    [HttpPut("packs/{id:guid}/progress")]
+    public async Task<ActionResult<PreparationPackDto>> Progress(Guid id, [FromBody] PreparationProgressRequest request, CancellationToken ct)
     {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await reportingService.GetTranscriptAsync(user, id, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.SaveProgressAsync(user, id, request, ct));
     }
 
-    [HttpGet("sessions/{id:guid}/report")]
-    public async Task<ActionResult<InterviewPrepCandidateReportDto>> GetReport(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await reportingService.GetReportAsync(user, id, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-    }
-
-    [HttpGet("sessions/{id:guid}/competencies")]
-    public async Task<ActionResult<InterviewPrepCompetencyResultsDto>> GetCompetencies(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await reportingService.GetCompetenciesAsync(user, id, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-    }
-
-    [HttpPost("sessions/{id:guid}/full-loop/next-stage")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> StartNextFullLoopStage(
-        Guid id,
-        CancellationToken cancellationToken) =>
-        MutateAsync(id, sessionService.StartNextFullLoopStageAsync, cancellationToken);
-
-    [HttpPost("sessions/{id:guid}/loop-guard/revisit")]
-    public Task<ActionResult<InterviewPrepSessionDetailDto>> ApproveLoopGuardRevisit(
-        Guid id,
-        [FromBody] InterviewPrepLoopGuardRevisitRequest request,
-        CancellationToken cancellationToken) =>
-        MutateAsync(
-            id,
-            (user, sessionId, ifMatch, ct) =>
-                sessionService.ApproveLoopGuardRevisitAsync(user, sessionId, request, ifMatch, ct),
-            cancellationToken);
-
-    [HttpGet("sessions/{id:guid}/panel-debrief")]
-    public async Task<ActionResult<InterviewPrepPanelDebriefDto>> GetPanelDebrief(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await sessionService.GetPanelDebriefAsync(user, id, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-    }
-
-    [HttpPost("sessions/{id:guid}/turns/{turnId:guid}/review")]
+    [HttpPost("packs/{id:guid}/documents/{documentId}/discovery")]
     [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public async Task<ActionResult<InterviewPrepAnswerReviewDto>> RequestAnswerReview(
-        Guid id,
-        Guid turnId,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PreparationPackDto>> PrepareDocument(Guid id, string documentId,
+        [FromBody] PreparationRevisionRequest request, CancellationToken ct)
     {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await coachingService.RequestReviewAsync(user, id, turnId, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.PrepareDocumentAsync(user, id, documentId, request, ct));
     }
 
-    [HttpPost("sessions/{id:guid}/turns/{turnId:guid}/retry")]
+    [HttpPut("packs/{id:guid}/documents/{documentId}/answers")]
+    public async Task<ActionResult<PreparationPackDto>> SaveAnswers(Guid id, string documentId,
+        [FromBody] PreparationAnswersRequest request, CancellationToken ct)
+    {
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.SaveAnswersAsync(user, id, documentId, request, ct));
+    }
+
+    [HttpPost("packs/{id:guid}/documents/{documentId}/generate")]
     [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public async Task<ActionResult<InterviewPrepAnswerRetryResultDto>> SubmitAnswerRetry(
-        Guid id,
-        Guid turnId,
-        [FromBody] InterviewPrepSubmitAnswerRetryRequest request,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PreparationPackDto>> WriteDocument(Guid id, string documentId,
+        [FromBody] PreparationRevisionRequest request, CancellationToken ct)
     {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await coachingService.SubmitRetryAsync(user, id, turnId, request, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.WriteDocumentAsync(user, id, documentId, request, ct));
     }
 
-    [HttpGet("sessions/{id:guid}/turns/{turnId:guid}/retry")]
-    public async Task<ActionResult<InterviewPrepAnswerRetryResultDto>> GetAnswerRetry(
-        Guid id,
-        Guid turnId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await coachingService.GetRetryAsync(user, id, turnId, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-    }
-
-    [HttpPost("briefs")]
+    [HttpPost("packs/{id:guid}/documents/{documentId}/questions/{questionId}/help")]
     [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public async Task<ActionResult<InterviewPrepStudyBriefDto>> GenerateStudyBrief(
-        [FromBody] InterviewPrepGenerateStudyBriefRequest request,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PreparationHelpResponse>> Help(Guid id, string documentId, string questionId,
+        [FromBody] PreparationHelpRequest request, CancellationToken ct)
+    {
+        var user = await users.GetRequiredUserAsync();
+        return await Execute(() => packs.HelpAsync(user, id, documentId, questionId, request, ct));
+    }
+
+    [HttpDelete("packs/{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) =>
+        await packs.DeleteAsync(await users.GetRequiredUserAsync(), id, ct) ? NoContent() : NotFound();
+
+    private async Task<ActionResult<T>> Execute<T>(Func<Task<T>> action, bool created = false)
     {
         try
         {
-            var user = await appUserService.GetRequiredUserAsync();
-            var created = await studyBriefService.GenerateAsync(user, request, cancellationToken);
-            return CreatedAtAction(nameof(GetStudyBrief), new { id = created.Id }, created);
+            var result = await action();
+            return created && result is PreparationPackDto pack
+                ? CreatedAtAction(nameof(Get), new { id = pack.Id }, result) : Ok(result);
         }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message,
-                code = ex.ErrorCode,
-                existingBriefId = ex.ExistingBriefId
-            });
-        }
-        catch (InterviewPrepAiUnavailableException ex)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
-            {
-                message = ex.Message,
-                code = ex.ErrorCode
-            });
-        }
-    }
-
-    [HttpPost("briefs/{id:guid}/regenerate")]
-    [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
-    public async Task<ActionResult<InterviewPrepStudyBriefDto>> RegenerateStudyBrief(
-        Guid id,
-        [FromBody] InterviewPrepRegenerateStudyBriefRequest? request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await studyBriefService.RegenerateAsync(
-                user,
-                id,
-                request ?? new InterviewPrepRegenerateStudyBriefRequest(),
-                cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
-        }
-        catch (InterviewPrepAiUnavailableException ex)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
-            {
-                message = ex.Message,
-                code = ex.ErrorCode
-            });
-        }
-    }
-
-    [HttpGet("briefs")]
-    public async Task<ActionResult<InterviewPrepStudyBriefListResponseDto>> ListStudyBriefs(
-        [FromQuery] Guid? scrapeResultId,
-        [FromQuery] bool? cvOnly,
-        CancellationToken cancellationToken)
-    {
-        var user = await appUserService.GetRequiredUserAsync();
-        return Ok(await studyBriefService.ListAsync(user, scrapeResultId, cvOnly, cancellationToken));
-    }
-
-    [HttpGet("briefs/{id:guid}")]
-    public async Task<ActionResult<InterviewPrepStudyBriefDto>> GetStudyBrief(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            return Ok(await studyBriefService.GetAsync(user, id, cancellationToken));
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            // Nested body stale / legacy flat → 400 interview_prep_brief_body_stale
-            return BadRequest(new { message = ex.Message, code = ex.ErrorCode });
-        }
-    }
-
-    [HttpDelete("briefs/{id:guid}")]
-    public async Task<IActionResult> DeleteStudyBrief(Guid id, CancellationToken cancellationToken)
-    {
-        var user = await appUserService.GetRequiredUserAsync();
-        var deleted = await studyBriefService.DeleteAsync(user, id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
-    }
-
-    private async Task<ActionResult<InterviewPrepSessionDetailDto>> MutateAsync(
-        Guid id,
-        Func<Data.AppUserEntity, Guid, string?, CancellationToken, Task<InterviewPrepSessionDetailDto>> action,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await appUserService.GetRequiredUserAsync();
-            var detail = await action(user, id, Request.Headers.IfMatch.ToString(), cancellationToken);
-            Response.Headers.ETag = detail.ETag;
-            return Ok(detail);
-        }
-        catch (InterviewPrepNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InterviewPrepConflictException ex)
-        {
-            return Conflict(new { message = ex.Message, code = ex.ErrorCode });
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new
-            {
-                message = "The session was modified by another request.",
-                code = "interview_prep_concurrency_conflict"
-            });
-        }
+        catch (InterviewPrepNotFoundException) { return NotFound(); }
+        catch (InterviewPrepValidationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InterviewPrepConflictException ex) { return Conflict(new { message = ex.Message, existingPackId = ex.ExistingPackId }); }
+        catch (DbUpdateConcurrencyException) { return Conflict(new { message = "This pack changed in another tab. Reload it before saving." }); }
+        catch (InterviewPrepAiUnavailableException ex) { return StatusCode(503, new { message = ex.Message, code = ex.FailureCode }); }
     }
 }

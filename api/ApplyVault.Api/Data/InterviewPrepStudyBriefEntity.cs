@@ -1,7 +1,7 @@
 namespace ApplyVault.Api.Data;
 
 /// <summary>
-/// Durable Interview Prep study brief (ADR-0025). Independent of sessions.
+/// Preparation pack storage. The legacy table name is retained to preserve saved briefs (ADR-0046).
 /// </summary>
 public sealed class InterviewPrepStudyBriefEntity
 {
@@ -16,15 +16,14 @@ public sealed class InterviewPrepStudyBriefEntity
 
     public required string Market { get; set; }
 
-    /// <summary>Last focus note supplied on generate/regenerate (null if omitted that run).</summary>
+    /// <summary>Legacy brief focus note. New pack inputs live in the versioned body.</summary>
     public string? FocusNoteSnapshot { get; set; }
 
-    /// <summary>Structured body JSON: topics, sampleQuestions, talkingPoints (camelCase).</summary>
+    /// <summary>Versioned preparation pack JSON: inputs, documents, study plan, and progress.</summary>
     public required string BodyJson { get; set; }
 
     /// <summary>
-    /// Structured CV change token at last generate (document id + imported-at + content hash).
-    /// Compared on read to label <c>structuredCvChanged</c>.
+    /// Source fingerprint at generation, including CV, job, selected projects, and preparation inputs.
     /// </summary>
     public required string CvFingerprint { get; set; }
 

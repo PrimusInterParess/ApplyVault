@@ -4,7 +4,6 @@ using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.CvSectionCatalog;
 using ApplyVault.Api.Services.HtmlExport;
-using ApplyVault.Api.Services.InterviewPrep;
 using ApplyVault.Api.Services.InterviewPrep.Adapters;
 using Microsoft.EntityFrameworkCore;
 
@@ -184,7 +183,7 @@ public sealed class CvSectionVisibilityPlacementTests
     }
 
     [Fact]
-    public async Task ComputeCvFingerprint_UnchangedWhenOnlyIncludedOnTemplateChanges()
+    public async Task CandidateSnapshot_UnchangedWhenOnlyIncludedOnTemplateChanges()
     {
         var documentId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var sectionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -199,9 +198,6 @@ public sealed class CvSectionVisibilityPlacementTests
         Assert.DoesNotContain("includedOnTemplate", included.SnapshotJson, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Kept for interview prep", included.SnapshotJson, StringComparison.Ordinal);
         Assert.Contains(Catalog.Version.ToString(), included.SnapshotJson, StringComparison.Ordinal);
-        Assert.Equal(
-            InterviewPrepStudyBriefService.ComputeCvFingerprint(included),
-            InterviewPrepStudyBriefService.ComputeCvFingerprint(omitted));
 
         var edited = await CaptureAsync(
             user,
@@ -212,8 +208,8 @@ public sealed class CvSectionVisibilityPlacementTests
             includedOnTemplate: false,
             summary: "Edited entry");
         Assert.NotEqual(
-            InterviewPrepStudyBriefService.ComputeCvFingerprint(omitted),
-            InterviewPrepStudyBriefService.ComputeCvFingerprint(edited));
+            omitted.SnapshotJson,
+            edited.SnapshotJson);
     }
 
     [Fact]

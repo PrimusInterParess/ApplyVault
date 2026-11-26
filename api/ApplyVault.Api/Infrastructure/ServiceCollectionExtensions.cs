@@ -7,14 +7,6 @@ using ApplyVault.Api.Services.HtmlExport;
 using ApplyVault.Api.Services.InterviewPrep;
 using ApplyVault.Api.Services.InterviewPrep.Adapters;
 using ApplyVault.Api.Services.InterviewPrep.Ai;
-using ApplyVault.Api.Services.InterviewPrep.Ai.Prompts;
-using ApplyVault.Api.Services.InterviewPrep.Catalogs;
-using ApplyVault.Api.Services.InterviewPrep.Domain;
-using ApplyVault.Api.Services.InterviewPrep.Planning;
-using ApplyVault.Api.Services.InterviewPrep.Reporting;
-using ApplyVault.Api.Services.InterviewPrep.Coaching;
-using ApplyVault.Api.Services.InterviewPrep.Runtime;
-using ApplyVault.Api.Services.InterviewPrep.FullLoop;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -227,30 +219,17 @@ public static class ServiceCollectionExtensions
         }
 
         services
-            .AddOptions<InterviewPrepOptions>()
-            .Bind(configuration.GetSection(InterviewPrepOptions.SectionName))
-            .Validate(
-                (options) => options.LoopGuard.NearDuplicateThreshold is > 0 and <= 1,
-                "InterviewPrep:LoopGuard:NearDuplicateThreshold must be between 0 and 1.")
-            .Validate(
-                (options) => options.LoopGuard.MaxSessionTurns > 0,
-                "InterviewPrep:LoopGuard:MaxSessionTurns must be greater than 0.")
-            .Validate(
-                (options) => options.LoopGuard.MaxSessionTurnsFullLoop > 0,
-                "InterviewPrep:LoopGuard:MaxSessionTurnsFullLoop must be greater than 0.");
-
-        services
             .AddOptions<InterviewPrepAiOptions>()
             .Bind(configuration.GetSection(InterviewPrepAiOptions.SectionName))
             .Validate(
-                (options) => options.MaxRetries >= 0,
-                "InterviewPrep:Ai:MaxRetries must be >= 0.")
+                (options) => options.MaxRetries is >= 0 and <= 2,
+                "InterviewPrep:Ai:MaxRetries must be between 0 and 2.")
             .Validate(
-                (options) => options.RetryDelayMilliseconds >= 0,
-                "InterviewPrep:Ai:RetryDelayMilliseconds must be >= 0.")
+                (options) => options.RetryDelayMilliseconds is >= 0 and <= 10000,
+                "InterviewPrep:Ai:RetryDelayMilliseconds must be between 0 and 10000.")
             .Validate(
-                (options) => options.TimeoutSeconds is null or > 0,
-                "InterviewPrep:Ai:TimeoutSeconds must be null or > 0.");
+                (options) => options.TimeoutSeconds is null or (>= 1 and <= 600),
+                "InterviewPrep:Ai:TimeoutSeconds must be null or between 1 and 600.");
 
         return services;
     }
@@ -382,39 +361,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
         services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
         services.AddScoped<IScrapeResultCaptureQualityService, ScrapeResultCaptureQualityService>();
-        services.AddSingleton<IInterviewLoopGuard, InterviewLoopGuard>();
-        services.AddSingleton<IInterviewPrepQuestionBank, FixedInterviewPrepQuestionBank>();
-        services.AddSingleton<IInterviewPrepCompetencyCatalog, InterviewPrepCompetencyCatalog>();
-        services.AddSingleton<IInterviewPrepModeCatalog, InterviewPrepModeCatalog>();
-        services.AddSingleton<IInterviewPrepPersonaCatalog, InterviewPrepPersonaCatalog>();
-        services.AddSingleton<IInterviewPrepCaseCatalog, InterviewPrepCaseCatalog>();
-        services.AddSingleton<IInterviewPrepPromptRegistry, InterviewPrepPromptRegistry>();
-        services.AddSingleton<FakeDeterministicInterviewPrepAiProvider>();
-        services.AddHttpClient<GoogleAiInterviewPrepTransport>();
-        services.AddScoped<IInterviewPrepAiProvider>(static (serviceProvider) =>
-        {
-            var aiOptions = serviceProvider.GetRequiredService<IOptions<InterviewPrepAiOptions>>().Value;
-            var googleOptions = serviceProvider.GetRequiredService<IOptions<GoogleAiOptions>>().Value;
-
-            if (aiOptions.UseFakeProvider || !aiOptions.Enabled || !googleOptions.Enabled)
-            {
-                return serviceProvider.GetRequiredService<FakeDeterministicInterviewPrepAiProvider>();
-            }
-
-            return serviceProvider.GetRequiredService<GoogleAiInterviewPrepTransport>();
-        });
-        services.AddScoped<IInterviewPrepAiGateway, InterviewPrepAiGateway>();
-        services.AddScoped<IInterviewContextBuilder, InterviewContextBuilder>();
-        services.AddScoped<IInterviewPlanner, InterviewPlanner>();
-        services.AddScoped<IInterviewPrepFullLoopService, InterviewPrepFullLoopService>();
-        services.AddScoped<IInterviewPrepAdaptiveRuntime, InterviewPrepAdaptiveRuntime>();
-        services.AddScoped<IInterviewPrepCaseRuntime, InterviewPrepCaseRuntime>();
-        services.AddScoped<IInterviewPrepReportingService, InterviewPrepReportingService>();
-        services.AddScoped<IInterviewPrepCoachingService, InterviewPrepCoachingService>();
+        services.AddHttpClient<IInterviewPreparationPackGenerator, GoogleAiPreparationPackGenerator>(client =>
+            client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<IInterviewPrepCandidateContextAdapter, InterviewPrepCandidateContextAdapter>();
         services.AddScoped<IInterviewPrepJobContextAdapter, InterviewPrepJobContextAdapter>();
-        services.AddScoped<IInterviewPrepSessionService, InterviewPrepSessionService>();
-        services.AddScoped<IInterviewPrepStudyBriefService, InterviewPrepStudyBriefService>();
+        services.AddScoped<InterviewPreparationPackService>();
 
         if (mailIntegration.Enabled)
         {

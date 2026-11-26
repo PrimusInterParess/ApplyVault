@@ -1,979 +1,308 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
-
-import { CvDocumentApiService } from '../../cv-projects/data-access/cv-document-api.service';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, finalize, forkJoin, Observable, of, switchMap, tap } from 'rxjs';
 import { JobResultsApiService } from '../../job-results/data-access/job-results-api.service';
+import { SavedJobResult } from '../../job-results/models/job-result.model';
 import { InterviewPrepApiService } from './interview-prep-api.service';
 import {
-  DEFAULT_INTERVIEW_PREP_EXPERIENCE_TYPE,
-  DEFAULT_INTERVIEW_PREP_LANGUAGE,
-  DEFAULT_INTERVIEW_PREP_MARKET,
-  DEFAULT_INTERVIEW_PREP_MODE,
-  defaultPersonaForMode,
-  InterviewPrepAnswerRetryResult,
-  InterviewPrepAnswerReview,
-  InterviewPrepApiErrorBody,
-  InterviewPrepCandidateReport,
-  InterviewPrepCompetencyResults,
-  InterviewPrepExperienceType,
-  INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH,
-  InterviewPrepLanguage,
-  InterviewPrepMarket,
-  InterviewPrepMode,
-  InterviewPrepPageSurface,
-  InterviewPrepPanelDebrief,
-  InterviewPrepPersona,
-  InterviewPrepSessionDetail,
-  InterviewPrepSessionSummary,
-  InterviewPrepStudyBrief,
-  InterviewPrepTranscript,
-  InterviewPrepTurn,
-  isPersonaValidForMode,
-  personasForMode
+  defaultPreparationInput, emptyPreparationProgress, MAX_PREPARATION_DAYS, PreparationAnswerInput, PreparationContext, PreparationDocument, PreparationHelpResponse, PreparationPack,
+  PreparationPackInput, PreparationProgress, PreparationReadinessKey
 } from '../models/interview-prep.model';
 
-export type InterviewPrepCvGateStatus = 'unknown' | 'loading' | 'ready' | 'missing' | 'error';
-
-export type InterviewPrepJobLinkStatus = 'idle' | 'loading' | 'ready' | 'invalid' | 'error';
-
-export type InterviewPrepHistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-export type InterviewPrepSessionLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-export type InterviewPrepStudyBriefListStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-export type InterviewPrepStudyBriefBusy = 'idle' | 'generating' | 'regenerating' | 'deleting';
-
-export type InterviewPrepResultsTab = 'report' | 'transcript' | 'competencies' | 'panel';
-
-export interface InterviewPrepJobOption {
-  readonly id: string;
-  readonly label: string;
-}
-
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class InterviewPrepFacade {
   private readonly api = inject(InterviewPrepApiService);
-  private readonly cvDocumentApi = inject(CvDocumentApiService);
-  private readonly jobResultsApi = inject(JobResultsApiService);
+  private readonly jobsApi = inject(JobResultsApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  private cvGateSubscription: Subscription | null = null;
-  private historySubscription: Subscription | null = null;
-  private sessionSubscription: Subscription | null = null;
-  private flowSubscription: Subscription | null = null;
-  private turnSubscription: Subscription | null = null;
-  private resultsSubscription: Subscription | null = null;
-  private coachingSubscription: Subscription | null = null;
-  private studyBriefListSubscription: Subscription | null = null;
-  private studyBriefMutationSubscription: Subscription | null = null;
+  readonly context = signal<PreparationContext | null>(null);
+  readonly jobs = signal<readonly SavedJobResult[]>([]);
+  readonly packs = signal<readonly PreparationPack[]>([]);
+  readonly selected = signal<PreparationPack | null>(null);
+  readonly input = signal<PreparationPackInput>(defaultPreparationInput());
+  readonly progress = signal<PreparationProgress>(emptyPreparationProgress());
+  readonly documentId = signal<string | null>(null);
+  readonly busy = signal<'loading' | 'generating' | 'regenerating' | 'saving' | 'deleting' | 'questions' | 'answers' | 'writing' | 'helping' | null>(null);
+  readonly generationInProgress = computed(() => ['generating', 'regenerating', 'questions', 'writing'].includes(this.busy() ?? ''));
+  readonly answerDrafts = signal<Readonly<Record<string, readonly PreparationAnswerInput[]>>>({});
+  readonly helpResult = signal<{ documentId: string; questionId: string; response: PreparationHelpResponse } | null>(null);
+  readonly error = signal<string | null>(null);
+  readonly jobsError = signal<string | null>(null);
+  readonly notice = signal<string | null>(null);
 
-  private pendingClientTurnId: string | null = null;
-
-  readonly surface = signal<InterviewPrepPageSurface>('practice');
-
-  readonly cvGateStatus = signal<InterviewPrepCvGateStatus>('unknown');
-  readonly cvGateError = signal<string | null>(null);
-
-  readonly mode = signal<InterviewPrepMode>(DEFAULT_INTERVIEW_PREP_MODE);
-  readonly persona = signal<InterviewPrepPersona>(defaultPersonaForMode(DEFAULT_INTERVIEW_PREP_MODE));
-  readonly language = signal<InterviewPrepLanguage>(DEFAULT_INTERVIEW_PREP_LANGUAGE);
-  readonly market = signal<InterviewPrepMarket>(DEFAULT_INTERVIEW_PREP_MARKET);
-  readonly experienceType = signal<InterviewPrepExperienceType>(DEFAULT_INTERVIEW_PREP_EXPERIENCE_TYPE);
-
-  readonly jobOptions = signal<readonly InterviewPrepJobOption[]>([]);
-  readonly selectedScrapeResultId = signal<string | null>(null);
-  readonly jobLinkStatus = signal<InterviewPrepJobLinkStatus>('idle');
-  readonly jobLinkError = signal<string | null>(null);
-
-  readonly historyStatus = signal<InterviewPrepHistoryStatus>('idle');
-  readonly historyError = signal<string | null>(null);
-  readonly historyItems = signal<readonly InterviewPrepSessionSummary[]>([]);
-
-  readonly sessionId = signal<string | null>(null);
-  readonly sessionDetail = signal<InterviewPrepSessionDetail | null>(null);
-  readonly sessionEtag = signal<string | null>(null);
-  readonly sessionLoadStatus = signal<InterviewPrepSessionLoadStatus>('idle');
-  readonly sessionError = signal<string | null>(null);
-
-  readonly startingSession = signal(false);
-  readonly submittingAnswer = signal(false);
-  /** Last turn-submit reported a mid-loop Stage auto-advance (cleared on next submit). */
-  readonly lastStageTransitionOccurred = signal(false);
-  readonly lifecycleBusy = signal(false);
-  readonly resultsTab = signal<InterviewPrepResultsTab>('report');
-
-  readonly transcript = signal<InterviewPrepTranscript | null>(null);
-  readonly report = signal<InterviewPrepCandidateReport | null>(null);
-  readonly competencies = signal<InterviewPrepCompetencyResults | null>(null);
-  readonly panelDebrief = signal<InterviewPrepPanelDebrief | null>(null);
-  readonly resultsLoading = signal(false);
-  readonly resultsError = signal<string | null>(null);
-
-  readonly coachingReview = signal<InterviewPrepAnswerReview | null>(null);
-  readonly coachingRetry = signal<InterviewPrepAnswerRetryResult | null>(null);
-  readonly coachingTurnId = signal<string | null>(null);
-  readonly coachingBusy = signal(false);
-  readonly coachingError = signal<string | null>(null);
-
-  readonly studyBriefListStatus = signal<InterviewPrepStudyBriefListStatus>('idle');
-  readonly studyBriefListError = signal<string | null>(null);
-  readonly studyBriefItems = signal<readonly InterviewPrepStudyBrief[]>([]);
-  readonly selectedStudyBrief = signal<InterviewPrepStudyBrief | null>(null);
-  readonly studyFocusNote = signal('');
-  readonly studyBriefBusy = signal<InterviewPrepStudyBriefBusy>('idle');
-  readonly studyBriefError = signal<string | null>(null);
-
-  readonly availablePersonas = computed(() => personasForMode(this.mode()));
-
-  readonly chatTurns = computed((): readonly InterviewPrepTurn[] => {
-    const turns = this.sessionDetail()?.turns ?? [];
-    return turns.filter((turn) => turn.role !== 'system');
+  readonly document = computed(() => this.selected()?.content?.documents.find(d => d.id === this.documentId()) ?? null);
+  readonly totalMinutes = computed(() => this.selected()?.content?.studyPlan.reduce((total, s) => total + s.minutes, 0) ?? 0);
+  readonly progressDirty = computed(() => !!this.selected()?.content && JSON.stringify(this.progress()) !== JSON.stringify(this.selected()!.progress));
+  readonly discoveryDirty = computed(() => Object.entries(this.answerDrafts()).some(([id, answers]) =>
+    JSON.stringify(answers) !== JSON.stringify(this.savedAnswers(id))));
+  readonly unsaved = computed(() => this.progressDirty() || this.discoveryDirty());
+  readonly generatedCount = computed(() => this.selected()?.content?.documents.filter(d => d.isGenerated !== false).length ?? 0);
+  readonly missingProjectIds = computed(() => this.input().projectSummaryIds.filter(id => !this.context()?.projects.some(p => p.id === id)));
+  readonly generationIssues = computed(() => {
+    const input = this.input();
+    const issues: string[] = [];
+    if (!this.context()?.hasStructuredCv) issues.push('Build or import your Structured CV first.');
+    if (!input.scrapeResultId) {
+      if (!input.targetRole.trim()) issues.push('Enter a target role or select a saved job.');
+      if (!input.targetLevel.trim()) issues.push('Enter a target level or select a saved job.');
+    }
+    if (!Number.isInteger(input.preparationDays) || input.preparationDays < 1 || input.preparationDays > MAX_PREPARATION_DAYS)
+      issues.push(`Choose 1–${MAX_PREPARATION_DAYS} whole preparation days.`);
+    if (!Number.isInteger(input.minutesPerDay) || input.minutesPerDay < 15 || input.minutesPerDay > 240)
+      issues.push('Choose 15–240 whole study minutes per day.');
+    if (this.missingProjectIds().length) issues.push('Remove unavailable projects from your selection.');
+    if (input.projectSummaryIds.length > 10) issues.push('Choose at most 10 project summaries.');
+    const formats = [...new Set(input.interviewFormats.map(format => format.trim()).filter(Boolean))];
+    if (formats.length > 8) issues.push('Enter at most 8 interview formats.');
+    if (formats.some(format => format.length > 120)) issues.push('Keep each interview format within 120 characters.');
+    return issues;
   });
+  readonly canGenerate = computed(() => !this.busy() && this.generationIssues().length === 0);
 
-  readonly canAnswer = computed(() => {
-    const status = this.sessionDetail()?.status;
-    return status === 'inProgress' && !this.submittingAnswer() && !this.lifecycleBusy();
-  });
 
-  readonly canCoach = computed(() => {
-    const detail = this.sessionDetail();
-    if (!detail) {
-      return false;
-    }
-    const status = detail.status;
-    if (detail.experienceType === 'guidedCoaching') {
-      return status === 'inProgress' || status === 'paused' || status === 'completed' || status === 'completing';
-    }
-    return status === 'completed' || status === 'completing';
-  });
-
-  readonly showResults = computed(() => {
-    const status = this.sessionDetail()?.status;
-    return status === 'completing' || status === 'completed';
-  });
-
-  readonly isFullLoop = computed(() => this.sessionDetail()?.mode === 'fullLoop');
-
-  readonly activeStageLabel = computed(() => {
-    const stages = this.sessionDetail()?.stages ?? [];
-    const active = stages.find((stage) => stage.status !== 'completed' && stage.status !== 'assessed');
-    if (!active) {
-      const last = stages[stages.length - 1];
-      return last ? `${last.stageType} (${last.status})` : null;
-    }
-    return `${active.stageType} (${active.status})`;
-  });
-
-  /**
-   * Recovery-only: prior Stage finished (completed/assessed) with no live Stage and a Planned next.
-   * Happy path auto-advances via POST /turns — do not gate the interview on this control.
-   */
-  readonly canAdvanceFullLoop = computed(() => {
-    const detail = this.sessionDetail();
-    if (!detail || detail.mode !== 'fullLoop') {
-      return false;
-    }
-    if (detail.status !== 'inProgress' && detail.status !== 'ready') {
-      return false;
-    }
-    if (this.submittingAnswer() || this.lifecycleBusy()) {
-      return false;
-    }
-    const stages = detail.stages;
-    const hasActiveInterviewStage = stages.some((stage) => isActiveInterviewStageStatus(stage.status));
-    if (hasActiveInterviewStage) {
-      return false;
-    }
-    const hasCompletedPrior = stages.some(
-      (stage) => stage.status === 'completed' || stage.status === 'assessed'
-    );
-    const hasPlannedNext = stages.some((stage) => stage.status === 'planned');
-    return hasCompletedPrior && hasPlannedNext;
-  });
-
-  /**
-   * Full-loop turn submit may auto-advance Stages (assessment + handoff + next open).
-   * Status banner only — not a chat bubble.
-   */
-  readonly fullLoopTransitionBanner = computed((): string | null => {
-    if (!this.isFullLoop() || !this.submittingAnswer()) {
-      return null;
-    }
-    return 'Transitioning to the next interviewer…';
-  });
-
-  readonly allFullLoopStagesDone = computed(() => {
-    const detail = this.sessionDetail();
-    if (!detail || detail.mode !== 'fullLoop' || detail.stages.length === 0) {
-      return false;
-    }
-    return detail.stages.every(
-      (stage) => stage.status === 'completed' || stage.status === 'assessed'
-    );
-  });
-
-  setMode(mode: InterviewPrepMode): void {
-    this.mode.set(mode);
-    if (!isPersonaValidForMode(mode, this.persona())) {
-      this.persona.set(defaultPersonaForMode(mode));
-    }
-  }
-
-  setPersona(persona: InterviewPrepPersona): void {
-    if (isPersonaValidForMode(this.mode(), persona)) {
-      this.persona.set(persona);
-    }
-  }
-
-  setLanguage(language: InterviewPrepLanguage): void {
-    this.language.set(language);
-  }
-
-  setMarket(market: InterviewPrepMarket): void {
-    this.market.set(market);
-  }
-
-  setExperienceType(experienceType: InterviewPrepExperienceType): void {
-    this.experienceType.set(experienceType);
-  }
-
-  setSurface(surface: InterviewPrepPageSurface): void {
-    this.surface.set(surface);
-    if (surface === 'study') {
-      this.loadStudyBriefs();
-    }
-  }
-
-  setStudyFocusNote(note: string): void {
-    this.studyFocusNote.set(note);
-  }
-
-  setSelectedJob(scrapeResultId: string | null): void {
-    this.selectedScrapeResultId.set(scrapeResultId);
-  }
-
-  applyJobIdFromQuery(jobId: string | null): void {
-    if (!jobId) {
-      return;
-    }
-    this.selectedScrapeResultId.set(jobId);
-    this.jobLinkStatus.set('loading');
-    this.jobLinkError.set(null);
-    this.jobResultsApi.getAll().subscribe({
-      next: (jobs) => {
-        const match = jobs.find((job) => job.id === jobId);
-        if (match) {
-          this.jobLinkStatus.set('ready');
-          this.jobOptions.set(this.mapJobOptions(jobs));
-          if (this.surface() === 'study') {
-            this.loadStudyBriefsForJob(jobId);
-          }
-        } else {
-          this.jobLinkStatus.set('invalid');
-          this.jobLinkError.set('Saved job not found — pick another or continue without a job.');
-          this.selectedScrapeResultId.set(null);
+  load(jobId?: string | null, packId?: string | null): void {
+    if (this.busy()) return;
+    this.busy.set('loading');
+    this.error.set(null);
+    this.jobsError.set(null);
+    forkJoin({
+      context: this.api.context(), packs: this.api.list(),
+      jobs: this.jobsApi.getAll().pipe(catchError(() => {
+        this.jobsError.set('Saved jobs could not be loaded. Retry to prepare for a specific posting.');
+        return of([] as readonly SavedJobResult[]);
+      }))
+    }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(null))).subscribe({
+      next: ({ context, packs, jobs }) => {
+        this.context.set(context); this.packs.set(packs); this.jobs.set(jobs);
+        const selected = packId ? packs.find(p => p.id === packId)
+          : packs.find(p => p.scrapeResultId === (jobId ?? null));
+        if (selected) this.select(selected);
+        else {
+          this.selected.set(null); this.documentId.set(null); this.progress.set(emptyPreparationProgress());
+          this.answerDrafts.set({}); this.helpResult.set(null);
+          this.input.set({ ...defaultPreparationInput(), scrapeResultId: jobId ?? null });
+          if (packId) this.error.set('This preparation pack is unavailable.');
+          if (jobId && !jobs.some(j => j.id === jobId))
+            this.error.set('The linked saved job is unavailable. Choose another job or general preparation.');
         }
       },
-      error: (error) => {
-        this.jobLinkStatus.set('error');
-        this.jobLinkError.set(this.readError(error, 'Could not verify the linked job.'));
-      }
+      error: error => this.error.set(this.readError(error, 'Could not load preparation. Please retry.'))
     });
   }
 
-  applySurfaceFromQuery(surface: string | null): void {
-    if (surface === 'study') {
-      this.surface.set('study');
+  select(pack: PreparationPack): void {
+    this.selected.set(pack);
+    this.answerDrafts.set({}); this.helpResult.set(null);
+    // Older briefs and nullable wire fields get complete form defaults.
+    this.input.set({
+      ...defaultPreparationInput(), ...pack.input,
+      targetRole: pack.input.targetRole ?? '', targetLevel: pack.input.targetLevel ?? '',
+      hiringMarket: pack.input.hiringMarket ?? '', knownWeaknesses: pack.input.knownWeaknesses ?? '',
+      additionalInformation: pack.input.additionalInformation ?? '',
+      interviewFormats: pack.input.interviewFormats ?? [], projectSummaryIds: pack.input.projectSummaryIds ?? []
+    });
+    this.progress.set(pack.progress);
+    this.documentId.set(null);
+    this.error.set(null); this.notice.set(null);
+  }
+
+  setJob(id: string): void {
+    const binding = id || null;
+    const existing = this.packs().find(p => p.scrapeResultId === binding);
+    if (existing) this.select(existing);
+    else {
+      this.selected.set(null); this.documentId.set(null); this.progress.set(emptyPreparationProgress());
+      this.answerDrafts.set({}); this.helpResult.set(null);
+      this.patchInput({ scrapeResultId: binding }); this.error.set(null); this.notice.set(null);
     }
   }
 
-  loadCvGate(): void {
-    this.cvGateSubscription?.unsubscribe();
-    this.cvGateStatus.set('loading');
-    this.cvGateError.set(null);
-    this.cvGateSubscription = this.cvDocumentApi.getStructured().subscribe({
-      next: (document) => {
-        const sections = document.sections?.length ?? 0;
-        this.cvGateStatus.set(sections > 0 ? 'ready' : 'missing');
-      },
-      error: (error) => {
-        if (error instanceof HttpErrorResponse && error.status === 404) {
-          this.cvGateStatus.set('missing');
-          return;
-        }
-        this.cvGateStatus.set('error');
-        this.cvGateError.set(this.readError(error, 'Could not load your Structured CV.'));
-      }
-    });
+  patchInput(patch: Partial<PreparationPackInput>): void {
+    this.input.update(input => ({ ...input, ...patch }));
   }
 
-  loadJobOptions(): void {
-    this.jobLinkStatus.set('loading');
-    this.jobLinkError.set(null);
-    this.jobResultsApi.getAll().subscribe({
-      next: (jobs) => {
-        this.jobOptions.set(this.mapJobOptions(jobs));
-        this.jobLinkStatus.set('ready');
-      },
-      error: (error) => {
-        this.jobLinkStatus.set('error');
-        this.jobLinkError.set(this.readError(error, 'Could not load saved jobs.'));
-      }
-    });
+  removeUnavailableProjects(): void {
+    this.patchInput({ projectSummaryIds: this.input().projectSummaryIds.filter(id => !this.missingProjectIds().includes(id)) });
   }
 
-  loadHistory(): void {
-    this.historySubscription?.unsubscribe();
-    this.historyStatus.set('loading');
-    this.historyError.set(null);
-    this.historySubscription = this.api.listSessions().subscribe({
-      next: (response) => {
-        this.historyItems.set(response.items ?? []);
-        this.historyStatus.set('ready');
-      },
-      error: (error) => {
-        this.historyStatus.set('error');
-        this.historyError.set(this.readError(error, 'Could not load session history.'));
-      }
-    });
+  toggleProject(id: string, checked: boolean): void {
+    const ids = this.input().projectSummaryIds;
+    this.patchInput({ projectSummaryIds: checked ? [...ids, id] : ids.filter(p => p !== id) });
   }
 
-  loadSession(id: string): void {
-    this.sessionSubscription?.unsubscribe();
-    this.sessionId.set(id);
-    this.sessionLoadStatus.set('loading');
-    this.sessionError.set(null);
-    this.sessionSubscription = this.api.getSession(id).subscribe({
-      next: ({ detail, eTag }) => {
-        this.applySessionDetail(detail, eTag);
-        this.sessionLoadStatus.set('ready');
-        if (detail.status === 'completing' || detail.status === 'completed') {
-          this.loadResults();
-        }
-        if (detail.mode === 'fullLoop' && this.allFullLoopStagesDone()) {
-          this.loadPanelDebrief();
-        }
-      },
-      error: (error) => {
-        this.sessionLoadStatus.set('error');
-        this.sessionError.set(this.readError(error, 'Could not load session.'));
-      }
-    });
+  generate(): void {
+    if (!this.canGenerate()) return;
+    const pack = this.selected();
+    this.mutate(pack ? this.api.regenerate(pack, this.input()) : this.api.generate(this.input()),
+      pack ? 'regenerating' : 'generating', true);
   }
 
-  continueLoadedSession(): void {
-    const sessionId = this.sessionId();
-    const detail = this.sessionDetail();
-    const etag = this.sessionEtag();
-    if (!sessionId || !detail || !etag) {
-      return;
-    }
-    if (detail.status === 'ready') {
-      this.lifecycleBusy.set(true);
-      this.api.startSession(sessionId, etag).subscribe({
-        next: (started) => {
-          this.lifecycleBusy.set(false);
-          this.applySessionDetail(started, started.eTag);
-        },
-        error: (error) => {
-          this.lifecycleBusy.set(false);
-          this.sessionError.set(this.mapSessionMutationError(error));
-        }
-      });
-      return;
-    }
-    if (detail.status === 'created') {
-      this.lifecycleBusy.set(true);
-      this.api.prepareSession(sessionId, etag).subscribe({
-        next: (prepared) => {
-          this.api.startSession(sessionId, prepared.eTag).subscribe({
-            next: (started) => {
-              this.lifecycleBusy.set(false);
-              this.applySessionDetail(started, started.eTag);
-            },
-            error: (error) => {
-              this.lifecycleBusy.set(false);
-              this.sessionError.set(this.mapSessionMutationError(error));
-            }
-          });
-        },
-        error: (error) => {
-          this.lifecycleBusy.set(false);
-          this.sessionError.set(this.mapSessionMutationError(error));
-        }
-      });
-    }
+  toggleReadiness(key: PreparationReadinessKey, id: string, checked: boolean): void {
+    this.progress.update(progress => ({ ...progress, [key]: checked ? [...progress[key], id] : progress[key].filter(x => x !== id) }));
   }
 
-  startNewSession(): void {
-    this.flowSubscription?.unsubscribe();
-    this.startingSession.set(true);
-    this.sessionError.set(null);
-    const scrapeResultId = this.selectedScrapeResultId();
-    this.flowSubscription = this.api
-      .createSession({
-        mode: this.mode(),
-        persona: this.persona(),
-        language: this.language(),
-        market: this.market(),
-        experienceType: this.experienceType(),
-        interactionType: 'text',
-        scrapeResultId: scrapeResultId ?? undefined,
-        idempotencyKey: crypto.randomUUID()
-      })
-      .subscribe({
-        next: (summary) => {
-          this.sessionId.set(summary.id);
-          this.prepareAndStart(summary.id);
-        },
-        error: (error) => {
-          this.startingSession.set(false);
-          this.sessionError.set(this.readError(error, 'Could not create session.'));
-        }
-      });
+  toggleDay(day: number, checked: boolean): void {
+    this.progress.update(p => ({ ...p, completedDays: checked ? [...p.completedDays, day] : p.completedDays.filter(d => d !== day) }));
   }
 
-  private prepareAndStart(sessionId: string): void {
-    this.api.prepareSession(sessionId).subscribe({
-      next: (detail) => {
-        this.applySessionDetail(detail, detail.eTag);
-        this.api.startSession(sessionId, detail.eTag).subscribe({
-          next: (started) => {
-            this.applySessionDetail(started, started.eTag);
-            this.startingSession.set(false);
-            this.loadHistory();
-          },
-          error: (error) => {
-            this.startingSession.set(false);
-            this.sessionError.set(this.readError(error, 'Could not start session.'));
-          }
-        });
-      },
-      error: (error) => {
-        this.startingSession.set(false);
-        this.sessionError.set(this.readError(error, 'Could not prepare session.'));
-      }
-    });
+  setReviewLog(reviewLog: string): void { this.progress.update(p => ({ ...p, reviewLog })); }
+
+  saveProgress(): void {
+    const pack = this.selected();
+    if (!pack?.content || this.busy() || !this.progressDirty()) return;
+    this.mutate(this.api.saveProgress(pack, this.progress()), 'saving', false);
   }
 
-  refreshSession(): void {
-    const id = this.sessionId();
-    if (id) {
-      this.loadSession(id);
-    }
-  }
-
-  submitAnswer(answer: string): void {
-    const trimmed = answer.trim();
-    if (!trimmed || !this.canAnswer()) {
-      return;
-    }
-    const sessionId = this.sessionId();
-    const etag = this.sessionEtag();
-    if (!sessionId || !etag) {
-      return;
-    }
-    const clientTurnId = this.pendingClientTurnId ?? crypto.randomUUID();
-    this.pendingClientTurnId = clientTurnId;
-    this.turnSubscription?.unsubscribe();
-    this.submittingAnswer.set(true);
-    this.lastStageTransitionOccurred.set(false);
-    this.sessionError.set(null);
-    this.turnSubscription = this.api
-      .submitTurn(sessionId, { clientTurnId, answer: trimmed }, etag)
-      .subscribe({
-        next: ({ result, eTag }) => {
-          this.pendingClientTurnId = null;
-          this.submittingAnswer.set(false);
-          this.lastStageTransitionOccurred.set(result.stageTransitionOccurred === true);
-          // Prefer session.turns (includes stageHandoff + next-stage opening) over nextInterviewerTurn alone.
-          this.applySessionDetail(result.session, eTag || result.session.eTag);
-          if (result.interviewComplete || result.session.status === 'completing') {
-            this.loadResults();
-          }
-          if (result.session.mode === 'fullLoop' && this.allFullLoopStagesDone()) {
-            this.loadPanelDebrief();
-          }
-        },
-        error: (error) => {
-          this.submittingAnswer.set(false);
-          this.lastStageTransitionOccurred.set(false);
-          this.sessionError.set(this.mapSessionMutationError(error));
-        }
-      });
-  }
-
-  pauseSession(): void {
-    this.runLifecycle((id, etag) => this.api.pauseSession(id, etag));
-  }
-
-  resumeSession(): void {
-    this.runLifecycle((id, etag) => this.api.resumeSession(id, etag));
-  }
-
-  cancelSession(): void {
-    this.runLifecycle((id, etag) => this.api.cancelSession(id, etag));
-  }
-
-  completeSession(): void {
-    this.runLifecycle((id, etag) => this.api.completeSession(id, etag), () => this.loadResults());
-  }
-
-  advanceFullLoopStage(): void {
-    const sessionId = this.sessionId();
-    const etag = this.sessionEtag();
-    if (!sessionId || !etag) {
-      return;
-    }
-    this.lifecycleBusy.set(true);
-    this.sessionError.set(null);
-    this.api.startNextFullLoopStage(sessionId, etag).subscribe({
-      next: (detail) => {
-        this.lifecycleBusy.set(false);
-        this.applySessionDetail(detail, detail.eTag);
-      },
-      error: (error) => {
-        this.lifecycleBusy.set(false);
-        this.sessionError.set(this.mapSessionMutationError(error));
-      }
-    });
-  }
-
-  loadResults(): void {
-    const sessionId = this.sessionId();
-    if (!sessionId) {
-      return;
-    }
-    this.resultsSubscription?.unsubscribe();
-    this.resultsLoading.set(true);
-    this.resultsError.set(null);
-    this.resultsSubscription = this.api.getReport(sessionId).subscribe({
-      next: (report) => {
-        this.report.set(report);
-        this.resultsLoading.set(false);
-      },
-      error: (error) => {
-        this.resultsLoading.set(false);
-        this.resultsError.set(this.readError(error, 'Could not load report.'));
-      }
-    });
-    this.api.getTranscript(sessionId).subscribe({
-      next: (transcript) => this.transcript.set(transcript),
-      error: () => undefined
-    });
-    this.api.getCompetencies(sessionId).subscribe({
-      next: (competencies) => this.competencies.set(competencies),
-      error: () => undefined
-    });
-  }
-
-  loadPanelDebrief(): void {
-    const sessionId = this.sessionId();
-    if (!sessionId) {
-      return;
-    }
-    this.api.getPanelDebrief(sessionId).subscribe({
-      next: (debrief) => this.panelDebrief.set(debrief),
-      error: (error) => {
-        this.resultsError.set(this.readError(error, 'Could not load panel debrief.'));
-      }
-    });
-  }
-
-  openCoachingReview(candidateTurnId: string): void {
-    const sessionId = this.sessionId();
-    if (!sessionId || !this.canCoach()) {
-      return;
-    }
-    this.coachingSubscription?.unsubscribe();
-    // Drop prior review/retry so the panel renews instead of keeping the last Model answer.
-    this.coachingReview.set(null);
-    this.coachingRetry.set(null);
-    this.coachingBusy.set(true);
-    this.coachingError.set(null);
-    this.coachingTurnId.set(candidateTurnId);
-    this.coachingSubscription = this.api.requestAnswerReview(sessionId, candidateTurnId).subscribe({
-      next: (review) => {
-        this.coachingReview.set(review);
-        this.coachingBusy.set(false);
-      },
-      error: (error) => {
-        this.coachingBusy.set(false);
-        this.coachingError.set(this.mapSessionMutationError(error));
-      }
-    });
-  }
-
-  submitCoachingRetry(revisedAnswer: string): void {
-    const sessionId = this.sessionId();
-    const turnId = this.coachingTurnId();
-    if (!sessionId || !turnId || !revisedAnswer.trim()) {
-      return;
-    }
-    this.coachingBusy.set(true);
-    this.coachingError.set(null);
-    this.api.submitAnswerRetry(sessionId, turnId, revisedAnswer.trim()).subscribe({
-      next: (retry) => {
-        this.coachingRetry.set(retry);
-        this.coachingBusy.set(false);
-      },
-      error: (error) => {
-        this.coachingBusy.set(false);
-        this.coachingError.set(this.mapSessionMutationError(error));
-      }
-    });
-  }
-
-  clearCoaching(): void {
-    this.coachingReview.set(null);
-    this.coachingRetry.set(null);
-    this.coachingTurnId.set(null);
-    this.coachingError.set(null);
-  }
-
-  deleteHistorySession(id: string): void {
-    this.api.deleteSession(id).subscribe({
+  remove(): void {
+    const pack = this.selected();
+    if (!pack || this.busy()) return;
+    this.busy.set('deleting'); this.error.set(null);
+    this.api.delete(pack.id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(null))).subscribe({
       next: () => {
-        this.historyItems.update((items) => items.filter((item) => item.id !== id));
-        if (this.sessionId() === id) {
-          this.resetActiveSession();
-        }
+        this.packs.update(items => items.filter(p => p.id !== pack.id));
+        this.selected.set(null); this.documentId.set(null); this.progress.set(emptyPreparationProgress());
+        this.answerDrafts.set({}); this.helpResult.set(null);
+        this.notice.set('Preparation pack deleted.');
       },
-      error: (error) => {
-        this.historyError.set(this.readError(error, 'Could not delete session.'));
-      }
+      error: error => this.error.set(this.readError(error, 'Could not delete this pack.'))
     });
   }
 
-  resetActiveSession(): void {
-    this.sessionId.set(null);
-    this.sessionDetail.set(null);
-    this.sessionEtag.set(null);
-    this.sessionLoadStatus.set('idle');
-    this.submittingAnswer.set(false);
-    this.lastStageTransitionOccurred.set(false);
-    this.transcript.set(null);
-    this.report.set(null);
-    this.competencies.set(null);
-    this.panelDebrief.set(null);
-    this.clearCoaching();
-    this.pendingClientTurnId = null;
-  }
-
-  setResultsTab(tab: InterviewPrepResultsTab): void {
-    this.resultsTab.set(tab);
-    if (tab === 'panel' && this.isFullLoop()) {
-      this.loadPanelDebrief();
-    }
-  }
-
-  loadStudyBriefs(): void {
-    this.studyBriefListSubscription?.unsubscribe();
-    this.studyBriefListStatus.set('loading');
-    this.studyBriefListError.set(null);
-    this.studyBriefListSubscription = this.api.listStudyBriefs().subscribe({
-      next: (response) => {
-        const items = response.items ?? [];
-        this.studyBriefItems.set(items);
-        this.studyBriefListStatus.set('ready');
-        this.ensureSelectedStudyBrief(items);
-      },
-      error: (error) => {
-        this.studyBriefListStatus.set('error');
-        this.studyBriefListError.set(this.readError(error, 'Could not load study briefs.'));
-      }
+  savedAnswers(documentId: string): readonly PreparationAnswerInput[] {
+    const discovery = this.selected()?.discovery;
+    const questions = discovery?.documents.find(d => d.id === documentId)?.questions ?? [];
+    return questions.map(q => {
+      const answer = discovery?.answers.find(a => a.documentId === documentId && a.questionId === q.id);
+      return { questionId: q.id, status: answer?.status ?? 'pending', text: answer?.text ?? '' };
     });
   }
 
-  loadStudyBriefsForJob(scrapeResultId: string): void {
-    this.studyBriefListSubscription?.unsubscribe();
-    this.studyBriefListStatus.set('loading');
-    this.studyBriefListError.set(null);
-    this.studyBriefListSubscription = this.api.listStudyBriefs().subscribe({
-      next: (response) => {
-        const items = response.items ?? [];
-        this.studyBriefItems.set(items);
-        this.studyBriefListStatus.set('ready');
-        const forJob = items.find((item) => item.scrapeResultId === scrapeResultId) ?? null;
-        this.selectedStudyBrief.set(forJob);
-      },
-      error: (error) => {
-        this.studyBriefListStatus.set('error');
-        this.studyBriefListError.set(this.readError(error, 'Could not load study briefs.'));
-      }
-    });
+  answers(documentId: string): readonly PreparationAnswerInput[] {
+    return this.answerDrafts()[documentId] ?? this.savedAnswers(documentId);
   }
 
-  selectStudyBrief(brief: InterviewPrepStudyBrief): void {
-    this.selectedStudyBrief.set(brief);
-    this.studyBriefError.set(null);
-    if (brief.scrapeResultId) {
-      this.selectedScrapeResultId.set(brief.scrapeResultId);
-    } else {
-      this.selectedScrapeResultId.set(null);
-    }
-    if (isInterviewPrepLanguage(brief.language)) {
-      this.language.set(brief.language);
-    }
-    if (isInterviewPrepMarket(brief.market)) {
-      this.market.set(brief.market);
-    }
+  answersDirty(documentId: string): boolean {
+    return JSON.stringify(this.answers(documentId)) !== JSON.stringify(this.savedAnswers(documentId));
   }
 
-  clearSelectedStudyBrief(): void {
-    this.selectedStudyBrief.set(null);
-    this.studyBriefError.set(null);
+  updateAnswer(documentId: string, questionId: string, patch: Partial<PreparationAnswerInput>): void {
+    const answers = this.answers(documentId).map(a => a.questionId === questionId ? { ...a, ...patch } : a);
+    this.answerDrafts.update(drafts => ({ ...drafts, [documentId]: answers }));
   }
 
-  generateStudyBrief(): void {
-    const focusNote = this.normalizeFocusNote(this.studyFocusNote());
-    if (focusNote === undefined) {
-      return;
-    }
-    this.studyBriefMutationSubscription?.unsubscribe();
-    this.studyBriefBusy.set('generating');
-    this.studyBriefError.set(null);
-    const scrapeResultId = this.selectedScrapeResultId();
-    this.studyBriefMutationSubscription = this.api
-      .generateStudyBrief({
-        language: this.language(),
-        market: this.market(),
-        scrapeResultId: scrapeResultId ?? null,
-        focusNote
-      })
-      .subscribe({
-        next: (brief) => {
-          this.studyBriefBusy.set('idle');
-          this.studyFocusNote.set('');
-          this.applyStudyBrief(brief);
-        },
-        error: (error) => {
-          if (error instanceof HttpErrorResponse && error.status === 409) {
-            const body = error.error as InterviewPrepApiErrorBody | null;
-            if (body?.code === 'interview_prep_brief_exists' && body.existingBriefId) {
-              this.api.getStudyBrief(body.existingBriefId).subscribe({
-                next: (existing) => {
-                  this.studyBriefBusy.set('idle');
-                  this.applyStudyBrief(existing);
-                  this.studyBriefError.set(
-                    'A brief already exists for this binding — opened it. Use regenerate to refresh.'
-                  );
-                },
-                error: (loadError) => {
-                  this.studyBriefBusy.set('idle');
-                  this.studyBriefError.set(
-                    this.mapStudyBriefError(
-                      loadError,
-                      'A brief already exists but could not be loaded.'
-                    )
-                  );
-                }
-              });
-              return;
-            }
-          }
-          this.studyBriefBusy.set('idle');
-          this.studyBriefError.set(this.mapStudyBriefError(error, 'Could not generate study brief.'));
-        }
+  canWrite(documentId: string): boolean {
+    const answers = this.answers(documentId);
+    return !this.busy() && answers.length > 0 && answers.every(a => a.status !== 'pending'
+      && (a.status !== 'answered' || !!a.text.trim()));
+  }
+
+  documentContextChanged(document: PreparationDocument): boolean {
+    return document.isGenerated !== false && (document.contextRevision ?? 0) < (this.selected()?.discovery?.contextRevision ?? 0);
+  }
+
+  dayReady(documentIds: readonly string[]): boolean {
+    return documentIds.every(id => this.selected()?.content?.documents.some(d => d.id === id && d.isGenerated !== false));
+  }
+
+  questionsNeedRefresh(documentId: string): boolean {
+    const discovery = this.selected()?.discovery;
+    const outline = discovery?.documents.find(d => d.id === documentId);
+    return !!outline?.questions.length && this.selected()?.content?.documents.some(d => d.id === documentId && d.isGenerated === false) === true
+      && (outline.contextRevision ?? 0) < (discovery?.contextRevision ?? 0)
+      && !this.answersDirty(documentId) && !discovery?.answers.some(a => a.documentId === documentId && a.status !== 'pending');
+  }
+
+  prepareDocument(documentId: string): void {
+    const pack = this.selected();
+    if (!pack || this.busy()) return;
+    this.documentMutation(this.api.prepareDocument(pack, documentId), 'questions', documentId);
+  }
+
+  saveAnswers(documentId: string): void {
+    const pack = this.selected();
+    if (!pack || this.busy()) return;
+    this.documentMutation(this.api.saveAnswers(pack, documentId, this.answers(documentId)), 'answers', documentId);
+  }
+
+  writeDocument(documentId: string): void {
+    const pack = this.selected();
+    if (!pack || !this.canWrite(documentId)) return;
+    // Save the user's explicit statuses first; guidance is never copied into this ledger.
+    const request = (this.answersDirty(documentId)
+      ? this.api.saveAnswers(pack, documentId, this.answers(documentId)).pipe(tap(saved => {
+          this.acceptDocumentPack(saved); this.clearDraft(documentId); this.busy.set('writing');
+        }))
+      : of(pack)).pipe(switchMap(saved => this.api.writeDocument(saved, documentId)));
+    this.documentMutation(request, this.answersDirty(documentId) ? 'answers' : 'writing', documentId, true);
+  }
+
+  askForHelp(documentId: string, questionId: string, request: string): void {
+    const pack = this.selected();
+    if (!pack || this.busy() || !request.trim()) return;
+    this.busy.set('helping'); this.error.set(null);
+    const draft = this.answers(documentId).find(a => a.questionId === questionId)?.text ?? '';
+    const previous = this.helpResult();
+    const previousGuidance = previous?.documentId === documentId && previous.questionId === questionId ? previous.response.markdown : undefined;
+    this.api.help(pack, documentId, questionId, request.trim(), draft, previousGuidance)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(null))).subscribe({
+        next: response => this.helpResult.set({ documentId, questionId, response }),
+        error: error => this.error.set(this.readError(error, 'Could not load more guidance. Your answer is unchanged.'))
       });
   }
 
-  regenerateStudyBrief(): void {
-    const brief = this.selectedStudyBrief();
-    if (!brief) {
-      return;
-    }
-    const focusNote = this.normalizeFocusNote(this.studyFocusNote());
-    if (focusNote === undefined) {
-      return;
-    }
-    this.studyBriefMutationSubscription?.unsubscribe();
-    this.studyBriefBusy.set('regenerating');
-    this.studyBriefError.set(null);
-    this.studyBriefMutationSubscription = this.api
-      .regenerateStudyBrief(brief.id, {
-        focusNote,
-        language: this.language(),
-        market: this.market()
-      })
-      .subscribe({
-        next: (updated) => {
-          this.studyBriefBusy.set('idle');
-          this.studyFocusNote.set('');
-          this.applyStudyBrief(updated);
-        },
-        error: (error) => {
-          this.studyBriefBusy.set('idle');
-          this.studyBriefError.set(this.mapStudyBriefError(error, 'Could not regenerate study brief.'));
+  private documentMutation(request: Observable<PreparationPack>, busy: 'questions' | 'answers' | 'writing', documentId: string, written = false): void {
+    this.busy.set(busy); this.error.set(null); this.notice.set(null);
+    request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(null))).subscribe({
+      next: pack => {
+        this.acceptDocumentPack(pack); this.clearDraft(documentId);
+        if (written) {
+          const days = new Set(pack.content?.studyPlan.filter(s => s.documentIds.includes(documentId)).map(s => s.day));
+          this.progress.update(p => ({ ...p,
+            readDocumentIds: p.readDocumentIds.filter(id => id !== documentId),
+            explainedDocumentIds: p.explainedDocumentIds.filter(id => id !== documentId),
+            demonstratedDocumentIds: p.demonstratedDocumentIds.filter(id => id !== documentId),
+            adaptedDocumentIds: p.adaptedDocumentIds.filter(id => id !== documentId),
+            completedDays: p.completedDays.filter(day => !days.has(day))
+          }));
         }
-      });
-  }
-
-  deleteStudyBrief(id: string): void {
-    this.studyBriefMutationSubscription?.unsubscribe();
-    this.studyBriefBusy.set('deleting');
-    this.studyBriefError.set(null);
-    this.studyBriefMutationSubscription = this.api.deleteStudyBrief(id).subscribe({
-      next: () => {
-        this.studyBriefBusy.set('idle');
-        this.studyBriefItems.update((items) => items.filter((item) => item.id !== id));
-        if (this.selectedStudyBrief()?.id === id) {
-          this.selectedStudyBrief.set(null);
-        }
+        this.notice.set(written ? 'This document is ready. Other documents were preserved.'
+          : busy === 'questions' ? 'Clarification questions are ready.' : 'Your context is saved and available to the other documents.');
       },
-      error: (error) => {
-        this.studyBriefBusy.set('idle');
-        this.studyBriefError.set(this.readError(error, 'Could not delete study brief.'));
-      }
+      error: error => this.error.set(this.readError(error, 'Could not complete this step. Saved documents and answers were preserved.'))
     });
   }
 
-  private applyStudyBrief(brief: InterviewPrepStudyBrief): void {
-    this.selectedStudyBrief.set(brief);
-    this.studyBriefItems.update((items) => {
-      const without = items.filter((item) => item.id !== brief.id);
-      return [brief, ...without];
+  private acceptDocumentPack(pack: PreparationPack): void {
+    this.selected.set(pack);
+    this.packs.update(items => [pack, ...items.filter(p => p.id !== pack.id)]);
+  }
+
+  private clearDraft(documentId: string): void {
+    this.answerDrafts.update(drafts => {
+      const next = { ...drafts }; delete next[documentId]; return next;
     });
-    if (brief.scrapeResultId) {
-      this.selectedScrapeResultId.set(brief.scrapeResultId);
-    }
-    if (isInterviewPrepLanguage(brief.language)) {
-      this.language.set(brief.language);
-    }
-    if (isInterviewPrepMarket(brief.market)) {
-      this.market.set(brief.market);
-    }
   }
 
-  private ensureSelectedStudyBrief(items: readonly InterviewPrepStudyBrief[]): void {
-    const selected = this.selectedStudyBrief();
-    if (!selected) {
-      return;
-    }
-    const match = items.find((item) => item.id === selected.id);
-    if (match) {
-      this.selectedStudyBrief.set(match);
-    } else {
-      this.selectedStudyBrief.set(null);
-    }
-  }
-
-  /**
-   * Returns null when omitted, trimmed string when valid, undefined when invalid (sets error).
-   */
-  private normalizeFocusNote(raw: string): string | null | undefined {
-    const trimmed = raw.trim();
-    if (!trimmed) {
-      return null;
-    }
-    if (trimmed.length > INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH) {
-      this.studyBriefError.set(
-        `Focus note must be at most ${INTERVIEW_PREP_FOCUS_NOTE_MAX_LENGTH} characters.`
-      );
-      return undefined;
-    }
-    return trimmed;
-  }
-
-  private mapStudyBriefError(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse) {
-      const body = error.error as InterviewPrepApiErrorBody | null;
-      if (body?.code === 'interview_prep_brief_body_stale') {
-        return 'This study brief needs to be regenerated — saved content is out of date.';
-      }
-      if (body?.message) {
-        return body.message;
-      }
-      if (error.status === 429) {
-        return 'Too many generate requests — wait a moment and try again.';
-      }
-      if (error.status === 503) {
-        return 'Study brief AI is temporarily unavailable.';
-      }
-    }
-    return this.readError(error, fallback);
-  }
-
-  private runLifecycle(
-    call: (id: string, etag: string) => ReturnType<InterviewPrepApiService['pauseSession']>,
-    onSuccess?: () => void
-  ): void {
-    const sessionId = this.sessionId();
-    const etag = this.sessionEtag();
-    if (!sessionId || !etag) {
-      return;
-    }
-    this.lifecycleBusy.set(true);
-    this.sessionError.set(null);
-    call(sessionId, etag).subscribe({
-      next: (detail) => {
-        this.lifecycleBusy.set(false);
-        this.applySessionDetail(detail, detail.eTag);
-        onSuccess?.();
-        this.loadHistory();
+  private mutate(request: Observable<PreparationPack>, busy: 'generating' | 'regenerating' | 'saving', resetDocument: boolean): void {
+    if (this.busy()) return;
+    this.busy.set(busy); this.error.set(null); this.notice.set(null);
+    request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(null))).subscribe({
+      next: pack => {
+        this.selected.set(pack); this.progress.set(pack.progress);
+        this.packs.update(items => [pack, ...items.filter(p => p.id !== pack.id)]);
+        if (resetDocument) { this.documentId.set(null); this.answerDrafts.set({}); this.helpResult.set(null); }
+        this.notice.set(busy === 'saving' ? 'Progress saved.' : 'Your outline is ready. Open a document to shape it with a few clarification questions.');
       },
-      error: (error) => {
-        this.lifecycleBusy.set(false);
-        this.sessionError.set(this.mapSessionMutationError(error));
+      error: error => {
+        this.error.set(this.readError(error, 'Could not save preparation. Existing documents were preserved.'));
+        if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.existingPackId)
+          this.notice.set('Reload preparation to open the existing pack.');
       }
     });
-  }
-
-  private applySessionDetail(detail: InterviewPrepSessionDetail, eTag: string): void {
-    this.sessionDetail.set(detail);
-    this.sessionEtag.set(eTag || detail.eTag);
-    this.sessionId.set(detail.id);
-  }
-
-  private mapJobOptions(
-    jobs: readonly { id: string; payload: { jobDetails?: { jobTitle?: string | null; companyName?: string | null } | null } }[]
-  ): readonly InterviewPrepJobOption[] {
-    return jobs.map((job) => {
-      const title = job.payload?.jobDetails?.jobTitle ?? 'Saved job';
-      const company = job.payload?.jobDetails?.companyName;
-      const label = company ? `${title} · ${company}` : title;
-      return { id: job.id, label };
-    });
-  }
-
-  private mapSessionMutationError(error: unknown): string {
-    if (error instanceof HttpErrorResponse && error.status === 409) {
-      return 'This session changed elsewhere. Refresh to continue.';
-    }
-    return this.readError(error, 'Something went wrong. Try again.');
   }
 
   private readError(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse) {
-      const body = error.error as { message?: string } | null;
-      if (body?.message) {
-        return body.message;
-      }
-      if (error.status === 0) {
-        return 'Network error — is the API running?';
-      }
-    }
-    return fallback;
+    return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : fallback;
   }
-}
-
-/** Stage statuses that still accept interview turns (mirrors GetActiveInterviewStage). */
-function isActiveInterviewStageStatus(status: string): boolean {
-  return (
-    status === 'opening' ||
-    status === 'warmUp' ||
-    status === 'coreAssessment' ||
-    status === 'candidateQuestions' ||
-    status === 'closing' ||
-    status === 'assessmentPending'
-  );
-}
-
-function isInterviewPrepLanguage(value: string): value is InterviewPrepLanguage {
-  return value === 'english' || value === 'danish' || value === 'mixedEnglishDanish';
-}
-
-function isInterviewPrepMarket(value: string): value is InterviewPrepMarket {
-  return value === 'general' || value === 'danish';
 }

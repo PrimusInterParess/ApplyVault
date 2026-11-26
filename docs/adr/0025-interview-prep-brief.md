@@ -2,6 +2,8 @@
 
 ## Status
 
+Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.
+
 Accepted (2026-08-05 — grill-with-docs + `/operate` A/B; glossary in `CONTEXT.md`)
 
 **Amended** (2026-08-05 — grill-with-docs nested **Coverage item** body; `/operate` D + `CONTEXT.md`)

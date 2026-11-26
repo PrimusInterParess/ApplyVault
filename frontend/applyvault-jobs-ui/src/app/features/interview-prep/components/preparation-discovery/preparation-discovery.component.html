@@ -1,0 +1,78 @@
+<section class="discovery" aria-label="Document clarification">
+  <button type="button" class="discovery-toggle" [attr.aria-expanded]="expanded()" [attr.aria-controls]="'discovery-' + document().id" (click)="expanded.set(!expanded())">
+    <span><strong>Shape this document</strong><small>{{ document().isGenerated === false ? 'A little context makes the teaching more useful.' : 'Refine the context and rewrite this document when you need to.' }}</small></span>
+    <span>{{ expanded() ? 'Hide' : 'Open' }}</span>
+  </button>
+  @if (expanded()) {
+    <div [id]="'discovery-' + document().id">
+      @if (!questions().length) {
+        <p>Prepare a few questions about this document's missing context and your learning needs.</p>
+        <button type="button" class="prep-primary" [disabled]="!!facade.busy()" (click)="facade.prepareDocument(document().id)">Prepare questions for this document</button>
+      } @else {
+        @if (facade.questionsNeedRefresh(document().id)) {
+          <button type="button" class="prep-secondary" [disabled]="!!facade.busy()" (click)="facade.prepareDocument(document().id)">Update questions from earlier answers</button>
+        }
+        <p class="discovery-intro">Your saved answers are available across the pack. Plain language is enough; uncertainty is useful context too.</p>
+        @if (question(); as question) {
+          <fieldset [disabled]="!!facade.busy()">
+            <p class="discovery-step">Question {{ questionIndex() + 1 }} of {{ questions().length }} · {{ completedCount() }} addressed</p>
+            <h3 [id]="question.id + '-prompt'">{{ question.prompt }}</h3>
+            <p class="prep-muted">{{ question.whyItMatters }}</p>
+            <label [for]="question.id + '-answer'">Your answer or tentative recollection</label>
+            <textarea [id]="question.id + '-answer'" [attr.aria-describedby]="question.id + '-prompt'" rows="4" maxlength="4000" [ngModel]="answer()?.text ?? ''" (ngModelChange)="updateText($event)" placeholder="Tell us what you know, what you tried, or where you get stuck."></textarea>
+            <div class="discovery-choices">
+              <button type="button" class="prep-secondary" [class.chosen]="answer()?.status === 'unknown'" [attr.aria-pressed]="answer()?.status === 'unknown'" (click)="choose('unknown')">I don't know</button>
+              <button type="button" class="prep-secondary" [class.chosen]="answer()?.status === 'skipped'" [attr.aria-pressed]="answer()?.status === 'skipped'" (click)="choose('skipped')">Skip</button>
+              <button type="button" class="prep-secondary" [attr.aria-expanded]="helpOpenFor() === question.id" [attr.aria-controls]="question.id + '-help'" (click)="showHelp()">Help me answer</button>
+              @if (answer()?.status === 'unknown' && answer()?.text?.trim()) {
+                <button type="button" class="prep-text-button" (click)="choose('answered')">Use my written answer</button>
+              }
+            </div>
+            @if (answer()?.status === 'unknown') {
+              <p class="discovery-note" role="status">
+                @switch (question.kind) {
+                  @case ('knowledge') { The document will include foundations and a worked example for this uncertainty. }
+                  @case ('experience') { This stays missing or tentative evidence. The document will suggest where to look without inventing your history. }
+                  @default { The document will explain any assumptions it needs to make. }
+                }
+              </p>
+            }
+            @if (answer()?.status === 'skipped') { <p class="discovery-note" role="status">We'll use your other context and leave missing facts unknown.</p> }
+            @if (helpOpenFor() === question.id) {
+              <aside class="discovery-help" [id]="question.id + '-help'">
+                <h4>A way to start</h4>
+                <div class="prep-markdown" [innerHTML]="renderMarkdown(question.guidanceMarkdown)"></div>
+                <p><strong>Starting structure</strong></p><blockquote>{{ question.answerStarter }}</blockquote>
+                <button type="button" class="prep-secondary" (click)="useStarter()">Use this blank structure</button>
+                <p class="discovery-example"><strong>Hypothetical example</strong><br />{{ question.hypotheticalExample }}</p>
+                <p class="prep-hint">Examples and guidance are not facts about you. Write or edit your answer, then save it.</p>
+                <label [for]="question.id + '-help-request'">Still unsure? Tell us what you need help with.</label>
+                <textarea [id]="question.id + '-help-request'" rows="2" maxlength="2000" [ngModel]="helpRequest()" (ngModelChange)="helpRequest.set($event)" placeholder="e.g. I don't know how to investigate this. Can you walk me through it?"></textarea>
+                <div class="discovery-choices">
+                  <button type="button" class="prep-secondary" [disabled]="!helpRequest().trim()" (click)="askForHelp()">Ask for guidance</button>
+                  <button type="button" class="prep-text-button" (click)="askForHelp('Explain this question more simply and show me the first small step.')">Explain more simply</button>
+                </div>
+                @if (extraHelp(); as help) {
+                  @if (help.isDemo) { <p class="prep-hint">Demo guidance</p> }
+                  <div class="prep-markdown discovery-response" role="status" [innerHTML]="renderMarkdown(help.markdown)"></div>
+                }
+              </aside>
+            }
+            <div class="discovery-navigation">
+              <button type="button" class="prep-secondary" [disabled]="questionIndex() === 0" (click)="changeQuestion(questionIndex() - 1)">Previous</button>
+              @if (questionIndex() + 1 < questions().length) {
+                <button type="button" class="prep-secondary" [disabled]="answer()?.status === 'pending'" (click)="changeQuestion(questionIndex() + 1)">Next question</button>
+              }
+              <span class="prep-hint">{{ facade.answersDirty(document().id) ? 'Unsaved context' : 'No unsaved changes' }}</span>
+            </div>
+          </fieldset>
+        }
+        <div class="discovery-footer">
+          <button type="button" class="prep-secondary" [disabled]="!!facade.busy() || !facade.answersDirty(document().id)" (click)="facade.saveAnswers(document().id)">Save context</button>
+          <button type="button" class="prep-primary" [disabled]="!facade.canWrite(document().id)" (click)="facade.writeDocument(document().id)">{{ document().isGenerated === false ? 'Save answers and write this document' : 'Save answers and rewrite this document' }}</button>
+          <p class="prep-hint">Answer, choose I don't know, or skip each question. Rewriting resets only this document's readiness and the study days that use it.</p>
+        </div>
+      }
+    </div>
+  }
+</section>

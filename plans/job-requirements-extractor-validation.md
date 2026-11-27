@@ -80,3 +80,27 @@ enabled.
 - Automatic approval review rejected a separate manual diagnostic extraction of
   that saved posting. No such diagnostic request was executed; further manual
   provider diagnostics with its content await explicit approval.
+
+## Saved-job capture diagnosis
+
+Local inspection found two distinct conditions: a failed extraction with a
+complete 4,515-character Jobnet description, and a SuccessFactors capture with no
+description and 103,543 characters of mixed scripts and page text. The latter's
+raw capture was displayed by the dashboard's description fallback, obscuring the
+missing description field.
+
+A deterministic DOM regression test reproduced script and hidden-template text
+winning selection through a detached element's `innerText` fallback. Capture now
+walks the live DOM with visibility and noise filtering, preserving original
+ancestor styles and excluding script content. The source page is not mutated.
+Another regression test reproduced a navigation link, `Return to List`, being
+selected as the employer. Metadata candidate validation now rejects that action
+label instead of saving it as a company or location.
+Extension checks passed: typecheck, all 16 tests, and development build. Reload
+the unpacked extension to use the new capture code.
+
+The full 7,644-character SuccessFactors description was also recovered verbatim
+from the local capture, between its application-control blocks, into
+`/private/tmp/applyvault-recovered-job-description.txt` for review.
+No saved-job content was changed and no additional provider extraction was
+performed. Applying that recovery and any manual provider reruns remain pending.

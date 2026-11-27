@@ -8,7 +8,7 @@ import { addFieldCandidate, collectHeaderMetadataContainers, getNormalizedText, 
 import type { FieldCandidate } from './types';
 
 export function isLikelyActionText(value: string): boolean {
-  return /^(apply|ansøg|search|share|save)\b|^(deadline|tiltrædelse|start date|salary|løn|grundløn|compensation|pay|job description|description|contact|email|phone|forventninger)\b/i.test(
+  return /^(apply|ansøg|search|share|save)\b|^return to list$|^(deadline|tiltrædelse|start date|salary|løn|grundløn|compensation|pay|job description|description|contact|email|phone|forventninger)\b/i.test(
     value
   );
 }

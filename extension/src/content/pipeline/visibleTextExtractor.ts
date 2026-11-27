@@ -35,32 +35,63 @@ export interface PageTextExtraction {
   textLength: number;
 }
 
-function isElementHidden(element: Element): boolean {
-  const htmlElement = element as HTMLElement;
+export function extractPageText(documentRef: Document = document): PageTextExtraction {
+  if (!documentRef.body) {
+    throw new Error('This page does not have a readable document body.');
+  }
 
-  if (htmlElement.hidden || htmlElement.getAttribute('aria-hidden') === 'true') {
+  // Read the live DOM so visibility and ancestor styles remain meaningful.
+  // Detached innerText can become textContent and include scripts and hidden templates.
+  const text = getNormalizedTreeWalkerText(documentRef, resolveJobRoot(documentRef));
+
+  if (!text) {
+    throw new Error('No visible text was found on this page.');
+  }
+
+  return {
+    title: documentRef.title || 'Untitled page',
+    url: documentRef.location.href,
+    text,
+    textLength: text.length
+  };
+}
+
+export function hasExtractionSignals(documentRef: Document): boolean {
+  if (documentRef.querySelector('script[type="application/ld+json"]')) {
     return true;
   }
 
-  const computedStyle = window.getComputedStyle(htmlElement);
-  return computedStyle.display === 'none' || computedStyle.visibility === 'hidden';
+  if (documentRef.querySelector(GENERIC_TITLE_SELECTORS.join(', '))) {
+    return true;
+  }
+
+  return Boolean(documentRef.querySelector('[class*="description"], [itemprop="description"], article'));
 }
 
-function isTextNodeVisible(node: Text): boolean {
+function isElementHidden(element: Element): boolean {
+  if (element.hasAttribute('hidden') || element.getAttribute('aria-hidden') === 'true') {
+    return true;
+  }
+
+  const computedStyle = element.ownerDocument.defaultView?.getComputedStyle(element);
+  return computedStyle?.display === 'none' || computedStyle?.visibility === 'hidden';
+}
+
+function isTextNodeVisible(node: Node, noiseSelector: string): boolean {
   const parentElement = node.parentElement;
 
   if (!parentElement) {
     return false;
   }
 
-  if (IGNORED_TAGS.has(parentElement.tagName)) {
-    return false;
-  }
-
   let currentElement: Element | null = parentElement;
 
   while (currentElement) {
-    if (isElementHidden(currentElement)) {
+    if (
+      IGNORED_TAGS.has(currentElement.tagName) ||
+      currentElement.matches(noiseSelector) ||
+      isElementHidden(currentElement)
+    ) {
       return false;
     }
 
@@ -85,37 +116,23 @@ function resolveJobRoot(documentRef: Document): HTMLElement {
   );
 }
 
-function stripNoiseNodes(root: HTMLElement, documentRef: Document): HTMLElement {
-  const clone = root.cloneNode(true) as HTMLElement;
+function getNoiseSelector(documentRef: Document): string {
   const hostname = documentRef.location.hostname.toLowerCase();
-  const noiseSelectors = [
+  return [
     ...SHARED_NOISE_SELECTORS,
     ...(Object.entries(SITE_NOISE_SELECTORS).find(([domain]) => hostname.includes(domain))?.[1] ?? [])
-  ];
-
-  for (const selector of noiseSelectors) {
-    for (const element of Array.from(clone.querySelectorAll(selector))) {
-      element.remove();
-    }
-  }
-
-  return clone;
-}
-
-function getNormalizedRenderedText(root: HTMLElement): string {
-  return normalizeLines((root.innerText || '').replace(/\r/g, '').split('\n'));
+  ].join(', ');
 }
 
 function getNormalizedTreeWalkerText(documentRef: Document, root: HTMLElement): string {
   const walker = documentRef.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const noiseSelector = getNoiseSelector(documentRef);
   const collectedLines: string[] = [];
   let currentNode = walker.nextNode();
 
   while (currentNode) {
-    const textNode = currentNode as Text;
-
-    if (isTextNodeVisible(textNode)) {
-      const value = textNode.textContent ?? '';
+    if (isTextNodeVisible(currentNode, noiseSelector)) {
+      const value = currentNode.textContent ?? '';
 
       if (value.trim()) {
         collectedLines.push(value);
@@ -126,54 +143,4 @@ function getNormalizedTreeWalkerText(documentRef: Document, root: HTMLElement): 
   }
 
   return normalizeLines(collectedLines);
-}
-
-function pickBestPageText(renderedText: string, treeWalkerText: string): string {
-  if (!renderedText) {
-    return treeWalkerText;
-  }
-
-  if (!treeWalkerText) {
-    return renderedText;
-  }
-
-  const renderedScore = renderedText.length + renderedText.split('\n').length * 24;
-  const treeWalkerScore = treeWalkerText.length + treeWalkerText.split('\n').length * 24;
-
-  return renderedScore >= treeWalkerScore ? renderedText : treeWalkerText;
-}
-
-export function extractPageText(documentRef: Document = document): PageTextExtraction {
-  if (!documentRef.body) {
-    throw new Error('This page does not have a readable document body.');
-  }
-
-  const jobRoot = stripNoiseNodes(resolveJobRoot(documentRef), documentRef);
-  const text = pickBestPageText(
-    getNormalizedRenderedText(jobRoot),
-    getNormalizedTreeWalkerText(documentRef, jobRoot)
-  );
-
-  if (!text) {
-    throw new Error('No visible text was found on this page.');
-  }
-
-  return {
-    title: documentRef.title || 'Untitled page',
-    url: documentRef.location.href,
-    text,
-    textLength: text.length
-  };
-}
-
-export function hasExtractionSignals(documentRef: Document): boolean {
-  if (documentRef.querySelector('script[type="application/ld+json"]')) {
-    return true;
-  }
-
-  if (documentRef.querySelector(GENERIC_TITLE_SELECTORS.join(', '))) {
-    return true;
-  }
-
-  return Boolean(documentRef.querySelector('[class*="description"], [itemprop="description"], article'));
 }

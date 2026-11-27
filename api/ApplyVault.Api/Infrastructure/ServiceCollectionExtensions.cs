@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 
 using ApplyVault.Api.Services.CoverLetters;
 using ApplyVault.Api.Services.CvSectionCatalog;
+using ApplyVault.Api.Services.JobRequirements;
 
 namespace ApplyVault.Api.Infrastructure;
 
@@ -343,6 +344,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailDrivenJobUpdateService, EmailDrivenJobUpdateService>();
         services.AddScoped<IAppUserService, AppUserService>();
         services.AddScoped<IScrapeResultStore, EfCoreScrapeResultStore>();
+        services.AddJobRequirements(configuration);
         services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
         services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
         services.AddScoped<IScrapeResultCaptureQualityService, ScrapeResultCaptureQualityService>();

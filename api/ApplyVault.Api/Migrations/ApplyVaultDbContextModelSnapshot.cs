@@ -339,6 +339,38 @@ namespace ApplyVault.Api.Migrations
                     b.Property<string>("PositionSummary")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("RequirementsAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("RequirementsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RequirementsLeaseExpiresUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RequirementsLeaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("RequirementsNextAttemptUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("RequirementsRevision")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<string>("RequirementsSourceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("RequirementsStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTimeOffset>("SavedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -367,6 +399,8 @@ namespace ApplyVault.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("IsDeleted", "RequirementsStatus", "RequirementsNextAttemptUtc");
 
                     b.ToTable("ScrapeResults");
                 });

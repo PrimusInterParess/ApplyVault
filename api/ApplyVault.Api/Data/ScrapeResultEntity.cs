@@ -1,3 +1,5 @@
+using ApplyVault.Api.Services.JobRequirements;
+
 namespace ApplyVault.Api.Data;
 
 public sealed class ScrapeResultEntity
@@ -67,6 +69,22 @@ public sealed class ScrapeResultEntity
     public string? JobDescription { get; set; }
 
     public string? JobDescriptionOverride { get; set; }
+
+    internal long RequirementsRevision { get; set; }
+
+    internal string? RequirementsSourceHash { get; set; }
+
+    internal JobRequirementsStatus RequirementsStatus { get; set; }
+
+    internal string? RequirementsJson { get; set; }
+
+    internal int RequirementsAttempts { get; set; }
+
+    internal DateTime? RequirementsNextAttemptUtc { get; set; }
+
+    internal Guid? RequirementsLeaseId { get; set; }
+
+    internal DateTime? RequirementsLeaseExpiresUtc { get; set; }
 
     public double JobDescriptionConfidence { get; set; }
 

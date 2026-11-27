@@ -1,5 +1,6 @@
 using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
+using ApplyVault.Api.Services.JobRequirements;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Services;
@@ -111,6 +112,8 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         };
         UpdateCaptureReviewStatus(entity);
 
+        JobRequirementsSource.Synchronize(entity);
+
         await dbContext.ScrapeResults.AddAsync(entity, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -147,6 +150,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
         }
 
         UpdateCaptureReviewStatus(entity);
+        JobRequirementsSource.Synchronize(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);
@@ -206,6 +210,7 @@ public sealed class EfCoreScrapeResultStore(ApplyVaultDbContext dbContext) : ISc
 
         entity.JobDescriptionOverride = NormalizeOverride(description, entity.JobDescription);
         UpdateCaptureReviewStatus(entity);
+        JobRequirementsSource.Synchronize(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToSavedResult(entity);

@@ -203,6 +203,8 @@ Option sections (validated at startup when enabled):
   Prompt templates for CV project summary generation (`SystemPrompt`, `UserPromptTemplate`). Defaults are suitable for most setups; override only when you want different tone or structure.
 - `ScrapeResultEnrichment`
   Turns the low-confidence enrichment pass on or off and controls whether AI failures should block saving.
+- `JobRequirements`
+  Automatically extracts internal Job requirements from new and existing saved descriptions when both `Enabled` (default `true`) and `GoogleAi:Enabled` are true. No extraction UI or public API is added. Defaults: `BatchSize=5`, `PollIntervalSeconds=30`, `MaxAttempts=3`, `RetryDelaySeconds=60`, and `TimeoutSeconds=60`. Description edits immediately invalidate previous results. Failed attempts retry after the configured delay, then stop; interrupted work resumes after its processing lease expires. Disabled processing retains pending work. Apply the additive database migration before enabling the worker; existing jobs are backfilled gradually. See [ADR-0050](docs/adr/0050-durable-job-requirements-extraction.md).
 - `Supabase`
   Configures JWT validation for authenticated dashboard and extension requests. Set `Url` to the project root (for example `https://your-project.supabase.co`), not `/auth/v1`. The API derives issuer and JWKS URLs from that value.
 - `CalendarIntegration`

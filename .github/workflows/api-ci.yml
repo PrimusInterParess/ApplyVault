@@ -73,3 +73,33 @@ jobs:
       - name: Frontend critical-path tests
         working-directory: frontend/applyvault-jobs-ui
         run: npm run test:ci
+
+      - name: Frontend build
+        working-directory: frontend/applyvault-jobs-ui
+        run: npm run build
+
+  extension-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

@@ -4,6 +4,19 @@ BRIDGE layout: this file binds **project delivery procedures**. The Architect
 library lives under `core/` (slash commands in `core/slash-commands.md`).
 Do not treat this file as a replacement for `core/` workflows.
 
+## Application coding standards
+
+Before changing application code, read [docs/coding-standards.md](docs/coding-standards.md),
+`CONTEXT.md`, and the ADRs relevant to the change. These standards apply to
+`api/`, `frontend/`, `extension/`, and application assets under `shared/`.
+
+- Identify the owning feature and trace its existing implementation before editing.
+- Follow the responsibilities and dependency rules in the standards; existing
+  code is context, not an automatic exemption from them.
+- Keep changes focused and improve the code you touch without unrelated rewrites.
+- Before finishing, review the diff against the standards and task requirements.
+  Report checks run, results, and any remaining limitations or justified exceptions.
+
 ## Agent skills
 
 ### Issue tracker

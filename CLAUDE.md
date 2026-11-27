@@ -1,5 +1,8 @@
 # Claude Code / Claude project instructions
 
+For ApplyVault application changes, read `AGENTS.md` and
+`docs/coding-standards.md` before editing. Apply the same standards during review.
+
 Follow The Architect portable library in this repository.
 
 1. Treat `AGENTS.md` and `core/` as source of truth.

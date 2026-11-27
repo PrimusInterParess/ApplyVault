@@ -84,6 +84,10 @@ _Avoid_: Motivation letter (when meaning a separate document), application essay
 
 ## Job search
 
+**Job requirements**:
+The explicit requirements, responsibilities, and role context captured from a saved job posting to guide future interview preparation, preserving distinctions between required and preferred qualifications. They describe the posting, not predicted interview topics or an assessment of the seeker's Structured CV.
+_Avoid_: Job metadata (when meaning preparation context), interview predictions
+
 **Work in Denmark search query**:
 A keyword search for one Work in Denmark search, with at least one keyword and at most one optional Place. A Place narrows that search (ADR-0041).
 _Avoid_: Jobnet request, search string, country filter, place-only search

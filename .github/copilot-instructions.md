@@ -1,5 +1,8 @@
 # GitHub Copilot instructions — The Architect
 
+For ApplyVault application changes, read `AGENTS.md` and
+`docs/coding-standards.md` before editing. Apply the same standards during review.
+
 When working in a repository that includes The Architect library:
 
 - Prefer `AGENTS.md` and files under `core/workflows/`.

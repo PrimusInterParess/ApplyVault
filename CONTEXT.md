@@ -1,6 +1,6 @@
 # ApplyVault
 
-ApplyVault helps seekers build a Structured CV and prepare for interviews with documents tailored to their background and target role.
+ApplyVault helps seekers build a Structured CV and manage their job applications.
 
 ## CV structuring
 
@@ -37,7 +37,7 @@ One of the seven fixed, ordered blocks of a Structured CV: Contact, Summary, Ski
 _Avoid_: Block, chunk, custom section (when meaning a user-added block)
 
 **Section visibility**:
-Whether a Section appears on the Template, as a content choice separate from Section placement (ADR-0033). An omitted Section leaves the edit canvas and the Template, and still feeds Evaluate CV and Interview Prep; a visibility change alone does not mark an Interview preparation pack outdated. It returns to the canvas and the Template only when included from the section list — adding Entries does not include it. Any Section except Contact may be omitted; Contact is always included when it has content, a Section with no Entry content is already omitted, and a new Structured CV starts with every Section included.
+Whether a Section appears on the Template, as a content choice separate from Section placement (ADR-0033). An omitted Section leaves the edit canvas and the Template, and still feeds Evaluate CV and cover letters. It returns to the canvas and the Template only when included from the section list — adding Entries does not include it. Any Section except Contact may be omitted; Contact is always included when it has content, a Section with no Entry content is already omitted, and a new Structured CV starts with every Section included.
 _Avoid_: Remove section, delete section, disable section (when meaning the Entries are gone)
 
 **Section placement**:
@@ -75,44 +75,6 @@ _Avoid_: Hardcoded section rules, prompt-only schema
 **Project summary import**:
 Adding saved project summaries from the Projects surface into the Structured CV as Projects Entries, tracked by source summary identity so the same summary is not imported twice.
 _Avoid_: Merge projects, paste README (when meaning this product action)
-
-## Interview Preparation
-
-**Interview preparation pack**:
-A saved collection of preparation documents tailored to a seeker's target role and supplied context: their Structured CV, optional saved job, selected project summaries, and additional information. The generator works across seekers, professions, and projects; each pack's subject matter, examples, and depth reflect the individual seeker's needs.
-_Avoid_: Generic study pack (when meaning identical content for every seeker), question bank, practice session, Interview Prep brief (retired outline)
-
-**Preparation document**:
-One connected teaching or practice document within an Interview preparation pack, with a clear purpose and any prerequisite documents. It develops explanations, mechanisms, examples, choices, and application appropriate to the seeker's target.
-_Avoid_: Answer script, coverage item (retired syllabus leaf)
-
-**Preparation inputs**:
-The seeker's target, available study time, language, expected formats, self-reported knowledge, additional information, and selected sources used to personalize a pack. Additional information may supply facts beyond the CV; user-reported facts remain distinct from inferred or hypothetical material.
-_Avoid_: Focus note (retired steering-only input), verified experience (when meaning a user report)
-
-**Document discovery**:
-The short clarification step for one Preparation document, using its purpose, the seeker's sources, and context already saved elsewhere in the pack. It gathers information and learning needs before that document is written or rewritten.
-_Avoid_: Practice interview, assessment, mandatory quiz
-
-**Clarification answer**:
-A seeker's explicitly saved response to a Document discovery question, including an answer, uncertainty, a skip, or an unfinished response. Saved answers are shared context for the pack; reported uncertainty about knowledge and missing evidence about past work have different meanings.
-_Avoid_: Verified achievement, model answer, competency score
-
-**Answer guidance**:
-Explanations, blank starting structures, and clearly hypothetical examples that help a seeker answer a clarification question, including further help on request. Guidance and unconfirmed drafts do not become saved personal facts automatically.
-_Avoid_: Suggested personal achievement, auto-filled experience, answer review
-
-**Study plan**:
-A sequence of concrete preparation activities that fits the seeker's chosen number of days and daily study time. Completing an activity is separate from demonstrating readiness.
-_Avoid_: Interview stages, Full loop, equal-time syllabus
-
-**Preparation readiness**:
-The seeker's own record of having read, explained without notes, demonstrated, or adapted a document's material. A CV skill mention or a completed study day does not establish readiness.
-_Avoid_: Competency score, AI-assessed mastery, already-strong (inferred from CV presence)
-
-**Review log**:
-The seeker's saved observations about weaknesses, corrections, evidence from attempts, and next practice tasks for a preparation pack.
-_Avoid_: Answer review, coach chat
 
 ## Cover letter
 

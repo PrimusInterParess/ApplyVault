@@ -328,7 +328,7 @@ public sealed class ScrapeResultsController(
 
     [HttpPost("{id:guid}/cover-letter")]
 
-    [EnableRateLimiting(RateLimitingOptions.PolicyInterviewPrep)]
+    [EnableRateLimiting(RateLimitingOptions.PolicyCoverLetter)]
 
     public async Task<ActionResult<CoverLetterDto>> CreateCoverLetter(
 

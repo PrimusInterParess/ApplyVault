@@ -1,5 +1,7 @@
 # ADR-0046: Personalized interview preparation documents replace simulation
 
+Retired by [ADR-0049](0049-remove-interview-preparation.md). Kept as historical context only.
+
 Amended by [ADR-0047](0047-guided-document-discovery.md) to plan first and clarify/write each document separately.
 
 Accepted 2026-11-26 following a docs-based design discussion and the user's instruction to rework the whole feature and remove redundant code. Supersedes ADR-0021 through ADR-0027 for the active Interview Prep experience; existing ownership, CV context, and raw HTTP AI integration patterns continue.

@@ -11,22 +11,6 @@ npm start
 
 Open `http://localhost:4200/`. The app calls the API at `http://localhost:5173/api` (see `src/environments/environment.ts`).
 
-### Interview preparation packs
-
-Route: `/interview-prep`. `?jobId=<scrape-result-guid>` preselects a saved job; `?packId=<guid>` opens a saved pack.
-
-1. Run the API with live Gemini enabled (`GoogleAi:Enabled`, API key, and `InterviewPrep:Ai:Enabled`). The explicit `InterviewPrep:Ai:UseFakeProvider=true` option renders a labeled demo, not personalized material.
-2. Sign in and build or import a Structured CV.
-3. Choose an optional saved job; without one, specify target role and level. Select relevant saved project summaries and add any additional facts, weaknesses, formats, and study time (1–90 preparation days, 15–240 minutes per day). The form shows the remaining requirements if planning is disabled.
-4. Click **Plan preparation documents**, then open a document. Answer its 1–3 clarification questions, shown one at a time. **Help me answer** explains how to form an answer, offers a blank starting structure and a hypothetical example, and lets you ask for more guidance. **I don't know** and **Skip** are valid responses.
-5. Use **Save context** to pause, or **Save answers and write this document** to produce its teaching material. Saved answers are available across the pack. Help responses and drafts never automatically become facts about the user.
-6. Attempt the exercises and record readiness and a review log. Use **Save progress and review log** to persist those changes. Download the pack as Markdown; unwritten documents are clearly marked.
-7. Refine a document's answers and rewrite that document individually. Other documents and their readiness remain; study days using the rewritten document reset. **Create a new outline** replaces the whole pack after confirmation, resetting its answers and progress. Failed AI operations preserve saved material.
-
-Existing packs remain readable and can gain a discovery step for individual documents without rebuilding the pack. Opening a later unwritten document refreshes unanswered questions when shared context has advanced, while drafts already in progress stay intact.
-
-The UI has one document experience; the former practice chat and study-outline interfaces are retired. Live generation can take several minutes. The API validates links, prerequisite order, and daily time limits; it does not browse references or execute reference code.
-
 ## Building
 
 Configuration is baked in at build time via `src/environments/`. See [plans/production-readiness/FRONTEND.md](../../plans/production-readiness/FRONTEND.md).

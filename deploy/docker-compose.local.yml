@@ -47,7 +47,6 @@ services:
       ConnectionStrings__ApplyVault: Server=db,1433;Database=ApplyVault;User Id=sa;Password=${MSSQL_SA_PASSWORD:-ApplyVault_local_1};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True
       Database__MigrateAtStartup: "true"
       Supabase__Url: ${SUPABASE_URL:-https://riglrazbjbucpyhaofvb.supabase.co}
-      InterviewPrep__Ai__UseFakeProvider: "false"
       GoogleAi__Enabled: ${GOOGLE_AI_ENABLED:-false}
       GoogleAi__ApiKey: ${GOOGLE_AI_API_KEY:-}
       GoogleAi__Model: ${GOOGLE_AI_MODEL:-gemini-2.5-flash}

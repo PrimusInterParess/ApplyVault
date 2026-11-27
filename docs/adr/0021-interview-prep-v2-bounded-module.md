@@ -1,5 +1,7 @@
 # ADR-0021: Interview Preparation v2 bounded module
 
+Retired by [ADR-0049](0049-remove-interview-preparation.md). Kept as historical context only.
+
 ## Status
 
 Superseded for the active feature by [ADR-0046](0046-personalized-interview-preparation-packs.md). The original decision below is retained as history.

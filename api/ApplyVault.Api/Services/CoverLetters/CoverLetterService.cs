@@ -5,8 +5,6 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Options;
 using ApplyVault.Api.Services;
-using ApplyVault.Api.Services.InterviewPrep.Adapters;
-using ApplyVault.Api.Services.InterviewPrep.Domain;
 using Microsoft.Extensions.Options;
 
 namespace ApplyVault.Api.Services.CoverLetters;
@@ -23,8 +21,8 @@ public interface ICoverLetterService
 public sealed class CoverLetterValidationException(string message) : Exception(message);
 
 public sealed class CoverLetterService(
-    IInterviewPrepCandidateContextAdapter candidateContext,
-    IInterviewPrepJobContextAdapter jobContext,
+    ICoverLetterCandidateContextAdapter candidateContext,
+    ICoverLetterJobContextAdapter jobContext,
     ICoverLetterAiClient aiClient,
     IScrapeResultStore scrapeResultStore) : ICoverLetterService
 {
@@ -42,17 +40,8 @@ public sealed class CoverLetterService(
             throw new CoverLetterValidationException($"Note must be {MaxNoteLength} characters or fewer.");
         }
 
-        InterviewPrepCandidateSnapshot candidate;
-        InterviewPrepJobSnapshot? job;
-        try
-        {
-            candidate = await candidateContext.CaptureAsync(user, cancellationToken);
-            job = await jobContext.CaptureAsync(user, scrapeResultId, cancellationToken);
-        }
-        catch (InterviewPrepValidationException ex)
-        {
-            throw new CoverLetterValidationException(MapContextError(ex.Message));
-        }
+        var candidate = await candidateContext.CaptureAsync(user, cancellationToken);
+        var job = await jobContext.CaptureAsync(user, scrapeResultId, cancellationToken);
 
         if (job is null || string.IsNullOrWhiteSpace(job.JobDescription))
         {
@@ -76,21 +65,6 @@ public sealed class CoverLetterService(
         }
 
         return new CoverLetterDto(scrapeResultId, letter, updatedAt.Value);
-    }
-
-    private static string MapContextError(string message)
-    {
-        if (message.Contains("Structured CV", StringComparison.Ordinal))
-        {
-            return "Create a Structured CV before writing a cover letter.";
-        }
-
-        if (message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Saved job was not found.";
-        }
-
-        return message;
     }
 }
 

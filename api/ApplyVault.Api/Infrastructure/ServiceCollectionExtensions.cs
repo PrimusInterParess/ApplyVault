@@ -4,9 +4,6 @@ using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.Eures;
 using ApplyVault.Api.Services.Jobnet;
 using ApplyVault.Api.Services.HtmlExport;
-using ApplyVault.Api.Services.InterviewPrep;
-using ApplyVault.Api.Services.InterviewPrep.Adapters;
-using ApplyVault.Api.Services.InterviewPrep.Ai;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -218,18 +215,6 @@ public static class ServiceCollectionExtensions
                 .ValidateOnStart();
         }
 
-        services
-            .AddOptions<InterviewPrepAiOptions>()
-            .Bind(configuration.GetSection(InterviewPrepAiOptions.SectionName))
-            .Validate(
-                (options) => options.MaxRetries is >= 0 and <= 2,
-                "InterviewPrep:Ai:MaxRetries must be between 0 and 2.")
-            .Validate(
-                (options) => options.RetryDelayMilliseconds is >= 0 and <= 10000,
-                "InterviewPrep:Ai:RetryDelayMilliseconds must be between 0 and 10000.")
-            .Validate(
-                (options) => options.TimeoutSeconds is null or (>= 1 and <= 600),
-                "InterviewPrep:Ai:TimeoutSeconds must be null or between 1 and 600.");
 
         return services;
     }
@@ -361,11 +346,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScrapeResultSaveService, ScrapeResultSaveService>();
         services.AddScoped<IScrapeResultEnrichmentService, ScrapeResultEnrichmentService>();
         services.AddScoped<IScrapeResultCaptureQualityService, ScrapeResultCaptureQualityService>();
-        services.AddHttpClient<IInterviewPreparationPackGenerator, GoogleAiPreparationPackGenerator>(client =>
-            client.Timeout = Timeout.InfiniteTimeSpan);
-        services.AddScoped<IInterviewPrepCandidateContextAdapter, InterviewPrepCandidateContextAdapter>();
-        services.AddScoped<IInterviewPrepJobContextAdapter, InterviewPrepJobContextAdapter>();
-        services.AddScoped<InterviewPreparationPackService>();
+        services.AddScoped<ICoverLetterCandidateContextAdapter, CoverLetterCandidateContextAdapter>();
+        services.AddScoped<ICoverLetterJobContextAdapter, CoverLetterJobContextAdapter>();
 
         if (mailIntegration.Enabled)
         {

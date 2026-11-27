@@ -14,12 +14,6 @@
         <a [href]="selectedJob.url" target="_blank" rel="noreferrer" class="job-detail__primary-link">
           Open source listing
         </a>
-        <a
-          routerLink="/interview-prep"
-          [queryParams]="{ jobId: selectedJob.id }"
-          class="job-detail__secondary-action">
-          Prepare for interview
-        </a>
       </div>
       <button
         type="button"

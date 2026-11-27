@@ -3,33 +3,32 @@ using ApplyVault.Api.Data;
 using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.CvSectionCatalog;
-using ApplyVault.Api.Services.InterviewPrep.Domain;
 
-namespace ApplyVault.Api.Services.InterviewPrep.Adapters;
+namespace ApplyVault.Api.Services.CoverLetters;
 
-public interface IInterviewPrepCandidateContextAdapter
+public interface ICoverLetterCandidateContextAdapter
 {
-    Task<InterviewPrepCandidateSnapshot> CaptureAsync(
+    Task<CoverLetterCandidateSnapshot> CaptureAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default);
 }
 
-public interface IInterviewPrepJobContextAdapter
+public interface ICoverLetterJobContextAdapter
 {
-    Task<InterviewPrepJobSnapshot?> CaptureAsync(
+    Task<CoverLetterJobSnapshot?> CaptureAsync(
         AppUserEntity user,
         Guid scrapeResultId,
         CancellationToken cancellationToken = default);
 }
 
-public sealed record InterviewPrepCandidateSnapshot(
+public sealed record CoverLetterCandidateSnapshot(
     Guid CvDocumentId,
     DateTimeOffset? StructuredImportedAt,
     string CatalogVersion,
     string SnapshotJson,
     DateTimeOffset CapturedAt);
 
-public sealed record InterviewPrepJobSnapshot(
+public sealed record CoverLetterJobSnapshot(
     Guid ScrapeResultId,
     string? JobTitle,
     string? CompanyName,
@@ -37,30 +36,28 @@ public sealed record InterviewPrepJobSnapshot(
     string SnapshotJson,
     DateTimeOffset CapturedAt);
 
-public sealed class InterviewPrepCandidateContextAdapter(
+public sealed class CoverLetterCandidateContextAdapter(
     ICvStructuredDocumentService structuredDocumentService,
-    ICvSectionCatalog sectionCatalog) : IInterviewPrepCandidateContextAdapter
+    ICvSectionCatalog sectionCatalog) : ICoverLetterCandidateContextAdapter
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<InterviewPrepCandidateSnapshot> CaptureAsync(
+    public async Task<CoverLetterCandidateSnapshot> CaptureAsync(
         AppUserEntity user,
         CancellationToken cancellationToken = default)
     {
         var structured = await structuredDocumentService.GetStructuredAsync(user, cancellationToken);
         if (structured is null || structured.Sections.Count == 0)
         {
-            throw new InterviewPrepValidationException(
-                "Create a Structured CV before generating a preparation pack.");
+            throw new CoverLetterValidationException(
+                "Create a Structured CV before writing a cover letter.");
         }
 
         var capturedAt = DateTimeOffset.UtcNow;
         // CapturedAt stays on the record only — do not embed in SnapshotJson.
-        // Study-brief fingerprints hash SnapshotJson; a clock field would make every
-        // post-regenerate outdated check look like the Structured CV changed.
         // includedOnTemplate is template visibility, not entry content. Omit it so a
         // visibility-only save does not change the fingerprint. Entries stay either way.
         var payload = new
@@ -78,7 +75,7 @@ public sealed class InterviewPrepCandidateContextAdapter(
             })
         };
 
-        return new InterviewPrepCandidateSnapshot(
+        return new CoverLetterCandidateSnapshot(
             structured.DocumentId,
             structured.StructuredImportedAt,
             sectionCatalog.Version.ToString(),
@@ -87,15 +84,15 @@ public sealed class InterviewPrepCandidateContextAdapter(
     }
 }
 
-public sealed class InterviewPrepJobContextAdapter(
-    IScrapeResultStore scrapeResultStore) : IInterviewPrepJobContextAdapter
+public sealed class CoverLetterJobContextAdapter(
+    IScrapeResultStore scrapeResultStore) : ICoverLetterJobContextAdapter
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<InterviewPrepJobSnapshot?> CaptureAsync(
+    public async Task<CoverLetterJobSnapshot?> CaptureAsync(
         AppUserEntity user,
         Guid scrapeResultId,
         CancellationToken cancellationToken = default)
@@ -103,8 +100,8 @@ public sealed class InterviewPrepJobContextAdapter(
         var job = await scrapeResultStore.GetByIdAsync(scrapeResultId, user.Id, cancellationToken);
         if (job is null)
         {
-            throw new InterviewPrepValidationException(
-                "Scrape result was not found for the current user.");
+            throw new CoverLetterValidationException(
+                "Saved job was not found.");
         }
 
         var title = FirstNonEmpty(
@@ -129,7 +126,7 @@ public sealed class InterviewPrepJobContextAdapter(
             job.Payload.Url
         };
 
-        return new InterviewPrepJobSnapshot(
+        return new CoverLetterJobSnapshot(
             job.Id,
             title,
             company,

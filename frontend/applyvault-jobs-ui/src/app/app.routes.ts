@@ -83,19 +83,6 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'interview-prep',
-        canDeactivate: [(component: { canLeave(): boolean }) => component.canLeave()],
-        title: 'Interview Prep',
-        data: {
-          shellSubtitle:
-            'Personal preparation documents for your next interview.'
-        },
-        loadComponent: () =>
-          import('./features/interview-prep/pages/interview-prep-page/interview-prep-page.component').then(
-            (module) => module.InterviewPrepPageComponent
-          )
-      },
-      {
         path: 'settings',
         title: 'ApplyVault Settings',
         data: {

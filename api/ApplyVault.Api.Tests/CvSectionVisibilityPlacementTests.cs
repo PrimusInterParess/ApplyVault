@@ -4,7 +4,7 @@ using ApplyVault.Api.Models;
 using ApplyVault.Api.Services;
 using ApplyVault.Api.Services.CvSectionCatalog;
 using ApplyVault.Api.Services.HtmlExport;
-using ApplyVault.Api.Services.InterviewPrep.Adapters;
+using ApplyVault.Api.Services.CoverLetters;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApplyVault.Api.Tests;
@@ -196,7 +196,7 @@ public sealed class CvSectionVisibilityPlacementTests
 
         Assert.Equal(included.SnapshotJson, omitted.SnapshotJson);
         Assert.DoesNotContain("includedOnTemplate", included.SnapshotJson, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Kept for interview prep", included.SnapshotJson, StringComparison.Ordinal);
+        Assert.Contains("Kept for cover letters", included.SnapshotJson, StringComparison.Ordinal);
         Assert.Contains(Catalog.Version.ToString(), included.SnapshotJson, StringComparison.Ordinal);
 
         var edited = await CaptureAsync(
@@ -353,14 +353,14 @@ public sealed class CvSectionVisibilityPlacementTests
         Assert.True(FixedSectionLayout.IsCanonical(healed.Sections, Catalog));
     }
 
-    private static async Task<InterviewPrepCandidateSnapshot> CaptureAsync(
+    private static async Task<CoverLetterCandidateSnapshot> CaptureAsync(
         AppUserEntity user,
         Guid documentId,
         DateTimeOffset importedAt,
         Guid sectionId,
         Guid entryId,
         bool includedOnTemplate,
-        string summary = "Kept for interview prep")
+        string summary = "Kept for cover letters")
     {
         var document = new CvStructuredDocumentDto(
             documentId,
@@ -375,7 +375,7 @@ public sealed class CvSectionVisibilityPlacementTests
                     includedOnTemplate,
                     entryId: entryId)
             ]);
-        var adapter = new InterviewPrepCandidateContextAdapter(
+        var adapter = new CoverLetterCandidateContextAdapter(
             new FixedStructuredDocumentService(document),
             Catalog);
         return await adapter.CaptureAsync(user);
